@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trailhead — Philippine outdoor adventures",
+  title: "Sama — Adventure, together.",
   description:
     "Discover hikes, camps, dives, and island hops across the Philippines. Book trusted trips from local organizers.",
 };
