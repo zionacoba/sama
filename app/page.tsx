@@ -94,7 +94,7 @@ export default function Home() {
               href="/"
               className="text-lg font-bold tracking-tight text-trailhead"
             >
-              ⛰ Trailhead
+              ⛰Sama
             </a>
             <a
               href="#"
