@@ -1,12 +1,6 @@
 import Link from "next/link";
+import { Navbar } from "@/app/components/navbar";
 import { supabase } from "@/lib/supabase";
-
-const navLinks = [
-  { label: "Hike", href: "#" },
-  { label: "Camp", href: "#" },
-  { label: "Dive", href: "#" },
-  { label: "Island Hop", href: "#" },
-] as const;
 
 const filterChips = [
   "Hiking",
@@ -76,44 +70,7 @@ const trips = (data ?? []) as Trip[];
 
   return (
     <div className="min-h-full bg-stone-50 text-stone-900 font-sans">
-      <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-3.5">
-          <div className="flex items-center justify-between gap-3">
-            <a
-              href="/"
-              className="text-lg font-bold tracking-tight text-trailhead"
-            >
-              ⛰ Sama
-            </a>
-            <a
-              href="#"
-              className="rounded-lg border border-trailhead bg-trailhead px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark sm:hidden"
-            >
-              Login
-            </a>
-          </div>
-          <nav
-            className="-mx-1 flex items-center gap-1 overflow-x-auto pb-1 sm:mx-0 sm:flex-1 sm:justify-center sm:pb-0 sm:px-4"
-            aria-label="Main"
-          >
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-trailhead-muted hover:text-trailhead"
-              >
-                {link.label}
-              </a>
-            ))}
-          </nav>
-          <a
-            href="#"
-            className="hidden rounded-lg border border-trailhead bg-trailhead px-4 py-2 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark sm:inline-block"
-          >
-            Login
-          </a>
-        </div>
-      </header>
+      <Navbar />
 
       <main>
         <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-12 sm:py-16">
