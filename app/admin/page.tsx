@@ -1,0 +1,176 @@
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+
+type Booking = {
+  id: string | number;
+  full_name: string;
+  email: string;
+  phone: string;
+  trip_id: string | number;
+  slots: number;
+  total_amount: number;
+  status: string;
+  created_at: string;
+};
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatCreatedAt(date: string) {
+  return new Intl.DateTimeFormat("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(date));
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const normalized = status.toLowerCase();
+  const styles =
+    normalized === "confirmed"
+      ? "bg-emerald-100 text-emerald-800"
+      : normalized === "cancelled"
+        ? "bg-red-100 text-red-800"
+        : "bg-amber-100 text-amber-900";
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${styles}`}
+    >
+      {status}
+    </span>
+  );
+}
+
+export default async function AdminPage() {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  const bookings = (data ?? []) as Booking[];
+
+  return (
+    <div className="min-h-full bg-stone-50 font-sans text-stone-900">
+      <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+          <div>
+            <Link
+              href="/"
+              className="text-lg font-bold tracking-tight hover:opacity-90"
+            >
+              ⛰ Sama
+            </Link>
+            <p className="mt-0.5 text-sm text-trailhead-muted">Admin</p>
+          </div>
+          <Link
+            href="/"
+            className="text-sm font-medium text-trailhead-muted transition hover:text-white"
+          >
+            ← Back to site
+          </Link>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+            Bookings
+          </h1>
+          <p className="mt-1 text-stone-600">
+            All trip bookings from the database.
+          </p>
+        </div>
+
+        {error && (
+          <p
+            role="alert"
+            className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          >
+            Failed to load bookings: {error.message}
+          </p>
+        )}
+
+        <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[960px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-trailhead/20 bg-trailhead text-white">
+                  <th className="px-4 py-3 font-semibold">Booking ID</th>
+                  <th className="px-4 py-3 font-semibold">Full name</th>
+                  <th className="px-4 py-3 font-semibold">Email</th>
+                  <th className="px-4 py-3 font-semibold">Phone</th>
+                  <th className="px-4 py-3 font-semibold">Trip ID</th>
+                  <th className="px-4 py-3 font-semibold">Slots</th>
+                  <th className="px-4 py-3 font-semibold">Total amount</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Date created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={9}
+                      className="px-4 py-12 text-center text-stone-500"
+                    >
+                      No bookings yet.
+                    </td>
+                  </tr>
+                ) : (
+                  bookings.map((booking) => (
+                    <tr
+                      key={booking.id}
+                      className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30"
+                    >
+                      <td className="px-4 py-3 font-mono text-xs text-stone-600">
+                        {booking.id}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-stone-900">
+                        {booking.full_name}
+                      </td>
+                      <td className="px-4 py-3 text-stone-600">
+                        {booking.email}
+                      </td>
+                      <td className="px-4 py-3 text-stone-600">
+                        {booking.phone}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-stone-600">
+                        {booking.trip_id}
+                      </td>
+                      <td className="px-4 py-3 text-stone-900">
+                        {booking.slots}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-trailhead">
+                        {formatCurrency(booking.total_amount)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={booking.status} />
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-stone-600">
+                        {formatCreatedAt(booking.created_at)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {!error && bookings.length > 0 && (
+          <p className="mt-4 text-sm text-stone-500">
+            {bookings.length} booking{bookings.length !== 1 ? "s" : ""} total
+          </p>
+        )}
+      </main>
+    </div>
+  );
+}
