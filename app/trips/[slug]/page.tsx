@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import {
-  BookingModal,
-  parseTripPrice,
-} from "@/app/trips/[slug]/booking-modal";
+import { BookingModal } from "@/app/trips/[slug]/booking-modal";
 
 type TripDetail = {
   id: string | number;
@@ -40,6 +37,12 @@ function formatPrice(price: string | number) {
     currency: "PHP",
     maximumFractionDigits: 0,
   }).format(price);
+}
+
+function getUnitPrice(price: string | number): number {
+  if (typeof price === "number") return price;
+  const digits = price.replace(/[^\d.]/g, "");
+  return parseFloat(digits) || 0;
 }
 
 function formatDate(dateStart: string) {
@@ -174,7 +177,7 @@ export default async function TripDetailPage({ params }: PageProps) {
           <BookingModal
             tripId={tripData.id}
             tripTitle={tripData.title}
-            unitPrice={parseTripPrice(tripData.price)}
+            unitPrice={getUnitPrice(tripData.price)}
           />
         </section>
       </main>

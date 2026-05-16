@@ -17,16 +17,6 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-function parseUnitPrice(price: string | number): number {
-  if (typeof price === "number") return price;
-  const digits = price.replace(/[^\d.]/g, "");
-  return parseFloat(digits) || 0;
-}
-
-export function parseTripPrice(price: string | number) {
-  return parseUnitPrice(price);
-}
-
 export function BookingModal({
   tripId,
   tripTitle,
