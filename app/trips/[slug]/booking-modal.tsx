@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -22,10 +23,12 @@ export function BookingModal({
   tripTitle,
   unitPrice,
 }: BookingModalProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(false);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -66,6 +69,23 @@ export function BookingModal({
     resetForm();
   }
 
+  async function handleBookClick() {
+    setCheckingAuth(true);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    setCheckingAuth(false);
+
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+
+    setOpen(true);
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -96,10 +116,11 @@ export function BookingModal({
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        className="mt-10 w-full rounded-xl bg-trailhead px-6 py-4 text-base font-semibold text-white shadow-md transition hover:bg-trailhead-dark sm:w-auto sm:min-w-[240px]"
+        onClick={handleBookClick}
+        disabled={checkingAuth}
+        className="mt-10 w-full rounded-xl bg-trailhead px-6 py-4 text-base font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[240px]"
       >
-        Book This Trip
+        {checkingAuth ? "Checking…" : "Book This Trip"}
       </button>
 
       {open && (
