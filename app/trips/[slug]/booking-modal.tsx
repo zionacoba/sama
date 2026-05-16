@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 
 type BookingModalProps = {
   tripId: string | number;
+  tripSlug: string;
   tripTitle: string;
   unitPrice: number;
 };
@@ -20,6 +21,7 @@ function formatCurrency(amount: number) {
 
 export function BookingModal({
   tripId,
+  tripSlug,
   tripTitle,
   unitPrice,
 }: BookingModalProps) {
@@ -79,7 +81,8 @@ export function BookingModal({
     setCheckingAuth(false);
 
     if (!session) {
-      router.push("/login");
+      const redirectTo = encodeURIComponent(`/trips/${tripSlug}`);
+      router.push(`/login?redirectTo=${redirectTo}`);
       return;
     }
 

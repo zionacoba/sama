@@ -176,6 +176,7 @@ export default async function TripDetailPage({ params }: PageProps) {
 
           <BookingModal
             tripId={tripData.id}
+            tripSlug={slug}
             tripTitle={tripData.title}
             unitPrice={getUnitPrice(tripData.price)}
           />

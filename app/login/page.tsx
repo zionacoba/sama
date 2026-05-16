@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
+function getSafeRedirect(redirectTo: string | null) {
+  if (!redirectTo || !redirectTo.startsWith("/") || redirectTo.startsWith("//")) {
+    return "/";
+  }
+  return redirectTo;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -29,7 +36,9 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/");
+    const params = new URLSearchParams(window.location.search);
+    const redirectTo = getSafeRedirect(params.get("redirectTo"));
+    router.push(redirectTo);
     router.refresh();
   }
 
