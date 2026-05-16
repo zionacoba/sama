@@ -170,9 +170,8 @@ export function BookingModal({
                     role="status"
                     className="rounded-lg border border-trailhead/30 bg-trailhead-muted px-4 py-3 text-sm text-trailhead"
                   >
-                    Your booking for <strong>{tripTitle}</strong> has been
-                    submitted. We&apos;ll contact you at {email}{" "}once
-                    it&apos;s confirmed.
+                    Your booking for <strong>{tripTitle}</strong>{" "}has been submitted.{" "}
+                    We'll contact you at {email} once it's confirmed.
                   </p>
                   <button
                     type="button"
