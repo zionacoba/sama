@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 const navLinks = [
@@ -17,6 +18,7 @@ const filterChips = [
 
 type Trip = {
   id?: string | number;
+  slug: string;
   title: string;
   price: string | number;
   location: string;
@@ -182,7 +184,11 @@ const trips = (data ?? []) as Trip[];
           <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {trips.map((trip) => (
               <li key={trip.id ?? trip.title}>
-                <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
+                <Link
+                  href={`/trips/${trip.slug}`}
+                  className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
+                >
+                  <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
                   <div className="aspect-[4/3] bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80" />
                   <div className="flex flex-1 flex-col gap-3 p-4">
                     <div className="flex items-start justify-between gap-2">
@@ -210,6 +216,7 @@ const trips = (data ?? []) as Trip[];
                     </div>
                   </div>
                 </article>
+                </Link>
               </li>
             ))}
           </ul>
