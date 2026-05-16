@@ -1,3 +1,5 @@
+import { supabase } from "@/lib/supabase";
+
 const navLinks = [
   { label: "Hike", href: "#" },
   { label: "Camp", href: "#" },
@@ -13,40 +15,15 @@ const filterChips = [
   "Surfing",
 ] as const;
 
-const trips = [
-  {
-    title: "Mt. Pinatubo",
-    price: "₱1,800",
-    location: "Capas, Tarlac",
-    difficulty: "Beginner" as const,
-    rating: 4.8,
-    reviews: 214,
-  },
-  {
-    title: "Mt. Pulag",
-    price: "₱3,500",
-    location: "Kabayan, Benguet",
-    difficulty: "Intermediate" as const,
-    rating: 4.9,
-    reviews: 502,
-  },
-  {
-    title: "Taal Volcano",
-    price: "₱1,200",
-    location: "Talisay, Batangas",
-    difficulty: "Beginner" as const,
-    rating: 4.6,
-    reviews: 189,
-  },
-  {
-    title: "Mt. Batulao",
-    price: "₱1,500",
-    location: "Nasugbu, Batangas",
-    difficulty: "Beginner" as const,
-    rating: 4.7,
-    reviews: 156,
-  },
-];
+type Trip = {
+  id?: string | number;
+  title: string;
+  price: string | number;
+  location: string;
+  difficulty: "Beginner" | "Intermediate";
+  rating: number;
+  reviews: number;
+};
 
 function StarRow({ rating }: { rating: number }) {
   const filled = Math.round(rating);
@@ -84,7 +61,17 @@ function DifficultyBadge({ level }: { level: "Beginner" | "Intermediate" }) {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const { data, error } = await supabase
+  .from("trips")
+  .select("*")
+  .eq("status", "active");
+
+console.log("trips data:", data);
+console.log("trips error:", error);
+
+const trips = (data ?? []) as Trip[];
+
   return (
     <div className="min-h-full bg-stone-50 text-stone-900 font-sans">
       <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
@@ -194,7 +181,7 @@ export default function Home() {
           </div>
           <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {trips.map((trip) => (
-              <li key={trip.title}>
+              <li key={trip.id ?? trip.title}>
                 <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
                   <div className="aspect-[4/3] bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80" />
                   <div className="flex flex-1 flex-col gap-3 p-4">
