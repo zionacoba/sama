@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import {
+  BookingModal,
+  parseTripPrice,
+} from "@/app/trips/[slug]/booking-modal";
 
 type TripDetail = {
+  id: string | number;
   title: string;
   destination: string;
   difficulty: "Beginner" | "Intermediate";
@@ -166,12 +171,11 @@ export default async function TripDetailPage({ params }: PageProps) {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="mt-10 w-full rounded-xl bg-trailhead px-6 py-4 text-base font-semibold text-white shadow-md transition hover:bg-trailhead-dark sm:w-auto sm:min-w-[240px]"
-          >
-            Book This Trip
-          </button>
+          <BookingModal
+            tripId={tripData.id}
+            tripTitle={tripData.title}
+            unitPrice={parseTripPrice(tripData.price)}
+          />
         </section>
       </main>
 
