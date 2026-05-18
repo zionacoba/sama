@@ -1,9 +1,20 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { updateOrganizerStatus } from "@/app/actions/organizer";
 import { supabase } from "@/lib/supabase";
 
 const ADMIN_EMAIL = "acobapaulzion@gmail.com";
+
+type OrganizerApplication = {
+  id: string;
+  full_name: string;
+  email: string;
+  bio: string;
+  phone: string;
+  status: string;
+  created_at: string;
+};
 
 type Booking = {
   id: string | number;
@@ -38,9 +49,9 @@ function formatCreatedAt(date: string) {
 function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
   const styles =
-    normalized === "confirmed"
+    normalized === "confirmed" || normalized === "approved"
       ? "bg-emerald-100 text-emerald-800"
-      : normalized === "cancelled"
+      : normalized === "cancelled" || normalized === "rejected"
         ? "bg-red-100 text-red-800"
         : "bg-amber-100 text-amber-900";
 
@@ -91,6 +102,13 @@ export default async function AdminPage() {
     .order("created_at", { ascending: false });
 
   const bookings = (data ?? []) as Booking[];
+
+  const { data: orgData, error: orgError } = await authClient
+    .from("organizers")
+    .select("id, full_name, email, bio, phone, status, created_at")
+    .order("created_at", { ascending: false });
+
+  const applications = (orgData ?? []) as OrganizerApplication[];
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -203,6 +221,108 @@ export default async function AdminPage() {
         {!error && bookings.length > 0 && (
           <p className="mt-4 text-sm text-stone-500">
             {bookings.length} booking{bookings.length !== 1 ? "s" : ""} total
+          </p>
+        )}
+
+        <div className="mb-8 mt-16">
+          <h2 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+            Organizer Applications
+          </h2>
+          <p className="mt-1 text-stone-600">
+            Review and approve or reject organizer applications.
+          </p>
+        </div>
+
+        {orgError && (
+          <p
+            role="alert"
+            className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          >
+            Failed to load applications: {orgError.message}
+          </p>
+        )}
+
+        <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-trailhead/20 bg-trailhead text-white">
+                  <th className="px-4 py-3 font-semibold">Full name</th>
+                  <th className="px-4 py-3 font-semibold">Email</th>
+                  <th className="px-4 py-3 font-semibold">Phone</th>
+                  <th className="px-4 py-3 font-semibold">Bio</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Date applied</th>
+                  <th className="px-4 py-3 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {applications.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-4 py-12 text-center text-stone-500"
+                    >
+                      No applications yet.
+                    </td>
+                  </tr>
+                ) : (
+                  applications.map((app) => (
+                    <tr
+                      key={app.id}
+                      className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30"
+                    >
+                      <td className="px-4 py-3 font-medium text-stone-900">
+                        {app.full_name}
+                      </td>
+                      <td className="px-4 py-3 text-stone-600">{app.email}</td>
+                      <td className="px-4 py-3 text-stone-600">{app.phone}</td>
+                      <td className="max-w-xs px-4 py-3 text-stone-600">
+                        <p className="line-clamp-2">{app.bio}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={app.status} />
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-stone-600">
+                        {formatCreatedAt(app.created_at)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <form action={updateOrganizerStatus}>
+                            <input type="hidden" name="id" value={app.id} />
+                            <input type="hidden" name="status" value="approved" />
+                            <button
+                              type="submit"
+                              disabled={app.status === "approved"}
+                              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              Approve
+                            </button>
+                          </form>
+                          <form action={updateOrganizerStatus}>
+                            <input type="hidden" name="id" value={app.id} />
+                            <input type="hidden" name="status" value="rejected" />
+                            <button
+                              type="submit"
+                              disabled={app.status === "rejected"}
+                              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              Reject
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {!orgError && applications.length > 0 && (
+          <p className="mt-4 text-sm text-stone-500">
+            {applications.length} application{applications.length !== 1 ? "s" : ""} total
           </p>
         )}
       </main>
