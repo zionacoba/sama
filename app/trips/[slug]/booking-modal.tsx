@@ -45,16 +45,25 @@ export function BookingModal({
 
   const totalAmount = unitPrice * slots;
 
+  function applySession(session: Session | null) {
+    sessionRef.current = session;
+    if (session?.user) {
+      setEmail((prev) => prev || (session.user.email ?? ""));
+      setFullName((prev) => prev || ((session.user.user_metadata?.full_name as string) || ""));
+    }
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      sessionRef.current = session;
+      applySession(session);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      sessionRef.current = session;
+      applySession(session);
     });
 
     return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
