@@ -20,7 +20,7 @@ export function ReviewForm({ tripId, tripSlug, defaultName }: ReviewFormProps) {
       <input type="hidden" name="trip_slug" value={tripSlug} />
       <input type="hidden" name="rating" value={rating} />
 
-      {state?.error && (
+      {state && "error" in state && (
         <p
           role="alert"
           className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
@@ -66,7 +66,7 @@ export function ReviewForm({ tripId, tripSlug, defaultName }: ReviewFormProps) {
             </button>
           ))}
         </div>
-        {rating === 0 && state?.error && (
+        {rating === 0 && state && "error" in state && (
           <p className="mt-1 text-xs text-red-600">Please select a rating.</p>
         )}
       </div>

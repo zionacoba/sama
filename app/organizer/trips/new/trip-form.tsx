@@ -9,7 +9,7 @@ const inputClass =
 
 const labelClass = "block text-sm font-medium text-stone-700";
 
-export function TripForm() {
+export function TripForm({ destinations = [] }: { destinations?: string[] }) {
   const [state, action] = useActionState(createTrip, null);
   const [isPending, startTransition] = useTransition();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -125,9 +125,17 @@ export function TripForm() {
           name="destination"
           type="text"
           required
+          list="destination-suggestions"
           className={inputClass}
           placeholder="Mt. Pulag, Benguet"
         />
+        {destinations.length > 0 && (
+          <datalist id="destination-suggestions">
+            {destinations.map((d) => (
+              <option key={d} value={d} />
+            ))}
+          </datalist>
+        )}
       </div>
 
       {/* Date + Price + Slots */}

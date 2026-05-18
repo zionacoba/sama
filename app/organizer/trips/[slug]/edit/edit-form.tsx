@@ -29,7 +29,7 @@ type TripForEdit = {
   cancellation_policy_custom: string | null;
 };
 
-export function EditTripForm({ trip }: { trip: TripForEdit }) {
+export function EditTripForm({ trip, destinations = [] }: { trip: TripForEdit; destinations?: string[] }) {
   const [state, action] = useActionState(updateTrip, null);
   const [isPending, startTransition] = useTransition();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -168,10 +168,18 @@ export function EditTripForm({ trip }: { trip: TripForEdit }) {
           name="destination"
           type="text"
           required
+          list="destination-suggestions"
           defaultValue={trip.destination}
           className={inputClass}
           placeholder="Mt. Pulag, Benguet"
         />
+        {destinations.length > 0 && (
+          <datalist id="destination-suggestions">
+            {destinations.map((d) => (
+              <option key={d} value={d} />
+            ))}
+          </datalist>
+        )}
       </div>
 
       {/* Date + Price + Slots */}

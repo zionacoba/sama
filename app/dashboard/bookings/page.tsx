@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { BookingReviewForm } from "./booking-review-form";
 
 type Booking = {
   id: number;
@@ -9,6 +10,7 @@ type Booking = {
   total_amount: number;
   status: string;
   trip: {
+    id: number;
     title: string;
     slug: string;
     date_start: string;
@@ -19,8 +21,6 @@ type Booking = {
     meeting_point: string;
   };
 };
-
-type ReviewMap = Record<string, boolean>;
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -138,19 +138,16 @@ function BookingCard({
           )}
         </div>
 
-        {past && !reviewed && (
-          <div className="mt-auto pt-1">
-            <Link
-              href={`/trips/${trip.slug}#reviews`}
-              className="inline-flex rounded-lg border border-trailhead px-3.5 py-1.5 text-xs font-semibold text-trailhead transition hover:bg-trailhead hover:text-white"
-            >
-              Leave a Review
-            </Link>
-          </div>
+        {past && booking.status === "confirmed" && !reviewed && (
+          <BookingReviewForm
+            tripId={trip.id}
+            tripSlug={trip.slug}
+            bookingId={booking.id}
+          />
         )}
 
-        {past && reviewed && (
-          <p className="mt-auto pt-1 text-xs text-stone-400">Review submitted</p>
+        {past && booking.status === "confirmed" && reviewed && (
+          <p className="mt-auto pt-1 text-xs text-stone-400">Review submitted ✓</p>
         )}
       </div>
     </article>
@@ -172,43 +169,31 @@ export default async function BookingsPage() {
       slots,
       total_amount,
       status,
-      trip:trips(title, slug, date_start, destination, photos, difficulty, activity_type, meeting_point)
+      trip:trips(id, title, slug, date_start, destination, photos, difficulty, activity_type, meeting_point)
     `)
     .eq("email", user.email ?? "")
     .order("created_at", { ascending: false });
 
   const bookings = (bookingsData ?? []) as unknown as Booking[];
 
-  const tripSlugsPast = bookings
-    .filter((b) => new Date(b.trip.date_start) < new Date())
-    .map((b) => b.trip.slug);
+  const now = new Date().toISOString();
+  const pastConfirmedBookingIds = bookings
+    .filter((b) => b.trip.date_start <= now && b.status === "confirmed")
+    .map((b) => b.id);
 
-  let reviewedSlugs: ReviewMap = {};
-  if (tripSlugsPast.length > 0) {
-    const tripIds = bookings
-      .filter((b) => new Date(b.trip.date_start) < new Date())
-      .map((b) => b.trip.slug);
+  let reviewedBookingIds = new Set<number>();
+  if (pastConfirmedBookingIds.length > 0) {
+    const { data: reviewsData } = await supabase
+      .from("reviews")
+      .select("booking_id")
+      .eq("user_id", user.id)
+      .in("booking_id", pastConfirmedBookingIds);
 
-    const { data: tripsData } = await supabase
-      .from("trips")
-      .select("id, slug")
-      .in("slug", tripIds);
-
-    if (tripsData && tripsData.length > 0) {
-      const idToSlug = Object.fromEntries(tripsData.map((t) => [t.id, t.slug]));
-      const { data: reviewsData } = await supabase
-        .from("reviews")
-        .select("trip_id")
-        .eq("user_id", user.id)
-        .in("trip_id", tripsData.map((t) => t.id));
-
-      reviewedSlugs = Object.fromEntries(
-        (reviewsData ?? []).map((r) => [idToSlug[r.trip_id], true])
-      );
-    }
+    reviewedBookingIds = new Set(
+      (reviewsData ?? []).map((r) => r.booking_id).filter(Boolean)
+    );
   }
 
-  const now = new Date().toISOString();
   const upcoming = bookings.filter((b) => b.trip.date_start > now);
   const past = bookings.filter((b) => b.trip.date_start <= now);
 
@@ -274,7 +259,7 @@ export default async function BookingsPage() {
                   <BookingCard
                     booking={b}
                     past={true}
-                    reviewed={!!reviewedSlugs[b.trip.slug]}
+                    reviewed={reviewedBookingIds.has(b.id)}
                   />
                 </li>
               ))}

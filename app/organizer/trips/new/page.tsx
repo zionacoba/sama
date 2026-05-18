@@ -21,6 +21,16 @@ export default async function NewTripPage() {
     redirect("/organizer/apply");
   }
 
+  const { data: destinationsData } = await supabase
+    .from("trips")
+    .select("destination")
+    .not("destination", "is", null)
+    .order("destination");
+
+  const destinations = [
+    ...new Set((destinationsData ?? []).map((t: { destination: string }) => t.destination).filter(Boolean)),
+  ] as string[];
+
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
@@ -56,7 +66,7 @@ export default async function NewTripPage() {
         </div>
 
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-          <TripForm />
+          <TripForm destinations={destinations} />
         </div>
       </main>
     </div>

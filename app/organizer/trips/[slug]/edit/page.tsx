@@ -37,6 +37,16 @@ export default async function EditTripPage({ params }: PageProps) {
 
   if (!trip) redirect("/organizer/dashboard");
 
+  const { data: destinationsData } = await supabase
+    .from("trips")
+    .select("destination")
+    .not("destination", "is", null)
+    .order("destination");
+
+  const destinations = [
+    ...new Set((destinationsData ?? []).map((t: { destination: string }) => t.destination).filter(Boolean)),
+  ] as string[];
+
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
@@ -64,7 +74,7 @@ export default async function EditTripPage({ params }: PageProps) {
           <h1 className="mb-6 text-xl font-bold tracking-tight text-stone-900">
             Edit trip
           </h1>
-          <EditTripForm trip={trip} />
+          <EditTripForm trip={trip} destinations={destinations} />
         </div>
       </main>
     </div>

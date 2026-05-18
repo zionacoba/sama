@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { BookingModal } from "@/app/trips/[slug]/booking-modal";
-import { ReviewForm } from "@/app/trips/[slug]/review-form";
 import { ShareButton } from "@/app/components/share-button";
 
 type TripDetail = {
@@ -30,14 +29,16 @@ type TripDetail = {
 type OrganizerInfo = {
   full_name: string;
   bio: string | null;
+  photo_url: string | null;
 };
 
 type Review = {
   id: number;
-  full_name: string;
+  full_name: string | null;
   rating: number;
   body: string;
   created_at: string;
+  trips: { title: string; date_start: string } | null;
 };
 
 function Stars({ rating, size = "sm" }: { rating: number; size?: "sm" | "lg" }) {
@@ -182,27 +183,31 @@ export default async function TripDetailPage({ params }: PageProps) {
 
   const [
     { data: reviewsData },
+    reviewCountResult,
     { data: organizerData },
-    { data: bookingData },
-    { data: existingReview },
   ] = await Promise.all([
-    supabase.from("reviews").select("id, full_name, rating, body, created_at").eq("trip_id", tripData.id).order("created_at", { ascending: false }),
     tripData.organizer_id
-      ? supabase.from("organizers").select("full_name, bio").eq("id", tripData.organizer_id).maybeSingle()
-      : Promise.resolve({ data: null }),
-    user
-      ? supabase.from("bookings").select("id, full_name").eq("trip_id", tripData.id).eq("email", user.email ?? "").limit(1).maybeSingle()
-      : Promise.resolve({ data: null }),
-    user
-      ? supabase.from("reviews").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).maybeSingle()
+      ? supabase
+          .from("reviews")
+          .select("id, full_name, rating, body, created_at, trips(title, date_start)")
+          .eq("organizer_id", tripData.organizer_id)
+          .order("created_at", { ascending: false })
+          .limit(3)
+      : Promise.resolve({ data: [] }),
+    tripData.organizer_id
+      ? supabase
+          .from("reviews")
+          .select("*", { count: "exact", head: true })
+          .eq("organizer_id", tripData.organizer_id)
+      : Promise.resolve({ count: 0 }),
+    tripData.organizer_id
+      ? supabase.from("organizers").select("full_name, bio, photo_url").eq("id", tripData.organizer_id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
-  const reviews = (reviewsData ?? []) as Review[];
+  const reviews = (reviewsData ?? []) as unknown as Review[];
+  const totalReviewCount = reviewCountResult.count ?? reviews.length;
   const organizer = organizerData as OrganizerInfo | null;
-  const tripPast = new Date(tripData.date_start) < new Date();
-  const canReview = !!user && !!bookingData && !existingReview && tripPast;
-  const reviewerName = (bookingData as { full_name?: string } | null)?.full_name ?? "";
 
   const avgRating =
     reviews.length > 0
@@ -244,13 +249,13 @@ export default async function TripDetailPage({ params }: PageProps) {
               {tripData.title}
             </h1>
             <p className="mt-2 text-lg text-stone-600">{tripData.destination}</p>
-            {avgRating !== null && (
-              <div className="mt-3 flex items-center gap-2">
+            {totalReviewCount > 0 && avgRating !== null && (
+              <a href="#reviews" className="mt-3 flex items-center gap-2 group w-fit">
                 <Stars rating={avgRating} size="lg" />
-                <span className="text-sm text-stone-600">
-                  {avgRating.toFixed(1)} · {reviews.length} review{reviews.length !== 1 ? "s" : ""}
+                <span className="text-sm text-stone-600 group-hover:text-trailhead group-hover:underline underline-offset-4">
+                  {avgRating.toFixed(1)} · {totalReviewCount} review{totalReviewCount !== 1 ? "s" : ""}
                 </span>
-              </div>
+              </a>
             )}
             <div className="mt-4 flex items-center gap-4">
               <p className="text-2xl font-bold text-trailhead">
@@ -346,12 +351,21 @@ export default async function TripDetailPage({ params }: PageProps) {
               <h2 className="text-lg font-bold text-stone-900">Your organizer</h2>
               <Link
                 href={`/organizers/${tripData.organizer_id}`}
-                className="mt-3 block font-semibold text-trailhead underline-offset-4 hover:underline"
+                className="mt-4 flex items-center gap-3 group"
               >
-                {organizer.full_name}
+                <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-lg font-bold text-trailhead">
+                  {organizer.photo_url ? (
+                    <Image src={organizer.photo_url} alt={organizer.full_name} fill className="object-cover" sizes="48px" />
+                  ) : (
+                    organizer.full_name.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <span className="font-semibold text-trailhead underline-offset-4 group-hover:underline">
+                  {organizer.full_name}
+                </span>
               </Link>
               {organizer.bio && (
-                <p className="mt-1 leading-relaxed text-stone-600">{organizer.bio}</p>
+                <p className="mt-3 leading-relaxed text-stone-600">{organizer.bio}</p>
               )}
             </div>
           )}
@@ -372,80 +386,72 @@ export default async function TripDetailPage({ params }: PageProps) {
           />
 
           {/* Reviews */}
-          <div className="mt-12">
-            <h2 className="text-xl font-bold tracking-tight text-stone-900">
-              Reviews
-              {reviews.length > 0 && (
-                <span className="ml-2 text-base font-normal text-stone-500">
-                  ({reviews.length})
-                </span>
-              )}
-            </h2>
-
-            {reviews.length === 0 && (
-              <p className="mt-4 text-stone-500">No reviews yet. Be the first!</p>
-            )}
-
-            {reviews.length > 0 && (
-              <ul className="mt-6 space-y-4">
-                {reviews.map((review) => (
-                  <li
-                    key={review.id}
-                    className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"
+          {organizer && (
+            <div className="mt-12" id="reviews">
+              <div className="flex items-baseline justify-between gap-4">
+                <h2 className="text-xl font-bold tracking-tight text-stone-900">
+                  Reviews for {organizer.full_name}
+                  {totalReviewCount > 0 && (
+                    <span className="ml-2 text-base font-normal text-stone-500">
+                      ({totalReviewCount})
+                    </span>
+                  )}
+                </h2>
+                {totalReviewCount > 3 && (
+                  <Link
+                    href={`/organizers/${tripData.organizer_id}`}
+                    className="shrink-0 text-sm font-semibold text-trailhead underline-offset-4 hover:underline"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-semibold text-stone-900">{review.full_name}</p>
-                        <div className="mt-0.5 flex items-center gap-2">
-                          <Stars rating={review.rating} />
-                          <span className="text-xs text-stone-400">
-                            {formatReviewDate(review.created_at)}
-                          </span>
+                    See all →
+                  </Link>
+                )}
+              </div>
+
+              {reviews.length === 0 && (
+                <p className="mt-4 text-stone-500">No reviews yet for this organizer.</p>
+              )}
+
+              {reviews.length > 0 && (
+                <ul className="mt-6 space-y-4">
+                  {reviews.map((review) => (
+                    <li
+                      key={review.id}
+                      className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-semibold text-stone-900">
+                            {review.full_name ?? "Verified adventurer"}
+                          </p>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <Stars rating={review.rating} />
+                            <span className="text-xs text-stone-400">
+                              {formatReviewDate(review.created_at)}
+                            </span>
+                          </div>
+                          {review.trips && (
+                            <p className="mt-1 text-xs text-stone-400">
+                              {review.trips.title} · {formatReviewDate(review.trips.date_start)}
+                            </p>
+                          )}
                         </div>
                       </div>
-                    </div>
-                    <p className="mt-3 leading-relaxed text-stone-600">{review.body}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
+                      <p className="mt-3 leading-relaxed text-stone-600">{review.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-            {canReview && (
-              <div className="mt-8 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-                <h3 className="text-lg font-bold text-stone-900">Write a review</h3>
-                <p className="mt-1 text-sm text-stone-500">
-                  Share your experience to help future adventurers.
-                </p>
-                <ReviewForm
-                  tripId={tripData.id}
-                  tripSlug={slug}
-                  defaultName={reviewerName}
-                />
-              </div>
-            )}
-
-            {user && !!bookingData && !existingReview && !tripPast && (
-              <p className="mt-6 text-sm text-stone-400">
-                You can leave a review after the trip on{" "}
-                <span className="font-medium text-stone-600">
-                  {formatDate(tripData.date_start)}
-                </span>
-                .
-              </p>
-            )}
-
-            {user && !bookingData && !existingReview && (
-              <p className="mt-6 text-sm text-stone-400">
-                You need a booking on this trip to leave a review.
-              </p>
-            )}
-
-            {existingReview && (
-              <p className="mt-6 text-sm text-stone-400">
-                You&apos;ve already reviewed this trip — thanks!
-              </p>
-            )}
-          </div>
+              {totalReviewCount > 3 && (
+                <Link
+                  href={`/organizers/${tripData.organizer_id}`}
+                  className="mt-6 inline-block text-sm font-semibold text-trailhead underline-offset-4 hover:underline"
+                >
+                  See all {totalReviewCount} reviews →
+                </Link>
+              )}
+            </div>
+          )}
         </section>
       </main>
 

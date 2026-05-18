@@ -22,11 +22,11 @@ type Trip = {
 
 type Review = {
   id: number;
-  full_name: string;
+  full_name: string | null;
   rating: number;
   body: string;
   created_at: string;
-  trip_id: number;
+  trips: { title: string; slug: string; date_start: string } | null;
 };
 
 function Stars({ rating }: { rating: number }) {
@@ -76,42 +76,42 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
 
   const { data: organizer } = await supabase
     .from("organizers")
-    .select("id, full_name, bio")
+    .select("id, full_name, bio, photo_url")
     .eq("id", id)
     .eq("status", "approved")
     .maybeSingle();
 
   if (!organizer) notFound();
 
-  const { data: allTrips } = await supabase
-    .from("trips")
-    .select("id, slug, title, activity_type, difficulty, date_start, price, total_slots, remaining_slots, photos")
-    .eq("organizer_id", id)
-    .eq("status", "active")
-    .order("date_start", { ascending: true });
+  const [{ data: allTrips }, { data: reviewsData }] = await Promise.all([
+    supabase
+      .from("trips")
+      .select("id, slug, title, activity_type, difficulty, date_start, price, total_slots, remaining_slots, photos")
+      .eq("organizer_id", id)
+      .eq("status", "active")
+      .order("date_start", { ascending: true }),
+    supabase
+      .from("reviews")
+      .select("id, full_name, rating, body, created_at, trips(title, slug, date_start)")
+      .eq("organizer_id", id)
+      .order("created_at", { ascending: false }),
+  ]);
 
   const trips = (allTrips ?? []) as Trip[];
+  const reviews = (reviewsData ?? []) as unknown as Review[];
   const now = new Date().toISOString();
   const upcomingTrips = trips.filter((t) => t.date_start > now);
-  const allTripIds = trips.map((t) => t.id);
-
-  const { data: reviewsData } =
-    allTripIds.length > 0
-      ? await supabase
-          .from("reviews")
-          .select("id, full_name, rating, body, created_at, trip_id")
-          .in("trip_id", allTripIds)
-          .order("created_at", { ascending: false })
-      : { data: [] };
-
-  const reviews = (reviewsData ?? []) as Review[];
 
   const avgRating =
     reviews.length > 0
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       : null;
 
-  const tripTitleMap = Object.fromEntries(trips.map((t) => [t.id, { title: t.title, slug: t.slug }]));
+  const initials = organizer.full_name
+    .split(" ")
+    .map((w: string) => w.charAt(0).toUpperCase())
+    .slice(0, 2)
+    .join("");
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -132,28 +132,45 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
       <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
         {/* Organizer hero */}
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-          <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
-            {organizer.full_name}
-          </h1>
+          <div className="flex items-center gap-4">
+            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-xl font-bold text-trailhead">
+              {organizer.photo_url ? (
+                <Image
+                  src={organizer.photo_url}
+                  alt={organizer.full_name}
+                  fill
+                  className="object-cover"
+                  sizes="64px"
+                />
+              ) : (
+                initials
+              )}
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+                {organizer.full_name}
+              </h1>
+              {avgRating !== null && (
+                <div className="mt-1 flex items-center gap-1.5">
+                  <Stars rating={avgRating} />
+                  <span className="text-sm font-semibold text-stone-700">{avgRating.toFixed(1)}</span>
+                  <span className="text-sm text-stone-400">({reviews.length} review{reviews.length !== 1 ? "s" : ""})</span>
+                </div>
+              )}
+            </div>
+          </div>
           {organizer.bio && (
-            <p className="mt-3 leading-relaxed text-stone-600">{organizer.bio}</p>
+            <p className="mt-5 leading-relaxed text-stone-600">{organizer.bio}</p>
           )}
-          <div className="mt-5 flex flex-wrap gap-4 border-t border-stone-100 pt-5 text-sm">
-            <div className="text-center">
+          <div className="mt-5 flex flex-wrap gap-6 border-t border-stone-100 pt-5 text-sm">
+            <div>
               <p className="text-xl font-bold text-stone-900">{trips.length}</p>
               <p className="text-stone-500">trip{trips.length !== 1 ? "s" : ""} led</p>
             </div>
-            <div className="text-center">
+            <div>
               <p className="text-xl font-bold text-stone-900">{reviews.length}</p>
               <p className="text-stone-500">review{reviews.length !== 1 ? "s" : ""}</p>
             </div>
-            {avgRating !== null && (
-              <div className="flex items-center gap-2">
-                <Stars rating={avgRating} />
-                <span className="font-semibold text-stone-900">{avgRating.toFixed(1)}</span>
-                <span className="text-stone-500">avg rating</span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -219,36 +236,40 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
             <p className="mt-4 text-stone-500">No reviews yet.</p>
           ) : (
             <ul className="mt-4 space-y-4">
-              {reviews.map((review) => {
-                const tripInfo = tripTitleMap[review.trip_id];
-                return (
-                  <li
-                    key={review.id}
-                    className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-semibold text-stone-900">{review.full_name}</p>
-                        <div className="mt-0.5 flex items-center gap-2">
-                          <Stars rating={review.rating} />
-                          <span className="text-xs text-stone-400">
-                            {formatDate(review.created_at)}
-                          </span>
-                        </div>
+              {reviews.map((review) => (
+                <li
+                  key={review.id}
+                  className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-semibold text-stone-900">
+                        {review.full_name ?? "Verified adventurer"}
+                      </p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <Stars rating={review.rating} />
+                        <span className="text-xs text-stone-400">
+                          {formatDate(review.created_at)}
+                        </span>
                       </div>
-                      {tripInfo && (
-                        <Link
-                          href={`/trips/${tripInfo.slug}`}
-                          className="shrink-0 rounded-lg border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-600 transition hover:border-trailhead hover:text-trailhead"
-                        >
-                          {tripInfo.title}
-                        </Link>
-                      )}
                     </div>
-                    <p className="mt-3 leading-relaxed text-stone-600">{review.body}</p>
-                  </li>
-                );
-              })}
+                    {review.trips && (
+                      <Link
+                        href={`/trips/${review.trips.slug}`}
+                        className="shrink-0 rounded-lg border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-600 transition hover:border-trailhead hover:text-trailhead"
+                      >
+                        {review.trips.title}
+                      </Link>
+                    )}
+                  </div>
+                  {review.trips && (
+                    <p className="mt-1 text-xs text-stone-400">
+                      Trip date: {formatDate(review.trips.date_start)}
+                    </p>
+                  )}
+                  <p className="mt-3 leading-relaxed text-stone-600">{review.body}</p>
+                </li>
+              ))}
             </ul>
           )}
         </section>
