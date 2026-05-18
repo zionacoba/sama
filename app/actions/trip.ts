@@ -50,6 +50,10 @@ export async function createTrip(
   const min_downpayment = payment_type === "downpayment" && min_downpayment_raw
     ? parseFloat(min_downpayment_raw)
     : null;
+  const cancellation_policy = (formData.get("cancellation_policy") as string) || "flexible";
+  const cancellation_policy_custom = cancellation_policy === "custom"
+    ? ((formData.get("cancellation_policy_custom") as string)?.trim() || null)
+    : null;
 
   if (
     !title ||
@@ -67,6 +71,10 @@ export async function createTrip(
 
   if (payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
     return { error: "Please enter a minimum downpayment amount." };
+  }
+
+  if (cancellation_policy === "custom" && !cancellation_policy_custom) {
+    return { error: "Please enter your custom cancellation policy." };
   }
 
   const slug = `${slugify(title)}-${Date.now().toString(36)}`;
@@ -90,6 +98,8 @@ export async function createTrip(
     organizer_id: organizer.id,
     payment_type,
     min_downpayment,
+    cancellation_policy,
+    cancellation_policy_custom,
   });
 
   if (error) {
@@ -152,6 +162,10 @@ export async function updateTrip(
   const min_downpayment = payment_type === "downpayment" && min_downpayment_raw
     ? parseFloat(min_downpayment_raw)
     : null;
+  const cancellation_policy = (formData.get("cancellation_policy") as string) || "flexible";
+  const cancellation_policy_custom = cancellation_policy === "custom"
+    ? ((formData.get("cancellation_policy_custom") as string)?.trim() || null)
+    : null;
 
   if (
     !title ||
@@ -169,6 +183,10 @@ export async function updateTrip(
 
   if (payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
     return { error: "Please enter a minimum downpayment amount." };
+  }
+
+  if (cancellation_policy === "custom" && !cancellation_policy_custom) {
+    return { error: "Please enter your custom cancellation policy." };
   }
 
   const slotDiff = total_slots - existing.total_slots;
@@ -192,6 +210,8 @@ export async function updateTrip(
       photos: photo_url ? [photo_url] : [],
       payment_type,
       min_downpayment,
+      cancellation_policy,
+      cancellation_policy_custom,
     })
     .eq("id", tripId);
 

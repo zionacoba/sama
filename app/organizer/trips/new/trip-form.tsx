@@ -14,6 +14,7 @@ export function TripForm() {
   const [isPending, startTransition] = useTransition();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [paymentType, setPaymentType] = useState<"full" | "downpayment">("full");
+  const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict" | "custom">("flexible");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -272,6 +273,34 @@ export function TripForm() {
               placeholder="500"
             />
           </div>
+        )}
+      </div>
+
+      {/* Cancellation policy */}
+      <div>
+        <label htmlFor="cancellation_policy" className={labelClass}>
+          Cancellation policy
+        </label>
+        <select
+          id="cancellation_policy"
+          name="cancellation_policy"
+          value={cancellationPolicy}
+          onChange={(e) => setCancellationPolicy(e.target.value as typeof cancellationPolicy)}
+          className={inputClass}
+        >
+          <option value="flexible">Flexible — full refund 3+ days before, 50% within 3 days</option>
+          <option value="moderate">Moderate — 50% refund 5+ days before, no refund within 5 days</option>
+          <option value="strict">Strict — no refund within 7 days of trip</option>
+          <option value="custom">Custom — write your own policy</option>
+        </select>
+        {cancellationPolicy === "custom" && (
+          <textarea
+            name="cancellation_policy_custom"
+            required
+            rows={3}
+            className={`${inputClass} mt-3 resize-none`}
+            placeholder="Describe your cancellation and refund terms…"
+          />
         )}
       </div>
 

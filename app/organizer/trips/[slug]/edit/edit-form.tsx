@@ -25,6 +25,8 @@ type TripForEdit = {
   photos: string[] | null;
   payment_type: string | null;
   min_downpayment: number | null;
+  cancellation_policy: string | null;
+  cancellation_policy_custom: string | null;
 };
 
 export function EditTripForm({ trip }: { trip: TripForEdit }) {
@@ -33,6 +35,9 @@ export function EditTripForm({ trip }: { trip: TripForEdit }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [paymentType, setPaymentType] = useState<"full" | "downpayment">(
     trip.payment_type === "downpayment" ? "downpayment" : "full",
+  );
+  const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict" | "custom">(
+    (trip.cancellation_policy as "flexible" | "moderate" | "strict" | "custom") ?? "flexible",
   );
   const [previewUrl, setPreviewUrl] = useState<string | null>(
     trip.photos?.[0] ?? null,
@@ -318,6 +323,35 @@ export function EditTripForm({ trip }: { trip: TripForEdit }) {
               placeholder="500"
             />
           </div>
+        )}
+      </div>
+
+      {/* Cancellation policy */}
+      <div>
+        <label htmlFor="cancellation_policy" className={labelClass}>
+          Cancellation policy
+        </label>
+        <select
+          id="cancellation_policy"
+          name="cancellation_policy"
+          value={cancellationPolicy}
+          onChange={(e) => setCancellationPolicy(e.target.value as typeof cancellationPolicy)}
+          className={inputClass}
+        >
+          <option value="flexible">Flexible — full refund 3+ days before, 50% within 3 days</option>
+          <option value="moderate">Moderate — 50% refund 5+ days before, no refund within 5 days</option>
+          <option value="strict">Strict — no refund within 7 days of trip</option>
+          <option value="custom">Custom — write your own policy</option>
+        </select>
+        {cancellationPolicy === "custom" && (
+          <textarea
+            name="cancellation_policy_custom"
+            required
+            rows={3}
+            defaultValue={trip.cancellation_policy_custom ?? ""}
+            className={`${inputClass} mt-3 resize-none`}
+            placeholder="Describe your cancellation and refund terms…"
+          />
         )}
       </div>
 

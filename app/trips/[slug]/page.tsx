@@ -22,6 +22,8 @@ type TripDetail = {
   organizer_id: string | null;
   payment_type: string | null;
   min_downpayment: number | null;
+  cancellation_policy: string | null;
+  cancellation_policy_custom: string | null;
 };
 
 type OrganizerInfo = {
@@ -100,6 +102,31 @@ function formatReviewDate(date: string) {
     month: "short",
     day: "numeric",
   }).format(new Date(date));
+}
+
+const CANCELLATION_POLICIES: Record<string, { label: string; color: string; text: string }> = {
+  strict:   { label: "Strict",   color: "bg-red-100 text-red-800",     text: "No refund within 7 days of the trip date. Full refund if cancelled more than 7 days before." },
+  moderate: { label: "Moderate", color: "bg-amber-100 text-amber-900", text: "50% refund if cancelled 5 or more days before the trip. No refund within 5 days of the trip date." },
+  flexible: { label: "Flexible", color: "bg-emerald-100 text-emerald-800", text: "Full refund if cancelled 3 or more days before the trip. 50% refund if cancelled within 3 days." },
+  custom:   { label: "Custom",   color: "bg-stone-100 text-stone-700", text: "" },
+};
+
+function CancellationPolicyCard({ policy, custom }: { policy: string | null; custom: string | null }) {
+  const key = policy ?? "flexible";
+  const meta = CANCELLATION_POLICIES[key] ?? CANCELLATION_POLICIES.flexible;
+  const text = key === "custom" ? (custom ?? "") : meta.text;
+  if (!text) return null;
+  return (
+    <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
+      <div className="flex items-center gap-3">
+        <h2 className="text-lg font-bold text-stone-900">Cancellation policy</h2>
+        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.color}`}>
+          {meta.label}
+        </span>
+      </div>
+      <p className="mt-3 leading-relaxed text-stone-600">{text}</p>
+    </div>
+  );
 }
 
 function parseList(text: string | null): string[] {
@@ -320,6 +347,11 @@ export default async function TripDetailPage({ params }: PageProps) {
               )}
             </div>
           )}
+
+          <CancellationPolicyCard
+            policy={tripData.cancellation_policy}
+            custom={tripData.cancellation_policy_custom}
+          />
 
           <BookingModal
             tripId={tripData.id}
