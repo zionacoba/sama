@@ -40,6 +40,8 @@ export function BookingModal({
   const [phone, setPhone] = useState("");
   const [slots, setSlots] = useState(1);
   const [notes, setNotes] = useState("");
+  const [waiverAccepted, setWaiverAccepted] = useState(false);
+  const [waiverError, setWaiverError] = useState(false);
 
   const totalAmount = unitPrice * slots;
 
@@ -71,6 +73,8 @@ export function BookingModal({
     setPhone("");
     setSlots(1);
     setNotes("");
+    setWaiverAccepted(false);
+    setWaiverError(false);
     setError(null);
     setSuccess(false);
   }
@@ -90,6 +94,10 @@ export function BookingModal({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!waiverAccepted) {
+      setWaiverError(true);
+      return;
+    }
     setError(null);
     setLoading(true);
 
@@ -304,6 +312,28 @@ export function BookingModal({
                       className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                       placeholder="Dietary needs, emergency contact, questions…"
                     />
+                  </div>
+
+                  <div>
+                    <label className="flex cursor-pointer items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={waiverAccepted}
+                        onChange={(e) => {
+                          setWaiverAccepted(e.target.checked);
+                          if (e.target.checked) setWaiverError(false);
+                        }}
+                        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      />
+                      <span className="text-xs leading-relaxed text-stone-600">
+                        I understand that outdoor activities involve physical risks including injury. I confirm that I am physically fit for this activity, will follow the organizer&apos;s instructions, and release Sama and the trip organizer from liability for accidents caused by my own negligence or the inherent risks of outdoor adventure.
+                      </span>
+                    </label>
+                    {waiverError && (
+                      <p role="alert" className="mt-1.5 text-xs text-red-600">
+                        You must accept the waiver before confirming your booking.
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
