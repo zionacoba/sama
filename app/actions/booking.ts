@@ -25,8 +25,6 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     .eq("id", bookingId)
     .maybeSingle();
 
-  console.log("[updateBookingStatus] bookingId:", bookingId, "| booking:", booking);
-
   if (!booking) return { error: "Booking not found." };
 
   const { data: trip } = await supabase
@@ -34,8 +32,6 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     .select("id, organizer_id")
     .eq("id", booking.trip_id)
     .maybeSingle();
-
-  console.log("[updateBookingStatus] trip.organizer_id:", trip?.organizer_id, "| organizer.id:", organizer.id);
 
   if (!trip || trip.organizer_id?.toString().trim() !== organizer.id?.toString().trim()) {
     return { error: "You don't have permission to manage this booking." };
