@@ -76,7 +76,7 @@ export async function createBooking(input: CreateBookingInput) {
           day: "numeric",
         }).format(new Date(trip.date_start));
 
-        console.log("[createBooking] sending email to:", organizerEmail);
+        console.log("[createBooking] sending organizer email to:", organizerEmail);
         const { data: emailData, error: emailError } = await resend.emails.send({
           from: "Sama <onboarding@resend.dev>",
           to: organizerEmail,
@@ -93,8 +93,37 @@ export async function createBooking(input: CreateBookingInput) {
             <p>— The Sama Team</p>
           `,
         });
-        console.log("[createBooking] email result:", emailData, emailError);
+        console.log("[createBooking] organizer email result:", emailData, emailError);
       }
+    }
+
+    // Send confirmation email to booker
+    if (trip) {
+      const tripDate = new Intl.DateTimeFormat("en-PH", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }).format(new Date(trip.date_start));
+
+      console.log("[createBooking] sending booker confirmation to:", input.email);
+      const { data: bookerEmailData, error: bookerEmailError } = await resend.emails.send({
+        from: "Sama <onboarding@resend.dev>",
+        to: input.email,
+        subject: `Booking received — ${trip.title}`,
+        html: `
+          <p>Hi ${input.fullName},</p>
+          <p>We've received your booking request. Here's a summary:</p>
+          <ul>
+            <li><strong>Trip:</strong> ${trip.title}</li>
+            <li><strong>Date:</strong> ${tripDate}</li>
+            <li><strong>Slots booked:</strong> ${input.slots}</li>
+          </ul>
+          <p>The organizer will review your request and be in touch to confirm. You can track your bookings at <a href="https://sama.ph/dashboard/bookings">sama.ph/dashboard/bookings</a>.</p>
+          <p>— The Sama Team</p>
+        `,
+      });
+      console.log("[createBooking] booker email result:", bookerEmailData, bookerEmailError);
     }
   } catch (err) {
     console.log("[createBooking] email error (non-fatal):", err);
