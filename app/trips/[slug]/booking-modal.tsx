@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
 type BookingModalProps = {
@@ -32,7 +33,7 @@ export function BookingModal({
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(false);
+  const sessionRef = useRef<Session | null>(null);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -41,6 +42,12 @@ export function BookingModal({
   const [notes, setNotes] = useState("");
 
   const totalAmount = unitPrice * slots;
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      sessionRef.current = session;
+    });
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -73,21 +80,11 @@ export function BookingModal({
     resetForm();
   }
 
-  async function handleBookClick() {
-    setCheckingAuth(true);
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    setCheckingAuth(false);
-
-    if (!session) {
-      const redirectTo = encodeURIComponent(`/trips/${tripSlug}`);
-      router.push(`/login?redirectTo=${redirectTo}`);
+  function handleBookClick() {
+    if (!sessionRef.current) {
+      router.push(`/login?redirectTo=${encodeURIComponent(`/trips/${tripSlug}`)}`);
       return;
     }
-
     setOpen(true);
   }
 
@@ -131,10 +128,9 @@ export function BookingModal({
         <button
           type="button"
           onClick={handleBookClick}
-          disabled={checkingAuth}
-          className="mt-10 w-full rounded-xl bg-trailhead px-6 py-4 text-base font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[240px]"
+          className="mt-10 w-full rounded-xl bg-trailhead px-6 py-4 text-base font-semibold text-white shadow-md transition hover:bg-trailhead-dark sm:w-auto sm:min-w-[240px]"
         >
-          {checkingAuth ? "Checking…" : "Book This Trip"}
+          Book This Trip
         </button>
       )}
 
