@@ -63,7 +63,7 @@ export async function createBooking(input: CreateBookingInput) {
           }).format(new Date(trip.date_start));
 
           await resend.emails.send({
-            from: "Sama <notifications@sama.ph>",
+            from: "Sama <onboarding@resend.dev>",
             to: organizerEmail,
             subject: `New booking for ${trip.title}`,
             html: `
