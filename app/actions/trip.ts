@@ -66,7 +66,6 @@ export async function createTrip(
     slug,
     activity_type,
     destination,
-    location: destination,
     difficulty,
     date_start,
     price,
