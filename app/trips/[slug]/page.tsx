@@ -193,6 +193,7 @@ export default async function TripDetailPage({ params }: PageProps) {
             tripSlug={slug}
             tripTitle={tripData.title}
             unitPrice={getUnitPrice(tripData.price)}
+            remainingSlots={tripData.remaining_slots}
           />
         </section>
       </main>

@@ -9,6 +9,7 @@ type BookingModalProps = {
   tripSlug: string;
   tripTitle: string;
   unitPrice: number;
+  remainingSlots: number;
 };
 
 function formatCurrency(amount: number) {
@@ -24,6 +25,7 @@ export function BookingModal({
   tripSlug,
   tripTitle,
   unitPrice,
+  remainingSlots,
 }: BookingModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -117,14 +119,24 @@ export function BookingModal({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleBookClick}
-        disabled={checkingAuth}
-        className="mt-10 w-full rounded-xl bg-trailhead px-6 py-4 text-base font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[240px]"
-      >
-        {checkingAuth ? "Checking…" : "Book This Trip"}
-      </button>
+      {remainingSlots === 0 ? (
+        <button
+          type="button"
+          disabled
+          className="mt-10 w-full cursor-not-allowed rounded-xl bg-stone-200 px-6 py-4 text-base font-semibold text-stone-500 sm:w-auto sm:min-w-[240px]"
+        >
+          Sold Out
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={handleBookClick}
+          disabled={checkingAuth}
+          className="mt-10 w-full rounded-xl bg-trailhead px-6 py-4 text-base font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[240px]"
+        >
+          {checkingAuth ? "Checking…" : "Book This Trip"}
+        </button>
+      )}
 
       {open && (
         <div
@@ -268,11 +280,11 @@ export function BookingModal({
                       type="number"
                       required
                       min={1}
-                      max={5}
+                      max={remainingSlots}
                       value={slots}
                       onChange={(e) =>
                         setSlots(
-                          Math.min(5, Math.max(1, Number(e.target.value) || 1))
+                          Math.min(remainingSlots, Math.max(1, Number(e.target.value) || 1))
                         )
                       }
                       className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
