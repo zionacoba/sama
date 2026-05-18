@@ -16,32 +16,18 @@ type Trip = {
   slug: string;
   title: string;
   price: string | number;
-  location: string;
+  destination: string;
   difficulty: "Beginner" | "Intermediate";
-  rating: number;
-  reviews: number;
   photos: string[] | null;
 };
 
-function StarRow({ rating }: { rating: number }) {
-  const filled = Math.round(rating);
-  return (
-    <div
-      className="flex items-center gap-0.5"
-      aria-label={`${rating} out of 5 stars`}
-    >
-      {Array.from({ length: 5 }, (_, i) => (
-        <span
-          key={i}
-          className={`text-base leading-none ${
-            i < filled ? "text-amber-500" : "text-stone-300"
-          }`}
-        >
-          ★
-        </span>
-      ))}
-    </div>
-  );
+function formatPrice(price: string | number) {
+  if (typeof price === "string") return price;
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    maximumFractionDigits: 0,
+  }).format(price);
 }
 
 function DifficultyBadge({ level }: { level: "Beginner" | "Intermediate" }) {
@@ -163,22 +149,11 @@ export default async function Home() {
                       </h3>
                       <DifficultyBadge level={trip.difficulty} />
                     </div>
-                    <p className="text-sm text-stone-500">{trip.location}</p>
-                    <div className="mt-auto flex items-center justify-between gap-2 border-t border-stone-100 pt-3">
+                    <p className="text-sm text-stone-500">{trip.destination}</p>
+                    <div className="mt-auto border-t border-stone-100 pt-3">
                       <p className="text-lg font-bold text-trailhead">
-                        {trip.price}
+                        {formatPrice(trip.price)}
                       </p>
-                      <div className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <StarRow rating={trip.rating} />
-                          <span className="text-sm font-semibold text-stone-800">
-                            {trip.rating}
-                          </span>
-                        </div>
-                        <p className="text-xs text-stone-500">
-                          {trip.reviews} reviews
-                        </p>
-                      </div>
                     </div>
                   </div>
                 </article>
