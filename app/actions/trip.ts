@@ -107,20 +107,27 @@ export async function updateTrip(
 
   if (!organizer || organizer.status !== "approved") redirect("/organizer/apply");
 
-  const tripId = parseInt(formData.get("trip_id") as string, 10);
+  console.log("[updateTrip] auth user.id =", user.id, "| organizer.id =", organizer.id);
 
-  const { data: existing } = await supabase
+  const rawTripId = formData.get("trip_id");
+  const tripId = parseInt(rawTripId as string, 10);
+  console.log("[updateTrip] raw trip_id from form =", rawTripId, "| parsed =", tripId);
+
+  const { data: existing, error: fetchError } = await supabase
     .from("trips")
     .select("id, organizer_id, total_slots, remaining_slots")
     .eq("id", tripId)
     .maybeSingle();
 
-  if (!existing || Number(existing.organizer_id) !== Number(organizer.id)) {
-    console.error("[updateTrip] ownership check failed", {
-      tripId,
-      existingOrganizerId: existing?.organizer_id,
-      organizerId: organizer.id,
-    });
+  console.log("[updateTrip] existing trip =", existing, "| fetchError =", fetchError);
+
+  if (!existing) {
+    console.error("[updateTrip] trip not found for id", tripId);
+    return { error: "Trip not found or you don't have permission to edit it." };
+  }
+
+  if (Number(existing.organizer_id) !== Number(organizer.id)) {
+    console.error("[updateTrip] organizer mismatch — trip.organizer_id =", existing.organizer_id, "| organizer.id =", organizer.id);
     return { error: "Trip not found or you don't have permission to edit it." };
   }
 
