@@ -76,8 +76,6 @@ export async function createTrip(
     includes: includes || null,
     what_to_bring: what_to_bring || null,
     status: "active",
-    rating: 0,
-    reviews: 0,
     organizer_id: organizer.id,
   });
 
