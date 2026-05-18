@@ -150,13 +150,12 @@ export default async function TripDetailPage({ params }: PageProps) {
 
   const tripData = trip as TripDetail;
 
-  // Parallel fetches after trip is confirmed
-  const queries: [
-    Promise<{ data: unknown }>,
-    Promise<{ data: unknown }>,
-    Promise<{ data: unknown }>,
-    Promise<{ data: unknown }>,
-  ] = [
+  const [
+    { data: reviewsData },
+    { data: organizerData },
+    { data: bookingData },
+    { data: existingReview },
+  ] = await Promise.all([
     supabase.from("reviews").select("id, full_name, rating, body, created_at").eq("trip_id", tripData.id).order("created_at", { ascending: false }),
     tripData.organizer_id
       ? supabase.from("organizers").select("full_name, bio").eq("id", tripData.organizer_id).maybeSingle()
@@ -167,14 +166,7 @@ export default async function TripDetailPage({ params }: PageProps) {
     user
       ? supabase.from("reviews").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).maybeSingle()
       : Promise.resolve({ data: null }),
-  ];
-
-  const [
-    { data: reviewsData },
-    { data: organizerData },
-    { data: bookingData },
-    { data: existingReview },
-  ] = await Promise.all(queries);
+  ]);
 
   const reviews = (reviewsData ?? []) as Review[];
   const organizer = organizerData as OrganizerInfo | null;
