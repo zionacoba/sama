@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { BookingActions } from "./booking-actions";
 
 type OrganizerTrip = {
   id: string | number;
@@ -258,7 +259,7 @@ export default async function OrganizerDashboardPage() {
 
           <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] text-left text-sm">
+              <table className="w-full min-w-[960px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-trailhead/20 bg-trailhead text-white">
                     <th className="px-4 py-3 font-semibold">Joiner name</th>
@@ -269,12 +270,13 @@ export default async function OrganizerDashboardPage() {
                     <th className="px-4 py-3 font-semibold">Total</th>
                     <th className="px-4 py-3 font-semibold">Status</th>
                     <th className="px-4 py-3 font-semibold">Date booked</th>
+                    <th className="px-4 py-3 font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {bookings.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center text-stone-500">
+                      <td colSpan={9} className="px-4 py-12 text-center text-stone-500">
                         No bookings yet.
                       </td>
                     </tr>
@@ -301,9 +303,11 @@ export default async function OrganizerDashboardPage() {
                             className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
                               booking.status === "confirmed"
                                 ? "bg-emerald-100 text-emerald-800"
-                                : booking.status === "cancelled"
+                                : booking.status === "rejected"
                                   ? "bg-red-100 text-red-800"
-                                  : "bg-amber-100 text-amber-900"
+                                  : booking.status === "cancelled"
+                                    ? "bg-stone-100 text-stone-600"
+                                    : "bg-amber-100 text-amber-900"
                             }`}
                           >
                             {booking.status}
@@ -311,6 +315,11 @@ export default async function OrganizerDashboardPage() {
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-stone-600">
                           {formatDateTime(booking.created_at)}
+                        </td>
+                        <td className="px-4 py-3">
+                          {booking.status === "pending" && (
+                            <BookingActions bookingId={Number(booking.id)} />
+                          )}
                         </td>
                       </tr>
                     ))
