@@ -29,7 +29,7 @@ export default async function EditTripPage({ params }: PageProps) {
   const { data: trip } = await supabase
     .from("trips")
     .select(
-      "id, title, activity_type, difficulty, destination, date_start, price, total_slots, meeting_point, description, includes, what_to_bring, photos",
+      "id, title, activity_type, difficulty, destination, date_start, price, total_slots, meeting_point, description, includes, what_to_bring, photos, payment_type, min_downpayment",
     )
     .eq("slug", slug)
     .eq("organizer_id", organizer.id)

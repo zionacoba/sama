@@ -13,6 +13,7 @@ export function TripForm() {
   const [state, action] = useActionState(createTrip, null);
   const [isPending, startTransition] = useTransition();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [paymentType, setPaymentType] = useState<"full" | "downpayment">("full");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -236,6 +237,42 @@ export function TripForm() {
           className={`${inputClass} mt-1.5 resize-none`}
           placeholder={"Sleeping bag\nRain jacket\nHeadlamp\nExtra clothes"}
         />
+      </div>
+
+      {/* Payment options */}
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div>
+          <label htmlFor="payment_type" className={labelClass}>
+            Payment type
+          </label>
+          <select
+            id="payment_type"
+            name="payment_type"
+            value={paymentType}
+            onChange={(e) => setPaymentType(e.target.value as "full" | "downpayment")}
+            className={inputClass}
+          >
+            <option value="full">Full payment only</option>
+            <option value="downpayment">Downpayment available</option>
+          </select>
+        </div>
+        {paymentType === "downpayment" && (
+          <div>
+            <label htmlFor="min_downpayment" className={labelClass}>
+              Minimum downpayment (PHP)
+            </label>
+            <input
+              id="min_downpayment"
+              name="min_downpayment"
+              type="number"
+              min="0"
+              step="1"
+              required
+              className={inputClass}
+              placeholder="500"
+            />
+          </div>
+        )}
       </div>
 
       {/* Photo upload */}

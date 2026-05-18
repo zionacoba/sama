@@ -12,6 +12,8 @@ type BookingModalProps = {
   tripTitle: string;
   unitPrice: number;
   remainingSlots: number;
+  paymentType: string;
+  minDownpayment: number | null;
 };
 
 function formatCurrency(amount: number) {
@@ -28,6 +30,8 @@ export function BookingModal({
   tripTitle,
   unitPrice,
   remainingSlots,
+  paymentType,
+  minDownpayment,
 }: BookingModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -44,8 +48,11 @@ export function BookingModal({
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [waiverError, setWaiverError] = useState(false);
   const [bookingStatus, setBookingStatus] = useState<"confirmed" | "pending" | null>(null);
+  const [paymentOption, setPaymentOption] = useState<"full" | "downpayment">("full");
 
+  const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
   const totalAmount = unitPrice * slots;
+  const amountDue = paymentOption === "downpayment" && hasDownpayment ? minDownpayment : totalAmount;
 
   function applySession(session: Session | null) {
     sessionRef.current = session;
@@ -95,6 +102,7 @@ export function BookingModal({
     setError(null);
     setSuccess(false);
     setBookingStatus(null);
+    setPaymentOption("full");
   }
 
   function handleClose() {
@@ -127,6 +135,8 @@ export function BookingModal({
       slots,
       totalAmount,
       notes: notes.trim() || null,
+      paymentOption,
+      amountDue,
     });
 
     setLoading(false);
@@ -226,7 +236,10 @@ export function BookingModal({
                       {tripTitle}
                     </p>
                     <p className="mt-1 text-lg font-bold text-trailhead">
-                      Total: {formatCurrency(totalAmount)}
+                      {paymentOption === "downpayment" && hasDownpayment
+                        ? <>Due now: {formatCurrency(amountDue)} <span className="text-sm font-normal text-stone-500">(downpayment)</span></>
+                        : <>Total: {formatCurrency(totalAmount)}</>
+                      }
                     </p>
                     <p className="text-xs text-stone-500">
                       {formatCurrency(unitPrice)} × {slots} slot
@@ -316,6 +329,38 @@ export function BookingModal({
                       className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
                   </div>
+
+                  {hasDownpayment && (
+                    <div>
+                      <p className="block text-sm font-medium text-stone-700">Payment option</p>
+                      <div className="mt-1.5 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentOption("full")}
+                          className={`rounded-xl border px-4 py-2.5 text-left text-sm transition ${
+                            paymentOption === "full"
+                              ? "border-trailhead bg-trailhead-muted font-semibold text-trailhead"
+                              : "border-stone-200 bg-white text-stone-700 hover:border-trailhead"
+                          }`}
+                        >
+                          <span className="block font-medium">Pay in full</span>
+                          <span className="block text-xs opacity-75">{formatCurrency(totalAmount)}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentOption("downpayment")}
+                          className={`rounded-xl border px-4 py-2.5 text-left text-sm transition ${
+                            paymentOption === "downpayment"
+                              ? "border-trailhead bg-trailhead-muted font-semibold text-trailhead"
+                              : "border-stone-200 bg-white text-stone-700 hover:border-trailhead"
+                          }`}
+                        >
+                          <span className="block font-medium">Pay downpayment</span>
+                          <span className="block text-xs opacity-75">{formatCurrency(minDownpayment!)} minimum</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <label

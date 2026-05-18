@@ -20,6 +20,8 @@ type TripDetail = {
   includes: string | null;
   what_to_bring: string | null;
   organizer_id: string | null;
+  payment_type: string | null;
+  min_downpayment: number | null;
 };
 
 type OrganizerInfo = {
@@ -325,6 +327,8 @@ export default async function TripDetailPage({ params }: PageProps) {
             tripTitle={tripData.title}
             unitPrice={getUnitPrice(tripData.price)}
             remainingSlots={tripData.remaining_slots}
+            paymentType={tripData.payment_type ?? "full"}
+            minDownpayment={tripData.min_downpayment ?? null}
           />
 
           {/* Reviews */}

@@ -13,6 +13,8 @@ type CreateBookingInput = {
   slots: number;
   totalAmount: number;
   notes: string | null;
+  paymentOption: "full" | "downpayment";
+  amountDue: number;
 };
 
 export async function createBooking(input: CreateBookingInput) {
@@ -45,6 +47,8 @@ export async function createBooking(input: CreateBookingInput) {
     total_amount: input.totalAmount,
     status: bookingStatus,
     notes: input.notes,
+    payment_option: input.paymentOption,
+    amount_due: input.amountDue,
   });
 
   if (insertError) {

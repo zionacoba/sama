@@ -45,6 +45,11 @@ export async function createTrip(
   const includes = (formData.get("includes") as string)?.trim();
   const what_to_bring = (formData.get("what_to_bring") as string)?.trim();
   const photo_url = (formData.get("photo_url") as string)?.trim();
+  const payment_type = (formData.get("payment_type") as string) || "full";
+  const min_downpayment_raw = formData.get("min_downpayment") as string;
+  const min_downpayment = payment_type === "downpayment" && min_downpayment_raw
+    ? parseFloat(min_downpayment_raw)
+    : null;
 
   if (
     !title ||
@@ -58,6 +63,10 @@ export async function createTrip(
     !description
   ) {
     return { error: "Please fill in all required fields." };
+  }
+
+  if (payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
+    return { error: "Please enter a minimum downpayment amount." };
   }
 
   const slug = `${slugify(title)}-${Date.now().toString(36)}`;
@@ -79,6 +88,8 @@ export async function createTrip(
     photos: photo_url ? [photo_url] : [],
     status: "active",
     organizer_id: organizer.id,
+    payment_type,
+    min_downpayment,
   });
 
   if (error) {
@@ -136,6 +147,11 @@ export async function updateTrip(
   const includes = (formData.get("includes") as string)?.trim();
   const what_to_bring = (formData.get("what_to_bring") as string)?.trim();
   const photo_url = (formData.get("photo_url") as string)?.trim();
+  const payment_type = (formData.get("payment_type") as string) || "full";
+  const min_downpayment_raw = formData.get("min_downpayment") as string;
+  const min_downpayment = payment_type === "downpayment" && min_downpayment_raw
+    ? parseFloat(min_downpayment_raw)
+    : null;
 
   if (
     !title ||
@@ -149,6 +165,10 @@ export async function updateTrip(
     !description
   ) {
     return { error: "Please fill in all required fields." };
+  }
+
+  if (payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
+    return { error: "Please enter a minimum downpayment amount." };
   }
 
   const slotDiff = total_slots - existing.total_slots;
@@ -170,6 +190,8 @@ export async function updateTrip(
       includes: includes || null,
       what_to_bring: what_to_bring || null,
       photos: photo_url ? [photo_url] : [],
+      payment_type,
+      min_downpayment,
     })
     .eq("id", tripId);
 
