@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
 const navLinks = [
@@ -21,26 +22,18 @@ function AuthSection({ className }: { className?: string }) {
 
   useEffect(() => {
     async function fetchOrganizerStatus(userId: string) {
-      console.log("[navbar] fetchOrganizerStatus called, userId:", userId);
       try {
-        // null = timeout sentinel; Supabase always returns { data, error }
-        const result = await Promise.race([
-          supabase
-            .from("organizers")
-            .select("status")
-            .eq("user_id", userId)
-            .maybeSingle(),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
-        ]);
-
-        if (result === null) {
-          console.log("[navbar] fetchOrganizerStatus timed out");
-          setOrganizerStatus(null);
-          return;
-        }
-
-        console.log("[navbar] fetchOrganizerStatus result:", JSON.stringify(result));
-        setOrganizerStatus(result.data?.status ?? null);
+        const client = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        );
+        const { data, error } = await client
+          .from("organizers")
+          .select("status")
+          .eq("user_id", userId)
+          .maybeSingle();
+        console.log("[navbar] fetchOrganizerStatus data:", data, "error:", error);
+        setOrganizerStatus(data?.status ?? null);
       } catch (err) {
         console.error("[navbar] fetchOrganizerStatus threw:", err);
         setOrganizerStatus(null);
