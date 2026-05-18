@@ -68,12 +68,22 @@ export default async function OrganizerDashboardPage() {
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-          <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
-            Welcome back, {organizer.full_name}! 👋
-          </h1>
-          <p className="mt-2 text-stone-600">
-            Your organizer dashboard is ready. Trip management is coming soon.
-          </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+                Welcome back, {organizer.full_name}! 👋
+              </h1>
+              <p className="mt-2 text-stone-600">
+                Manage your trips and track your bookings from here.
+              </p>
+            </div>
+            <Link
+              href="/organizer/trips/new"
+              className="shrink-0 rounded-xl bg-trailhead px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
+            >
+              + Create new trip
+            </Link>
+          </div>
         </div>
       </main>
     </div>
