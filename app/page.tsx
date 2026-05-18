@@ -17,7 +17,7 @@ type Trip = {
   title: string;
   price: string | number;
   destination: string;
-  difficulty: "Beginner" | "Intermediate";
+  difficulty: string;
   photos: string[] | null;
 };
 
@@ -30,15 +30,16 @@ function formatPrice(price: string | number) {
   }).format(price);
 }
 
-function DifficultyBadge({ level }: { level: "Beginner" | "Intermediate" }) {
-  const isBeginner = level === "Beginner";
+function DifficultyBadge({ level }: { level: string }) {
+  const colorClass =
+    level === "Beginner"
+      ? "bg-emerald-100 text-emerald-800"
+      : level === "Intermediate"
+        ? "bg-amber-100 text-amber-900"
+        : "bg-red-100 text-red-800";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-        isBeginner
-          ? "bg-emerald-100 text-emerald-800"
-          : "bg-amber-100 text-amber-900"
-      }`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${colorClass}`}
     >
       {level}
     </span>
@@ -46,10 +47,12 @@ function DifficultyBadge({ level }: { level: "Beginner" | "Intermediate" }) {
 }
 
 export default async function Home() {
-  const { data, error } = await supabase
-  .from("trips")
-  .select("*")
-  .eq("status", "active");
+  const { data } = await supabase
+    .from("trips")
+    .select("id, slug, title, price, destination, difficulty, photos")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(4);
 
   const trips = (data ?? []) as Trip[];
 
