@@ -70,6 +70,12 @@ function AuthSection({ className }: { className?: string }) {
         <span className="max-w-[120px] truncate text-sm text-stone-600 sm:max-w-[200px]">
           {user.email}
         </span>
+        <Link
+          href="/dashboard/bookings"
+          className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
+        >
+          My Bookings
+        </Link>
         {!hasOrganizerRow && (
           <Link
             href="/organizer/apply"
