@@ -20,11 +20,12 @@ function AuthSection({ className }: { className?: string }) {
   const [organizerStatus, setOrganizerStatus] = useState<string | null | undefined>(undefined);
 
   async function loadOrganizerStatus(userId: string) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("organizers")
       .select("status")
       .eq("user_id", userId)
       .maybeSingle();
+    console.log("[loadOrganizerStatus] userId:", userId, "| data:", data, "| error:", error);
     setOrganizerStatus(data?.status ?? null);
   }
 
