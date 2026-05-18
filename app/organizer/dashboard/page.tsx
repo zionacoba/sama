@@ -2,6 +2,35 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
+type OrganizerTrip = {
+  id: string | number;
+  slug: string;
+  title: string;
+  activity_type: string | null;
+  date_start: string;
+  price: number;
+  total_slots: number;
+  remaining_slots: number;
+  status: string;
+  bookings: { count: number }[];
+};
+
+function formatPrice(price: number) {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    maximumFractionDigits: 0,
+  }).format(price);
+}
+
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(date));
+}
+
 export default async function OrganizerDashboardPage() {
   const supabase = await createSupabaseServerClient();
   const {
@@ -12,7 +41,7 @@ export default async function OrganizerDashboardPage() {
 
   const { data: organizer } = await supabase
     .from("organizers")
-    .select("full_name, status")
+    .select("id, full_name, status")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -43,6 +72,14 @@ export default async function OrganizerDashboardPage() {
       </div>
     );
   }
+
+  const { data: tripsData } = await supabase
+    .from("trips")
+    .select("id, slug, title, activity_type, date_start, price, total_slots, remaining_slots, status, bookings(count)")
+    .eq("organizer_id", organizer.id)
+    .order("created_at", { ascending: false });
+
+  const trips = (tripsData ?? []) as OrganizerTrip[];
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -84,6 +121,100 @@ export default async function OrganizerDashboardPage() {
               + Create new trip
             </Link>
           </div>
+        </div>
+
+        <div className="mt-8">
+          <h2 className="mb-4 text-xl font-bold tracking-tight text-stone-900">
+            Your trips
+          </h2>
+
+          <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-trailhead/20 bg-trailhead text-white">
+                    <th className="px-4 py-3 font-semibold">Title</th>
+                    <th className="px-4 py-3 font-semibold">Activity</th>
+                    <th className="px-4 py-3 font-semibold">Date</th>
+                    <th className="px-4 py-3 font-semibold">Price</th>
+                    <th className="px-4 py-3 font-semibold">Slots left</th>
+                    <th className="px-4 py-3 font-semibold">Bookings</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trips.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-12 text-center text-stone-500">
+                        No trips yet.{" "}
+                        <Link href="/organizer/trips/new" className="font-semibold text-trailhead underline-offset-4 hover:underline">
+                          Create your first trip →
+                        </Link>
+                      </td>
+                    </tr>
+                  ) : (
+                    trips.map((trip) => (
+                      <tr
+                        key={trip.id}
+                        className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30"
+                      >
+                        <td className="px-4 py-3 font-medium text-stone-900">
+                          <Link
+                            href={`/trips/${trip.slug}`}
+                            className="hover:text-trailhead hover:underline underline-offset-4"
+                          >
+                            {trip.title}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-stone-600">
+                          {trip.activity_type ?? "—"}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">
+                          {formatDate(trip.date_start)}
+                        </td>
+                        <td className="px-4 py-3 font-medium text-trailhead">
+                          {formatPrice(trip.price)}
+                        </td>
+                        <td className="px-4 py-3 text-stone-900">
+                          {trip.remaining_slots}{" "}
+                          <span className="text-stone-400">/ {trip.total_slots}</span>
+                        </td>
+                        <td className="px-4 py-3 text-stone-900">
+                          {trip.bookings[0]?.count ?? 0}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+                              trip.status === "active"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-stone-100 text-stone-600"
+                            }`}
+                          >
+                            {trip.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/organizer/trips/${trip.slug}/edit`}
+                            className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:border-trailhead hover:text-trailhead"
+                          >
+                            Edit
+                          </Link>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {trips.length > 0 && (
+            <p className="mt-3 text-sm text-stone-500">
+              {trips.length} trip{trips.length !== 1 ? "s" : ""} total
+            </p>
+          )}
         </div>
       </main>
     </div>
