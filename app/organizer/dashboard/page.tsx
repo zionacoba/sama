@@ -100,7 +100,7 @@ export default async function OrganizerDashboardPage() {
     .from("trips")
     .select("id, slug, title, activity_type, date_start, price, total_slots, remaining_slots, status, bookings(count)")
     .eq("organizer_id", organizer.id)
-    .order("created_at", { ascending: false });
+    .order("date_start", { ascending: true });
 
   const trips = (tripsData ?? []) as OrganizerTrip[];
 
