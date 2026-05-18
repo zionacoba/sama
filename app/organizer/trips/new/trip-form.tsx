@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import { createTrip } from "@/app/actions/trip";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2";
@@ -9,16 +10,62 @@ const inputClass =
 const labelClass = "block text-sm font-medium text-stone-700";
 
 export function TripForm() {
-  const [state, action, pending] = useActionState(createTrip, null);
+  const [state, action] = useActionState(createTrip, null);
+  const [isPending, startTransition] = useTransition();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setSelectedFile(file);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(file ? URL.createObjectURL(file) : null);
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!formRef.current) return;
+
+    setUploadError(null);
+    const formData = new FormData(formRef.current);
+
+    if (selectedFile) {
+      const ext = selectedFile.name.split(".").pop() ?? "jpg";
+      const path = `${Date.now()}.${ext}`;
+
+      const { data, error } = await supabaseBrowser.storage
+        .from("trip-photos")
+        .upload(path, selectedFile, { upsert: false });
+
+      if (error || !data) {
+        setUploadError(error?.message ?? "Image upload failed. Please try again.");
+        return;
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabaseBrowser.storage.from("trip-photos").getPublicUrl(data.path);
+
+      formData.set("photo_url", publicUrl);
+    }
+
+    startTransition(async () => {
+      await action(formData);
+    });
+  }
+
+  const errorMessage = uploadError ?? state?.error;
 
   return (
-    <form action={action} className="space-y-6">
-      {state?.error && (
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+      {errorMessage && (
         <p
           role="alert"
           className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
         >
-          {state.error}
+          {errorMessage}
         </p>
       )}
 
@@ -191,19 +238,29 @@ export function TripForm() {
         />
       </div>
 
-      {/* Photo URL */}
+      {/* Photo upload */}
       <div>
-        <label htmlFor="photo_url" className={labelClass}>
-          Photo URL{" "}
+        <label htmlFor="photo" className={labelClass}>
+          Photo{" "}
           <span className="font-normal text-stone-400">(optional)</span>
         </label>
         <input
-          id="photo_url"
-          name="photo_url"
-          type="url"
-          className={inputClass}
-          placeholder="https://images.unsplash.com/photo-..."
+          id="photo"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleFileChange}
+          className="mt-1.5 w-full cursor-pointer rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm file:mr-4 file:rounded-lg file:border-0 file:bg-trailhead file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-trailhead-dark"
         />
+        {previewUrl && (
+          <div className="mt-3 overflow-hidden rounded-xl border border-stone-200">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewUrl}
+              alt="Photo preview"
+              className="h-48 w-full object-cover"
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-end gap-4 border-t border-stone-100 pt-6">
@@ -215,10 +272,14 @@ export function TripForm() {
         </a>
         <button
           type="submit"
-          disabled={pending}
+          disabled={isPending}
           className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending ? "Creating trip…" : "Create trip"}
+          {isPending
+            ? selectedFile
+              ? "Uploading…"
+              : "Creating trip…"
+            : "Create trip"}
         </button>
       </div>
     </form>
