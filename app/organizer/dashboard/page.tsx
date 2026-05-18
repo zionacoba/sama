@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { BookingActions } from "./booking-actions";
+import { ShareButton } from "@/app/components/share-button";
 
 type OrganizerTrip = {
   id: string | number;
@@ -230,12 +231,19 @@ export default async function OrganizerDashboardPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <Link
-                            href={`/organizer/trips/${trip.slug}/edit`}
-                            className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:border-trailhead hover:text-trailhead"
-                          >
-                            Edit
-                          </Link>
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/organizer/trips/${trip.slug}/edit`}
+                              className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:border-trailhead hover:text-trailhead"
+                            >
+                              Edit
+                            </Link>
+                            <ShareButton
+                              url={`/trips/${trip.slug}`}
+                              title={trip.title}
+                              className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:border-trailhead hover:text-trailhead"
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))

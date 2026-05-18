@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { BookingModal } from "@/app/trips/[slug]/booking-modal";
 import { ReviewForm } from "@/app/trips/[slug]/review-form";
+import { ShareButton } from "@/app/components/share-button";
 
 type TripDetail = {
   id: number;
@@ -251,9 +252,16 @@ export default async function TripDetailPage({ params }: PageProps) {
                 </span>
               </div>
             )}
-            <p className="mt-4 text-2xl font-bold text-trailhead">
-              {formatPrice(tripData.price)}
-            </p>
+            <div className="mt-4 flex items-center gap-4">
+              <p className="text-2xl font-bold text-trailhead">
+                {formatPrice(tripData.price)}
+              </p>
+              <ShareButton
+                url={`/trips/${slug}`}
+                title={tripData.title}
+                className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-600 shadow-sm transition hover:border-trailhead hover:text-trailhead"
+              />
+            </div>
           </div>
         </section>
 
