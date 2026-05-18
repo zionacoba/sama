@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
 const navLinks = [
   { label: "Hike", href: "#" },

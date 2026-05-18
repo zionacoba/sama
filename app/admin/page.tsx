@@ -1,12 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { supabase } from "@/lib/supabase";
+
+const ADMIN_EMAIL = "acobapaulzion@gmail.com";
 
 type Booking = {
   id: string | number;
   full_name: string;
   email: string;
   phone: string;
-  trip_id: string | number;
+  trips: { title: string } | null;
   slots: number;
   total_amount: number;
   status: string;
@@ -50,9 +54,40 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default async function AdminPage() {
+  const authClient = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await authClient.auth.getUser();
+
+  if (!user) {
+    redirect("/login?redirectTo=/admin");
+  }
+
+  if (user.email !== ADMIN_EMAIL) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-stone-50 font-sans">
+        <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-8 text-center shadow-sm">
+          <p className="text-4xl">🚫</p>
+          <h1 className="mt-4 text-xl font-bold text-stone-900">
+            Access denied
+          </h1>
+          <p className="mt-2 text-sm text-stone-600">
+            You don&apos;t have permission to view this page.
+          </p>
+          <Link
+            href="/"
+            className="mt-6 inline-block rounded-xl bg-trailhead px-5 py-2.5 text-sm font-semibold text-white hover:bg-trailhead-dark"
+          >
+            Back to site
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const { data, error } = await supabase
     .from("bookings")
-    .select("*")
+    .select("*, trips(title)")
     .order("created_at", { ascending: false });
 
   const bookings = (data ?? []) as Booking[];
@@ -107,7 +142,7 @@ export default async function AdminPage() {
                   <th className="px-4 py-3 font-semibold">Full name</th>
                   <th className="px-4 py-3 font-semibold">Email</th>
                   <th className="px-4 py-3 font-semibold">Phone</th>
-                  <th className="px-4 py-3 font-semibold">Trip ID</th>
+                  <th className="px-4 py-3 font-semibold">Trip</th>
                   <th className="px-4 py-3 font-semibold">Slots</th>
                   <th className="px-4 py-3 font-semibold">Total amount</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
@@ -142,8 +177,8 @@ export default async function AdminPage() {
                       <td className="px-4 py-3 text-stone-600">
                         {booking.phone}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-stone-600">
-                        {booking.trip_id}
+                      <td className="px-4 py-3 text-stone-900">
+                        {booking.trips?.title ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-stone-900">
                         {booking.slots}
