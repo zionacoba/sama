@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Navbar } from "@/app/components/navbar";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 const filterChips = [
   "Hiking",
@@ -47,6 +47,7 @@ function DifficultyBadge({ level }: { level: string }) {
 }
 
 export default async function Home() {
+  const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("trips")
     .select("id, slug, title, price, destination, difficulty, photos")
