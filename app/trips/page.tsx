@@ -104,16 +104,40 @@ export default async function TripsPage({ searchParams }: PageProps) {
             <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
               Browse trips
             </h1>
-            {search && (
-              <p className="mt-1 text-sm font-medium text-trailhead">
-                Searching for: &ldquo;{search}&rdquo;{" "}
-                <Link href="/trips" className="ml-1 text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline">
-                  Clear
-                </Link>
-              </p>
-            )}
-            <p className="mt-1 text-stone-600">
+
+            <form action="/trips" method="GET" className="mt-4 flex gap-2">
+              {activity && <input type="hidden" name="activity" value={activity} />}
+              {difficulty && <input type="hidden" name="difficulty" value={difficulty} />}
+              <div className="relative flex-1">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden>
+                  🔍
+                </span>
+                <input
+                  name="search"
+                  type="search"
+                  defaultValue={search ?? ""}
+                  placeholder="Search destination, activity…"
+                  className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-900 shadow-sm outline-none placeholder:text-stone-400 focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                />
+              </div>
+              <button
+                type="submit"
+                className="shrink-0 rounded-xl bg-trailhead px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark"
+              >
+                Search
+              </button>
+            </form>
+
+            <p className="mt-3 text-sm text-stone-600">
               {trips.length} trip{trips.length !== 1 ? "s" : ""} found
+              {search && (
+                <>
+                  {" "}for &ldquo;{search}&rdquo;
+                  <Link href={filterUrl({ activity, difficulty }, "activity", currentActivity)} className="ml-2 text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline">
+                    Clear search
+                  </Link>
+                </>
+              )}
             </p>
 
             <div className="mt-6 space-y-3">
