@@ -16,6 +16,7 @@ type CreateBookingInput = {
 };
 
 export async function createBooking(input: CreateBookingInput) {
+  console.log("[createBooking] called for tripId:", input.tripId, "by:", input.email);
   const supabase = await createSupabaseServerClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -32,7 +33,12 @@ export async function createBooking(input: CreateBookingInput) {
     notes: input.notes,
   });
 
-  if (insertError) return { error: insertError.message };
+  if (insertError) {
+    console.log("[createBooking] insert error:", insertError.message);
+    return { error: insertError.message };
+  }
+
+  console.log("[createBooking] booking inserted successfully");
 
   // Send notification email to organizer (best-effort — don't fail the booking if email fails)
   try {
@@ -42,6 +48,8 @@ export async function createBooking(input: CreateBookingInput) {
       .eq("id", input.tripId)
       .maybeSingle();
 
+    console.log("[createBooking] trip fetched:", trip?.title, "organizer_id:", trip?.organizer_id);
+
     if (trip?.organizer_id) {
       const { data: organizer } = await supabase
         .from("organizers")
@@ -49,11 +57,15 @@ export async function createBooking(input: CreateBookingInput) {
         .eq("id", trip.organizer_id)
         .maybeSingle();
 
+      console.log("[createBooking] organizer user_id:", organizer?.user_id);
+
       if (organizer?.user_id) {
         const admin = createSupabaseAdminClient();
         const { data: { user: organizerUser } } = await admin.auth.admin.getUserById(organizer.user_id);
 
         const organizerEmail = organizerUser?.email;
+        console.log("[createBooking] organizer email:", organizerEmail);
+
         if (organizerEmail) {
           const tripDate = new Intl.DateTimeFormat("en-PH", {
             weekday: "long",
@@ -62,7 +74,8 @@ export async function createBooking(input: CreateBookingInput) {
             day: "numeric",
           }).format(new Date(trip.date_start));
 
-          await resend.emails.send({
+          console.log("[createBooking] sending email to:", organizerEmail);
+          const { data: emailData, error: emailError } = await resend.emails.send({
             from: "Sama <onboarding@resend.dev>",
             to: organizerEmail,
             subject: `New booking for ${trip.title}`,
@@ -78,11 +91,12 @@ export async function createBooking(input: CreateBookingInput) {
               <p>— The Sama Team</p>
             `,
           });
+          console.log("[createBooking] email result:", emailData, emailError);
         }
       }
     }
-  } catch {
-    // Email failure is non-fatal
+  } catch (err) {
+    console.log("[createBooking] email error (non-fatal):", err);
   }
 
   revalidatePath(`/trips/${input.tripId}`);
