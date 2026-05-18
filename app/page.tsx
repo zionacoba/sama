@@ -52,7 +52,8 @@ export default async function Home() {
     .from("trips")
     .select("id, slug, title, price, destination, difficulty, photos")
     .eq("status", "active")
-    .order("created_at", { ascending: false })
+    .gt("date_start", new Date().toISOString())
+    .order("date_start", { ascending: true })
     .limit(4);
 
   const trips = (data ?? []) as Trip[];

@@ -67,7 +67,8 @@ export default async function TripsPage({ searchParams }: PageProps) {
   let query = supabase
     .from("trips")
     .select("*")
-    .eq("status", "active");
+    .eq("status", "active")
+    .gt("date_start", new Date().toISOString());
 
   if (search) {
     const term = `%${search}%`;
