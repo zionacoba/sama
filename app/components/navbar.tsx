@@ -19,48 +19,34 @@ function AuthSection({ className }: { className?: string }) {
   // undefined = still fetching, null = no organizer row, string = status value
   const [organizerStatus, setOrganizerStatus] = useState<string | null | undefined>(undefined);
 
-  async function loadOrganizerStatus(userId: string) {
-    const { data, error } = await supabase
-      .from("organizers")
-      .select("status")
-      .eq("user_id", userId)
-      .maybeSingle();
-    console.log("[loadOrganizerStatus] userId:", userId, "| data:", data, "| error:", error);
-    setOrganizerStatus(data?.status ?? null);
-  }
-
   useEffect(() => {
-    console.log("[navbar] useEffect running");
+    async function fetchOrganizerStatus(userId: string) {
+      const { data, error } = await supabase
+        .from("organizers")
+        .select("status")
+        .eq("user_id", userId)
+        .maybeSingle();
+      console.log("[navbar] fetchOrganizerStatus data:", data, "error:", error);
+      setOrganizerStatus(data?.status ?? null);
+    }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const currentUser = session?.user ?? null;
-      console.log("[navbar] getSession resolved, user:", currentUser?.email ?? "null");
       setUser(currentUser);
-      if (currentUser) {
-        await loadOrganizerStatus(currentUser.id);
-      } else {
-        setOrganizerStatus(null);
-      }
+      if (currentUser) await fetchOrganizerStatus(currentUser.id);
+      else setOrganizerStatus(null);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const currentUser = session?.user ?? null;
-      console.log("[navbar] onAuthStateChange fired, event:", _event, "user:", currentUser?.email ?? "null");
-      setUser(currentUser);
-      console.log("[navbar] currentUser truthy:", !!currentUser, "| id:", currentUser?.id ?? "none");
-      if (currentUser) {
-        console.log("[navbar] calling loadOrganizerStatus");
-        await loadOrganizerStatus(currentUser.id);
-        console.log("[navbar] loadOrganizerStatus done");
-      } else {
-        setOrganizerStatus(null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) await fetchOrganizerStatus(currentUser.id);
+        else setOrganizerStatus(null);
       }
-    });
+    );
 
     return () => subscription.unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleLogout() {
