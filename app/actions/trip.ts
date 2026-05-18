@@ -126,7 +126,7 @@ export async function updateTrip(
     return { error: "Trip not found or you don't have permission to edit it." };
   }
 
-  if (Number(existing.organizer_id) !== Number(organizer.id)) {
+  if (existing.organizer_id?.toString().trim() !== organizer.id?.toString().trim()) {
     console.error("[updateTrip] organizer mismatch — trip.organizer_id =", existing.organizer_id, "| organizer.id =", organizer.id);
     return { error: "Trip not found or you don't have permission to edit it." };
   }
