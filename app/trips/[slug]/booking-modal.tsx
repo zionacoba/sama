@@ -94,7 +94,6 @@ export function BookingModal({
     setLoading(true);
 
     const tripIdInt = Number(tripId);
-    console.log("[booking] trip_id =", tripIdInt, "| raw =", tripId, typeof tripId);
 
     const { error: insertError } = await supabase.from("bookings").insert({
       trip_id: tripIdInt,
