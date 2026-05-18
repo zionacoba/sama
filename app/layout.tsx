@@ -12,8 +12,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : "https://sama.ph";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://sama.ph"),
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Sama — Philippine outdoor adventures",
     template: "%s | Sama",

@@ -1,9 +1,32 @@
 import { ImageResponse } from "next/og";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
+export const runtime = "edge";
 export const alt = "Trip on Sama";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+type TripRow = {
+  title: string;
+  destination: string;
+  photos: string[] | null;
+};
+
+async function fetchTrip(slug: string): Promise<TripRow | null> {
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const apiKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!baseUrl || !apiKey) return null;
+
+  const url = `${baseUrl}/rest/v1/trips?slug=eq.${encodeURIComponent(slug)}&select=title,destination,photos&limit=1`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: apiKey,
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+  if (!res.ok) return null;
+  const rows: TripRow[] = await res.json();
+  return rows[0] ?? null;
+}
 
 export default async function Image({
   params,
@@ -11,19 +34,11 @@ export default async function Image({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-
-  const supabase = createSupabaseAdminClient();
-  const { data: trip } = await supabase
-    .from("trips")
-    .select("title, destination, photos")
-    .eq("slug", slug)
-    .maybeSingle();
+  const trip = await fetchTrip(slug);
 
   const title = trip?.title ?? "Adventure awaits";
   const destination = trip?.destination ?? "";
   const photo = trip?.photos?.[0] ?? null;
-
-  // Clamp font size so long titles don't overflow
   const titleSize = title.length > 50 ? 54 : title.length > 35 ? 64 : 72;
 
   return new ImageResponse(
@@ -54,7 +69,7 @@ export default async function Image({
           />
         )}
 
-        {/* Dark gradient: transparent top → dark bottom */}
+        {/* Dark gradient overlay */}
         <div
           style={{
             position: "absolute",
@@ -62,7 +77,7 @@ export default async function Image({
             left: 0,
             right: 0,
             bottom: 0,
-            background: photo
+            backgroundImage: photo
               ? "linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.22) 38%, rgba(0,0,0,0.84) 100%)"
               : "linear-gradient(135deg, #292524 0%, #1c1917 100%)",
             display: "flex",
@@ -80,7 +95,6 @@ export default async function Image({
             color: "#ffffff",
             fontSize: 28,
             fontWeight: 700,
-            letterSpacing: "-0.01em",
           }}
         >
           ⛰ Sama
@@ -93,23 +107,26 @@ export default async function Image({
             bottom: 0,
             left: 0,
             right: 0,
-            padding: "0 56px 52px",
+            paddingLeft: 56,
+            paddingRight: 56,
+            paddingBottom: 52,
             display: "flex",
             flexDirection: "column",
           }}
         >
-          {destination && (
+          {destination ? (
             <div
               style={{
                 color: "rgba(255,255,255,0.70)",
                 fontSize: 22,
                 letterSpacing: "0.08em",
                 marginBottom: 12,
+                display: "flex",
               }}
             >
               {destination.toUpperCase()}
             </div>
-          )}
+          ) : null}
           <div
             style={{
               color: "#ffffff",
@@ -117,6 +134,7 @@ export default async function Image({
               fontWeight: 700,
               lineHeight: 1.1,
               letterSpacing: "-0.025em",
+              display: "flex",
             }}
           >
             {title}
