@@ -162,7 +162,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? trip.description.slice(0, 157).trimEnd() + (trip.description.length > 157 ? "…" : "")
     : `An outdoor adventure in ${trip.destination} — book your spot on Sama.`;
 
-  const image = trip.photos?.[0] ?? null;
+  const ogImageUrl = `/trips/${slug}/opengraph-image`;
 
   return {
     title: trip.title,
@@ -172,15 +172,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       url: `https://sama.ph/trips/${slug}`,
       type: "website",
-      ...(image && {
-        images: [{ url: image, width: 1200, height: 630, alt: trip.title }],
-      }),
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: trip.title }],
     },
     twitter: {
-      card: image ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: `${trip.title} | Sama`,
       description,
-      ...(image && { images: [image] }),
+      images: [ogImageUrl],
     },
   };
 }
