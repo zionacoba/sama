@@ -113,12 +113,12 @@ export default async function Home() {
                 Search
               </button>
             </form>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            <div className="-mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0">
               {filterChips.map((chip) => (
                 <Link
                   key={chip}
                   href={`/trips?activity=${encodeURIComponent(chip)}`}
-                  className="rounded-full border border-stone-200 bg-white px-3.5 py-1.5 text-xs font-medium text-stone-700 shadow-sm transition hover:border-trailhead hover:bg-trailhead-muted hover:text-trailhead sm:text-sm"
+                  className="shrink-0 rounded-full border border-stone-200 bg-white px-3.5 py-1.5 text-xs font-medium text-stone-700 shadow-sm transition hover:border-trailhead hover:bg-trailhead-muted hover:text-trailhead sm:text-sm"
                 >
                   {chip}
                 </Link>
