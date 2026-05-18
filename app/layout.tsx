@@ -13,9 +13,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sama — Philippine outdoor adventures",
+  metadataBase: new URL("https://sama.ph"),
+  title: {
+    default: "Sama — Philippine outdoor adventures",
+    template: "%s | Sama",
+  },
   description:
     "Discover hikes, camps, dives, and island hops across the Philippines. Book trusted trips from local organizers.",
+  openGraph: {
+    siteName: "Sama",
+    type: "website",
+    locale: "en_PH",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({

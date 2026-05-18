@@ -1,7 +1,21 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Navbar } from "@/app/components/navbar";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+
+export const metadata: Metadata = {
+  title: "Browse trips",
+  description:
+    "Browse hikes, camps, dives, and island hops across the Philippines. Filter by activity and difficulty to find your next adventure.",
+  openGraph: {
+    title: "Browse trips | Sama",
+    description:
+      "Browse hikes, camps, dives, and island hops across the Philippines. Filter by activity and difficulty to find your next adventure.",
+    url: "https://sama.ph/trips",
+    type: "website",
+  },
+};
 
 const ACTIVITIES = ["All", "Hiking", "Camping", "Freediving", "Island Hopping", "Surfing"] as const;
 const DIFFICULTIES = ["All", "Beginner", "Intermediate", "Advanced", "Expert"] as const;

@@ -1,7 +1,21 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Navbar } from "@/app/components/navbar";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+
+export const metadata: Metadata = {
+  title: { absolute: "Sama — Philippine outdoor adventures" },
+  description:
+    "Discover hikes, camps, dives, and island hops across the Philippines. Book trusted trips from local organizers.",
+  openGraph: {
+    title: "Sama — Philippine outdoor adventures",
+    description:
+      "Discover hikes, camps, dives, and island hops across the Philippines. Book trusted trips from local organizers.",
+    url: "https://sama.ph",
+    type: "website",
+  },
+};
 
 const filterChips = [
   "Hiking",

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
@@ -143,6 +144,46 @@ function parseList(text: string | null): string[] {
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = await createSupabaseServerClient();
+  const { data: trip } = await supabase
+    .from("trips")
+    .select("title, description, photos, destination")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!trip) {
+    return { title: "Trip not found" };
+  }
+
+  const description = trip.description
+    ? trip.description.slice(0, 157).trimEnd() + (trip.description.length > 157 ? "…" : "")
+    : `An outdoor adventure in ${trip.destination} — book your spot on Sama.`;
+
+  const image = trip.photos?.[0] ?? null;
+
+  return {
+    title: trip.title,
+    description,
+    openGraph: {
+      title: `${trip.title} | Sama`,
+      description,
+      url: `https://sama.ph/trips/${slug}`,
+      type: "website",
+      ...(image && {
+        images: [{ url: image, width: 1200, height: 630, alt: trip.title }],
+      }),
+    },
+    twitter: {
+      card: image ? "summary_large_image" : "summary",
+      title: `${trip.title} | Sama`,
+      description,
+      ...(image && { images: [image] }),
+    },
+  };
+}
 
 export default async function TripDetailPage({ params }: PageProps) {
   const { slug } = await params;
