@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createBrowserClient } from "@supabase/ssr";
@@ -15,7 +14,6 @@ const navLinks = [
 ] as const;
 
 function AuthSection({ className }: { className?: string }) {
-  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   // undefined = still fetching, null = no organizer row, string = status value
   const [organizerStatus, setOrganizerStatus] = useState<string | null | undefined>(undefined);
@@ -63,8 +61,7 @@ function AuthSection({ className }: { className?: string }) {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    setUser(null);
-    router.refresh();
+    window.location.replace("/");
   }
 
   function getDisplayName(u: User): string {
