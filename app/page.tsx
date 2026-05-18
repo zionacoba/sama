@@ -71,7 +71,11 @@ export default async function Home() {
               Guided hikes, camps, and coastal trips across Luzon, Visayas, and
               Mindanao — curated for every skill level.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:mx-auto sm:max-w-xl sm:flex-row sm:items-stretch">
+            <form
+              action="/trips"
+              method="GET"
+              className="mt-8 flex flex-col gap-3 sm:mx-auto sm:max-w-xl sm:flex-row sm:items-stretch"
+            >
               <label className="sr-only" htmlFor="search">
                 Search trips
               </label>
@@ -84,27 +88,28 @@ export default async function Home() {
                 </span>
                 <input
                   id="search"
+                  name="search"
                   type="search"
                   placeholder="Search destination, activity, or organizer…"
                   className="w-full rounded-xl border border-stone-200 bg-white py-3 pl-10 pr-4 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2"
                 />
               </div>
               <button
-                type="button"
+                type="submit"
                 className="shrink-0 rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark sm:w-auto"
               >
                 Search
               </button>
-            </div>
+            </form>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
               {filterChips.map((chip) => (
-                <button
+                <Link
                   key={chip}
-                  type="button"
+                  href={`/trips?activity=${encodeURIComponent(chip)}`}
                   className="rounded-full border border-stone-200 bg-white px-3.5 py-1.5 text-xs font-medium text-stone-700 shadow-sm transition hover:border-trailhead hover:bg-trailhead-muted hover:text-trailhead sm:text-sm"
                 >
                   {chip}
-                </button>
+                </Link>
               ))}
             </div>
           </div>

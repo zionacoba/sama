@@ -18,7 +18,7 @@ type Trip = {
 };
 
 type PageProps = {
-  searchParams: Promise<{ activity?: string; difficulty?: string }>;
+  searchParams: Promise<{ activity?: string; difficulty?: string; search?: string }>;
 };
 
 function formatPrice(price: string | number) {
@@ -47,12 +47,13 @@ function DifficultyBadge({ level }: { level: string }) {
 }
 
 function filterUrl(
-  base: { activity?: string; difficulty?: string },
+  base: { activity?: string; difficulty?: string; search?: string },
   key: "activity" | "difficulty",
   value: string,
 ) {
   const next = { ...base, [key]: value === "All" ? undefined : value };
   const sp = new URLSearchParams();
+  if (next.search) sp.set("search", next.search);
   if (next.activity) sp.set("activity", next.activity);
   if (next.difficulty) sp.set("difficulty", next.difficulty);
   const qs = sp.toString();
@@ -60,7 +61,7 @@ function filterUrl(
 }
 
 export default async function TripsPage({ searchParams }: PageProps) {
-  const { activity, difficulty } = await searchParams;
+  const { activity, difficulty, search } = await searchParams;
 
   const supabase = await createSupabaseServerClient();
   let query = supabase
@@ -68,6 +69,10 @@ export default async function TripsPage({ searchParams }: PageProps) {
     .select("*")
     .eq("status", "active");
 
+  if (search) {
+    const term = `%${search}%`;
+    query = query.or(`title.ilike.${term},destination.ilike.${term},activity_type.ilike.${term}`);
+  }
   if (activity) query = query.eq("activity_type", activity);
   if (difficulty) query = query.eq("difficulty", difficulty);
 
@@ -76,7 +81,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
 
   const currentActivity = activity ?? "All";
   const currentDifficulty = difficulty ?? "All";
-  const current = { activity, difficulty };
+  const current = { activity, difficulty, search };
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -88,6 +93,14 @@ export default async function TripsPage({ searchParams }: PageProps) {
             <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
               Browse trips
             </h1>
+            {search && (
+              <p className="mt-1 text-sm font-medium text-trailhead">
+                Searching for: &ldquo;{search}&rdquo;{" "}
+                <Link href="/trips" className="ml-1 text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline">
+                  Clear
+                </Link>
+              </p>
+            )}
             <p className="mt-1 text-stone-600">
               {trips.length} trip{trips.length !== 1 ? "s" : ""} found
             </p>
