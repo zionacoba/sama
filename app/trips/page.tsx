@@ -14,6 +14,8 @@ type Trip = {
   destination: string;
   difficulty: string;
   activity_type: string | null;
+  date_start: string;
+  remaining_slots: number;
   photos: string[] | null;
 };
 
@@ -28,6 +30,14 @@ function formatPrice(price: string | number) {
     currency: "PHP",
     maximumFractionDigits: 0,
   }).format(price);
+}
+
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat("en-PH", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(date));
 }
 
 function DifficultyBadge({ level }: { level: string }) {
@@ -191,18 +201,25 @@ export default async function TripsPage({ searchParams }: PageProps) {
                           />
                         )}
                       </div>
-                      <div className="flex flex-1 flex-col gap-3 p-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="text-base font-bold text-stone-900">
-                            {trip.title}
-                          </h3>
+                      <div className="flex flex-1 flex-col gap-2 p-4">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {trip.activity_type && (
+                            <span className="inline-flex items-center rounded-full bg-trailhead-muted px-2 py-0.5 text-xs font-semibold text-trailhead">
+                              {trip.activity_type}
+                            </span>
+                          )}
                           <DifficultyBadge level={trip.difficulty} />
                         </div>
+                        <h3 className="font-bold text-stone-900">{trip.title}</h3>
                         <p className="text-sm text-stone-500">{trip.destination}</p>
-                        <div className="mt-auto border-t border-stone-100 pt-3">
+                        <p className="text-xs text-stone-400">{formatDate(trip.date_start)}</p>
+                        <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-3">
                           <p className="text-lg font-bold text-trailhead">
                             {formatPrice(trip.price)}
                           </p>
+                          <span className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-400"}`}>
+                            {trip.remaining_slots} slot{trip.remaining_slots !== 1 ? "s" : ""} left
+                          </span>
                         </div>
                       </div>
                     </article>
