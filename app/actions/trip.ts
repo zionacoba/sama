@@ -161,24 +161,31 @@ export async function updateTrip(
   const slotDiff = total_slots - existing.total_slots;
   const remaining_slots = Math.max(0, existing.remaining_slots + slotDiff);
 
-  const { error } = await supabase
+  const updatePayload = {
+    title,
+    activity_type,
+    destination,
+    difficulty,
+    date_start,
+    price,
+    total_slots,
+    remaining_slots,
+    meeting_point,
+    description,
+    includes: includes || null,
+    what_to_bring: what_to_bring || null,
+    photos: photo_url ? [photo_url] : [],
+  };
+
+  console.log("[updateTrip] sending update for tripId =", tripId, "| payload =", JSON.stringify(updatePayload));
+
+  const { data: updateData, error } = await supabase
     .from("trips")
-    .update({
-      title,
-      activity_type,
-      destination,
-      difficulty,
-      date_start,
-      price,
-      total_slots,
-      remaining_slots,
-      meeting_point,
-      description,
-      includes: includes || null,
-      what_to_bring: what_to_bring || null,
-      photos: photo_url ? [photo_url] : [],
-    })
-    .eq("id", tripId);
+    .update(updatePayload)
+    .eq("id", tripId)
+    .select();
+
+  console.log("[updateTrip] update result — data =", updateData, "| error =", error);
 
   if (error) {
     console.error("[updateTrip] supabase update error", error);
