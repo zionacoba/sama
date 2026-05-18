@@ -106,10 +106,11 @@ export async function createBooking(input: CreateBookingInput) {
         day: "numeric",
       }).format(new Date(trip.date_start));
 
+      // TODO: change to input.email once sama.com.ph is verified in Resend
       console.log("[createBooking] sending booker confirmation to:", input.email);
       const { data: bookerEmailData, error: bookerEmailError } = await resend.emails.send({
         from: "Sama <onboarding@resend.dev>",
-        to: input.email,
+        to: "acobapaulzion@gmail.com",
         subject: `Booking received — ${trip.title}`,
         html: `
           <p>Hi ${input.fullName},</p>
