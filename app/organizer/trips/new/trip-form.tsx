@@ -191,6 +191,21 @@ export function TripForm() {
         />
       </div>
 
+      {/* Photo URL */}
+      <div>
+        <label htmlFor="photo_url" className={labelClass}>
+          Photo URL{" "}
+          <span className="font-normal text-stone-400">(optional)</span>
+        </label>
+        <input
+          id="photo_url"
+          name="photo_url"
+          type="url"
+          className={inputClass}
+          placeholder="https://images.unsplash.com/photo-..."
+        />
+      </div>
+
       <div className="flex items-center justify-end gap-4 border-t border-stone-100 pt-6">
         <a
           href="/organizer/dashboard"

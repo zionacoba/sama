@@ -44,6 +44,7 @@ export async function createTrip(
   const description = (formData.get("description") as string)?.trim();
   const includes = (formData.get("includes") as string)?.trim();
   const what_to_bring = (formData.get("what_to_bring") as string)?.trim();
+  const photo_url = (formData.get("photo_url") as string)?.trim();
 
   if (
     !title ||
@@ -75,6 +76,7 @@ export async function createTrip(
     description,
     includes: includes || null,
     what_to_bring: what_to_bring || null,
+    photos: photo_url ? [photo_url] : [],
     status: "active",
     organizer_id: organizer.id,
   });
