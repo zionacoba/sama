@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
 
 type CreateBookingInput = {
@@ -48,51 +47,46 @@ export async function createBooking(input: CreateBookingInput) {
       .eq("id", input.tripId)
       .maybeSingle();
 
-    console.log("[createBooking] trip fetched:", trip?.title, "organizer_id:", trip?.organizer_id);
+    console.log("[createBooking] trip fetched:", JSON.stringify(trip));
 
     if (trip?.organizer_id) {
       const { data: organizer } = await supabase
         .from("organizers")
-        .select("user_id")
+        .select("email")
         .eq("id", trip.organizer_id)
         .maybeSingle();
 
-      console.log("[createBooking] organizer user_id:", organizer?.user_id);
+      console.log("[createBooking] organizer:", JSON.stringify(organizer));
 
-      if (organizer?.user_id) {
-        const admin = createSupabaseAdminClient();
-        const { data: { user: organizerUser } } = await admin.auth.admin.getUserById(organizer.user_id);
+      const organizerEmail = organizer?.email;
+      console.log("[createBooking] organizer email:", organizerEmail);
 
-        const organizerEmail = organizerUser?.email;
-        console.log("[createBooking] organizer email:", organizerEmail);
+      if (organizerEmail) {
+        const tripDate = new Intl.DateTimeFormat("en-PH", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }).format(new Date(trip.date_start));
 
-        if (organizerEmail) {
-          const tripDate = new Intl.DateTimeFormat("en-PH", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }).format(new Date(trip.date_start));
-
-          console.log("[createBooking] sending email to:", organizerEmail);
-          const { data: emailData, error: emailError } = await resend.emails.send({
-            from: "Sama <onboarding@resend.dev>",
-            to: organizerEmail,
-            subject: `New booking for ${trip.title}`,
-            html: `
-              <p>Hi,</p>
-              <p><strong>${input.fullName}</strong> (${input.email}) just booked <strong>${input.slots} slot${input.slots !== 1 ? "s" : ""}</strong> on your trip:</p>
-              <ul>
-                <li><strong>Trip:</strong> ${trip.title}</li>
-                <li><strong>Date:</strong> ${tripDate}</li>
-                <li><strong>Remaining slots after this booking:</strong> ${Math.max(0, trip.remaining_slots - input.slots)}</li>
-              </ul>
-              <p>Log in to your <a href="https://sama.ph/organizer/dashboard">organizer dashboard</a> to confirm or reject this booking.</p>
-              <p>— The Sama Team</p>
-            `,
-          });
-          console.log("[createBooking] email result:", emailData, emailError);
-        }
+        console.log("[createBooking] sending email to:", organizerEmail);
+        const { data: emailData, error: emailError } = await resend.emails.send({
+          from: "Sama <onboarding@resend.dev>",
+          to: organizerEmail,
+          subject: `New booking for ${trip.title}`,
+          html: `
+            <p>Hi,</p>
+            <p><strong>${input.fullName}</strong> (${input.email}) just booked <strong>${input.slots} slot${input.slots !== 1 ? "s" : ""}</strong> on your trip:</p>
+            <ul>
+              <li><strong>Trip:</strong> ${trip.title}</li>
+              <li><strong>Date:</strong> ${tripDate}</li>
+              <li><strong>Remaining slots after this booking:</strong> ${Math.max(0, trip.remaining_slots - input.slots)}</li>
+            </ul>
+            <p>Log in to your <a href="https://sama.ph/organizer/dashboard">organizer dashboard</a> to confirm or reject this booking.</p>
+            <p>— The Sama Team</p>
+          `,
+        });
+        console.log("[createBooking] email result:", emailData, emailError);
       }
     }
   } catch (err) {
