@@ -107,11 +107,8 @@ export async function updateTrip(
 
   if (!organizer || organizer.status !== "approved") redirect("/organizer/apply");
 
-  console.log("[updateTrip] auth user.id =", user.id, "| organizer.id =", organizer.id);
-
   const rawTripId = formData.get("trip_id");
   const tripId = parseInt(rawTripId as string, 10);
-  console.log("[updateTrip] raw trip_id from form =", rawTripId, "| parsed =", tripId);
 
   const { data: existing, error: fetchError } = await supabase
     .from("trips")
@@ -119,15 +116,11 @@ export async function updateTrip(
     .eq("id", tripId)
     .maybeSingle();
 
-  console.log("[updateTrip] existing trip =", existing, "| fetchError =", fetchError);
-
-  if (!existing) {
-    console.error("[updateTrip] trip not found for id", tripId);
+  if (fetchError || !existing) {
     return { error: "Trip not found or you don't have permission to edit it." };
   }
 
   if (existing.organizer_id?.toString().trim() !== organizer.id?.toString().trim()) {
-    console.error("[updateTrip] organizer mismatch — trip.organizer_id =", existing.organizer_id, "| organizer.id =", organizer.id);
     return { error: "Trip not found or you don't have permission to edit it." };
   }
 
@@ -161,36 +154,26 @@ export async function updateTrip(
   const slotDiff = total_slots - existing.total_slots;
   const remaining_slots = Math.max(0, existing.remaining_slots + slotDiff);
 
-  const updatePayload = {
-    title,
-    activity_type,
-    destination,
-    difficulty,
-    date_start,
-    price,
-    total_slots,
-    remaining_slots,
-    meeting_point,
-    description,
-    includes: includes || null,
-    what_to_bring: what_to_bring || null,
-    photos: photo_url ? [photo_url] : [],
-  };
-
-  console.log("[updateTrip] sending update for tripId =", tripId, "| payload =", JSON.stringify(updatePayload));
-
-  const { data: updateData, error } = await supabase
+  const { error } = await supabase
     .from("trips")
-    .update(updatePayload)
-    .eq("id", tripId)
-    .select();
+    .update({
+      title,
+      activity_type,
+      destination,
+      difficulty,
+      date_start,
+      price,
+      total_slots,
+      remaining_slots,
+      meeting_point,
+      description,
+      includes: includes || null,
+      what_to_bring: what_to_bring || null,
+      photos: photo_url ? [photo_url] : [],
+    })
+    .eq("id", tripId);
 
-  console.log("[updateTrip] update result — data =", updateData, "| error =", error);
-
-  if (error) {
-    console.error("[updateTrip] supabase update error", error);
-    return { error: error.message };
-  }
+  if (error) return { error: error.message };
 
   redirect("/organizer/dashboard");
 }
