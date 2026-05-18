@@ -122,14 +122,14 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
                   Activity
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
                   {ACTIVITIES.map((a) => {
                     const active = a === currentActivity;
                     return (
                       <Link
                         key={a}
                         href={filterUrl(current, "activity", a)}
-                        className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+                        className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
                           active
                             ? "bg-trailhead text-white shadow-sm"
                             : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
@@ -147,14 +147,14 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
                   Difficulty
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
                   {DIFFICULTIES.map((d) => {
                     const active = d === currentDifficulty;
                     return (
                       <Link
                         key={d}
                         href={filterUrl(current, "difficulty", d)}
-                        className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+                        className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
                           active
                             ? "bg-trailhead text-white shadow-sm"
                             : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
@@ -190,7 +190,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                     className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
                   >
                     <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
-                      <div className="relative aspect-[2/1] overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:aspect-[4/3]">
+                      <div className="relative aspect-[3/1] overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:aspect-[4/3]">
                         {trip.photos?.[0] && (
                           <Image
                             src={trip.photos[0]}
