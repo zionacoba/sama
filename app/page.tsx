@@ -198,12 +198,12 @@ export default async function Home() {
             <p className="text-lg font-semibold sm:text-xl">
               Are you a trip organizer? List your trips free.
             </p>
-            <a
-              href="#"
+            <Link
+              href="/organizer/apply"
               className="inline-flex shrink-0 items-center justify-center rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-trailhead shadow transition hover:bg-trailhead-muted"
             >
               Get started
-            </a>
+            </Link>
           </div>
         </aside>
       </main>
