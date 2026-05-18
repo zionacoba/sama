@@ -6,7 +6,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
 type BookingModalProps = {
-  tripId: string;
+  tripId: number;
   tripSlug: string;
   tripTitle: string;
   unitPrice: number;
@@ -93,8 +93,11 @@ export function BookingModal({
     setError(null);
     setLoading(true);
 
+    const tripIdInt = Number(tripId);
+    console.log("[booking] trip_id =", tripIdInt, "| raw =", tripId, typeof tripId);
+
     const { error: insertError } = await supabase.from("bookings").insert({
-      trip_id: tripId,
+      trip_id: tripIdInt,
       full_name: fullName,
       email,
       phone,
