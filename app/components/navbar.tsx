@@ -21,13 +21,19 @@ function AuthSection({ className }: { className?: string }) {
 
   useEffect(() => {
     async function fetchOrganizerStatus(userId: string) {
-      const { data, error } = await supabase
-        .from("organizers")
-        .select("status")
-        .eq("user_id", userId)
-        .maybeSingle();
-      console.log("[navbar] fetchOrganizerStatus data:", data, "error:", error);
-      setOrganizerStatus(data?.status ?? null);
+      console.log("[navbar] fetchOrganizerStatus called, userId:", userId);
+      try {
+        const result = await supabase
+          .from("organizers")
+          .select("status")
+          .eq("user_id", userId)
+          .maybeSingle();
+        console.log("[navbar] fetchOrganizerStatus result:", JSON.stringify(result));
+        setOrganizerStatus(result.data?.status ?? null);
+      } catch (err) {
+        console.error("[navbar] fetchOrganizerStatus threw:", err);
+        setOrganizerStatus(null);
+      }
     }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
