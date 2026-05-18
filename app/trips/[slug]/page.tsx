@@ -19,7 +19,7 @@ type TripDetail = {
   photos: string[] | null;
   includes: string | null;
   what_to_bring: string | null;
-  organizer_id: number | null;
+  organizer_id: string | null;
 };
 
 type OrganizerInfo = {
@@ -307,7 +307,12 @@ export default async function TripDetailPage({ params }: PageProps) {
           {organizer && (
             <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
               <h2 className="text-lg font-bold text-stone-900">Your organizer</h2>
-              <p className="mt-3 font-semibold text-stone-900">{organizer.full_name}</p>
+              <Link
+                href={`/organizers/${tripData.organizer_id}`}
+                className="mt-3 block font-semibold text-trailhead underline-offset-4 hover:underline"
+              >
+                {organizer.full_name}
+              </Link>
               {organizer.bio && (
                 <p className="mt-1 leading-relaxed text-stone-600">{organizer.bio}</p>
               )}
