@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Navbar } from "@/app/components/navbar";
 import { supabase } from "@/lib/supabase";
@@ -19,6 +20,7 @@ type Trip = {
   difficulty: "Beginner" | "Intermediate";
   rating: number;
   reviews: number;
+  photos: string[] | null;
 };
 
 function StarRow({ rating }: { rating: number }) {
@@ -63,10 +65,7 @@ export default async function Home() {
   .select("*")
   .eq("status", "active");
 
-console.log("trips data:", data);
-console.log("trips error:", error);
-
-const trips = (data ?? []) as Trip[];
+  const trips = (data ?? []) as Trip[];
 
   return (
     <div className="min-h-full bg-stone-50 text-stone-900 font-sans">
@@ -146,7 +145,17 @@ const trips = (data ?? []) as Trip[];
                   className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
                 >
                   <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
-                  <div className="aspect-[4/3] bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80" />
+                  <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80">
+                    {trip.photos?.[0] && (
+                      <Image
+                        src={trip.photos[0]}
+                        alt={trip.title}
+                        fill
+                        className="object-cover"
+                        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                      />
+                    )}
+                  </div>
                   <div className="flex flex-1 flex-col gap-3 p-4">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="text-lg font-bold text-stone-900">

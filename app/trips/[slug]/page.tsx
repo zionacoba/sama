@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { BookingModal } from "@/app/trips/[slug]/booking-modal";
@@ -13,6 +14,7 @@ type TripDetail = {
   meeting_point: string;
   total_slots: number;
   remaining_slots: number;
+  photos: string[] | null;
 };
 
 function DifficultyBadge({ level }: { level: "Beginner" | "Intermediate" }) {
@@ -137,7 +139,18 @@ export default async function TripDetailPage({ params }: PageProps) {
         </section>
 
         <section className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
-          <div className="aspect-[16/9] rounded-2xl bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80" />
+          <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80">
+            {tripData.photos?.[0] && (
+              <Image
+                src={tripData.photos[0]}
+                alt={tripData.title}
+                fill
+                className="object-cover"
+                sizes="(min-width: 768px) 768px, 100vw"
+                priority
+              />
+            )}
+          </div>
 
           <div className="mt-10 grid gap-6 sm:grid-cols-2">
             <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
