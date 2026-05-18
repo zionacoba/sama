@@ -49,6 +49,12 @@ function AuthSection({ className }: { className?: string }) {
         <span className="max-w-[120px] truncate text-sm text-stone-600 sm:max-w-[200px]">
           {user.email}
         </span>
+        <Link
+          href="/organizer/apply"
+          className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
+        >
+          Become an Organizer
+        </Link>
         <button
           type="button"
           onClick={handleLogout}
