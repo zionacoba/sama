@@ -304,7 +304,7 @@ export function EditTripForm({ trip }: { trip: TripForEdit }) {
         {paymentType === "downpayment" && (
           <div>
             <label htmlFor="min_downpayment" className={labelClass}>
-              Minimum downpayment (PHP)
+              Downpayment amount (PHP)
             </label>
             <input
               id="min_downpayment"
