@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { BookingModal } from "@/app/trips/[slug]/booking-modal";
+import { ReviewForm } from "@/app/trips/[slug]/review-form";
 
 type TripDetail = {
   id: number;
@@ -25,6 +26,25 @@ type OrganizerInfo = {
   full_name: string;
   bio: string | null;
 };
+
+type Review = {
+  id: number;
+  full_name: string;
+  rating: number;
+  body: string;
+  created_at: string;
+};
+
+function Stars({ rating, size = "sm" }: { rating: number; size?: "sm" | "lg" }) {
+  const full = Math.round(rating);
+  const cls = size === "lg" ? "text-xl" : "text-base";
+  return (
+    <span aria-label={`${rating.toFixed(1)} out of 5 stars`} className={cls}>
+      <span className="text-amber-400">{"★".repeat(full)}</span>
+      <span className="text-stone-200">{"★".repeat(5 - full)}</span>
+    </span>
+  );
+}
 
 function DifficultyBadge({ level }: { level: string }) {
   const colorClass =
@@ -72,6 +92,14 @@ function formatDate(dateStart: string) {
   }).format(new Date(dateStart));
 }
 
+function formatReviewDate(date: string) {
+  return new Intl.DateTimeFormat("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(date));
+}
+
 function parseList(text: string | null): string[] {
   if (!text?.trim()) return [];
   return text
@@ -88,11 +116,11 @@ export default async function TripDetailPage({ params }: PageProps) {
   const { slug } = await params;
 
   const supabase = await createSupabaseServerClient();
-  const { data: trip } = await supabase
-    .from("trips")
-    .select("*")
-    .eq("slug", slug)
-    .maybeSingle();
+
+  const [{ data: trip }, { data: { user } }] = await Promise.all([
+    supabase.from("trips").select("*").eq("slug", slug).maybeSingle(),
+    supabase.auth.getUser(),
+  ]);
 
   if (!trip) {
     return (
@@ -122,15 +150,41 @@ export default async function TripDetailPage({ params }: PageProps) {
 
   const tripData = trip as TripDetail;
 
-  let organizer: OrganizerInfo | null = null;
-  if (tripData.organizer_id) {
-    const { data } = await supabase
-      .from("organizers")
-      .select("full_name, bio")
-      .eq("id", tripData.organizer_id)
-      .maybeSingle();
-    organizer = data as OrganizerInfo | null;
-  }
+  // Parallel fetches after trip is confirmed
+  const queries: [
+    Promise<{ data: unknown }>,
+    Promise<{ data: unknown }>,
+    Promise<{ data: unknown }>,
+    Promise<{ data: unknown }>,
+  ] = [
+    supabase.from("reviews").select("id, full_name, rating, body, created_at").eq("trip_id", tripData.id).order("created_at", { ascending: false }),
+    tripData.organizer_id
+      ? supabase.from("organizers").select("full_name, bio").eq("id", tripData.organizer_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    user
+      ? supabase.from("bookings").select("id, full_name").eq("trip_id", tripData.id).eq("email", user.email ?? "").limit(1).maybeSingle()
+      : Promise.resolve({ data: null }),
+    user
+      ? supabase.from("reviews").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ];
+
+  const [
+    { data: reviewsData },
+    { data: organizerData },
+    { data: bookingData },
+    { data: existingReview },
+  ] = await Promise.all(queries);
+
+  const reviews = (reviewsData ?? []) as Review[];
+  const organizer = organizerData as OrganizerInfo | null;
+  const canReview = !!user && !!bookingData && !existingReview;
+  const reviewerName = (bookingData as { full_name?: string } | null)?.full_name ?? "";
+
+  const avgRating =
+    reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+      : null;
 
   const includesList = parseList(tripData.includes);
   const whatToBringList = parseList(tripData.what_to_bring);
@@ -167,6 +221,14 @@ export default async function TripDetailPage({ params }: PageProps) {
               {tripData.title}
             </h1>
             <p className="mt-2 text-lg text-stone-600">{tripData.destination}</p>
+            {avgRating !== null && (
+              <div className="mt-3 flex items-center gap-2">
+                <Stars rating={avgRating} size="lg" />
+                <span className="text-sm text-stone-600">
+                  {avgRating.toFixed(1)} · {reviews.length} review{reviews.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
             <p className="mt-4 text-2xl font-bold text-trailhead">
               {formatPrice(tripData.price)}
             </p>
@@ -266,6 +328,72 @@ export default async function TripDetailPage({ params }: PageProps) {
             unitPrice={getUnitPrice(tripData.price)}
             remainingSlots={tripData.remaining_slots}
           />
+
+          {/* Reviews */}
+          <div className="mt-12">
+            <h2 className="text-xl font-bold tracking-tight text-stone-900">
+              Reviews
+              {reviews.length > 0 && (
+                <span className="ml-2 text-base font-normal text-stone-500">
+                  ({reviews.length})
+                </span>
+              )}
+            </h2>
+
+            {reviews.length === 0 && (
+              <p className="mt-4 text-stone-500">No reviews yet. Be the first!</p>
+            )}
+
+            {reviews.length > 0 && (
+              <ul className="mt-6 space-y-4">
+                {reviews.map((review) => (
+                  <li
+                    key={review.id}
+                    className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-semibold text-stone-900">{review.full_name}</p>
+                        <div className="mt-0.5 flex items-center gap-2">
+                          <Stars rating={review.rating} />
+                          <span className="text-xs text-stone-400">
+                            {formatReviewDate(review.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="mt-3 leading-relaxed text-stone-600">{review.body}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {canReview && (
+              <div className="mt-8 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
+                <h3 className="text-lg font-bold text-stone-900">Write a review</h3>
+                <p className="mt-1 text-sm text-stone-500">
+                  Share your experience to help future adventurers.
+                </p>
+                <ReviewForm
+                  tripId={tripData.id}
+                  tripSlug={slug}
+                  defaultName={reviewerName}
+                />
+              </div>
+            )}
+
+            {user && !canReview && !existingReview && (
+              <p className="mt-6 text-sm text-stone-400">
+                You need a confirmed booking on this trip to leave a review.
+              </p>
+            )}
+
+            {existingReview && (
+              <p className="mt-6 text-sm text-stone-400">
+                You&apos;ve already reviewed this trip — thanks!
+              </p>
+            )}
+          </div>
         </section>
       </main>
 
