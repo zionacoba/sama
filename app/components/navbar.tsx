@@ -17,20 +17,22 @@ function AuthSection({ className }: { className?: string }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasOrganizerRow, setHasOrganizerRow] = useState(false);
+  const [organizerStatus, setOrganizerStatus] = useState<string | null>(null);
+
+  async function loadOrganizerStatus(userId: string) {
+    const { data } = await supabase
+      .from("organizers")
+      .select("status")
+      .eq("user_id", userId)
+      .maybeSingle();
+    setOrganizerStatus(data?.status ?? null);
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      if (currentUser) {
-        const { data } = await supabase
-          .from("organizers")
-          .select("id")
-          .eq("user_id", currentUser.id)
-          .maybeSingle();
-        setHasOrganizerRow(!!data);
-      }
+      if (currentUser) await loadOrganizerStatus(currentUser.id);
       setLoading(false);
     });
 
@@ -40,18 +42,14 @@ function AuthSection({ className }: { className?: string }) {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        const { data } = await supabase
-          .from("organizers")
-          .select("id")
-          .eq("user_id", currentUser.id)
-          .maybeSingle();
-        setHasOrganizerRow(!!data);
+        await loadOrganizerStatus(currentUser.id);
       } else {
-        setHasOrganizerRow(false);
+        setOrganizerStatus(null);
       }
     });
 
     return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleLogout() {
@@ -76,7 +74,18 @@ function AuthSection({ className }: { className?: string }) {
         >
           My Bookings
         </Link>
-        {!hasOrganizerRow && (
+        {organizerStatus === "approved" ? (
+          <Link
+            href="/organizer/dashboard"
+            className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
+          >
+            Dashboard
+          </Link>
+        ) : organizerStatus === "pending" ? (
+          <span className="shrink-0 text-sm text-stone-400">
+            Application pending
+          </span>
+        ) : (
           <Link
             href="/organizer/apply"
             className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
