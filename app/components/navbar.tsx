@@ -19,7 +19,7 @@ type AuthLinksProps = {
 function AuthLinks({ email: _email, displayName, organizerStatus, className }: AuthLinksProps) {
   return (
     <div className={`flex items-center gap-2 sm:gap-3 ${className ?? ""}`}>
-      <span className="max-w-[120px] truncate text-sm text-stone-600 sm:max-w-[200px]">
+      <span className="hidden max-w-[200px] truncate text-sm text-stone-600 sm:inline">
         {displayName}
       </span>
       <Link
