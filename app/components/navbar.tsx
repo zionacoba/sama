@@ -30,8 +30,11 @@ function AuthSection({ className }: { className?: string }) {
   }
 
   useEffect(() => {
+    console.log("[navbar] useEffect running");
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const currentUser = session?.user ?? null;
+      console.log("[navbar] getSession resolved, user:", currentUser?.email ?? "null");
       setUser(currentUser);
       if (currentUser) {
         await loadOrganizerStatus(currentUser.id);
@@ -44,6 +47,7 @@ function AuthSection({ className }: { className?: string }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const currentUser = session?.user ?? null;
+      console.log("[navbar] onAuthStateChange fired, event:", _event, "user:", currentUser?.email ?? "null");
       setUser(currentUser);
       if (currentUser) {
         await loadOrganizerStatus(currentUser.id);
