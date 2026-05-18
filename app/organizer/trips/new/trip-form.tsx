@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState, useTransition } from "react";
 import { createTrip } from "@/app/actions/trip";
 import { supabaseBrowser } from "@/lib/supabase-browser";
+import { PhotoUploader, type PhotoItem } from "@/app/components/photo-uploader";
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2";
@@ -12,19 +13,11 @@ const labelClass = "block text-sm font-medium text-stone-700";
 export function TripForm({ destinations = [] }: { destinations?: string[] }) {
   const [state, action] = useActionState(createTrip, null);
   const [isPending, startTransition] = useTransition();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [photoItems, setPhotoItems] = useState<PhotoItem[]>([]);
   const [paymentType, setPaymentType] = useState<"full" | "downpayment">("full");
   const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict" | "custom">("flexible");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null;
-    setSelectedFile(file);
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(file ? URL.createObjectURL(file) : null);
-  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,31 +26,33 @@ export function TripForm({ destinations = [] }: { destinations?: string[] }) {
     setUploadError(null);
     const formData = new FormData(formRef.current);
 
-    if (selectedFile) {
-      const ext = selectedFile.name.split(".").pop() ?? "jpg";
-      const path = `${Date.now()}.${ext}`;
-
-      const { data, error } = await supabaseBrowser.storage
-        .from("trip-photos")
-        .upload(path, selectedFile, { upsert: false });
-
-      if (error || !data) {
-        setUploadError(error?.message ?? "Image upload failed. Please try again.");
-        return;
+    const uploadedUrls: string[] = [];
+    for (const item of photoItems) {
+      if (item.kind === "url") {
+        uploadedUrls.push(item.url);
+      } else {
+        const ext = item.file.name.split(".").pop() ?? "jpg";
+        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { data, error } = await supabaseBrowser.storage
+          .from("trip-photos")
+          .upload(path, item.file, { upsert: false });
+        if (error || !data) {
+          setUploadError(error?.message ?? "Image upload failed. Please try again.");
+          return;
+        }
+        const { data: { publicUrl } } = supabaseBrowser.storage.from("trip-photos").getPublicUrl(data.path);
+        uploadedUrls.push(publicUrl);
       }
-
-      const {
-        data: { publicUrl },
-      } = supabaseBrowser.storage.from("trip-photos").getPublicUrl(data.path);
-
-      formData.set("photo_url", publicUrl);
     }
+
+    formData.set("photos_json", JSON.stringify(uploadedUrls));
 
     startTransition(async () => {
       await action(formData);
     });
   }
 
+  const hasNewUploads = photoItems.some((i) => i.kind === "file");
   const errorMessage = uploadError ?? state?.error;
 
   return (
@@ -314,27 +309,13 @@ export function TripForm({ destinations = [] }: { destinations?: string[] }) {
 
       {/* Photo upload */}
       <div>
-        <label htmlFor="photo" className={labelClass}>
-          Photo{" "}
-          <span className="font-normal text-stone-400">(optional)</span>
-        </label>
-        <input
-          id="photo"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={handleFileChange}
-          className="mt-1.5 w-full cursor-pointer rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm file:mr-4 file:rounded-lg file:border-0 file:bg-trailhead file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-trailhead-dark"
-        />
-        {previewUrl && (
-          <div className="mt-3 overflow-hidden rounded-xl border border-stone-200">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={previewUrl}
-              alt="Photo preview"
-              className="h-48 w-full object-cover"
-            />
-          </div>
-        )}
+        <p className={labelClass}>
+          Photos{" "}
+          <span className="font-normal text-stone-400">(up to 5 — first is cover)</span>
+        </p>
+        <div className="mt-1.5">
+          <PhotoUploader onChange={setPhotoItems} />
+        </div>
       </div>
 
       <div className="flex items-center justify-end gap-4 border-t border-stone-100 pt-6">
@@ -350,7 +331,7 @@ export function TripForm({ destinations = [] }: { destinations?: string[] }) {
           className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isPending
-            ? selectedFile
+            ? hasNewUploads
               ? "Uploading…"
               : "Creating trip…"
             : "Create trip"}

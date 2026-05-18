@@ -44,7 +44,8 @@ export async function createTrip(
   const description = (formData.get("description") as string)?.trim();
   const includes = (formData.get("includes") as string)?.trim();
   const what_to_bring = (formData.get("what_to_bring") as string)?.trim();
-  const photo_url = (formData.get("photo_url") as string)?.trim();
+  const photosJson = formData.get("photos_json") as string | null;
+  const photos: string[] = photosJson ? JSON.parse(photosJson) : [];
   const payment_type = (formData.get("payment_type") as string) || "full";
   const min_downpayment_raw = formData.get("min_downpayment") as string;
   const min_downpayment = payment_type === "downpayment" && min_downpayment_raw
@@ -93,7 +94,7 @@ export async function createTrip(
     description,
     includes: includes || null,
     what_to_bring: what_to_bring || null,
-    photos: photo_url ? [photo_url] : [],
+    photos,
     status: "active",
     organizer_id: organizer.id,
     payment_type,
@@ -156,7 +157,8 @@ export async function updateTrip(
   const description = (formData.get("description") as string)?.trim();
   const includes = (formData.get("includes") as string)?.trim();
   const what_to_bring = (formData.get("what_to_bring") as string)?.trim();
-  const photo_url = (formData.get("photo_url") as string)?.trim();
+  const photosJson = formData.get("photos_json") as string | null;
+  const photos: string[] = photosJson ? JSON.parse(photosJson) : [];
   const payment_type = (formData.get("payment_type") as string) || "full";
   const min_downpayment_raw = formData.get("min_downpayment") as string;
   const min_downpayment = payment_type === "downpayment" && min_downpayment_raw
@@ -207,7 +209,7 @@ export async function updateTrip(
       description,
       includes: includes || null,
       what_to_bring: what_to_bring || null,
-      photos: photo_url ? [photo_url] : [],
+      photos,
       payment_type,
       min_downpayment,
       cancellation_policy,
