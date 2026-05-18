@@ -22,6 +22,20 @@ export async function createBooking(input: CreateBookingInput) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
+  // Fetch trip first to determine auto-approve eligibility
+  const { data: trip } = await supabase
+    .from("trips")
+    .select("title, date_start, remaining_slots, organizer_id, difficulty")
+    .eq("id", input.tripId)
+    .maybeSingle();
+
+  console.log("[createBooking] trip fetched:", JSON.stringify(trip));
+
+  const autoApprove = trip?.difficulty === "Beginner" || trip?.difficulty === "Intermediate";
+  const bookingStatus = autoApprove ? "confirmed" : "pending";
+
+  console.log("[createBooking] difficulty:", trip?.difficulty, "→ status:", bookingStatus);
+
   const { error: insertError } = await supabase.from("bookings").insert({
     trip_id: input.tripId,
     full_name: input.fullName,
@@ -29,7 +43,7 @@ export async function createBooking(input: CreateBookingInput) {
     phone: input.phone,
     slots: input.slots,
     total_amount: input.totalAmount,
-    status: "pending",
+    status: bookingStatus,
     notes: input.notes,
   });
 
@@ -38,18 +52,10 @@ export async function createBooking(input: CreateBookingInput) {
     return { error: insertError.message };
   }
 
-  console.log("[createBooking] booking inserted successfully");
+  console.log("[createBooking] booking inserted successfully with status:", bookingStatus);
 
-  // Send notification email to organizer (best-effort — don't fail the booking if email fails)
+  // Send emails (best-effort — don't fail the booking if email fails)
   try {
-    const { data: trip } = await supabase
-      .from("trips")
-      .select("title, date_start, remaining_slots, organizer_id")
-      .eq("id", input.tripId)
-      .maybeSingle();
-
-    console.log("[createBooking] trip fetched:", JSON.stringify(trip));
-
     if (trip?.organizer_id) {
       // Use admin client to bypass RLS — the booker cannot read other organizers' rows
       const admin = createSupabaseAdminClient();
@@ -89,7 +95,10 @@ export async function createBooking(input: CreateBookingInput) {
               <li><strong>Date:</strong> ${tripDate}</li>
               <li><strong>Remaining slots after this booking:</strong> ${Math.max(0, trip.remaining_slots - input.slots)}</li>
             </ul>
-            <p>Log in to your <a href="https://sama.ph/organizer/dashboard">organizer dashboard</a> to confirm or reject this booking.</p>
+            ${autoApprove
+              ? `<p>This booking was <strong>automatically confirmed</strong> (${trip.difficulty} trip).</p>`
+              : `<p>Log in to your <a href="https://sama.ph/organizer/dashboard">organizer dashboard</a> to confirm or reject this booking.</p>`
+            }
             <p>— The Sama Team</p>
           `,
         });
@@ -111,18 +120,32 @@ export async function createBooking(input: CreateBookingInput) {
       const { data: bookerEmailData, error: bookerEmailError } = await resend.emails.send({
         from: "Sama <onboarding@resend.dev>",
         to: "acobapaulzion@gmail.com",
-        subject: `Booking received — ${trip.title}`,
-        html: `
-          <p>Hi ${input.fullName},</p>
-          <p>We've received your booking request. Here's a summary:</p>
-          <ul>
-            <li><strong>Trip:</strong> ${trip.title}</li>
-            <li><strong>Date:</strong> ${tripDate}</li>
-            <li><strong>Slots booked:</strong> ${input.slots}</li>
-          </ul>
-          <p>The organizer will review your request and be in touch to confirm. You can track your bookings at <a href="https://sama.ph/dashboard/bookings">sama.ph/dashboard/bookings</a>.</p>
-          <p>— The Sama Team</p>
-        `,
+        subject: autoApprove
+          ? `Booking confirmed — ${trip.title}`
+          : `Booking request received — ${trip.title}`,
+        html: autoApprove
+          ? `
+            <p>Hi ${input.fullName},</p>
+            <p>Your booking is confirmed! Here's a summary:</p>
+            <ul>
+              <li><strong>Trip:</strong> ${trip.title}</li>
+              <li><strong>Date:</strong> ${tripDate}</li>
+              <li><strong>Slots booked:</strong> ${input.slots}</li>
+            </ul>
+            <p>See you on the trail! You can view your booking at <a href="https://sama.ph/dashboard/bookings">sama.ph/dashboard/bookings</a>.</p>
+            <p>— The Sama Team</p>
+          `
+          : `
+            <p>Hi ${input.fullName},</p>
+            <p>We've received your booking request. Here's a summary:</p>
+            <ul>
+              <li><strong>Trip:</strong> ${trip.title}</li>
+              <li><strong>Date:</strong> ${tripDate}</li>
+              <li><strong>Slots booked:</strong> ${input.slots}</li>
+            </ul>
+            <p>The organizer will review your request and be in touch to confirm. You can track your booking at <a href="https://sama.ph/dashboard/bookings">sama.ph/dashboard/bookings</a>.</p>
+            <p>— The Sama Team</p>
+          `,
       });
       console.log("[createBooking] booker email result:", bookerEmailData, bookerEmailError);
     }
@@ -131,7 +154,7 @@ export async function createBooking(input: CreateBookingInput) {
   }
 
   revalidatePath(`/trips/${input.tripId}`);
-  return { success: true };
+  return { success: true, status: bookingStatus };
 }
 
 export async function updateBookingStatus(bookingId: number, status: "confirmed" | "rejected") {

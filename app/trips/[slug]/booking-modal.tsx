@@ -43,6 +43,7 @@ export function BookingModal({
   const [notes, setNotes] = useState("");
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [waiverError, setWaiverError] = useState(false);
+  const [bookingStatus, setBookingStatus] = useState<"confirmed" | "pending" | null>(null);
 
   const totalAmount = unitPrice * slots;
 
@@ -93,6 +94,7 @@ export function BookingModal({
     setWaiverError(false);
     setError(null);
     setSuccess(false);
+    setBookingStatus(null);
   }
 
   function handleClose() {
@@ -134,6 +136,7 @@ export function BookingModal({
       return;
     }
 
+    setBookingStatus((result.status ?? "pending") as "confirmed" | "pending");
     setSuccess(true);
   }
 
@@ -178,7 +181,9 @@ export function BookingModal({
                   id="booking-modal-title"
                   className="text-lg font-bold text-stone-900"
                 >
-                  {success ? "Booking confirmed" : "Book this trip"}
+                  {success
+                    ? bookingStatus === "confirmed" ? "Booking confirmed!" : "Booking received"
+                    : "Book this trip"}
                 </h2>
                 {!success && (
                   <p className="mt-0.5 text-sm text-stone-600">{tripTitle}</p>
@@ -201,8 +206,10 @@ export function BookingModal({
                     role="status"
                     className="rounded-lg border border-trailhead/30 bg-trailhead-muted px-4 py-3 text-sm text-trailhead"
                   >
-                    Your booking for <strong>{tripTitle}</strong>{" "}has been submitted.{" "}
-                    We'll contact you at {email} once it's confirmed.
+                    {bookingStatus === "confirmed"
+                      ? <>Your booking for <strong>{tripTitle}</strong> is confirmed! See you on the trail.</>
+                      : <>Your booking request for <strong>{tripTitle}</strong> has been submitted — the organizer will review and confirm shortly.</>
+                    }
                   </p>
                   <button
                     type="button"
