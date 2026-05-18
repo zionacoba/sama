@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
 
 type CreateBookingInput = {
@@ -50,13 +51,15 @@ export async function createBooking(input: CreateBookingInput) {
     console.log("[createBooking] trip fetched:", JSON.stringify(trip));
 
     if (trip?.organizer_id) {
-      const { data: organizer } = await supabase
+      // Use admin client to bypass RLS — the booker cannot read other organizers' rows
+      const admin = createSupabaseAdminClient();
+      const { data: organizer, error: organizerError } = await admin
         .from("organizers")
         .select("email")
         .eq("id", trip.organizer_id)
         .maybeSingle();
 
-      console.log("[createBooking] organizer:", JSON.stringify(organizer));
+      console.log("[createBooking] organizer query:", JSON.stringify({ data: organizer, error: organizerError }));
 
       const organizerEmail = organizer?.email;
       console.log("[createBooking] organizer email:", organizerEmail);
