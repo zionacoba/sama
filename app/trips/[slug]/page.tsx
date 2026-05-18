@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { BookingModal } from "@/app/trips/[slug]/booking-modal";
 
 type TripDetail = {
-  id: string | number;
+  id: string;
   title: string;
   destination: string;
   difficulty: "Beginner" | "Intermediate";

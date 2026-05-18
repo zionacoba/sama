@@ -6,7 +6,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
 type BookingModalProps = {
-  tripId: string | number;
+  tripId: string;
   tripSlug: string;
   tripTitle: string;
   unitPrice: number;
