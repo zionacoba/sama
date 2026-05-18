@@ -23,11 +23,33 @@ function formatPrice(price: number) {
   }).format(price);
 }
 
+type OrganizerBooking = {
+  id: string | number;
+  full_name: string;
+  email: string;
+  phone: string;
+  slots: number;
+  total_amount: number;
+  status: string;
+  created_at: string;
+  trips: { title: string } | null;
+};
+
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("en-PH", {
     year: "numeric",
     month: "short",
     day: "numeric",
+  }).format(new Date(date));
+}
+
+function formatDateTime(date: string) {
+  return new Intl.DateTimeFormat("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   }).format(new Date(date));
 }
 
@@ -80,6 +102,18 @@ export default async function OrganizerDashboardPage() {
     .order("created_at", { ascending: false });
 
   const trips = (tripsData ?? []) as OrganizerTrip[];
+
+  const tripIds = trips.map((t) => t.id);
+  const { data: bookingsData } =
+    tripIds.length > 0
+      ? await supabase
+          .from("bookings")
+          .select("id, full_name, email, phone, slots, total_amount, status, created_at, trips(title)")
+          .in("trip_id", tripIds)
+          .order("created_at", { ascending: false })
+      : { data: [] };
+
+  const bookings = (bookingsData ?? []) as unknown as OrganizerBooking[];
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -213,6 +247,82 @@ export default async function OrganizerDashboardPage() {
           {trips.length > 0 && (
             <p className="mt-3 text-sm text-stone-500">
               {trips.length} trip{trips.length !== 1 ? "s" : ""} total
+            </p>
+          )}
+        </div>
+
+        <div className="mt-10">
+          <h2 className="mb-4 text-xl font-bold tracking-tight text-stone-900">
+            My bookings
+          </h2>
+
+          <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[860px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-trailhead/20 bg-trailhead text-white">
+                    <th className="px-4 py-3 font-semibold">Joiner name</th>
+                    <th className="px-4 py-3 font-semibold">Email</th>
+                    <th className="px-4 py-3 font-semibold">Phone</th>
+                    <th className="px-4 py-3 font-semibold">Trip</th>
+                    <th className="px-4 py-3 font-semibold">Slots</th>
+                    <th className="px-4 py-3 font-semibold">Total</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">Date booked</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-12 text-center text-stone-500">
+                        No bookings yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    bookings.map((booking) => (
+                      <tr
+                        key={booking.id}
+                        className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30"
+                      >
+                        <td className="px-4 py-3 font-medium text-stone-900">
+                          {booking.full_name}
+                        </td>
+                        <td className="px-4 py-3 text-stone-600">{booking.email}</td>
+                        <td className="px-4 py-3 text-stone-600">{booking.phone}</td>
+                        <td className="px-4 py-3 text-stone-900">
+                          {booking.trips?.title ?? "—"}
+                        </td>
+                        <td className="px-4 py-3 text-stone-900">{booking.slots}</td>
+                        <td className="px-4 py-3 font-medium text-trailhead">
+                          {formatPrice(booking.total_amount)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+                              booking.status === "confirmed"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : booking.status === "cancelled"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-amber-100 text-amber-900"
+                            }`}
+                          >
+                            {booking.status}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">
+                          {formatDateTime(booking.created_at)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {bookings.length > 0 && (
+            <p className="mt-3 text-sm text-stone-500">
+              {bookings.length} booking{bookings.length !== 1 ? "s" : ""} total
             </p>
           )}
         </div>
