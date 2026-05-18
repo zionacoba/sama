@@ -16,7 +16,8 @@ const navLinks = [
 function AuthSection({ className }: { className?: string }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [organizerStatus, setOrganizerStatus] = useState<string | null>(null);
+  // undefined = still fetching, null = no organizer row, string = status value
+  const [organizerStatus, setOrganizerStatus] = useState<string | null | undefined>(undefined);
 
   async function loadOrganizerStatus(userId: string) {
     const { data } = await supabase
@@ -32,7 +33,9 @@ function AuthSection({ className }: { className?: string }) {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        try { await loadOrganizerStatus(currentUser.id); } catch {}
+        await loadOrganizerStatus(currentUser.id);
+      } else {
+        setOrganizerStatus(null);
       }
     });
 
@@ -42,7 +45,7 @@ function AuthSection({ className }: { className?: string }) {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        try { await loadOrganizerStatus(currentUser.id); } catch {}
+        await loadOrganizerStatus(currentUser.id);
       } else {
         setOrganizerStatus(null);
       }
@@ -58,11 +61,17 @@ function AuthSection({ className }: { className?: string }) {
     router.refresh();
   }
 
+  function getDisplayName(u: User): string {
+    const full = u.user_metadata?.full_name as string | undefined;
+    if (full?.trim()) return full.trim().split(" ")[0];
+    return u.email?.split("@")[0] ?? "You";
+  }
+
   if (user) {
     return (
       <div className={`flex items-center gap-2 sm:gap-3 ${className ?? ""}`}>
         <span className="max-w-[120px] truncate text-sm text-stone-600 sm:max-w-[200px]">
-          {user.email}
+          {getDisplayName(user)}
         </span>
         <Link
           href="/dashboard/bookings"
@@ -81,14 +90,14 @@ function AuthSection({ className }: { className?: string }) {
           <span className="shrink-0 text-sm text-stone-400">
             Application pending
           </span>
-        ) : (
+        ) : organizerStatus === null ? (
           <Link
             href="/organizer/apply"
             className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
           >
             Become an Organizer
           </Link>
-        )}
+        ) : null /* undefined = still loading */}
         <button
           type="button"
           onClick={handleLogout}
