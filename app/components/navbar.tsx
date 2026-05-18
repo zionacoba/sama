@@ -49,8 +49,11 @@ function AuthSection({ className }: { className?: string }) {
       const currentUser = session?.user ?? null;
       console.log("[navbar] onAuthStateChange fired, event:", _event, "user:", currentUser?.email ?? "null");
       setUser(currentUser);
+      console.log("[navbar] currentUser truthy:", !!currentUser, "| id:", currentUser?.id ?? "none");
       if (currentUser) {
+        console.log("[navbar] calling loadOrganizerStatus");
         await loadOrganizerStatus(currentUser.id);
+        console.log("[navbar] loadOrganizerStatus done");
       } else {
         setOrganizerStatus(null);
       }
