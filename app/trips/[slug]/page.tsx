@@ -170,7 +170,8 @@ export default async function TripDetailPage({ params }: PageProps) {
 
   const reviews = (reviewsData ?? []) as Review[];
   const organizer = organizerData as OrganizerInfo | null;
-  const canReview = !!user && !!bookingData && !existingReview;
+  const tripPast = new Date(tripData.date_start) < new Date();
+  const canReview = !!user && !!bookingData && !existingReview && tripPast;
   const reviewerName = (bookingData as { full_name?: string } | null)?.full_name ?? "";
 
   const avgRating =
@@ -374,9 +375,19 @@ export default async function TripDetailPage({ params }: PageProps) {
               </div>
             )}
 
-            {user && !canReview && !existingReview && (
+            {user && !!bookingData && !existingReview && !tripPast && (
               <p className="mt-6 text-sm text-stone-400">
-                You need a confirmed booking on this trip to leave a review.
+                You can leave a review after the trip on{" "}
+                <span className="font-medium text-stone-600">
+                  {formatDate(tripData.date_start)}
+                </span>
+                .
+              </p>
+            )}
+
+            {user && !bookingData && !existingReview && (
+              <p className="mt-6 text-sm text-stone-400">
+                You need a booking on this trip to leave a review.
               </p>
             )}
 
