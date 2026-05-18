@@ -25,16 +25,21 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     .eq("id", bookingId)
     .maybeSingle();
 
+  console.log("[updateBookingStatus] bookingId:", bookingId, "| booking:", booking);
+
   if (!booking) return { error: "Booking not found." };
 
   const { data: trip } = await supabase
     .from("trips")
-    .select("id")
+    .select("id, organizer_id")
     .eq("id", booking.trip_id)
-    .eq("organizer_id", organizer.id)
     .maybeSingle();
 
-  if (!trip) return { error: "You don't have permission to manage this booking." };
+  console.log("[updateBookingStatus] trip.organizer_id:", trip?.organizer_id, "| organizer.id:", organizer.id);
+
+  if (!trip || trip.organizer_id?.toString().trim() !== organizer.id?.toString().trim()) {
+    return { error: "You don't have permission to manage this booking." };
+  }
 
   const { error } = await supabase
     .from("bookings")
