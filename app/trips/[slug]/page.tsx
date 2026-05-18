@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { BookingModal } from "@/app/trips/[slug]/booking-modal";
 
 type TripDetail = {
@@ -63,6 +63,7 @@ type PageProps = {
 export default async function TripDetailPage({ params }: PageProps) {
   const { slug } = await params;
 
+  const supabase = await createSupabaseServerClient();
   const { data: trip } = await supabase
     .from("trips")
     .select("*")
