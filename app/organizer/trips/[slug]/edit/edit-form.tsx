@@ -175,7 +175,7 @@ export function EditTripForm({ trip }: { trip: TripForEdit }) {
             name="date_start"
             type="date"
             required
-            defaultValue={trip.date_start}
+            defaultValue={trip.date_start.slice(0, 10)}
             className={inputClass}
           />
         </div>

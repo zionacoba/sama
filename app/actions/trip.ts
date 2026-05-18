@@ -115,7 +115,12 @@ export async function updateTrip(
     .eq("id", tripId)
     .maybeSingle();
 
-  if (!existing || existing.organizer_id !== organizer.id) {
+  if (!existing || Number(existing.organizer_id) !== Number(organizer.id)) {
+    console.error("[updateTrip] ownership check failed", {
+      tripId,
+      existingOrganizerId: existing?.organizer_id,
+      organizerId: organizer.id,
+    });
     return { error: "Trip not found or you don't have permission to edit it." };
   }
 
@@ -168,7 +173,10 @@ export async function updateTrip(
     })
     .eq("id", tripId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[updateTrip] supabase update error", error);
+    return { error: error.message };
+  }
 
   redirect("/organizer/dashboard");
 }
