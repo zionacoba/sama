@@ -29,12 +29,20 @@ function AuthSection({ className }: { className?: string }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) await loadOrganizerStatus(currentUser.id);
-      setLoading(false);
-    });
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) {
+          try {
+            await loadOrganizerStatus(currentUser.id);
+          } catch {
+            // non-fatal — show navbar without organizer status
+          }
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
 
     const {
       data: { subscription },
@@ -42,7 +50,11 @@ function AuthSection({ className }: { className?: string }) {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        await loadOrganizerStatus(currentUser.id);
+        try {
+          await loadOrganizerStatus(currentUser.id);
+        } catch {
+          // non-fatal
+        }
       } else {
         setOrganizerStatus(null);
       }
