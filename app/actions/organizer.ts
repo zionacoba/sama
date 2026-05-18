@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 const ADMIN_EMAIL = "acobapaulzion@gmail.com";
@@ -58,5 +57,5 @@ export async function updateOrganizerStatus(formData: FormData) {
 
   await supabase.from("organizers").update({ status }).eq("id", id);
 
-  revalidatePath("/admin");
+  redirect("/admin");
 }
