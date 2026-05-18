@@ -16,7 +16,6 @@ const navLinks = [
 function AuthSection({ className }: { className?: string }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const [organizerStatus, setOrganizerStatus] = useState<string | null>(null);
 
   async function loadOrganizerStatus(userId: string) {
@@ -29,20 +28,13 @@ function AuthSection({ className }: { className?: string }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession()
-      .then(async ({ data: { session } }) => {
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        if (currentUser) {
-          try {
-            await loadOrganizerStatus(currentUser.id);
-          } catch {
-            // non-fatal — show navbar without organizer status
-          }
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        try { await loadOrganizerStatus(currentUser.id); } catch {}
+      }
+    });
 
     const {
       data: { subscription },
@@ -50,11 +42,7 @@ function AuthSection({ className }: { className?: string }) {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        try {
-          await loadOrganizerStatus(currentUser.id);
-        } catch {
-          // non-fatal
-        }
+        try { await loadOrganizerStatus(currentUser.id); } catch {}
       } else {
         setOrganizerStatus(null);
       }
@@ -68,10 +56,6 @@ function AuthSection({ className }: { className?: string }) {
     await supabase.auth.signOut();
     setUser(null);
     router.refresh();
-  }
-
-  if (loading) {
-    return <div className={className} aria-hidden />;
   }
 
   if (user) {
