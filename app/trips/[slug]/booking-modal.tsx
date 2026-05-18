@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
+import { createBooking } from "@/app/actions/booking";
 
 type BookingModalProps = {
   tripId: number;
@@ -116,23 +117,20 @@ export function BookingModal({
     setError(null);
     setLoading(true);
 
-    const tripIdInt = Number(tripId);
-
-    const { error: insertError } = await supabase.from("bookings").insert({
-      trip_id: tripIdInt,
-      full_name: fullName,
+    const result = await createBooking({
+      tripId: Number(tripId),
+      fullName,
       email,
       phone,
       slots,
-      total_amount: totalAmount,
-      status: "pending",
+      totalAmount,
       notes: notes.trim() || null,
     });
 
     setLoading(false);
 
-    if (insertError) {
-      setError(insertError.message);
+    if (result.error) {
+      setError(result.error);
       return;
     }
 
