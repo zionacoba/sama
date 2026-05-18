@@ -21,6 +21,8 @@ function AuthSection({ className }: { className?: string }) {
   const [organizerStatus, setOrganizerStatus] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
+    console.log("[navbar] useEffect running");
+
     async function fetchOrganizerStatus(userId: string) {
       try {
         const client = createBrowserClient(
