@@ -116,12 +116,12 @@ export default async function Home() {
                 Hand-picked experiences travelers love right now.
               </p>
             </div>
-            <a
-              href="#"
+            <Link
+              href="/trips"
               className="text-sm font-semibold text-trailhead underline-offset-4 hover:underline"
             >
               View all trips
-            </a>
+            </Link>
           </div>
           <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {trips.map((trip) => (
