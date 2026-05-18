@@ -49,6 +49,12 @@ export function BookingModal({
     supabase.auth.getSession().then(({ data: { session } }) => {
       sessionRef.current = session;
     });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      sessionRef.current = session;
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
