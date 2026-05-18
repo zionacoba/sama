@@ -7,7 +7,8 @@ type TripDetail = {
   id: number;
   title: string;
   destination: string;
-  difficulty: "Beginner" | "Intermediate";
+  activity_type: string | null;
+  difficulty: string;
   price: string | number;
   description: string;
   date_start: string;
@@ -15,19 +16,34 @@ type TripDetail = {
   total_slots: number;
   remaining_slots: number;
   photos: string[] | null;
+  includes: string | null;
+  what_to_bring: string | null;
+  organizer_id: number | null;
 };
 
-function DifficultyBadge({ level }: { level: "Beginner" | "Intermediate" }) {
-  const isBeginner = level === "Beginner";
+type OrganizerInfo = {
+  full_name: string;
+  bio: string | null;
+};
+
+function DifficultyBadge({ level }: { level: string }) {
+  const colorClass =
+    level === "Beginner"
+      ? "bg-emerald-100 text-emerald-800"
+      : level === "Intermediate"
+        ? "bg-amber-100 text-amber-900"
+        : "bg-red-100 text-red-800";
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-        isBeginner
-          ? "bg-emerald-100 text-emerald-800"
-          : "bg-amber-100 text-amber-900"
-      }`}
-    >
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${colorClass}`}>
       {level}
+    </span>
+  );
+}
+
+function ActivityBadge({ type }: { type: string }) {
+  return (
+    <span className="inline-flex items-center rounded-full bg-trailhead-muted px-2.5 py-0.5 text-xs font-semibold text-trailhead">
+      {type}
     </span>
   );
 }
@@ -56,6 +72,14 @@ function formatDate(dateStart: string) {
   }).format(new Date(dateStart));
 }
 
+function parseList(text: string | null): string[] {
+  if (!text?.trim()) return [];
+  return text
+    .split(/[\n,]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
@@ -75,10 +99,7 @@ export default async function TripDetailPage({ params }: PageProps) {
       <div className="min-h-full bg-stone-50 text-stone-900 font-sans">
         <header className="border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
-            <Link
-              href="/"
-              className="text-lg font-bold tracking-tight text-trailhead"
-            >
+            <Link href="/" className="text-lg font-bold tracking-tight text-trailhead">
               ⛰ Sama
             </Link>
           </div>
@@ -101,18 +122,28 @@ export default async function TripDetailPage({ params }: PageProps) {
 
   const tripData = trip as TripDetail;
 
+  let organizer: OrganizerInfo | null = null;
+  if (tripData.organizer_id) {
+    const { data } = await supabase
+      .from("organizers")
+      .select("full_name, bio")
+      .eq("id", tripData.organizer_id)
+      .maybeSingle();
+    organizer = data as OrganizerInfo | null;
+  }
+
+  const includesList = parseList(tripData.includes);
+  const whatToBringList = parseList(tripData.what_to_bring);
+
   return (
     <div className="min-h-full bg-stone-50 text-stone-900 font-sans">
       <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
-          <Link
-            href="/"
-            className="text-lg font-bold tracking-tight text-trailhead"
-          >
+          <Link href="/" className="text-lg font-bold tracking-tight text-trailhead">
             ⛰ Sama
           </Link>
           <Link
-            href="/"
+            href="/trips"
             className="text-sm font-medium text-stone-600 transition hover:text-trailhead"
           >
             ← All trips
@@ -123,7 +154,10 @@ export default async function TripDetailPage({ params }: PageProps) {
       <main>
         <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-10 sm:py-14">
           <div className="mx-auto max-w-3xl">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {tripData.activity_type && (
+                <ActivityBadge type={tripData.activity_type} />
+              )}
               <DifficultyBadge level={tripData.difficulty} />
               <span className="text-sm text-stone-600">
                 {tripData.remaining_slots} of {tripData.total_slots} slots left
@@ -175,18 +209,55 @@ export default async function TripDetailPage({ params }: PageProps) {
                 Availability
               </h2>
               <p className="mt-2 font-medium text-stone-900">
-                {tripData.remaining_slots} remaining · {tripData.total_slots}{" "}
-                total slots
+                {tripData.remaining_slots} remaining · {tripData.total_slots} total slots
               </p>
             </div>
           </div>
 
           <div className="mt-10 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-lg font-bold text-stone-900">About this trip</h2>
-            <p className="mt-4 whitespace-pre-line text-stone-600 leading-relaxed">
+            <p className="mt-4 whitespace-pre-line leading-relaxed text-stone-600">
               {tripData.description}
             </p>
           </div>
+
+          {includesList.length > 0 && (
+            <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
+              <h2 className="text-lg font-bold text-stone-900">What&apos;s included</h2>
+              <ul className="mt-4 space-y-2">
+                {includesList.map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-stone-600">
+                    <span className="mt-0.5 shrink-0 text-trailhead">✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {whatToBringList.length > 0 && (
+            <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
+              <h2 className="text-lg font-bold text-stone-900">What to bring</h2>
+              <ul className="mt-4 space-y-2">
+                {whatToBringList.map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-stone-600">
+                    <span className="mt-0.5 shrink-0 text-stone-400">•</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {organizer && (
+            <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
+              <h2 className="text-lg font-bold text-stone-900">Your organizer</h2>
+              <p className="mt-3 font-semibold text-stone-900">{organizer.full_name}</p>
+              {organizer.bio && (
+                <p className="mt-1 leading-relaxed text-stone-600">{organizer.bio}</p>
+              )}
+            </div>
+          )}
 
           <BookingModal
             tripId={tripData.id}
