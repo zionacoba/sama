@@ -23,11 +23,22 @@ function AuthSection({ className }: { className?: string }) {
     async function fetchOrganizerStatus(userId: string) {
       console.log("[navbar] fetchOrganizerStatus called, userId:", userId);
       try {
-        const result = await supabase
-          .from("organizers")
-          .select("status")
-          .eq("user_id", userId)
-          .maybeSingle();
+        // null = timeout sentinel; Supabase always returns { data, error }
+        const result = await Promise.race([
+          supabase
+            .from("organizers")
+            .select("status")
+            .eq("user_id", userId)
+            .maybeSingle(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+        ]);
+
+        if (result === null) {
+          console.log("[navbar] fetchOrganizerStatus timed out");
+          setOrganizerStatus(null);
+          return;
+        }
+
         console.log("[navbar] fetchOrganizerStatus result:", JSON.stringify(result));
         setOrganizerStatus(result.data?.status ?? null);
       } catch (err) {
