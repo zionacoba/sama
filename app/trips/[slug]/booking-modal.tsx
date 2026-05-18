@@ -171,8 +171,8 @@ export function BookingModal({
             onClick={handleClose}
           />
 
-          <div className="relative z-10 w-full max-w-lg rounded-2xl border border-stone-200 bg-white shadow-xl">
-            <div className="flex items-start justify-between gap-4 border-b border-stone-100 px-6 py-4">
+          <div className="relative z-10 flex w-full max-w-lg flex-col max-h-[calc(100dvh-2rem)] rounded-2xl border border-stone-200 bg-white shadow-xl">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stone-100 px-6 py-4">
               <div>
                 <h2
                   id="booking-modal-title"
@@ -194,7 +194,7 @@ export function BookingModal({
               </button>
             </div>
 
-            <div className="px-6 py-5">
+            <div className="overflow-y-auto px-6 py-5">
               {success ? (
                 <div className="space-y-4">
                   <p
