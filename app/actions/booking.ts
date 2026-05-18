@@ -53,13 +53,17 @@ export async function createBooking(input: CreateBookingInput) {
     if (trip?.organizer_id) {
       // Use admin client to bypass RLS — the booker cannot read other organizers' rows
       const admin = createSupabaseAdminClient();
+
+      console.log("[createBooking] looking up organizer_id:", trip.organizer_id, typeof trip.organizer_id);
+
       const { data: organizer, error: organizerError } = await admin
         .from("organizers")
-        .select("email")
+        .select("*")
         .eq("id", trip.organizer_id)
         .maybeSingle();
 
-      console.log("[createBooking] organizer query:", JSON.stringify({ data: organizer, error: organizerError }));
+      console.log("[createBooking] organizer raw row:", JSON.stringify(organizer));
+      console.log("[createBooking] organizer query error:", JSON.stringify(organizerError));
 
       const organizerEmail = organizer?.email;
       console.log("[createBooking] organizer email:", organizerEmail);
