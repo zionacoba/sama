@@ -18,7 +18,6 @@ type CreateBookingInput = {
 };
 
 export async function createBooking(input: CreateBookingInput) {
-  console.log("[createBooking] called for tripId:", input.tripId, "by:", input.email);
   const supabase = await createSupabaseServerClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -31,12 +30,8 @@ export async function createBooking(input: CreateBookingInput) {
     .eq("id", input.tripId)
     .maybeSingle();
 
-  console.log("[createBooking] trip fetched:", JSON.stringify(trip));
-
   const autoApprove = trip?.difficulty === "Beginner" || trip?.difficulty === "Intermediate";
   const bookingStatus = autoApprove ? "confirmed" : "pending";
-
-  console.log("[createBooking] difficulty:", trip?.difficulty, "→ status:", bookingStatus);
 
   const { error: insertError } = await supabase.from("bookings").insert({
     trip_id: input.tripId,
@@ -51,32 +46,20 @@ export async function createBooking(input: CreateBookingInput) {
     amount_due: input.amountDue,
   });
 
-  if (insertError) {
-    console.log("[createBooking] insert error:", insertError.message);
-    return { error: insertError.message };
-  }
-
-  console.log("[createBooking] booking inserted successfully with status:", bookingStatus);
+  if (insertError) return { error: insertError.message };
 
   // Send emails (best-effort — don't fail the booking if email fails)
   try {
     if (trip?.organizer_id) {
       // Use admin client to bypass RLS — the booker cannot read other organizers' rows
       const admin = createSupabaseAdminClient();
-
-      console.log("[createBooking] looking up organizer_id:", trip.organizer_id, typeof trip.organizer_id);
-
-      const { data: organizer, error: organizerError } = await admin
+      const { data: organizer } = await admin
         .from("organizers")
-        .select("*")
+        .select("email")
         .eq("id", trip.organizer_id)
         .maybeSingle();
 
-      console.log("[createBooking] organizer raw row:", JSON.stringify(organizer));
-      console.log("[createBooking] organizer query error:", JSON.stringify(organizerError));
-
       const organizerEmail = organizer?.email;
-      console.log("[createBooking] organizer email:", organizerEmail);
 
       if (organizerEmail) {
         const tripDate = new Intl.DateTimeFormat("en-PH", {
@@ -86,8 +69,7 @@ export async function createBooking(input: CreateBookingInput) {
           day: "numeric",
         }).format(new Date(trip.date_start));
 
-        console.log("[createBooking] sending organizer email to:", organizerEmail);
-        const { data: emailData, error: emailError } = await resend.emails.send({
+        await resend.emails.send({
           from: "Sama <onboarding@resend.dev>",
           to: organizerEmail,
           subject: `New booking for ${trip.title}`,
@@ -106,7 +88,6 @@ export async function createBooking(input: CreateBookingInput) {
             <p>— The Sama Team</p>
           `,
         });
-        console.log("[createBooking] organizer email result:", emailData, emailError);
       }
     }
 
@@ -120,8 +101,7 @@ export async function createBooking(input: CreateBookingInput) {
       }).format(new Date(trip.date_start));
 
       // TODO: change to input.email once sama.com.ph is verified in Resend
-      console.log("[createBooking] sending booker confirmation to:", input.email);
-      const { data: bookerEmailData, error: bookerEmailError } = await resend.emails.send({
+      await resend.emails.send({
         from: "Sama <onboarding@resend.dev>",
         to: "acobapaulzion@gmail.com",
         subject: autoApprove
@@ -151,10 +131,9 @@ export async function createBooking(input: CreateBookingInput) {
             <p>— The Sama Team</p>
           `,
       });
-      console.log("[createBooking] booker email result:", bookerEmailData, bookerEmailError);
     }
-  } catch (err) {
-    console.log("[createBooking] email error (non-fatal):", err);
+  } catch {
+    // Email failure is non-fatal
   }
 
   revalidatePath(`/trips/${input.tripId}`);
