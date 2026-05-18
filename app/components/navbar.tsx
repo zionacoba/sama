@@ -7,27 +7,48 @@ import type { User } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
 const navLinks = [
-  { label: "Hike", href: "#" },
-  { label: "Camp", href: "#" },
-  { label: "Dive", href: "#" },
-  { label: "Island Hop", href: "#" },
+  { label: "Hike", href: "/trips?activity=Hiking" },
+  { label: "Camp", href: "/trips?activity=Camping" },
+  { label: "Dive", href: "/trips?activity=Freediving" },
+  { label: "Island Hop", href: "/trips?activity=Island Hopping" },
 ] as const;
 
 function AuthSection({ className }: { className?: string }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasOrganizerRow, setHasOrganizerRow] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        const { data } = await supabase
+          .from("organizers")
+          .select("id")
+          .eq("user_id", currentUser.id)
+          .maybeSingle();
+        setHasOrganizerRow(!!data);
+      }
       setLoading(false);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        const { data } = await supabase
+          .from("organizers")
+          .select("id")
+          .eq("user_id", currentUser.id)
+          .maybeSingle();
+        setHasOrganizerRow(!!data);
+      } else {
+        setHasOrganizerRow(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -49,12 +70,14 @@ function AuthSection({ className }: { className?: string }) {
         <span className="max-w-[120px] truncate text-sm text-stone-600 sm:max-w-[200px]">
           {user.email}
         </span>
-        <Link
-          href="/organizer/apply"
-          className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
-        >
-          Become an Organizer
-        </Link>
+        {!hasOrganizerRow && (
+          <Link
+            href="/organizer/apply"
+            className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
+          >
+            Become an Organizer
+          </Link>
+        )}
         <button
           type="button"
           onClick={handleLogout}
@@ -94,13 +117,13 @@ export function Navbar() {
           aria-label="Main"
         >
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.label}
               href={link.href}
               className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-trailhead-muted hover:text-trailhead"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </nav>
         <AuthSection className="hidden sm:flex" />
