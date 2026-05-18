@@ -182,7 +182,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
               </Link>
             </div>
           ) : (
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
               {trips.map((trip) => (
                 <li key={trip.id}>
                   <Link
@@ -190,7 +190,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                     className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
                   >
                     <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
-                      <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:aspect-[4/3]">
+                      <div className="relative aspect-[2/1] overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:aspect-[4/3]">
                         {trip.photos?.[0] && (
                           <Image
                             src={trip.photos[0]}

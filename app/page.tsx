@@ -144,15 +144,16 @@ export default async function Home() {
               View all trips
             </Link>
           </div>
-          <ul className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 snap-x snap-mandatory sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
+          <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
+          <ul className="flex gap-4 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
             {trips.map((trip) => (
-              <li key={trip.id ?? trip.title} className="w-[72vw] max-w-[280px] shrink-0 snap-start sm:w-auto sm:max-w-none">
+              <li key={trip.id ?? trip.title} className="w-[75vw] shrink-0 snap-start sm:w-auto">
                 <Link
                   href={`/trips/${trip.slug}`}
                   className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
                 >
                   <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
-                  <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80">
+                  <div className="relative aspect-[2/1] overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:aspect-[4/3]">
                     {trip.photos?.[0] && (
                       <Image
                         src={trip.photos[0]}
@@ -189,6 +190,7 @@ export default async function Home() {
               </li>
             ))}
           </ul>
+          </div>
         </section>
 
         <aside className="border-t border-trailhead-dark/20 bg-trailhead px-4 py-10 text-white sm:py-12">
