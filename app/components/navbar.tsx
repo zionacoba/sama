@@ -37,14 +37,7 @@ function AuthLinks({ email: _email, displayName, organizerStatus, className }: A
         </Link>
       ) : organizerStatus === "pending" ? (
         <span className="shrink-0 text-sm text-stone-400">Application pending</span>
-      ) : (
-        <Link
-          href="/organizer/apply"
-          className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
-        >
-          Become an Organizer
-        </Link>
-      )}
+      ) : null}
       <form action={signOut}>
         <button
           type="submit"
