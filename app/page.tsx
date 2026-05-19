@@ -32,6 +32,7 @@ type Trip = {
   destination: string;
   difficulty: string;
   activity_type: string | null;
+  duration: string | null;
   date_start: string;
   remaining_slots: number;
   photos: string[] | null;
@@ -74,7 +75,7 @@ export default async function Home() {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("trips")
-    .select("id, slug, title, price, destination, difficulty, activity_type, date_start, remaining_slots, photos")
+    .select("id, slug, title, price, destination, difficulty, activity_type, duration, date_start, remaining_slots, photos")
     .eq("status", "active")
     .gt("date_start", new Date().toISOString())
     .order("date_start", { ascending: true })
@@ -187,7 +188,9 @@ export default async function Home() {
                     </div>
                     <h3 className="font-bold text-stone-900">{trip.title}</h3>
                     <p className="text-sm text-stone-500">{trip.destination}</p>
-                    <p className="text-xs text-stone-400">{formatDate(trip.date_start)}</p>
+                    <p className="text-xs text-stone-400">
+                      {formatDate(trip.date_start)}{trip.duration && ` · ${trip.duration}`}
+                    </p>
                     <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-3">
                       <p className="text-lg font-bold text-trailhead">
                         {formatPrice(trip.price)}
