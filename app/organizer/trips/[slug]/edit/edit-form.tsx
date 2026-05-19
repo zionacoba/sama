@@ -108,7 +108,7 @@ export function EditTripForm({ trip, destinations = [] }: { trip: TripForEdit; d
         />
       </div>
 
-      {/* Activity type + Difficulty */}
+      {/* Activity type + Level */}
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label htmlFor="activity_type" className={labelClass}>
@@ -123,13 +123,13 @@ export function EditTripForm({ trip, destinations = [] }: { trip: TripForEdit; d
           >
             <option value="">Select activity…</option>
             <option value="Hiking">Hiking</option>
-            <option value="Island Hopping">Island Hopping</option>
             <option value="Freediving">Freediving</option>
+            <option value="Beach & Island">Beach &amp; Island</option>
           </select>
         </div>
         <div>
           <label htmlFor="difficulty" className={labelClass}>
-            Difficulty
+            Level
           </label>
           <select
             id="difficulty"
@@ -138,7 +138,8 @@ export function EditTripForm({ trip, destinations = [] }: { trip: TripForEdit; d
             defaultValue={trip.difficulty}
             className={inputClass}
           >
-            <option value="">Select difficulty…</option>
+            <option value="">Select level…</option>
+            <option value="Chill">Chill</option>
             <option value="Beginner">Beginner</option>
             <option value="Intermediate">Intermediate</option>
             <option value="Advanced">Advanced</option>
@@ -146,6 +147,7 @@ export function EditTripForm({ trip, destinations = [] }: { trip: TripForEdit; d
           </select>
         </div>
       </div>
+      {/* TODO: add duration field (Day tour / Overnight / 2D1N / 3D2N / 4D3N+) once `duration` column is added to trips table */}
 
       {/* Destination */}
       <div>

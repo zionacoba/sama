@@ -20,6 +20,8 @@ export const metadata: Metadata = {
 // Add entries here to expose more activity chips on the homepage
 const filterChips = [
   "Hiking",
+  "Freediving",
+  "Beach & Island",
 ] as const;
 
 type Trip = {

@@ -19,8 +19,9 @@ export const metadata: Metadata = {
   },
 };
 
-const ACTIVITIES = ["All", "Hiking", "Island Hopping"] as const;
-const DIFFICULTIES = ["All", "Beginner", "Intermediate", "Advanced", "Expert"] as const;
+const ACTIVITIES = ["All", "Hiking", "Freediving", "Beach & Island"] as const;
+const DURATIONS  = ["All", "Day tour", "Overnight", "2D1N", "3D2N", "4D3N+"] as const;
+const DIFFICULTIES = ["All", "Chill", "Beginner", "Intermediate", "Advanced", "Expert"] as const;
 
 type Trip = {
   id: string | number;
@@ -37,6 +38,7 @@ type Trip = {
 
 type FilterParams = {
   activity?: string;
+  duration?: string;
   difficulty?: string;
   search?: string;
   date_from?: string;
@@ -67,13 +69,15 @@ function formatDate(date: string) {
 
 function DifficultyBadge({ level }: { level: string }) {
   const styles =
-    level === "Beginner"
-      ? "bg-emerald-100 text-emerald-800"
-      : level === "Intermediate"
-        ? "bg-amber-100 text-amber-900"
-        : level === "Advanced"
-          ? "bg-orange-100 text-orange-900"
-          : "bg-red-100 text-red-800";
+    level === "Chill"
+      ? "bg-sky-100 text-sky-800"
+      : level === "Beginner"
+        ? "bg-emerald-100 text-emerald-800"
+        : level === "Intermediate"
+          ? "bg-amber-100 text-amber-900"
+          : level === "Advanced"
+            ? "bg-orange-100 text-orange-900"
+            : "bg-red-100 text-red-800";
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles}`}>
       {level}
@@ -83,13 +87,14 @@ function DifficultyBadge({ level }: { level: string }) {
 
 function filterUrl(
   base: FilterParams,
-  key: "activity" | "difficulty",
+  key: "activity" | "duration" | "difficulty",
   value: string,
 ) {
   const next: FilterParams = { ...base, [key]: value === "All" ? undefined : value };
   const sp = new URLSearchParams();
   if (next.search) sp.set("search", next.search);
   if (next.activity) sp.set("activity", next.activity);
+  if (next.duration) sp.set("duration", next.duration);
   if (next.difficulty) sp.set("difficulty", next.difficulty);
   if (next.date_from) sp.set("date_from", next.date_from);
   if (next.date_to) sp.set("date_to", next.date_to);
@@ -99,7 +104,7 @@ function filterUrl(
 }
 
 export default async function TripsPage({ searchParams }: PageProps) {
-  const { activity, difficulty, search, date_from, date_to, sort = "soonest" } = await searchParams;
+  const { activity, duration, difficulty, search, date_from, date_to, sort = "soonest" } = await searchParams;
 
   const supabase = await createSupabaseServerClient();
   let query = supabase
@@ -113,6 +118,8 @@ export default async function TripsPage({ searchParams }: PageProps) {
     query = query.or(`title.ilike.${term},destination.ilike.${term},activity_type.ilike.${term}`);
   }
   if (activity) query = query.eq("activity_type", activity);
+  // TODO: apply duration filter once the `duration` column is added to the trips table
+  void duration;
   if (difficulty) query = query.eq("difficulty", difficulty);
   if (date_from) query = query.gte("date_start", `${date_from}T00:00:00`);
   if (date_to) query = query.lte("date_start", `${date_to}T23:59:59`);
@@ -128,8 +135,9 @@ export default async function TripsPage({ searchParams }: PageProps) {
   const trips = (data ?? []) as Trip[];
 
   const currentActivity = activity ?? "All";
+  const currentDuration = duration ?? "All";
   const currentDifficulty = difficulty ?? "All";
-  const current = { activity, difficulty, search, date_from, date_to, sort };
+  const current = { activity, duration, difficulty, search, date_from, date_to, sort };
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -144,6 +152,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
 
             <form action="/trips" method="GET" className="mt-4 flex gap-2">
               {activity && <input type="hidden" name="activity" value={activity} />}
+              {duration && <input type="hidden" name="duration" value={duration} />}
               {difficulty && <input type="hidden" name="difficulty" value={difficulty} />}
               {sort && sort !== "soonest" && <input type="hidden" name="sort" value={sort} />}
               {date_from && <input type="hidden" name="date_from" value={date_from} />}
@@ -180,6 +189,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                   {(() => {
                     const sp = new URLSearchParams();
                     if (activity) sp.set("activity", activity);
+                    if (duration) sp.set("duration", duration);
                     if (difficulty) sp.set("difficulty", difficulty);
                     if (date_from) sp.set("date_from", date_from);
                     if (date_to) sp.set("date_to", date_to);
@@ -224,10 +234,35 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 </div>
               </div>
 
-              {/* Difficulty filter */}
+              {/* Duration filter */}
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  Difficulty
+                  Duration
+                </p>
+                <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+                  {DURATIONS.map((d) => {
+                    const active = d === currentDuration;
+                    return (
+                      <Link
+                        key={d}
+                        href={filterUrl(current, "duration", d)}
+                        className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+                          active
+                            ? "bg-trailhead text-white shadow-sm"
+                            : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
+                        }`}
+                      >
+                        {d}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Level filter */}
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                  Level
                 </p>
                 <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
                   {DIFFICULTIES.map((d) => {
