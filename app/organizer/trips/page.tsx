@@ -66,24 +66,22 @@ export default async function OrganizerTripsPage() {
 
   const trips = (data ?? []) as TripRow[];
 
-  // Build a map of template id → template trip
-  const templateMap = new Map<number, TripRow>();
-  for (const t of trips) {
-    if (t.is_template) templateMap.set(t.id, t);
-  }
+  // A trip counts as a template if the column says so, or by the sentinel date
+  // (handles rows saved before the is_template column was reliably written)
+  const isTemplate = (t: TripRow) => t.is_template === true || t.date_start === "2099-12-31";
 
   // Group: templates with nested runs, then standalone trips
   type Group = { template: TripRow; runs: TripRow[] };
   const groups: Group[] = [];
   const groupedRunIds = new Set<number>();
 
-  for (const template of trips.filter((t) => t.is_template)) {
+  for (const template of trips.filter(isTemplate)) {
     const runs = trips.filter((t) => String(t.template_id) === String(template.id));
     runs.forEach((r) => groupedRunIds.add(r.id));
     groups.push({ template, runs });
   }
 
-  const standalones = trips.filter((t) => !t.is_template && !groupedRunIds.has(t.id));
+  const standalones = trips.filter((t) => !isTemplate(t) && !groupedRunIds.has(t.id));
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -209,6 +207,7 @@ export default async function OrganizerTripsPage() {
           {/* Standalone trips */}
           {standalones.map((trip) => {
             const badge = statusBadge(trip);
+            const tmpl = isTemplate(trip);
             return (
               <div key={trip.id} className="flex items-center justify-between gap-4 rounded-2xl border border-stone-200 bg-white px-5 py-4 shadow-sm">
                 <div className="min-w-0 flex-1">
@@ -219,17 +218,28 @@ export default async function OrganizerTripsPage() {
                     <h2 className="truncate font-semibold text-stone-900">{trip.title}</h2>
                   </div>
                   <p className="mt-0.5 text-xs text-stone-400">
-                    {formatDate(trip.date_start)} · {formatPrice(trip.price)} · {trip.remaining_slots}/{trip.total_slots} slots
+                    {tmpl
+                      ? "0 scheduled runs"
+                      : `${formatDate(trip.date_start)} · ${formatPrice(trip.price)} · ${trip.remaining_slots}/${trip.total_slots} slots`}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <Link
-                    href={`/trips/${trip.slug}`}
-                    target="_blank"
-                    className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
-                  >
-                    View
-                  </Link>
+                  {tmpl ? (
+                    <Link
+                      href={`/organizer/trips/new?template_id=${trip.id}`}
+                      className="rounded-lg border border-trailhead/30 px-3 py-1.5 text-xs font-semibold text-trailhead transition hover:bg-trailhead-muted"
+                    >
+                      + Add run
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/trips/${trip.slug}`}
+                      target="_blank"
+                      className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
+                    >
+                      View
+                    </Link>
+                  )}
                   <Link
                     href={`/organizer/trips/${trip.slug}/edit`}
                     className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
