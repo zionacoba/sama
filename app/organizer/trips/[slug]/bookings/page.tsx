@@ -5,6 +5,7 @@ import { BookingActions } from "@/app/organizer/dashboard/booking-actions";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ view?: string }>;
 };
 
 type Booking = {
@@ -25,6 +26,7 @@ type Booking = {
   waiver_agreed: boolean;
   medical_notes: string | null;
   notes: string | null;
+  meeting_point: string | null;
 };
 
 function formatCurrency(amount: number) {
@@ -54,7 +56,6 @@ function formatDateTime(date: string) {
   }).format(new Date(date));
 }
 
-
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     confirmed: "bg-emerald-100 text-emerald-800",
@@ -64,16 +65,17 @@ function StatusBadge({ status }: { status: string }) {
   };
   const label = status.charAt(0).toUpperCase() + status.slice(1);
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[status] ?? "bg-stone-100 text-stone-600"}`}
-    >
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[status] ?? "bg-stone-100 text-stone-600"}`}>
       {label}
     </span>
   );
 }
 
-export default async function TripBookingsPage({ params }: PageProps) {
-  const { slug } = await params;
+const NO_PICKUP = "No pickup point selected";
+
+export default async function TripBookingsPage({ params, searchParams }: PageProps) {
+  const [{ slug }, { view }] = await Promise.all([params, searchParams]);
+  const isGrouped = view === "grouped";
 
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -99,7 +101,7 @@ export default async function TripBookingsPage({ params }: PageProps) {
   const { data: bookingsData } = await supabase
     .from("bookings")
     .select(
-      "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes"
+      "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point"
     )
     .eq("trip_id", trip.id)
     .order("created_at", { ascending: false });
@@ -112,6 +114,22 @@ export default async function TripBookingsPage({ params }: PageProps) {
 
   const needsManualApproval = trip.difficulty === "Advanced" || trip.difficulty === "Expert";
   const slotsBooked = trip.total_slots - trip.remaining_slots;
+
+  // Grouped view: confirmed + pending only, grouped by meeting_point
+  const activeBookings = bookings.filter((b) => b.status === "confirmed" || b.status === "pending");
+  const groupMap = new Map<string, Booking[]>();
+  for (const b of activeBookings) {
+    const key = b.meeting_point?.trim() || NO_PICKUP;
+    if (!groupMap.has(key)) groupMap.set(key, []);
+    groupMap.get(key)!.push(b);
+  }
+  const groups = Array.from(groupMap.entries()).sort(([a], [b]) => {
+    if (a === NO_PICKUP) return 1;
+    if (b === NO_PICKUP) return -1;
+    return a.localeCompare(b);
+  });
+
+  const baseUrl = `/organizer/trips/${slug}/bookings`;
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -179,54 +197,137 @@ export default async function TripBookingsPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Bookings table */}
-        <div className="mt-8 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-          {bookings.length === 0 ? (
-            <p className="px-6 py-12 text-center text-sm text-stone-400">No bookings yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-sm">
-                <thead>
-                  <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
-                    <th className="px-5 py-3">Name</th>
-                    <th className="px-5 py-3">Email</th>
-                    <th className="px-5 py-3 text-center">Slots</th>
-                    <th className="px-5 py-3 text-right">Amount</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Booked on</th>
-                    {needsManualApproval && <th className="px-5 py-3" />}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {bookings.map((b) => (
-                    <tr key={b.id} className="hover:bg-stone-50">
-                      <td className="px-5 py-3.5 font-medium text-stone-900">{b.full_name}</td>
-                      <td className="px-5 py-3.5 text-stone-500">{b.email}</td>
-                      <td className="px-5 py-3.5 text-center text-stone-700">{b.slots}</td>
-                      <td className="px-5 py-3.5 text-right font-semibold text-trailhead">
-                        {formatCurrency(b.total_amount)}
-                        {b.payment_option === "downpayment" && b.amount_due != null && (
-                          <span className="ml-1 text-xs font-normal text-stone-400">
-                            ({formatCurrency(b.amount_due)} due)
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <StatusBadge status={b.status} />
-                      </td>
-                      <td className="px-5 py-3.5 text-stone-500">{formatDateTime(b.created_at)}</td>
-                      {needsManualApproval && (
-                        <td className="px-5 py-3.5 text-right">
-                          {b.status === "pending" && <BookingActions bookingId={b.id} />}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        {/* View toggle */}
+        <div className="mt-6 flex items-center gap-2">
+          <Link
+            href={baseUrl}
+            className={`rounded-lg px-3.5 py-2 text-sm font-medium transition ${
+              !isGrouped
+                ? "bg-trailhead text-white shadow-sm"
+                : "bg-white text-stone-600 border border-stone-200 hover:border-stone-300 hover:text-stone-900"
+            }`}
+          >
+            All bookings
+          </Link>
+          <Link
+            href={`${baseUrl}?view=grouped`}
+            className={`rounded-lg px-3.5 py-2 text-sm font-medium transition ${
+              isGrouped
+                ? "bg-trailhead text-white shadow-sm"
+                : "bg-white text-stone-600 border border-stone-200 hover:border-stone-300 hover:text-stone-900"
+            }`}
+          >
+            By pickup point
+          </Link>
         </div>
+
+        {/* Flat table */}
+        {!isGrouped && (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+            {bookings.length === 0 ? (
+              <p className="px-6 py-12 text-center text-sm text-stone-400">No bookings yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm">
+                  <thead>
+                    <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
+                      <th className="px-5 py-3">Name</th>
+                      <th className="px-5 py-3">Email</th>
+                      <th className="px-5 py-3 text-center">Slots</th>
+                      <th className="px-5 py-3 text-right">Amount</th>
+                      <th className="px-5 py-3">Status</th>
+                      <th className="px-5 py-3">Booked on</th>
+                      {needsManualApproval && <th className="px-5 py-3" />}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {bookings.map((b) => (
+                      <tr key={b.id} className="hover:bg-stone-50">
+                        <td className="px-5 py-3.5 font-medium text-stone-900">{b.full_name}</td>
+                        <td className="px-5 py-3.5 text-stone-500">{b.email}</td>
+                        <td className="px-5 py-3.5 text-center text-stone-700">{b.slots}</td>
+                        <td className="px-5 py-3.5 text-right font-semibold text-trailhead">
+                          {formatCurrency(b.total_amount)}
+                          {b.payment_option === "downpayment" && b.amount_due != null && (
+                            <span className="ml-1 text-xs font-normal text-stone-400">
+                              ({formatCurrency(b.amount_due)} due)
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <StatusBadge status={b.status} />
+                        </td>
+                        <td className="px-5 py-3.5 text-stone-500">{formatDateTime(b.created_at)}</td>
+                        {needsManualApproval && (
+                          <td className="px-5 py-3.5 text-right">
+                            {b.status === "pending" && <BookingActions bookingId={b.id} />}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Grouped view */}
+        {isGrouped && (
+          <div className="mt-4 space-y-4">
+            {activeBookings.length === 0 && (
+              <div className="rounded-2xl border border-stone-200 bg-white px-6 py-12 text-center text-sm text-stone-400">
+                No confirmed or pending bookings yet.
+              </div>
+            )}
+            {groups.map(([label, group]) => {
+              const totalSlots = group.reduce((sum, b) => sum + b.slots, 0);
+              const isUnknown = label === NO_PICKUP;
+              return (
+                <div key={label} className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                  <div className={`flex items-center gap-3 border-b border-stone-100 px-5 py-3.5 ${isUnknown ? "bg-stone-50" : "bg-white"}`}>
+                    <h2 className={`font-semibold ${isUnknown ? "text-stone-400 italic" : "text-stone-900"}`}>
+                      {label}
+                    </h2>
+                    <span className="rounded-full bg-trailhead-muted px-2.5 py-0.5 text-xs font-semibold text-trailhead">
+                      {totalSlots} {totalSlots === 1 ? "joiner" : "joiners"}
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[480px] text-sm">
+                      <thead>
+                        <tr className="border-b border-stone-100 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
+                          <th className="px-5 py-3">Name</th>
+                          <th className="px-5 py-3 text-center">Slots</th>
+                          <th className="px-5 py-3">Status</th>
+                          <th className="px-5 py-3">Booked on</th>
+                          {needsManualApproval && <th className="px-5 py-3" />}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-stone-100">
+                        {group.map((b) => (
+                          <tr key={b.id} className="hover:bg-stone-50">
+                            <td className="px-5 py-3.5 font-medium text-stone-900">{b.full_name}</td>
+                            <td className="px-5 py-3.5 text-center text-stone-700">{b.slots}</td>
+                            <td className="px-5 py-3.5">
+                              <StatusBadge status={b.status} />
+                            </td>
+                            <td className="px-5 py-3.5 text-stone-500">{formatDateTime(b.created_at)}</td>
+                            {needsManualApproval && (
+                              <td className="px-5 py-3.5 text-right">
+                                {b.status === "pending" && <BookingActions bookingId={b.id} />}
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </main>
     </div>
   );
