@@ -29,6 +29,13 @@ type Booking = {
   meeting_point: string | null;
 };
 
+type BookingParticipant = {
+  booking_id: number;
+  slot_index: number;
+  full_name: string | null;
+  completed: boolean;
+};
+
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
@@ -107,6 +114,22 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
     .order("created_at", { ascending: false });
 
   const bookings = (bookingsData ?? []) as Booking[];
+
+  const multiSlotIds = bookings.filter((b) => b.slots > 1).map((b) => b.id);
+  const participantsMap = new Map<number, BookingParticipant[]>();
+
+  if (multiSlotIds.length > 0) {
+    const { data: participantsData } = await supabase
+      .from("booking_participants")
+      .select("booking_id, slot_index, full_name, completed")
+      .in("booking_id", multiSlotIds)
+      .order("slot_index");
+
+    for (const p of (participantsData ?? []) as BookingParticipant[]) {
+      if (!participantsMap.has(p.booking_id)) participantsMap.set(p.booking_id, []);
+      participantsMap.get(p.booking_id)!.push(p);
+    }
+  }
 
   const pending = bookings.filter((b) => b.status === "pending");
   const confirmed = bookings.filter((b) => b.status === "confirmed");
@@ -245,7 +268,30 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                       <tr key={b.id} className="hover:bg-stone-50">
                         <td className="px-5 py-3.5 font-medium text-stone-900">{b.full_name}</td>
                         <td className="px-5 py-3.5 text-stone-500">{b.email}</td>
-                        <td className="px-5 py-3.5 text-center text-stone-700">{b.slots}</td>
+                        <td className="px-5 py-3.5 text-center text-stone-700">
+                          {b.slots}
+                          {b.slots > 1 && participantsMap.has(b.id) && (() => {
+                            const ps = participantsMap.get(b.id)!;
+                            const done = ps.filter((p) => p.completed).length;
+                            return (
+                              <details className="mt-1 text-left">
+                                <summary className="cursor-pointer list-none text-xs font-medium text-stone-400 hover:text-stone-600">
+                                  {done}/{b.slots} confirmed
+                                </summary>
+                                <ul className="mt-1 space-y-0.5 pl-0.5">
+                                  {ps.map((p) => (
+                                    <li key={p.slot_index} className="flex items-center gap-1 text-xs">
+                                      <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
+                                      <span className={p.completed ? "text-stone-700" : "text-stone-400"}>
+                                        {p.full_name ?? `Participant ${p.slot_index + 1}`}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </details>
+                            );
+                          })()}
+                        </td>
                         <td className="px-5 py-3.5 text-right font-semibold text-trailhead">
                           {formatCurrency(b.total_amount)}
                           {b.payment_option === "downpayment" && b.amount_due != null && (
@@ -308,7 +354,30 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                         {group.map((b) => (
                           <tr key={b.id} className="hover:bg-stone-50">
                             <td className="px-5 py-3.5 font-medium text-stone-900">{b.full_name}</td>
-                            <td className="px-5 py-3.5 text-center text-stone-700">{b.slots}</td>
+                            <td className="px-5 py-3.5 text-center text-stone-700">
+                              {b.slots}
+                              {b.slots > 1 && participantsMap.has(b.id) && (() => {
+                                const ps = participantsMap.get(b.id)!;
+                                const done = ps.filter((p) => p.completed).length;
+                                return (
+                                  <details className="mt-1 text-left">
+                                    <summary className="cursor-pointer list-none text-xs font-medium text-stone-400 hover:text-stone-600">
+                                      {done}/{b.slots} confirmed
+                                    </summary>
+                                    <ul className="mt-1 space-y-0.5 pl-0.5">
+                                      {ps.map((p) => (
+                                        <li key={p.slot_index} className="flex items-center gap-1 text-xs">
+                                          <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
+                                          <span className={p.completed ? "text-stone-700" : "text-stone-400"}>
+                                            {p.full_name ?? `Participant ${p.slot_index + 1}`}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </details>
+                                );
+                              })()}
+                            </td>
                             <td className="px-5 py-3.5">
                               <StatusBadge status={b.status} />
                             </td>

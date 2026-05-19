@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -56,38 +57,67 @@ export async function createBooking(input: CreateBookingInput) {
   const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
   const bookingStatus = autoApprove ? "confirmed" : "pending";
 
-  const { error: insertError } = await supabase.from("bookings").insert({
-    trip_id: input.tripId,
-    user_id: user.id,
-    full_name: input.fullName,
-    email: input.email,
-    phone: input.phone,
-    slots: input.slots,
-    total_amount: input.totalAmount,
-    status: bookingStatus,
-    notes: input.notes,
-    payment_option: input.paymentOption,
-    amount_due: input.amountDue,
-    participants: input.participants,
-    emergency_contact_name: input.emergencyContactName,
-    emergency_contact_phone: input.emergencyContactPhone,
-    waiver_agreed: input.waiverAgreed,
-    medical_notes: input.medicalNotes,
-    meeting_point: input.meetingPoint,
-  });
+  const { data: newBooking, error: insertError } = await supabase
+    .from("bookings")
+    .insert({
+      trip_id: input.tripId,
+      user_id: user.id,
+      full_name: input.fullName,
+      email: input.email,
+      phone: input.phone,
+      slots: input.slots,
+      total_amount: input.totalAmount,
+      status: bookingStatus,
+      notes: input.notes,
+      payment_option: input.paymentOption,
+      amount_due: input.amountDue,
+      participants: input.participants,
+      emergency_contact_name: input.emergencyContactName,
+      emergency_contact_phone: input.emergencyContactPhone,
+      waiver_agreed: input.waiverAgreed,
+      medical_notes: input.medicalNotes,
+      meeting_point: input.meetingPoint,
+    })
+    .select("id")
+    .single();
 
   if (insertError) return { error: insertError.message };
+  if (!newBooking) return { error: "Failed to create booking." };
+
+  // Use a single admin client for all privileged operations below.
+  const admin = createSupabaseAdminClient();
 
   // Decrement remaining slots. Use admin client since bookers don't have write access to trips.
-  const admin = createSupabaseAdminClient();
   await admin
     .from("trips")
     .update({ remaining_slots: trip.remaining_slots - input.slots })
     .eq("id", input.tripId);
 
+  // Insert one booking_participants row per slot.
+  const now = new Date().toISOString();
+  const participantRows = Array.from({ length: input.slots }, (_, i) => ({
+    booking_id: newBooking.id,
+    slot_index: i,
+    token: randomUUID(),
+    full_name: i === 0 ? input.fullName : null,
+    emergency_contact_name: i === 0 ? input.emergencyContactName : null,
+    emergency_contact_phone: i === 0 ? input.emergencyContactPhone : null,
+    medical_notes: i === 0 ? input.medicalNotes : null,
+    meeting_point: i === 0 ? input.meetingPoint : null,
+    waiver_accepted: i === 0,
+    waiver_accepted_at: i === 0 ? now : null,
+    completed: i === 0,
+  }));
+
+  await admin.from("booking_participants").insert(participantRows);
+
+  const participantTokens =
+    input.slots > 1
+      ? participantRows.slice(1).map((p) => ({ slotIndex: p.slot_index, token: p.token }))
+      : [];
+
   try {
     if (trip?.organizer_id) {
-      const admin = createSupabaseAdminClient();
       const { data: organizer } = await admin
         .from("organizers")
         .select("email")
@@ -184,7 +214,11 @@ export async function createBooking(input: CreateBookingInput) {
   }
 
   revalidatePath(`/trips/${input.tripId}`);
-  return { success: true, status: bookingStatus };
+  return {
+    success: true as const,
+    status: bookingStatus,
+    participantTokens: participantTokens.length > 0 ? participantTokens : undefined,
+  };
 }
 
 export async function updateBookingStatus(bookingId: number, status: "confirmed" | "rejected") {

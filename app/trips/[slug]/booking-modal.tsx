@@ -58,6 +58,8 @@ export function BookingModal({
   const [waiverError, setWaiverError] = useState(false);
   const [bookingStatus, setBookingStatus] = useState<"confirmed" | "pending" | null>(null);
   const [paymentOption, setPaymentOption] = useState<"full" | "downpayment">("full");
+  const [participantTokens, setParticipantTokens] = useState<{ slotIndex: number; token: string }[]>([]);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
   const totalAmount = unitPrice * slots;
@@ -146,6 +148,8 @@ export function BookingModal({
     setSuccess(false);
     setBookingStatus(null);
     setPaymentOption("full");
+    setParticipantTokens([]);
+    setCopiedIndex(null);
   }
 
   function handleClose() {
@@ -190,12 +194,15 @@ export function BookingModal({
 
     setLoading(false);
 
-    if (result.error) {
+    if (!result.success) {
       setError(result.error);
       return;
     }
 
     setBookingStatus((result.status ?? "pending") as "confirmed" | "pending");
+    if (result.participantTokens) {
+      setParticipantTokens(result.participantTokens);
+    }
     setSuccess(true);
   }
 
@@ -270,6 +277,45 @@ export function BookingModal({
                       : <>Your booking request for <strong>{tripTitle}</strong> has been submitted — the organizer will review and confirm shortly.</>
                     }
                   </p>
+
+                  {participantTokens.length > 0 && (
+                    <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
+                      <p className="text-sm font-semibold text-stone-900">Share with your group</p>
+                      <p className="mt-0.5 text-xs text-stone-500">
+                        Each participant needs to confirm their own details via their personal link.
+                      </p>
+                      <div className="mt-3 space-y-2">
+                        {participantTokens.map(({ slotIndex, token }) => {
+                          const url = `https://landas-zeta.vercel.app/join/${token}`;
+                          return (
+                            <div key={slotIndex} className="flex items-center gap-2">
+                              <span className="shrink-0 text-xs text-stone-500">
+                                Participant {slotIndex + 1}
+                              </span>
+                              <input
+                                readOnly
+                                value={url}
+                                className="min-w-0 flex-1 truncate rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-700 outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(url).then(() => {
+                                    setCopiedIndex(slotIndex);
+                                    setTimeout(() => setCopiedIndex(null), 2000);
+                                  });
+                                }}
+                                className="shrink-0 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-medium text-stone-600 transition hover:border-trailhead hover:text-trailhead"
+                              >
+                                {copiedIndex === slotIndex ? "Copied!" : "Copy"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     onClick={handleClose}
@@ -532,7 +578,7 @@ export function BookingModal({
                         className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
                       />
                       <span className="text-xs leading-relaxed text-stone-600">
-                        I understand that outdoor activities carry inherent risks including injury or death, and I participate at my own risk. I confirm that I am physically fit for this activity, will follow the organizer&apos;s instructions, and release Sama and the trip organizer from liability for accidents caused by my own negligence or the inherent risks of outdoor adventure.
+                        I confirm that I have informed all participants listed in this booking of the trip risks, cancellation policy, and terms. I am booking on their behalf with their full knowledge and consent. Each participant will receive a link to confirm their own details and sign their individual waiver.
                       </span>
                     </label>
                     {waiverError && (
