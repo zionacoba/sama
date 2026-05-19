@@ -30,7 +30,11 @@ export async function createBooking(input: CreateBookingInput) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: trip } = await supabase
+  // Use admin client for all DB operations so RLS never blocks reads or
+  // writes, and RETURNING clauses always get back the new row's id.
+  const admin = createSupabaseAdminClient();
+
+  const { data: trip } = await admin
     .from("trips")
     .select("title, date_start, remaining_slots, organizer_id, difficulty")
     .eq("id", input.tripId)
@@ -42,7 +46,7 @@ export async function createBooking(input: CreateBookingInput) {
   }
 
   // Prevent duplicate bookings for the same trip
-  const { data: existingBooking } = await supabase
+  const { data: existingBooking } = await admin
     .from("bookings")
     .select("id")
     .eq("trip_id", input.tripId)
@@ -56,10 +60,6 @@ export async function createBooking(input: CreateBookingInput) {
 
   const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
   const bookingStatus = autoApprove ? "confirmed" : "pending";
-
-  // All writes use the admin client so RLS never blocks an insert or
-  // prevents the RETURNING clause from reading back the new row's id.
-  const admin = createSupabaseAdminClient();
 
   const { data: newBooking, error: insertError } = await admin
     .from("bookings")
