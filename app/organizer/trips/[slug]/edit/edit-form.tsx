@@ -29,12 +29,23 @@ type TripForEdit = {
   min_downpayment: number | null;
   cancellation_policy: string | null;
   cancellation_policy_custom: string | null;
+  is_template: boolean | null;
+  template_id: string | null;
 };
 
-export function EditTripForm({ trip, destinations = [] }: { trip: TripForEdit; destinations?: string[] }) {
+export function EditTripForm({
+  trip,
+  destinations = [],
+  templates = [],
+}: {
+  trip: TripForEdit;
+  destinations?: string[];
+  templates?: { id: string | number; title: string }[];
+}) {
   const [state, action] = useActionState(updateTrip, null);
   const [isPending, startTransition] = useTransition();
   const [photoItems, setPhotoItems] = useState<PhotoItem[]>([]);
+  const [isTemplate, setIsTemplate] = useState(trip.is_template ?? false);
   const [paymentType, setPaymentType] = useState<"full" | "downpayment">(
     trip.payment_type === "downpayment" ? "downpayment" : "full",
   );
@@ -91,6 +102,47 @@ export function EditTripForm({ trip, destinations = [] }: { trip: TripForEdit; d
         >
           {errorMessage}
         </p>
+      )}
+
+      {/* Template toggle */}
+      <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
+        <label className="flex cursor-pointer items-center gap-3">
+          <input
+            type="checkbox"
+            checked={isTemplate}
+            onChange={(e) => setIsTemplate(e.target.checked)}
+            className="h-4 w-4 rounded border-stone-300 text-trailhead accent-trailhead"
+          />
+          <input type="hidden" name="is_template" value={isTemplate.toString()} />
+          <span className="text-sm font-medium text-stone-700">
+            This is a recurring trip template
+          </span>
+        </label>
+        <p className="ml-7 mt-0.5 text-xs text-stone-500">
+          Templates hold the trip details. You&apos;ll create separate dated runs linked to this template.
+        </p>
+      </div>
+
+      {/* Template link (only for non-templates when templates exist) */}
+      {!isTemplate && templates.length > 0 && (
+        <div>
+          <label htmlFor="template_id" className={labelClass}>
+            Link to template <span className="font-normal text-stone-400">(optional)</span>
+          </label>
+          <select
+            id="template_id"
+            name="template_id"
+            defaultValue={trip.template_id ?? ""}
+            className={inputClass}
+          >
+            <option value="">No template — standalone trip</option>
+            {templates.map((t) => (
+              <option key={t.id} value={String(t.id)}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
 
       {/* Title */}
@@ -193,68 +245,72 @@ export function EditTripForm({ trip, destinations = [] }: { trip: TripForEdit; d
         )}
       </div>
 
-      {/* Date + Price + Slots */}
-      <div className="grid gap-5 sm:grid-cols-3">
-        <div>
-          <label htmlFor="date_start" className={labelClass}>
-            Date
-          </label>
-          <input
-            id="date_start"
-            name="date_start"
-            type="date"
-            required
-            defaultValue={trip.date_start.slice(0, 10)}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label htmlFor="price" className={labelClass}>
-            Price per person (PHP)
-          </label>
-          <input
-            id="price"
-            name="price"
-            type="number"
-            min="0"
-            step="1"
-            required
-            defaultValue={trip.price}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label htmlFor="total_slots" className={labelClass}>
-            Total slots
-          </label>
-          <input
-            id="total_slots"
-            name="total_slots"
-            type="number"
-            min="1"
-            step="1"
-            required
-            defaultValue={trip.total_slots}
-            className={inputClass}
-          />
-        </div>
-      </div>
+      {/* Date + Price + Slots (hidden for templates) */}
+      {!isTemplate && (
+        <>
+          <div className="grid gap-5 sm:grid-cols-3">
+            <div>
+              <label htmlFor="date_start" className={labelClass}>
+                Date
+              </label>
+              <input
+                id="date_start"
+                name="date_start"
+                type="date"
+                required
+                defaultValue={trip.date_start.slice(0, 10)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="price" className={labelClass}>
+                Price per person (PHP)
+              </label>
+              <input
+                id="price"
+                name="price"
+                type="number"
+                min="0"
+                step="1"
+                required
+                defaultValue={trip.price}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="total_slots" className={labelClass}>
+                Total slots
+              </label>
+              <input
+                id="total_slots"
+                name="total_slots"
+                type="number"
+                min="1"
+                step="1"
+                required
+                defaultValue={trip.total_slots}
+                className={inputClass}
+              />
+            </div>
+          </div>
 
-      {/* Meeting point */}
-      <div>
-        <label htmlFor="meeting_point" className={labelClass}>
-          Meeting point
-        </label>
-        <input
-          id="meeting_point"
-          name="meeting_point"
-          type="text"
-          required
-          defaultValue={trip.meeting_point}
-          className={inputClass}
-          placeholder="Km. 61, Halsema Highway, Bokod"
-        />
-      </div>
+          {/* Meeting point */}
+          <div>
+            <label htmlFor="meeting_point" className={labelClass}>
+              Meeting point
+            </label>
+            <input
+              id="meeting_point"
+              name="meeting_point"
+              type="text"
+              required
+              defaultValue={trip.meeting_point}
+              className={inputClass}
+              placeholder="Km. 61, Halsema Highway, Bokod"
+            />
+          </div>
+        </>
+      )}
 
       {/* Description */}
       <div>
@@ -308,71 +364,74 @@ export function EditTripForm({ trip, destinations = [] }: { trip: TripForEdit; d
         />
       </div>
 
-      {/* Payment options */}
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <label htmlFor="payment_type" className={labelClass}>
-            Payment type
-          </label>
-          <select
-            id="payment_type"
-            name="payment_type"
-            value={paymentType}
-            onChange={(e) => setPaymentType(e.target.value as "full" | "downpayment")}
-            className={inputClass}
-          >
-            <option value="full">Full payment only</option>
-            <option value="downpayment">Downpayment available</option>
-          </select>
-        </div>
-        {paymentType === "downpayment" && (
-          <div>
-            <label htmlFor="min_downpayment" className={labelClass}>
-              Downpayment amount (PHP)
-            </label>
-            <input
-              id="min_downpayment"
-              name="min_downpayment"
-              type="number"
-              min="0"
-              step="1"
-              required
-              defaultValue={trip.min_downpayment ?? ""}
-              className={inputClass}
-              placeholder="500"
-            />
+      {/* Payment options + Cancellation policy (hidden for templates) */}
+      {!isTemplate && (
+        <>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label htmlFor="payment_type" className={labelClass}>
+                Payment type
+              </label>
+              <select
+                id="payment_type"
+                name="payment_type"
+                value={paymentType}
+                onChange={(e) => setPaymentType(e.target.value as "full" | "downpayment")}
+                className={inputClass}
+              >
+                <option value="full">Full payment only</option>
+                <option value="downpayment">Downpayment available</option>
+              </select>
+            </div>
+            {paymentType === "downpayment" && (
+              <div>
+                <label htmlFor="min_downpayment" className={labelClass}>
+                  Downpayment amount (PHP)
+                </label>
+                <input
+                  id="min_downpayment"
+                  name="min_downpayment"
+                  type="number"
+                  min="0"
+                  step="1"
+                  required
+                  defaultValue={trip.min_downpayment ?? ""}
+                  className={inputClass}
+                  placeholder="500"
+                />
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Cancellation policy */}
-      <div>
-        <label htmlFor="cancellation_policy" className={labelClass}>
-          Cancellation policy
-        </label>
-        <select
-          id="cancellation_policy"
-          name="cancellation_policy"
-          value={cancellationPolicy}
-          onChange={(e) => setCancellationPolicy(e.target.value as typeof cancellationPolicy)}
-          className={inputClass}
-        >
-          <option value="flexible">Flexible — full refund 3+ days before, 50% within 3 days</option>
-          <option value="moderate">Moderate — 50% refund 5+ days before, no refund within 5 days</option>
-          <option value="strict">Strict — no refund within 7 days of trip</option>
-          <option value="custom">Custom — write your own policy</option>
-        </select>
-        {cancellationPolicy === "custom" && (
-          <textarea
-            name="cancellation_policy_custom"
-            required
-            rows={3}
-            defaultValue={trip.cancellation_policy_custom ?? ""}
-            className={`${inputClass} mt-3 resize-none`}
-            placeholder="Describe your cancellation and refund terms…"
-          />
-        )}
-      </div>
+          <div>
+            <label htmlFor="cancellation_policy" className={labelClass}>
+              Cancellation policy
+            </label>
+            <select
+              id="cancellation_policy"
+              name="cancellation_policy"
+              value={cancellationPolicy}
+              onChange={(e) => setCancellationPolicy(e.target.value as typeof cancellationPolicy)}
+              className={inputClass}
+            >
+              <option value="flexible">Flexible — full refund 3+ days before, 50% within 3 days</option>
+              <option value="moderate">Moderate — 50% refund 5+ days before, no refund within 5 days</option>
+              <option value="strict">Strict — no refund within 7 days of trip</option>
+              <option value="custom">Custom — write your own policy</option>
+            </select>
+            {cancellationPolicy === "custom" && (
+              <textarea
+                name="cancellation_policy_custom"
+                required
+                rows={3}
+                defaultValue={trip.cancellation_policy_custom ?? ""}
+                className={`${inputClass} mt-3 resize-none`}
+                placeholder="Describe your cancellation and refund terms…"
+              />
+            )}
+          </div>
+        </>
+      )}
 
       {/* Photo upload */}
       <div>

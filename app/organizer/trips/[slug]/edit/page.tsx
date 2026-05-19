@@ -29,7 +29,7 @@ export default async function EditTripPage({ params }: PageProps) {
   const { data: trip } = await supabase
     .from("trips")
     .select(
-      "id, title, activity_type, difficulty, duration, destination, date_start, price, total_slots, meeting_point, description, includes, what_to_bring, photos, payment_type, min_downpayment, cancellation_policy, cancellation_policy_custom",
+      "id, title, activity_type, difficulty, duration, destination, date_start, price, total_slots, meeting_point, description, includes, what_to_bring, photos, payment_type, min_downpayment, cancellation_policy, cancellation_policy_custom, is_template, template_id",
     )
     .eq("slug", slug)
     .eq("organizer_id", organizer.id)
@@ -37,15 +37,26 @@ export default async function EditTripPage({ params }: PageProps) {
 
   if (!trip) redirect("/organizer/dashboard");
 
-  const { data: destinationsData } = await supabase
-    .from("trips")
-    .select("destination")
-    .not("destination", "is", null)
-    .order("destination");
+  const [{ data: destinationsData }, { data: templatesData }] = await Promise.all([
+    supabase
+      .from("trips")
+      .select("destination")
+      .not("destination", "is", null)
+      .order("destination"),
+    supabase
+      .from("trips")
+      .select("id, title")
+      .eq("organizer_id", organizer.id)
+      .eq("is_template", true)
+      .neq("id", trip.id)
+      .order("title"),
+  ]);
 
   const destinations = [
     ...new Set((destinationsData ?? []).map((t: { destination: string }) => t.destination).filter(Boolean)),
   ] as string[];
+
+  const templates = (templatesData ?? []) as { id: string | number; title: string }[];
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -74,7 +85,7 @@ export default async function EditTripPage({ params }: PageProps) {
           <h1 className="mb-6 text-xl font-bold tracking-tight text-stone-900">
             Edit trip
           </h1>
-          <EditTripForm trip={trip} destinations={destinations} />
+          <EditTripForm trip={trip} destinations={destinations} templates={templates} />
         </div>
       </main>
     </div>
