@@ -57,7 +57,11 @@ export async function createBooking(input: CreateBookingInput) {
   const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
   const bookingStatus = autoApprove ? "confirmed" : "pending";
 
-  const { data: newBooking, error: insertError } = await supabase
+  // All writes use the admin client so RLS never blocks an insert or
+  // prevents the RETURNING clause from reading back the new row's id.
+  const admin = createSupabaseAdminClient();
+
+  const { data: newBooking, error: insertError } = await admin
     .from("bookings")
     .insert({
       trip_id: input.tripId,
@@ -84,10 +88,7 @@ export async function createBooking(input: CreateBookingInput) {
   if (insertError) return { error: insertError.message };
   if (!newBooking) return { error: "Failed to create booking." };
 
-  // Use a single admin client for all privileged operations below.
-  const admin = createSupabaseAdminClient();
-
-  // Decrement remaining slots. Use admin client since bookers don't have write access to trips.
+  // Decrement remaining slots.
   await admin
     .from("trips")
     .update({ remaining_slots: trip.remaining_slots - input.slots })
