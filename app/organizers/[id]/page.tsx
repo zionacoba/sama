@@ -130,29 +130,29 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+      <main className="mx-auto max-w-3xl px-4 py-8 sm:py-10">
         {/* Organizer hero */}
-        <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex items-center gap-4">
-            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-xl font-bold text-trailhead">
+        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-sm font-bold text-trailhead">
               {organizer.photo_url ? (
                 <Image
                   src={organizer.photo_url}
                   alt={publicName}
                   fill
                   className="object-cover"
-                  sizes="64px"
+                  sizes="40px"
                 />
               ) : (
                 initials
               )}
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+              <h1 className="text-xl font-bold tracking-tight text-stone-900">
                 {publicName}
               </h1>
               {avgRating !== null && (
-                <div className="mt-1 flex items-center gap-1.5">
+                <div className="mt-0.5 flex items-center gap-1.5">
                   <Stars rating={avgRating} />
                   <span className="text-sm font-semibold text-stone-700">{avgRating.toFixed(1)}</span>
                   <span className="text-sm text-stone-400">({reviews.length} review{reviews.length !== 1 ? "s" : ""})</span>
@@ -161,23 +161,23 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
             </div>
           </div>
           {organizer.bio && (
-            <p className="mt-5 leading-relaxed text-stone-600">{organizer.bio}</p>
+            <p className="mt-3 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
           )}
-          <div className="mt-5 flex flex-wrap gap-6 border-t border-stone-100 pt-5 text-sm">
+          <div className="mt-4 flex flex-wrap gap-5 border-t border-stone-100 pt-4 text-sm">
             <div>
-              <p className="text-xl font-bold text-stone-900">{trips.length}</p>
+              <p className="text-lg font-bold text-stone-900">{trips.length}</p>
               <p className="text-stone-500">trip{trips.length !== 1 ? "s" : ""} led</p>
             </div>
             <div>
-              <p className="text-xl font-bold text-stone-900">{reviews.length}</p>
+              <p className="text-lg font-bold text-stone-900">{reviews.length}</p>
               <p className="text-stone-500">review{reviews.length !== 1 ? "s" : ""}</p>
             </div>
           </div>
         </div>
 
         {/* Upcoming trips */}
-        <section className="mt-10">
-          <h2 className="text-xl font-bold tracking-tight text-stone-900">
+        <section className="mt-8">
+          <h2 className="text-lg font-bold tracking-tight text-stone-900">
             Upcoming trips
           </h2>
           {upcomingTrips.length === 0 ? (
@@ -225,8 +225,8 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
         </section>
 
         {/* Reviews */}
-        <section className="mt-12">
-          <h2 className="text-xl font-bold tracking-tight text-stone-900">
+        <section className="mt-8">
+          <h2 className="text-lg font-bold tracking-tight text-stone-900">
             Reviews
             {reviews.length > 0 && (
               <span className="ml-2 text-base font-normal text-stone-500">
