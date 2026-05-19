@@ -15,15 +15,9 @@ async function fetchTrip(slug: string): Promise<TripRow | null> {
   const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  console.log("[og-image] env check — baseUrl:", !!baseUrl, "anonKey:", !!anonKey);
-
-  if (!baseUrl || !anonKey) {
-    console.error("[og-image] missing Supabase env vars");
-    return null;
-  }
+  if (!baseUrl || !anonKey) return null;
 
   const url = `${baseUrl}/rest/v1/trips?slug=eq.${encodeURIComponent(slug)}&select=title,destination,photos&limit=1`;
-  console.log("[og-image] fetching trip from:", url);
 
   const res = await fetch(url, {
     headers: {
@@ -32,27 +26,21 @@ async function fetchTrip(slug: string): Promise<TripRow | null> {
     },
   });
 
-  console.log("[og-image] trip fetch status:", res.status);
   if (!res.ok) return null;
 
   const rows: TripRow[] = await res.json();
-  console.log("[og-image] rows:", JSON.stringify(rows));
   return rows[0] ?? null;
 }
 
 async function fetchPhotoDataUrl(photoUrl: string): Promise<string | null> {
-  console.log("[og-image] fetching photo:", photoUrl);
   try {
     const res = await fetch(photoUrl);
-    console.log("[og-image] photo fetch status:", res.status, res.statusText);
     if (!res.ok) return null;
     const buffer = await res.arrayBuffer();
     const mime = res.headers.get("content-type") ?? "image/jpeg";
-    console.log("[og-image] photo buffer size:", buffer.byteLength, "mime:", mime);
     const base64 = Buffer.from(buffer).toString("base64");
     return `data:${mime};base64,${base64}`;
-  } catch (err) {
-    console.error("[og-image] photo fetch error:", err);
+  } catch {
     return null;
   }
 }
@@ -63,18 +51,12 @@ export default async function Image({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  console.log("[og-image] generating for slug:", slug);
-
   const trip = await fetchTrip(slug);
-  console.log("[og-image] trip:", JSON.stringify(trip));
 
   const title = trip?.title ?? "Adventure awaits";
   const destination = trip?.destination ?? "";
   const photoUrl = trip?.photos?.[0] ?? null;
-  console.log("[og-image] photoUrl:", photoUrl);
-
   const photoDataUrl = photoUrl ? await fetchPhotoDataUrl(photoUrl) : null;
-  console.log("[og-image] photoDataUrl present:", !!photoDataUrl);
 
   const titleSize = title.length > 50 ? 54 : title.length > 35 ? 64 : 72;
 
