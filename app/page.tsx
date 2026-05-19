@@ -19,10 +19,6 @@ export const metadata: Metadata = {
 
 const filterChips = [
   "Hiking",
-  "Camping",
-  "Freediving",
-  "Island Hopping",
-  "Surfing",
 ] as const;
 
 type Trip = {

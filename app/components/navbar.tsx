@@ -4,9 +4,6 @@ import { signOut } from "@/app/actions/auth";
 
 const navLinks = [
   { label: "Hike", href: "/trips?activity=Hiking" },
-  { label: "Camp", href: "/trips?activity=Camping" },
-  { label: "Dive", href: "/trips?activity=Freediving" },
-  { label: "Island Hop", href: "/trips?activity=Island Hopping" },
 ] as const;
 
 type AuthLinksProps = {
