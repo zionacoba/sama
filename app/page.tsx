@@ -80,9 +80,10 @@ export default async function Home() {
     .select("id, slug, title, price, destination, difficulty, activity_type, duration, date_start, remaining_slots, photos, is_template, template_id")
     .eq("status", "active")
     .gt("date_start", new Date().toISOString())
+    .gt("remaining_slots", 0)
     .or("is_template.is.null,is_template.eq.false")
     .order("date_start", { ascending: true })
-    .limit(12);
+    .limit(8);
 
   const raw = (data ?? []) as Trip[];
   // Deduplicate: one card per template group (earliest run already first from ORDER BY)
@@ -92,7 +93,7 @@ export default async function Home() {
     if (seen.has(t.template_id)) return false;
     seen.add(t.template_id);
     return true;
-  }).slice(0, 4);
+  });
 
   return (
     <div className="min-h-full bg-stone-50 text-stone-900 font-sans">
@@ -155,10 +156,10 @@ export default async function Home() {
           <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
-                Popular trips
+                Upcoming trips
               </h2>
               <p className="mt-1 text-stone-600">
-                Hand-picked experiences travelers love right now.
+                Trips happening soon with available slots.
               </p>
             </div>
             <Link
