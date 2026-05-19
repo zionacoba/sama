@@ -18,14 +18,25 @@ async function fetchTrip(slug: string): Promise<TripRow | null> {
 
   const url = `${baseUrl}/rest/v1/trips?slug=eq.${encodeURIComponent(slug)}&select=title,destination,photos&limit=1`;
   const res = await fetch(url, {
-    headers: {
-      apikey: apiKey,
-      Authorization: `Bearer ${apiKey}`,
-    },
+    headers: { apikey: apiKey, Authorization: `Bearer ${apiKey}` },
   });
   if (!res.ok) return null;
   const rows: TripRow[] = await res.json();
   return rows[0] ?? null;
+}
+
+async function fetchPhotoDataUrl(photoUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(photoUrl);
+    if (!res.ok) return null;
+    const buffer = await res.arrayBuffer();
+    const mime = res.headers.get("content-type") ?? "image/jpeg";
+    // Buffer is available in the Vercel Edge runtime
+    const base64 = Buffer.from(buffer).toString("base64");
+    return `data:${mime};base64,${base64}`;
+  } catch {
+    return null;
+  }
 }
 
 export default async function Image({
@@ -34,11 +45,16 @@ export default async function Image({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const trip = await fetchTrip(slug);
 
+  const trip = await fetchTrip(slug);
   const title = trip?.title ?? "Adventure awaits";
   const destination = trip?.destination ?? "";
-  const photo = trip?.photos?.[0] ?? null;
+  const photoUrl = trip?.photos?.[0] ?? null;
+
+  // Embed the photo as a data URI so Satori doesn't need to make
+  // an outbound fetch from the Edge sandbox
+  const photoDataUrl = photoUrl ? await fetchPhotoDataUrl(photoUrl) : null;
+
   const titleSize = title.length > 50 ? 54 : title.length > 35 ? 64 : 72;
 
   return new ImageResponse(
@@ -52,11 +68,11 @@ export default async function Image({
           backgroundColor: "#1c1917",
         }}
       >
-        {/* Background photo */}
-        {photo && (
+        {/* Background photo embedded as data URI */}
+        {photoDataUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={photo}
+            src={photoDataUrl}
             alt=""
             style={{
               position: "absolute",
@@ -77,7 +93,7 @@ export default async function Image({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundImage: photo
+            backgroundImage: photoDataUrl
               ? "linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.22) 38%, rgba(0,0,0,0.84) 100%)"
               : "linear-gradient(135deg, #292524 0%, #1c1917 100%)",
             display: "flex",
