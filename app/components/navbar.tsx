@@ -21,16 +21,10 @@ function AuthLinks({ email: _email, displayName, organizerStatus, organizerId, c
         {displayName}
       </span>
       <Link
-        href="/dashboard/bookings"
-        className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
-      >
-        My Bookings
-      </Link>
-      <Link
         href="/profile"
         className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
       >
-        My Profile
+        My Account
       </Link>
       {organizerStatus === "approved" && organizerId && (
         <Link
