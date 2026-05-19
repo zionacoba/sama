@@ -36,6 +36,8 @@ type Trip = {
   date_start: string;
   remaining_slots: number;
   photos: string[] | null;
+  is_template: boolean | null;
+  template_id: string | null;
 };
 
 function formatPrice(price: string | number) {
@@ -75,13 +77,22 @@ export default async function Home() {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("trips")
-    .select("id, slug, title, price, destination, difficulty, activity_type, duration, date_start, remaining_slots, photos")
+    .select("id, slug, title, price, destination, difficulty, activity_type, duration, date_start, remaining_slots, photos, is_template, template_id")
     .eq("status", "active")
     .gt("date_start", new Date().toISOString())
+    .or("is_template.is.null,is_template.eq.false")
     .order("date_start", { ascending: true })
-    .limit(4);
+    .limit(12);
 
-  const trips = (data ?? []) as Trip[];
+  const raw = (data ?? []) as Trip[];
+  // Deduplicate: one card per template group (earliest run already first from ORDER BY)
+  const seen = new Set<string>();
+  const trips = raw.filter((t) => {
+    if (!t.template_id) return true;
+    if (seen.has(t.template_id)) return false;
+    seen.add(t.template_id);
+    return true;
+  }).slice(0, 4);
 
   return (
     <div className="min-h-full bg-stone-50 text-stone-900 font-sans">

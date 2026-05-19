@@ -35,6 +35,8 @@ type Trip = {
   date_start: string;
   remaining_slots: number;
   photos: string[] | null;
+  is_template: boolean | null;
+  template_id: string | null;
 };
 
 type FilterParams = {
@@ -86,6 +88,32 @@ function DifficultyBadge({ level }: { level: string }) {
   );
 }
 
+type TripGroup = { key: string; representative: Trip; runs: Trip[] };
+
+function groupByTemplate(trips: Trip[]): TripGroup[] {
+  const grouped = new Map<string, Trip[]>();
+  const standalone: Trip[] = [];
+  for (const trip of trips) {
+    if (trip.template_id) {
+      const arr = grouped.get(trip.template_id) ?? [];
+      arr.push(trip);
+      grouped.set(trip.template_id, arr);
+    } else {
+      standalone.push(trip);
+    }
+  }
+  const result: TripGroup[] = [];
+  for (const [templateId, runs] of grouped) {
+    runs.sort((a, b) => a.date_start.localeCompare(b.date_start));
+    result.push({ key: `tmpl-${templateId}`, representative: runs[0], runs });
+  }
+  for (const trip of standalone) {
+    result.push({ key: String(trip.id), representative: trip, runs: [trip] });
+  }
+  result.sort((a, b) => a.representative.date_start.localeCompare(b.representative.date_start));
+  return result;
+}
+
 function filterUrl(
   base: FilterParams,
   key: "activity" | "duration" | "difficulty",
@@ -112,7 +140,8 @@ export default async function TripsPage({ searchParams }: PageProps) {
     .from("trips")
     .select("*")
     .eq("status", "active")
-    .gt("date_start", new Date().toISOString());
+    .gt("date_start", new Date().toISOString())
+    .or("is_template.is.null,is_template.eq.false");
 
   if (search) {
     const term = `%${search}%`;
@@ -138,6 +167,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
   const currentDuration = duration ?? "All";
   const currentDifficulty = difficulty ?? "All";
   const current = { activity, duration, difficulty, search, date_from, date_to, sort };
+  const groups = groupByTemplate(trips);
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -288,7 +318,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
         </section>
 
         <section className="mx-auto max-w-6xl px-4 py-10 sm:py-12">
-          {trips.length === 0 ? (
+          {groups.length === 0 ? (
             <div className="py-20 text-center">
               <p className="text-stone-500">No trips match your filters.</p>
               <Link
@@ -300,52 +330,99 @@ export default async function TripsPage({ searchParams }: PageProps) {
             </div>
           ) : (
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-              {trips.map((trip) => (
-                <li key={trip.id}>
-                  <Link
-                    href={`/trips/${trip.slug}`}
-                    className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
-                  >
-                    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
-                      <div className="relative aspect-[3/1] overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:aspect-[4/3]">
-                        {trip.photos?.[0] && (
-                          <Image
-                            src={trip.photos[0]}
-                            alt={trip.title}
-                            fill
-                            className="object-cover"
-                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                            quality={80}
-                          />
+              {groups.map(({ key, representative: trip, runs }) => {
+                const isGrouped = runs.length > 1;
+                const minPrice = isGrouped
+                  ? Math.min(...runs.map((r) => Number(r.price)))
+                  : Number(trip.price);
+                const photoEl = (
+                  <div className="relative aspect-[3/1] overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:aspect-[4/3]">
+                    {trip.photos?.[0] && (
+                      <Image
+                        src={trip.photos[0]}
+                        alt={trip.title}
+                        fill
+                        className="object-cover"
+                        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                        quality={80}
+                      />
+                    )}
+                  </div>
+                );
+                const cardContent = (
+                  <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
+                    {isGrouped ? (
+                      <Link href={`/trips/${trip.slug}`} className="block overflow-hidden">
+                        {photoEl}
+                      </Link>
+                    ) : photoEl}
+                    <div className="flex flex-1 flex-col gap-2 p-4">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {trip.activity_type && (
+                          <span className="inline-flex items-center rounded-full bg-trailhead-muted px-2 py-0.5 text-xs font-semibold text-trailhead">
+                            {trip.activity_type}
+                          </span>
                         )}
+                        <DifficultyBadge level={trip.difficulty} />
                       </div>
-                      <div className="flex flex-1 flex-col gap-2 p-4">
+                      {isGrouped ? (
+                        <Link
+                          href={`/trips/${trip.slug}`}
+                          className="font-bold text-stone-900 underline-offset-2 hover:text-trailhead hover:underline"
+                        >
+                          {trip.title}
+                        </Link>
+                      ) : (
+                        <h3 className="font-bold text-stone-900">{trip.title}</h3>
+                      )}
+                      <p className="text-sm text-stone-500">{trip.destination}</p>
+                      {isGrouped ? (
                         <div className="flex flex-wrap items-center gap-1.5">
-                          {trip.activity_type && (
-                            <span className="inline-flex items-center rounded-full bg-trailhead-muted px-2 py-0.5 text-xs font-semibold text-trailhead">
-                              {trip.activity_type}
+                          <span className="text-xs text-stone-400">Pick a date:</span>
+                          {runs.slice(0, 3).map((run) => (
+                            <Link
+                              key={run.id}
+                              href={`/trips/${run.slug}`}
+                              className="rounded-full border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-700 transition hover:border-trailhead hover:text-trailhead"
+                            >
+                              {formatDate(run.date_start)}
+                            </Link>
+                          ))}
+                          {runs.length > 3 && (
+                            <span className="rounded-full border border-stone-100 px-2.5 py-1 text-xs text-stone-400">
+                              +{runs.length - 3} more
                             </span>
                           )}
-                          <DifficultyBadge level={trip.difficulty} />
                         </div>
-                        <h3 className="font-bold text-stone-900">{trip.title}</h3>
-                        <p className="text-sm text-stone-500">{trip.destination}</p>
+                      ) : (
                         <p className="text-xs text-stone-400">
                           {formatDate(trip.date_start)}{trip.duration && ` · ${trip.duration}`}
                         </p>
-                        <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-3">
-                          <p className="text-lg font-bold text-trailhead">
-                            {formatPrice(trip.price)}
-                          </p>
-                          <span className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-400"}`}>
-                            {trip.remaining_slots} slot{trip.remaining_slots !== 1 ? "s" : ""} left
-                          </span>
-                        </div>
+                      )}
+                      <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-3">
+                        <p className="text-lg font-bold text-trailhead">
+                          {isGrouped ? `From ${formatPrice(minPrice)}` : formatPrice(trip.price)}
+                        </p>
+                        <span className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-400"}`}>
+                          {trip.remaining_slots} slot{trip.remaining_slots !== 1 ? "s" : ""} left
+                        </span>
                       </div>
-                    </article>
-                  </Link>
-                </li>
-              ))}
+                    </div>
+                  </article>
+                );
+                return (
+                  <li key={key}>
+                    {isGrouped ? cardContent : (
+                      <Link
+                        href={`/trips/${trip.slug}`}
+                        className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
+                      >
+                        {cardContent}
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>

@@ -23,6 +23,8 @@ type TripDetail = {
   includes: string | null;
   what_to_bring: string | null;
   organizer_id: string | null;
+  template_id: string | null;
+  is_template: boolean | null;
   payment_type: string | null;
   min_downpayment: number | null;
   cancellation_policy: string | null;
@@ -225,6 +227,7 @@ export default async function TripDetailPage({ params }: PageProps) {
     { data: reviewsData },
     reviewCountResult,
     { data: organizerData },
+    { data: siblingRunsData },
   ] = await Promise.all([
     tripData.organizer_id
       ? supabase
@@ -242,6 +245,16 @@ export default async function TripDetailPage({ params }: PageProps) {
       : Promise.resolve({ count: 0 }),
     tripData.organizer_id
       ? supabase.from("organizers").select("full_name, bio, photo_url").eq("id", tripData.organizer_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    tripData.template_id
+      ? supabase
+          .from("trips")
+          .select("slug, date_start, price, remaining_slots, duration")
+          .eq("template_id", tripData.template_id)
+          .eq("status", "active")
+          .neq("slug", slug)
+          .gt("date_start", new Date().toISOString())
+          .order("date_start", { ascending: true })
       : Promise.resolve({ data: null }),
   ]);
 
@@ -351,6 +364,39 @@ export default async function TripDetailPage({ params }: PageProps) {
               </p>
             </div>
           </div>
+
+          {siblingRunsData && siblingRunsData.length > 0 && (
+            <div className="mt-6 rounded-2xl border border-trailhead/20 bg-trailhead-muted p-5 sm:p-6">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-trailhead">
+                Other available dates
+              </h2>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {siblingRunsData.map((run) => (
+                  <Link
+                    key={run.slug}
+                    href={`/trips/${run.slug}`}
+                    className="rounded-xl border border-trailhead/30 bg-white px-3.5 py-2 text-sm shadow-sm transition hover:border-trailhead"
+                  >
+                    <span className="font-semibold text-stone-900">
+                      {formatDate(run.date_start)}
+                    </span>
+                    {run.duration && (
+                      <span className="ml-1.5 text-stone-400">· {run.duration}</span>
+                    )}
+                    <span className="ml-2 font-bold text-trailhead">
+                      {formatPrice(run.price)}
+                    </span>
+                    {run.remaining_slots === 0 && (
+                      <span className="ml-1.5 text-xs text-stone-400">· Full</span>
+                    )}
+                    {run.remaining_slots > 0 && run.remaining_slots < 5 && (
+                      <span className="ml-1.5 text-xs text-red-600">· {run.remaining_slots} left</span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mt-10 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-lg font-bold text-stone-900">About this trip</h2>
