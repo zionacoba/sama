@@ -152,7 +152,11 @@ function TripCard({
   );
 }
 
-export default async function OrganizerDashboardPage() {
+type PageProps = {
+  searchParams: Promise<{ tab?: string }>;
+};
+
+export default async function OrganizerDashboardPage({ searchParams }: PageProps) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?redirectTo=/organizer/dashboard");
@@ -208,9 +212,13 @@ export default async function OrganizerDashboardPage() {
     countsByTrip.set(b.trip_id, c);
   }
 
+  const { tab = "upcoming" } = await searchParams;
+  const activeTab = tab === "past" ? "past" : "upcoming";
+
   const now = new Date().toISOString();
   const upcoming = trips.filter((t) => t.date_start > now);
   const past = trips.filter((t) => t.date_start <= now);
+  const visibleTrips = activeTab === "upcoming" ? upcoming : past;
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -250,55 +258,65 @@ export default async function OrganizerDashboardPage() {
           </div>
         </div>
 
-        {/* Upcoming trips */}
-        {upcoming.length > 0 && (
-          <section className="mt-10">
-            <h2 className="mb-4 text-xl font-bold tracking-tight text-stone-900">
-              Upcoming trips
-              <span className="ml-2 text-base font-normal text-stone-400">({upcoming.length})</span>
-            </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {upcoming.map((trip) => (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  counts={countsByTrip.get(trip.id) ?? { pending: 0, confirmed: 0 }}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Past trips */}
-        {past.length > 0 && (
-          <section className="mt-10">
-            <h2 className="mb-4 text-xl font-bold tracking-tight text-stone-900">
-              Past trips
-              <span className="ml-2 text-base font-normal text-stone-400">({past.length})</span>
-            </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {past.map((trip) => (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  counts={countsByTrip.get(trip.id) ?? { pending: 0, confirmed: 0 }}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {trips.length === 0 && (
-          <div className="mt-16 flex flex-col items-center gap-4 text-center">
-            <p className="text-stone-500">You haven&apos;t created any trips yet.</p>
-            <Link
-              href="/organizer/trips/new"
-              className="rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
-            >
-              Create your first trip
-            </Link>
+        {/* Tabs */}
+        <div className="mt-8">
+          <div className="flex w-fit gap-1 rounded-xl border border-stone-200 bg-white p-1 shadow-sm">
+            {(["upcoming", "past"] as const).map((t) => {
+              const label = t === "upcoming" ? "Upcoming" : "Past";
+              const count = t === "upcoming" ? upcoming.length : past.length;
+              const isActive = activeTab === t;
+              return (
+                <Link
+                  key={t}
+                  href={`/organizer/dashboard${t === "upcoming" ? "" : "?tab=past"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                    isActive
+                      ? "bg-trailhead text-white shadow-sm"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  {label}
+                  <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs ${
+                    isActive ? "bg-white/20 text-white" : "bg-stone-100 text-stone-500"
+                  }`}>
+                    {count}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
-        )}
+
+          {/* Tab content */}
+          <div className="mt-6">
+            {visibleTrips.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 py-16 text-center">
+                <p className="text-stone-500">
+                  {activeTab === "upcoming"
+                    ? "No upcoming trips. Create one to get started."
+                    : "No past trips yet."}
+                </p>
+                {activeTab === "upcoming" && (
+                  <Link
+                    href="/organizer/trips/new"
+                    className="rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
+                  >
+                    Create your first trip
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {visibleTrips.map((trip) => (
+                  <TripCard
+                    key={trip.id}
+                    trip={trip}
+                    counts={countsByTrip.get(trip.id) ?? { pending: 0, confirmed: 0 }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );
