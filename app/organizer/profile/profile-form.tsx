@@ -13,6 +13,7 @@ type OrganizerData = {
   phone: string;
   bio: string;
   photo_url: string | null;
+  cover_image_url: string | null;
 };
 
 export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
@@ -96,6 +97,21 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
           name="photo_url"
           type="url"
           defaultValue={organizer.photo_url ?? ""}
+          className={inputClass}
+          placeholder="https://…"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="cover_image_url" className={labelClass}>
+          Cover image URL <span className="font-normal text-stone-400">(optional)</span>
+        </label>
+        <p className="mt-0.5 text-xs text-stone-500">Displayed as a banner at the top of your public profile.</p>
+        <input
+          id="cover_image_url"
+          name="cover_image_url"
+          type="url"
+          defaultValue={organizer.cover_image_url ?? ""}
           className={inputClass}
           placeholder="https://…"
         />

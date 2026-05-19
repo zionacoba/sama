@@ -11,7 +11,7 @@ export default async function OrganizerProfileEditPage() {
 
   const { data: organizer } = await supabase
     .from("organizers")
-    .select("id, display_name, full_name, phone, bio, photo_url, status")
+    .select("id, display_name, full_name, phone, bio, photo_url, cover_image_url, status")
     .eq("user_id", user.id)
     .maybeSingle();
 

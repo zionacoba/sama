@@ -65,6 +65,7 @@ export async function updateOrganizerProfile(
   const phone = (formData.get("phone") as string)?.trim();
   const bio = (formData.get("bio") as string)?.trim();
   const photo_url = (formData.get("photo_url") as string)?.trim() || null;
+  const cover_image_url = (formData.get("cover_image_url") as string)?.trim() || null;
 
   if (!display_name || !full_name || !phone || !bio) {
     return { error: "Please fill in all required fields." };
@@ -72,7 +73,7 @@ export async function updateOrganizerProfile(
 
   const { error } = await supabase
     .from("organizers")
-    .update({ display_name, full_name, phone, bio, photo_url })
+    .update({ display_name, full_name, phone, bio, photo_url, cover_image_url })
     .eq("id", organizer.id);
 
   if (error) return { error: error.message };

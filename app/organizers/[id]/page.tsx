@@ -76,7 +76,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
 
   const { data: organizer } = await supabase
     .from("organizers")
-    .select("id, display_name, full_name, bio, photo_url")
+    .select("id, display_name, full_name, bio, photo_url, cover_image_url")
     .eq("id", id)
     .eq("status", "approved")
     .maybeSingle();
@@ -129,6 +129,19 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
           </Link>
         </div>
       </header>
+
+      <div className="relative h-40 w-full overflow-hidden bg-trailhead sm:h-56">
+        {organizer.cover_image_url && (
+          <Image
+            src={organizer.cover_image_url}
+            alt=""
+            fill
+            className="object-cover"
+            sizes="100vw"
+            priority
+          />
+        )}
+      </div>
 
       <main className="mx-auto max-w-3xl px-4 py-8 sm:py-10">
         {/* Organizer hero */}
