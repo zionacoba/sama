@@ -180,11 +180,11 @@ export async function updateTrip(
     return { error: "Please fill in all required fields." };
   }
 
-  if (payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
+  if (!is_template && payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
     return { error: "Please enter a minimum downpayment amount." };
   }
 
-  if (cancellation_policy === "custom" && !cancellation_policy_custom) {
+  if (!is_template && cancellation_policy === "custom" && !cancellation_policy_custom) {
     return { error: "Please enter your custom cancellation policy." };
   }
 

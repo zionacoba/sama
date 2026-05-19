@@ -53,12 +53,16 @@ export function EditTripForm({
     (trip.cancellation_policy as "flexible" | "moderate" | "strict" | "custom") ?? "flexible",
   );
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [editedAfterSubmit, setEditedAfterSubmit] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!formRef.current) return;
 
+    setHasSubmitted(true);
+    setEditedAfterSubmit(false);
     setUploadError(null);
     const formData = new FormData(formRef.current);
 
@@ -89,10 +93,16 @@ export function EditTripForm({
   }
 
   const hasNewUploads = photoItems.some((i) => i.kind === "file");
-  const errorMessage = uploadError ?? state?.error;
+  const serverError = hasSubmitted && !editedAfterSubmit && !isPending ? state?.error : null;
+  const errorMessage = uploadError ?? serverError;
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      onChange={() => { if (hasSubmitted) setEditedAfterSubmit(true); }}
+      className="space-y-6"
+    >
       <input type="hidden" name="trip_id" value={trip.id} />
 
       {errorMessage && (
