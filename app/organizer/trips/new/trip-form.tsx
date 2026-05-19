@@ -90,10 +90,8 @@ export function TripForm({ destinations = [] }: { destinations?: string[] }) {
           <select id="activity_type" name="activity_type" required className={inputClass}>
             <option value="">Select activity…</option>
             <option value="Hiking">Hiking</option>
-            <option value="Camping">Camping</option>
-            <option value="Freediving">Freediving</option>
             <option value="Island Hopping">Island Hopping</option>
-            <option value="Surfing">Surfing</option>
+            <option value="Freediving">Freediving</option>
           </select>
         </div>
         <div>

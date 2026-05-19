@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
 };
 
-const ACTIVITIES = ["All", "Hiking"] as const;
+const ACTIVITIES = ["All", "Hiking", "Island Hopping"] as const;
 const DIFFICULTIES = ["All", "Beginner", "Intermediate", "Advanced", "Expert"] as const;
 
 type Trip = {

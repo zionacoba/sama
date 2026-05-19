@@ -123,10 +123,8 @@ export function EditTripForm({ trip, destinations = [] }: { trip: TripForEdit; d
           >
             <option value="">Select activity…</option>
             <option value="Hiking">Hiking</option>
-            <option value="Camping">Camping</option>
-            <option value="Freediving">Freediving</option>
             <option value="Island Hopping">Island Hopping</option>
-            <option value="Surfing">Surfing</option>
+            <option value="Freediving">Freediving</option>
           </select>
         </div>
         <div>
