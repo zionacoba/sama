@@ -145,11 +145,11 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
       </div>
 
       <main className="mx-auto max-w-3xl px-4 pb-8 sm:pb-10">
-        {/* Organizer hero — overlaps banner by 40px */}
-        <div className="-mt-10">
-          <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-lg">
-            <div className="flex items-start gap-4">
-              <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-lg font-bold text-trailhead ring-2 ring-white">
+        {/* Organizer hero — card overlaps banner 20px, avatar peeks 20px above card top */}
+        <div className="-mt-5">
+          <div className="rounded-2xl border border-stone-200 bg-white shadow-lg">
+            <div className="flex items-end gap-4 px-5 pt-5">
+              <div className="-mt-10 relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-lg font-bold text-trailhead ring-2 ring-white">
                 {organizer.photo_url ? (
                   <Image
                     src={organizer.photo_url}
@@ -162,7 +162,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                   initials
                 )}
               </div>
-              <div className="min-w-0 pt-1">
+              <div className="min-w-0 pb-1">
                 <h1 className="text-xl font-bold tracking-tight text-stone-900">
                   {publicName}
                 </h1>
@@ -176,9 +176,9 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
               </div>
             </div>
             {organizer.bio && (
-              <p className="mt-3 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
+              <p className="mt-3 px-5 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
             )}
-            <div className="mt-4 flex flex-wrap gap-5 border-t border-stone-100 pt-4 text-sm">
+            <div className="mx-5 mt-4 flex flex-wrap gap-5 border-t border-stone-100 pb-5 pt-4 text-sm">
               <div>
                 <p className="text-lg font-bold text-stone-900">{trips.length}</p>
                 <p className="text-stone-500">trip{trips.length !== 1 ? "s" : ""} led</p>
@@ -231,11 +231,11 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                           </div>
                           <h3 className="font-bold text-stone-900">{trip.title}</h3>
                           <p className="text-xs text-stone-400">{formatDate(trip.date_start)}</p>
-                          <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-3">
+                          <div className="mt-auto border-t border-stone-100 pt-3">
                             <p className="text-lg font-bold text-trailhead">{formatPrice(trip.price)}</p>
-                            <span className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-400"}`}>
+                            <p className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-400"}`}>
                               {trip.remaining_slots} slot{trip.remaining_slots !== 1 ? "s" : ""} left
-                            </span>
+                            </p>
                           </div>
                         </div>
                       </article>
