@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Navbar } from "@/app/components/navbar";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { SortSelect } from "./sort-select";
+import { TripFilters } from "./trip-filters";
 
 export const metadata: Metadata = {
   title: "Browse trips",
@@ -142,94 +142,61 @@ export default async function TripsPage({ searchParams }: PageProps) {
               Browse trips
             </h1>
 
-            <form action="/trips" method="GET" className="mt-4 space-y-2">
+            <form action="/trips" method="GET" className="mt-4 flex gap-2">
               {activity && <input type="hidden" name="activity" value={activity} />}
               {difficulty && <input type="hidden" name="difficulty" value={difficulty} />}
               {sort && sort !== "soonest" && <input type="hidden" name="sort" value={sort} />}
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden>
-                    🔍
-                  </span>
-                  <input
-                    name="search"
-                    type="search"
-                    defaultValue={search ?? ""}
-                    placeholder="Search destination, activity…"
-                    className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-900 shadow-sm outline-none placeholder:text-stone-400 focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="shrink-0 rounded-xl bg-trailhead px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark"
-                >
-                  Search
-                </button>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-medium text-stone-500">Dates</span>
+              {date_from && <input type="hidden" name="date_from" value={date_from} />}
+              {date_to && <input type="hidden" name="date_to" value={date_to} />}
+              <div className="relative flex-1">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden>
+                  🔍
+                </span>
                 <input
-                  name="date_from"
-                  type="date"
-                  defaultValue={date_from ?? ""}
-                  className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                  name="search"
+                  type="search"
+                  defaultValue={search ?? ""}
+                  placeholder="Search destination, activity…"
+                  className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-900 shadow-sm outline-none placeholder:text-stone-400 focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                 />
-                <span className="text-xs text-stone-400">to</span>
-                <input
-                  name="date_to"
-                  type="date"
-                  defaultValue={date_to ?? ""}
-                  className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
-                />
-                {(date_from || date_to) && (() => {
-                  const sp = new URLSearchParams();
-                  if (search) sp.set("search", search);
-                  if (activity) sp.set("activity", activity);
-                  if (difficulty) sp.set("difficulty", difficulty);
-                  if (sort && sort !== "soonest") sp.set("sort", sort);
-                  const qs = sp.toString();
-                  return (
-                    <Link
-                      href={`/trips${qs ? `?${qs}` : ""}`}
-                      className="text-xs text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline"
-                    >
-                      Clear dates
-                    </Link>
-                  );
-                })()}
               </div>
+              <button
+                type="submit"
+                className="shrink-0 rounded-xl bg-trailhead px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark"
+              >
+                Search
+              </button>
             </form>
 
-            <div className="mt-3 flex items-center justify-between gap-2">
-              <p className="text-sm text-stone-600">
-                {trips.length} trip{trips.length !== 1 ? "s" : ""} found
-                {search && (
-                  <>
-                    {" "}for &ldquo;{search}&rdquo;
-                    {(() => {
-                      const sp = new URLSearchParams();
-                      if (activity) sp.set("activity", activity);
-                      if (difficulty) sp.set("difficulty", difficulty);
-                      if (date_from) sp.set("date_from", date_from);
-                      if (date_to) sp.set("date_to", date_to);
-                      if (sort && sort !== "soonest") sp.set("sort", sort);
-                      const qs = sp.toString();
-                      return (
-                        <Link
-                          href={`/trips${qs ? `?${qs}` : ""}`}
-                          className="ml-2 text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline"
-                        >
-                          Clear search
-                        </Link>
-                      );
-                    })()}
-                  </>
-                )}
-              </p>
-              <Suspense fallback={null}>
-                <SortSelect current={sort} />
-              </Suspense>
-            </div>
+            <Suspense fallback={null}>
+              <TripFilters sort={sort} dateFrom={date_from} dateTo={date_to} />
+            </Suspense>
+
+            <p className="mt-3 text-sm text-stone-600">
+              {trips.length} trip{trips.length !== 1 ? "s" : ""} found
+              {search && (
+                <>
+                  {" "}for &ldquo;{search}&rdquo;
+                  {(() => {
+                    const sp = new URLSearchParams();
+                    if (activity) sp.set("activity", activity);
+                    if (difficulty) sp.set("difficulty", difficulty);
+                    if (date_from) sp.set("date_from", date_from);
+                    if (date_to) sp.set("date_to", date_to);
+                    if (sort && sort !== "soonest") sp.set("sort", sort);
+                    const qs = sp.toString();
+                    return (
+                      <Link
+                        href={`/trips${qs ? `?${qs}` : ""}`}
+                        className="ml-2 text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline"
+                      >
+                        Clear search
+                      </Link>
+                    );
+                  })()}
+                </>
+              )}
+            </p>
 
             <div className="mt-6 space-y-3">
               {/* Activity filter */}
