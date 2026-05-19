@@ -35,7 +35,12 @@ export async function createBooking(input: CreateBookingInput) {
     .eq("id", input.tripId)
     .maybeSingle();
 
-  const autoApprove = trip?.difficulty === "Beginner" || trip?.difficulty === "Intermediate";
+  if (!trip) return { error: "Trip not found." };
+  if (trip.remaining_slots < input.slots) {
+    return { error: "Not enough slots available. Please try booking fewer slots or check back later." };
+  }
+
+  const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
   const bookingStatus = autoApprove ? "confirmed" : "pending";
 
   const { error: insertError } = await supabase.from("bookings").insert({
@@ -59,6 +64,13 @@ export async function createBooking(input: CreateBookingInput) {
   });
 
   if (insertError) return { error: insertError.message };
+
+  // Decrement remaining slots. Use admin client since bookers don't have write access to trips.
+  const admin = createSupabaseAdminClient();
+  await admin
+    .from("trips")
+    .update({ remaining_slots: trip.remaining_slots - input.slots })
+    .eq("id", input.tripId);
 
   try {
     if (trip?.organizer_id) {
@@ -179,7 +191,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, trip_id")
+    .select("id, trip_id, slots, status")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -187,7 +199,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   const { data: trip } = await supabase
     .from("trips")
-    .select("id, organizer_id")
+    .select("id, organizer_id, remaining_slots, total_slots")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -201,6 +213,16 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     .eq("id", bookingId);
 
   if (error) return { error: error.message };
+
+  // Restore slots when rejecting a booking that wasn't already rejected/cancelled.
+  if (status === "rejected" && booking.status !== "rejected" && booking.status !== "cancelled") {
+    await supabase
+      .from("trips")
+      .update({
+        remaining_slots: Math.min(trip.total_slots, trip.remaining_slots + booking.slots),
+      })
+      .eq("id", trip.id);
+  }
 
   revalidatePath("/organizer/dashboard");
   revalidatePath("/organizer/trips/[slug]/bookings", "page");

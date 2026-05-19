@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { updateOrganizerStatus } from "@/app/actions/organizer";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const ADMIN_EMAIL = "acobapaulzion@gmail.com";
 
@@ -96,7 +96,8 @@ export default async function AdminPage() {
     );
   }
 
-  const { data, error } = await supabase
+  const adminClient = createSupabaseAdminClient();
+  const { data, error } = await adminClient
     .from("bookings")
     .select("*, trips(title)")
     .order("created_at", { ascending: false });

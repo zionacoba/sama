@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { BookingModal } from "@/app/trips/[slug]/booking-modal";
 import { ShareButton } from "@/app/components/share-button";
@@ -222,6 +223,11 @@ export default async function TripDetailPage({ params }: PageProps) {
         </main>
       </div>
     );
+  }
+
+  // Don't expose template trips as public bookable pages
+  if (trip.is_template === true || trip.date_start === "2099-12-31") {
+    notFound();
   }
 
   const tripData = trip as TripDetail;

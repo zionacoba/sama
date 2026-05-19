@@ -40,12 +40,15 @@ export async function submitReview(
   if (bookingId) {
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, status, email")
+      .select("id, status, user_id, email")
       .eq("id", bookingId)
       .maybeSingle();
 
     if (!booking) return { error: "Booking not found." };
     if (booking.status !== "confirmed") return { error: "You can only review confirmed bookings." };
+    if (booking.user_id !== user.id && booking.email !== user.email) {
+      return { error: "You don't have permission to review this booking." };
+    }
   }
 
   // Check for duplicate review on this booking or trip
