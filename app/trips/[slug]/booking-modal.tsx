@@ -81,13 +81,27 @@ export function BookingModal({
     }
   }
 
+  async function applyProfile(userId: string) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("emergency_contact_name, emergency_contact_phone")
+      .eq("id", userId)
+      .maybeSingle();
+    if (data) {
+      setEmergencyContactName((prev) => prev || data.emergency_contact_name || "");
+      setEmergencyContactPhone((prev) => prev || data.emergency_contact_phone || "");
+    }
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       applySession(session);
+      if (session?.user) applyProfile(session.user.id);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       applySession(session);
+      if (session?.user) applyProfile(session.user.id);
     });
 
     return () => subscription.unsubscribe();

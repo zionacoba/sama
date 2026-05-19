@@ -13,7 +13,7 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("birthdate")
+    .select("birthdate, emergency_contact_name, emergency_contact_phone")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -47,7 +47,11 @@ export default async function ProfilePage() {
             Helps organizers maintain accurate safety and registration records for their trips.
           </p>
           <div className="mt-6">
-            <ProfileForm birthdate={profile?.birthdate ?? null} />
+            <ProfileForm
+              birthdate={profile?.birthdate ?? null}
+              emergencyContactName={profile?.emergency_contact_name ?? null}
+              emergencyContactPhone={profile?.emergency_contact_phone ?? null}
+            />
           </div>
         </div>
       </main>

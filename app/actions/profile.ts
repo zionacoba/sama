@@ -14,12 +14,16 @@ export async function saveProfile(
   if (!user) return { error: "Not authenticated." };
 
   const birthdate = formData.get("birthdate") as string | null;
+  const emergencyContactName = formData.get("emergency_contact_name") as string | null;
+  const emergencyContactPhone = formData.get("emergency_contact_phone") as string | null;
 
   const { error } = await supabase
     .from("profiles")
     .upsert({
       id: user.id,
       birthdate: birthdate || null,
+      emergency_contact_name: emergencyContactName || null,
+      emergency_contact_phone: emergencyContactPhone || null,
       updated_at: new Date().toISOString(),
     });
 

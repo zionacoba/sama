@@ -3,7 +3,15 @@
 import { useActionState } from "react";
 import { saveProfile } from "@/app/actions/profile";
 
-export function ProfileForm({ birthdate }: { birthdate: string | null }) {
+export function ProfileForm({
+  birthdate,
+  emergencyContactName,
+  emergencyContactPhone,
+}: {
+  birthdate: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+}) {
   const [state, action, pending] = useActionState(saveProfile, null);
 
   return (
@@ -21,6 +29,37 @@ export function ProfileForm({ birthdate }: { birthdate: string | null }) {
           type="date"
           defaultValue={birthdate ?? ""}
           className="mt-1.5 w-full max-w-xs rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="emergency_contact_name" className="block text-sm font-medium text-stone-700">
+          Emergency contact name
+        </label>
+        <p className="mt-0.5 text-xs text-stone-500">
+          Pre-filled in the booking form and shared with organizers.
+        </p>
+        <input
+          id="emergency_contact_name"
+          name="emergency_contact_name"
+          type="text"
+          defaultValue={emergencyContactName ?? ""}
+          placeholder="Full name"
+          className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="emergency_contact_phone" className="block text-sm font-medium text-stone-700">
+          Emergency contact phone
+        </label>
+        <input
+          id="emergency_contact_phone"
+          name="emergency_contact_phone"
+          type="tel"
+          defaultValue={emergencyContactPhone ?? ""}
+          placeholder="+63 9XX XXX XXXX"
+          className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
       </div>
 
