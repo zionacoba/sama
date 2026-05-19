@@ -12,6 +12,7 @@ type TripDetail = {
   destination: string;
   activity_type: string | null;
   difficulty: string;
+  duration: string | null;
   price: string | number;
   description: string;
   date_start: string;
@@ -325,6 +326,14 @@ export default async function TripDetailPage({ params }: PageProps) {
                 {formatDate(tripData.date_start)}
               </p>
             </div>
+            {tripData.duration && (
+              <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-trailhead">
+                  Duration
+                </h2>
+                <p className="mt-2 font-medium text-stone-900">{tripData.duration}</p>
+              </div>
+            )}
             <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-trailhead">
                 Meeting point
