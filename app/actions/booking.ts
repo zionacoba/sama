@@ -20,6 +20,7 @@ type CreateBookingInput = {
   emergencyContactPhone: string;
   waiverAgreed: boolean;
   medicalNotes: string | null;
+  meetingPoint: string | null;
 };
 
 export async function createBooking(input: CreateBookingInput) {
@@ -54,6 +55,7 @@ export async function createBooking(input: CreateBookingInput) {
     emergency_contact_phone: input.emergencyContactPhone,
     waiver_agreed: input.waiverAgreed,
     medical_notes: input.medicalNotes,
+    meeting_point: input.meetingPoint,
   });
 
   if (insertError) return { error: insertError.message };

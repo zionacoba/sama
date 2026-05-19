@@ -6,6 +6,8 @@ import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { createBooking } from "@/app/actions/booking";
 
+type MeetingPoint = { location: string; time: string };
+
 type BookingModalProps = {
   tripId: number;
   tripSlug: string;
@@ -14,6 +16,7 @@ type BookingModalProps = {
   remainingSlots: number;
   paymentType: string;
   minDownpayment: number | null;
+  meetingPoints: MeetingPoint[];
 };
 
 function formatCurrency(amount: number) {
@@ -32,6 +35,7 @@ export function BookingModal({
   remainingSlots,
   paymentType,
   minDownpayment,
+  meetingPoints,
 }: BookingModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -49,6 +53,7 @@ export function BookingModal({
   const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
   const [medicalNotes, setMedicalNotes] = useState("");
   const [notes, setNotes] = useState("");
+  const [selectedMeetingPoint, setSelectedMeetingPoint] = useState("");
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [waiverError, setWaiverError] = useState(false);
   const [bookingStatus, setBookingStatus] = useState<"confirmed" | "pending" | null>(null);
@@ -134,6 +139,7 @@ export function BookingModal({
     setEmergencyContactPhone("");
     setMedicalNotes("");
     setNotes("");
+    setSelectedMeetingPoint("");
     setWaiverAccepted(false);
     setWaiverError(false);
     setError(null);
@@ -179,6 +185,7 @@ export function BookingModal({
       emergencyContactPhone,
       waiverAgreed: waiverAccepted,
       medicalNotes: medicalNotes.trim() || null,
+      meetingPoint: selectedMeetingPoint || null,
     });
 
     setLoading(false);
@@ -357,6 +364,29 @@ export function BookingModal({
                       className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
                   </div>
+
+                  {/* Pickup point */}
+                  {meetingPoints.length > 0 && (
+                    <div>
+                      <label htmlFor="booking-meeting-point" className="block text-sm font-medium text-stone-700">
+                        Pickup point
+                      </label>
+                      <select
+                        id="booking-meeting-point"
+                        required
+                        value={selectedMeetingPoint}
+                        onChange={(e) => setSelectedMeetingPoint(e.target.value)}
+                        className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      >
+                        <option value="">Select a pickup point…</option>
+                        {meetingPoints.map((mp) => (
+                          <option key={mp.location} value={mp.location}>
+                            {mp.location}{mp.time ? ` · ${mp.time}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   {/* Participant names — shown when booking multiple slots */}
                   {slots > 1 && (

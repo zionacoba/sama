@@ -486,6 +486,7 @@ export default async function TripDetailPage({ params }: PageProps) {
             remainingSlots={tripData.remaining_slots}
             paymentType={tripData.payment_type ?? "full"}
             minDownpayment={tripData.min_downpayment ?? null}
+            meetingPoints={tripData.meeting_points ?? []}
           />
 
           {/* Reviews */}
