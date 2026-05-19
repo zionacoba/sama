@@ -1,6 +1,8 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { BookingActions } from "./booking-actions";
 import { ShareButton } from "@/app/components/share-button";
 
@@ -27,6 +29,7 @@ function formatPrice(price: number) {
 
 type OrganizerBooking = {
   id: string | number;
+  user_id: string | null;
   full_name: string;
   email: string;
   phone: string;
@@ -35,6 +38,11 @@ type OrganizerBooking = {
   status: string;
   created_at: string;
   trips: { title: string } | null;
+  participants: string[] | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  waiver_agreed: boolean;
+  medical_notes: string | null;
 };
 
 function formatDate(date: string) {
@@ -53,6 +61,16 @@ function formatDateTime(date: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(date));
+}
+
+function calculateAge(birthdate: string | null | undefined): number | null {
+  if (!birthdate) return null;
+  const birth = new Date(birthdate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
 }
 
 export default async function OrganizerDashboardPage() {
@@ -110,12 +128,28 @@ export default async function OrganizerDashboardPage() {
     tripIds.length > 0
       ? await supabase
           .from("bookings")
-          .select("id, full_name, email, phone, slots, total_amount, status, created_at, trips(title)")
+          .select(
+            "id, user_id, full_name, email, phone, slots, total_amount, status, created_at, trips(title), participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes"
+          )
           .in("trip_id", tripIds)
           .order("created_at", { ascending: false })
       : { data: [] };
 
   const bookings = (bookingsData ?? []) as unknown as OrganizerBooking[];
+
+  // Fetch profiles (birthdate → age) for all bookers via admin client to bypass RLS
+  const userIds = [...new Set(bookings.map((b) => b.user_id).filter(Boolean) as string[])];
+  let profilesByUserId: Record<string, { birthdate: string | null }> = {};
+  if (userIds.length > 0) {
+    const admin = createSupabaseAdminClient();
+    const { data: profilesData } = await admin
+      .from("profiles")
+      .select("id, birthdate")
+      .in("id", userIds);
+    for (const p of profilesData ?? []) {
+      profilesByUserId[p.id] = { birthdate: p.birthdate };
+    }
+  }
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -159,6 +193,7 @@ export default async function OrganizerDashboardPage() {
           </div>
         </div>
 
+        {/* Trips table */}
         <div className="mt-8">
           <h2 className="mb-4 text-xl font-bold tracking-tight text-stone-900">
             Your trips
@@ -203,22 +238,14 @@ export default async function OrganizerDashboardPage() {
                             {trip.title}
                           </Link>
                         </td>
-                        <td className="px-4 py-3 text-stone-600">
-                          {trip.activity_type ?? "—"}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">
-                          {formatDate(trip.date_start)}
-                        </td>
-                        <td className="px-4 py-3 font-medium text-trailhead">
-                          {formatPrice(trip.price)}
-                        </td>
+                        <td className="px-4 py-3 text-stone-600">{trip.activity_type ?? "—"}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">{formatDate(trip.date_start)}</td>
+                        <td className="px-4 py-3 font-medium text-trailhead">{formatPrice(trip.price)}</td>
                         <td className="px-4 py-3 text-stone-900">
                           {trip.remaining_slots}{" "}
                           <span className="text-stone-400">/ {trip.total_slots}</span>
                         </td>
-                        <td className="px-4 py-3 text-stone-900">
-                          {trip.bookings[0]?.count ?? 0}
-                        </td>
+                        <td className="px-4 py-3 text-stone-900">{trip.bookings[0]?.count ?? 0}</td>
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
@@ -260,6 +287,7 @@ export default async function OrganizerDashboardPage() {
           )}
         </div>
 
+        {/* Bookings table */}
         <div className="mt-10">
           <h2 className="mb-4 text-xl font-bold tracking-tight text-stone-900">
             My bookings
@@ -289,48 +317,86 @@ export default async function OrganizerDashboardPage() {
                       </td>
                     </tr>
                   ) : (
-                    bookings.map((booking) => (
-                      <tr
-                        key={booking.id}
-                        className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30"
-                      >
-                        <td className="px-4 py-3 font-medium text-stone-900">
-                          {booking.full_name}
-                        </td>
-                        <td className="px-4 py-3 text-stone-600">{booking.email}</td>
-                        <td className="px-4 py-3 text-stone-600">{booking.phone}</td>
-                        <td className="px-4 py-3 text-stone-900">
-                          {booking.trips?.title ?? "—"}
-                        </td>
-                        <td className="px-4 py-3 text-stone-900">{booking.slots}</td>
-                        <td className="px-4 py-3 font-medium text-trailhead">
-                          {formatPrice(booking.total_amount)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
-                              booking.status === "confirmed"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : booking.status === "rejected"
-                                  ? "bg-red-100 text-red-800"
-                                  : booking.status === "cancelled"
-                                    ? "bg-stone-100 text-stone-600"
-                                    : "bg-amber-100 text-amber-900"
-                            }`}
-                          >
-                            {booking.status}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">
-                          {formatDateTime(booking.created_at)}
-                        </td>
-                        <td className="px-4 py-3">
-                          {booking.status === "pending" && (
-                            <BookingActions bookingId={Number(booking.id)} />
-                          )}
-                        </td>
-                      </tr>
-                    ))
+                    bookings.map((booking) => {
+                      const profile = profilesByUserId[booking.user_id ?? ""];
+                      const age = calculateAge(profile?.birthdate);
+                      return (
+                        <Fragment key={booking.id}>
+                          {/* Summary row */}
+                          <tr className="border-b border-stone-100 hover:bg-trailhead-muted/20">
+                            <td className="px-4 py-3 font-medium text-stone-900">{booking.full_name}</td>
+                            <td className="px-4 py-3 text-stone-600">{booking.email}</td>
+                            <td className="px-4 py-3 text-stone-600">{booking.phone}</td>
+                            <td className="px-4 py-3 text-stone-900">{booking.trips?.title ?? "—"}</td>
+                            <td className="px-4 py-3 text-stone-900">{booking.slots}</td>
+                            <td className="px-4 py-3 font-medium text-trailhead">{formatPrice(booking.total_amount)}</td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+                                  booking.status === "confirmed"
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : booking.status === "rejected"
+                                      ? "bg-red-100 text-red-800"
+                                      : booking.status === "cancelled"
+                                        ? "bg-stone-100 text-stone-600"
+                                        : "bg-amber-100 text-amber-900"
+                                }`}
+                              >
+                                {booking.status}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-stone-600">{formatDateTime(booking.created_at)}</td>
+                            <td className="px-4 py-3">
+                              {booking.status === "pending" && (
+                                <BookingActions bookingId={Number(booking.id)} />
+                              )}
+                            </td>
+                          </tr>
+                          {/* Detail row */}
+                          <tr className="border-b border-stone-100 bg-stone-50/60">
+                            <td colSpan={9} className="px-4 pb-3 pt-1">
+                              <dl className="flex flex-wrap gap-x-8 gap-y-2 text-xs">
+                                {booking.participants && booking.participants.length > 1 && (
+                                  <div>
+                                    <dt className="text-stone-400">Participants</dt>
+                                    <dd className="mt-0.5 font-medium text-stone-700">
+                                      {booking.participants.join(", ")}
+                                    </dd>
+                                  </div>
+                                )}
+                                <div>
+                                  <dt className="text-stone-400">Emergency contact</dt>
+                                  <dd className="mt-0.5 font-medium text-stone-700">
+                                    {booking.emergency_contact_name ?? "—"}{" "}
+                                    {booking.emergency_contact_phone
+                                      ? `· ${booking.emergency_contact_phone}`
+                                      : ""}
+                                  </dd>
+                                </div>
+                                {age !== null && (
+                                  <div>
+                                    <dt className="text-stone-400">Age</dt>
+                                    <dd className="mt-0.5 font-medium text-stone-700">{age} yrs</dd>
+                                  </div>
+                                )}
+                                {booking.medical_notes && (
+                                  <div>
+                                    <dt className="text-stone-400">Medical / allergies</dt>
+                                    <dd className="mt-0.5 font-medium text-stone-700">{booking.medical_notes}</dd>
+                                  </div>
+                                )}
+                                <div>
+                                  <dt className="text-stone-400">Waiver</dt>
+                                  <dd className={`mt-0.5 font-medium ${booking.waiver_agreed ? "text-emerald-700" : "text-red-600"}`}>
+                                    {booking.waiver_agreed ? "Agreed ✓" : "Not agreed ✗"}
+                                  </dd>
+                                </div>
+                              </dl>
+                            </td>
+                          </tr>
+                        </Fragment>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

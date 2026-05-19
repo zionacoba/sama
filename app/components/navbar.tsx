@@ -28,6 +28,12 @@ function AuthLinks({ email: _email, displayName, organizerStatus, className }: A
       >
         My Bookings
       </Link>
+      <Link
+        href="/dashboard/profile"
+        className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
+      >
+        Profile
+      </Link>
       {organizerStatus === "approved" ? (
         <Link
           href="/organizer/dashboard"

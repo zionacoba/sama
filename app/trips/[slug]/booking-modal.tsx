@@ -44,6 +44,10 @@ export function BookingModal({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [slots, setSlots] = useState(1);
+  const [participants, setParticipants] = useState<string[]>([]);
+  const [emergencyContactName, setEmergencyContactName] = useState("");
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
+  const [medicalNotes, setMedicalNotes] = useState("");
   const [notes, setNotes] = useState("");
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [waiverError, setWaiverError] = useState(false);
@@ -53,6 +57,21 @@ export function BookingModal({
   const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
   const totalAmount = unitPrice * slots;
   const amountDue = paymentOption === "downpayment" && hasDownpayment ? minDownpayment : totalAmount;
+
+  // Keep a ref so the slots effect can read fullName without being a dependency
+  const fullNameRef = useRef(fullName);
+  fullNameRef.current = fullName;
+
+  // Sync participant list length with slots; pre-fill slot 0 with booker name on first expansion
+  useEffect(() => {
+    setParticipants((prev) => {
+      if (slots <= 1) return [];
+      return Array.from({ length: slots }, (_, i) => {
+        if (i < prev.length) return prev[i];
+        return i === 0 ? fullNameRef.current : "";
+      });
+    });
+  }, [slots]);
 
   function applySession(session: Session | null) {
     sessionRef.current = session;
@@ -96,6 +115,10 @@ export function BookingModal({
     setEmail("");
     setPhone("");
     setSlots(1);
+    setParticipants([]);
+    setEmergencyContactName("");
+    setEmergencyContactPhone("");
+    setMedicalNotes("");
     setNotes("");
     setWaiverAccepted(false);
     setWaiverError(false);
@@ -137,6 +160,11 @@ export function BookingModal({
       notes: notes.trim() || null,
       paymentOption,
       amountDue,
+      participants: slots > 1 ? participants : null,
+      emergencyContactName,
+      emergencyContactPhone,
+      waiverAgreed: waiverAccepted,
+      medicalNotes: medicalNotes.trim() || null,
     });
 
     setLoading(false);
@@ -231,10 +259,9 @@ export function BookingModal({
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Pricing summary */}
                   <div className="rounded-xl bg-trailhead-muted/60 px-4 py-3">
-                    <p className="text-sm font-medium text-stone-700">
-                      {tripTitle}
-                    </p>
+                    <p className="text-sm font-medium text-stone-700">{tripTitle}</p>
                     <p className="mt-1 text-lg font-bold text-trailhead">
                       {paymentOption === "downpayment" && hasDownpayment
                         ? <>Due now: {formatCurrency(amountDue)} <span className="text-sm font-normal text-stone-500">(downpayment)</span></>
@@ -242,8 +269,7 @@ export function BookingModal({
                       }
                     </p>
                     <p className="text-xs text-stone-500">
-                      {formatCurrency(unitPrice)} × {slots} slot
-                      {slots !== 1 ? "s" : ""}
+                      {formatCurrency(unitPrice)} × {slots} slot{slots !== 1 ? "s" : ""}
                     </p>
                   </div>
 
@@ -256,11 +282,9 @@ export function BookingModal({
                     </p>
                   )}
 
+                  {/* Contact details */}
                   <div>
-                    <label
-                      htmlFor="booking-full-name"
-                      className="block text-sm font-medium text-stone-700"
-                    >
+                    <label htmlFor="booking-full-name" className="block text-sm font-medium text-stone-700">
                       Full name
                     </label>
                     <input
@@ -274,10 +298,7 @@ export function BookingModal({
                   </div>
 
                   <div>
-                    <label
-                      htmlFor="booking-email"
-                      className="block text-sm font-medium text-stone-700"
-                    >
+                    <label htmlFor="booking-email" className="block text-sm font-medium text-stone-700">
                       Email
                     </label>
                     <input
@@ -291,10 +312,7 @@ export function BookingModal({
                   </div>
 
                   <div>
-                    <label
-                      htmlFor="booking-phone"
-                      className="block text-sm font-medium text-stone-700"
-                    >
+                    <label htmlFor="booking-phone" className="block text-sm font-medium text-stone-700">
                       Phone number
                     </label>
                     <input
@@ -307,11 +325,9 @@ export function BookingModal({
                     />
                   </div>
 
+                  {/* Slots */}
                   <div>
-                    <label
-                      htmlFor="booking-slots"
-                      className="block text-sm font-medium text-stone-700"
-                    >
+                    <label htmlFor="booking-slots" className="block text-sm font-medium text-stone-700">
                       Number of slots
                     </label>
                     <input
@@ -322,14 +338,80 @@ export function BookingModal({
                       max={remainingSlots}
                       value={slots}
                       onChange={(e) =>
-                        setSlots(
-                          Math.min(remainingSlots, Math.max(1, Number(e.target.value) || 1))
-                        )
+                        setSlots(Math.min(remainingSlots, Math.max(1, Number(e.target.value) || 1)))
                       }
                       className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
                   </div>
 
+                  {/* Participant names — shown when booking multiple slots */}
+                  {slots > 1 && (
+                    <div>
+                      <p className="block text-sm font-medium text-stone-700">Participant names</p>
+                      <div className="mt-1.5 space-y-2">
+                        {participants.map((name, i) => (
+                          <div key={i}>
+                            <label
+                              htmlFor={`participant-${i}`}
+                              className="mb-0.5 block text-xs text-stone-500"
+                            >
+                              Participant {i + 1}{i === 0 ? " (you)" : ""}
+                            </label>
+                            <input
+                              id={`participant-${i}`}
+                              type="text"
+                              required
+                              value={name}
+                              onChange={(e) => {
+                                const next = [...participants];
+                                next[i] = e.target.value;
+                                setParticipants(next);
+                              }}
+                              className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                              placeholder="Full name"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Emergency contact */}
+                  <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3.5 space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                      Emergency contact
+                    </p>
+                    <div>
+                      <label htmlFor="booking-ec-name" className="block text-sm font-medium text-stone-700">
+                        Name
+                      </label>
+                      <input
+                        id="booking-ec-name"
+                        type="text"
+                        required
+                        value={emergencyContactName}
+                        onChange={(e) => setEmergencyContactName(e.target.value)}
+                        placeholder="Full name"
+                        className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="booking-ec-phone" className="block text-sm font-medium text-stone-700">
+                        Phone number
+                      </label>
+                      <input
+                        id="booking-ec-phone"
+                        type="tel"
+                        required
+                        value={emergencyContactPhone}
+                        onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                        placeholder="+63 9XX XXX XXXX"
+                        className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Payment option */}
                   {hasDownpayment && (
                     <div>
                       <p className="block text-sm font-medium text-stone-700">Payment option</p>
@@ -362,23 +444,38 @@ export function BookingModal({
                     </div>
                   )}
 
+                  {/* Medical notes */}
                   <div>
-                    <label
-                      htmlFor="booking-notes"
-                      className="block text-sm font-medium text-stone-700"
-                    >
+                    <label htmlFor="booking-medical" className="block text-sm font-medium text-stone-700">
+                      Medical conditions or allergies{" "}
+                      <span className="text-stone-400">(optional)</span>
+                    </label>
+                    <textarea
+                      id="booking-medical"
+                      rows={2}
+                      value={medicalNotes}
+                      onChange={(e) => setMedicalNotes(e.target.value)}
+                      placeholder="Any conditions or allergies the organizer should know about?"
+                      className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                    />
+                  </div>
+
+                  {/* General notes */}
+                  <div>
+                    <label htmlFor="booking-notes" className="block text-sm font-medium text-stone-700">
                       Notes <span className="text-stone-400">(optional)</span>
                     </label>
                     <textarea
                       id="booking-notes"
-                      rows={3}
+                      rows={2}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Questions, special requests…"
                       className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
-                      placeholder="Dietary needs, emergency contact, questions…"
                     />
                   </div>
 
+                  {/* Waiver */}
                   <div>
                     <label className="flex cursor-pointer items-start gap-3">
                       <input
@@ -391,7 +488,7 @@ export function BookingModal({
                         className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
                       />
                       <span className="text-xs leading-relaxed text-stone-600">
-                        I understand that outdoor activities involve physical risks including injury. I confirm that I am physically fit for this activity, will follow the organizer&apos;s instructions, and release Sama and the trip organizer from liability for accidents caused by my own negligence or the inherent risks of outdoor adventure.
+                        I understand that outdoor activities carry inherent risks including injury or death, and I participate at my own risk. I confirm that I am physically fit for this activity, will follow the organizer&apos;s instructions, and release Sama and the trip organizer from liability for accidents caused by my own negligence or the inherent risks of outdoor adventure.
                       </span>
                     </label>
                     {waiverError && (

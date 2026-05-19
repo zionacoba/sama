@@ -15,6 +15,11 @@ type CreateBookingInput = {
   notes: string | null;
   paymentOption: "full" | "downpayment";
   amountDue: number;
+  participants: string[] | null;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  waiverAgreed: boolean;
+  medicalNotes: string | null;
 };
 
 export async function createBooking(input: CreateBookingInput) {
@@ -23,7 +28,6 @@ export async function createBooking(input: CreateBookingInput) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  // Fetch trip first to determine auto-approve eligibility
   const { data: trip } = await supabase
     .from("trips")
     .select("title, date_start, remaining_slots, organizer_id, difficulty")
@@ -35,6 +39,7 @@ export async function createBooking(input: CreateBookingInput) {
 
   const { error: insertError } = await supabase.from("bookings").insert({
     trip_id: input.tripId,
+    user_id: user.id,
     full_name: input.fullName,
     email: input.email,
     phone: input.phone,
@@ -44,14 +49,17 @@ export async function createBooking(input: CreateBookingInput) {
     notes: input.notes,
     payment_option: input.paymentOption,
     amount_due: input.amountDue,
+    participants: input.participants,
+    emergency_contact_name: input.emergencyContactName,
+    emergency_contact_phone: input.emergencyContactPhone,
+    waiver_agreed: input.waiverAgreed,
+    medical_notes: input.medicalNotes,
   });
 
   if (insertError) return { error: insertError.message };
 
-  // Send emails (best-effort — don't fail the booking if email fails)
   try {
     if (trip?.organizer_id) {
-      // Use admin client to bypass RLS — the booker cannot read other organizers' rows
       const admin = createSupabaseAdminClient();
       const { data: organizer } = await admin
         .from("organizers")
@@ -69,6 +77,15 @@ export async function createBooking(input: CreateBookingInput) {
           day: "numeric",
         }).format(new Date(trip.date_start));
 
+        const participantsRow =
+          input.participants && input.participants.length > 1
+            ? `<li><strong>Participants:</strong> ${input.participants.map((n) => n || "(unnamed)").join(", ")}</li>`
+            : "";
+
+        const medicalRow = input.medicalNotes
+          ? `<li><strong>Medical / allergies:</strong> ${input.medicalNotes}</li>`
+          : "";
+
         await resend.emails.send({
           from: "Sama <onboarding@resend.dev>",
           to: organizerEmail,
@@ -80,6 +97,10 @@ export async function createBooking(input: CreateBookingInput) {
               <li><strong>Trip:</strong> ${trip.title}</li>
               <li><strong>Date:</strong> ${tripDate}</li>
               <li><strong>Remaining slots after this booking:</strong> ${Math.max(0, trip.remaining_slots - input.slots)}</li>
+              ${participantsRow}
+              <li><strong>Emergency contact:</strong> ${input.emergencyContactName} — ${input.emergencyContactPhone}</li>
+              ${medicalRow}
+              <li><strong>Waiver agreed:</strong> ${input.waiverAgreed ? "✓ Yes" : "✗ No"}</li>
             </ul>
             ${autoApprove
               ? `<p>This booking was <strong>automatically confirmed</strong> (${trip.difficulty} trip).</p>`
@@ -91,7 +112,6 @@ export async function createBooking(input: CreateBookingInput) {
       }
     }
 
-    // Send confirmation email to booker
     if (trip) {
       const tripDate = new Intl.DateTimeFormat("en-PH", {
         weekday: "long",
@@ -155,7 +175,6 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   if (!organizer) return { error: "Not an approved organizer." };
 
-  // Verify booking belongs to one of this organizer's trips
   const { data: booking } = await supabase
     .from("bookings")
     .select("id, trip_id")
