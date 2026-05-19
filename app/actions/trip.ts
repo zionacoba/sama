@@ -33,14 +33,17 @@ export async function createTrip(
     redirect("/organizer/apply");
   }
 
+  const is_template = formData.get("is_template") === "true";
+  const template_id = (formData.get("template_id") as string) || null;
   const title = (formData.get("title") as string)?.trim();
   const activity_type = formData.get("activity_type") as string;
   const destination = (formData.get("destination") as string)?.trim();
   const difficulty = formData.get("difficulty") as string;
-  const date_start = formData.get("date_start") as string;
-  const price = parseFloat(formData.get("price") as string);
-  const total_slots = parseInt(formData.get("total_slots") as string, 10);
-  const meeting_point = (formData.get("meeting_point") as string)?.trim();
+  const duration = (formData.get("duration") as string) || null;
+  const date_start = is_template ? "2099-12-31" : (formData.get("date_start") as string);
+  const price = is_template ? 0 : parseFloat(formData.get("price") as string);
+  const total_slots = is_template ? 0 : parseInt(formData.get("total_slots") as string, 10);
+  const meeting_point = is_template ? "" : ((formData.get("meeting_point") as string)?.trim() ?? "");
   const description = (formData.get("description") as string)?.trim();
   const includes = (formData.get("includes") as string)?.trim();
   const what_to_bring = (formData.get("what_to_bring") as string)?.trim();
@@ -56,25 +59,19 @@ export async function createTrip(
     ? ((formData.get("cancellation_policy_custom") as string)?.trim() || null)
     : null;
 
-  if (
-    !title ||
-    !activity_type ||
-    !destination ||
-    !difficulty ||
-    !date_start ||
-    isNaN(price) ||
-    isNaN(total_slots) ||
-    !meeting_point ||
-    !description
-  ) {
+  if (!title || !activity_type || !destination || !difficulty || !description) {
     return { error: "Please fill in all required fields." };
   }
 
-  if (payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
+  if (!is_template && (!date_start || isNaN(price) || isNaN(total_slots) || !meeting_point)) {
+    return { error: "Please fill in all required fields." };
+  }
+
+  if (!is_template && payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
     return { error: "Please enter a minimum downpayment amount." };
   }
 
-  if (cancellation_policy === "custom" && !cancellation_policy_custom) {
+  if (!is_template && cancellation_policy === "custom" && !cancellation_policy_custom) {
     return { error: "Please enter your custom cancellation policy." };
   }
 
@@ -86,10 +83,11 @@ export async function createTrip(
     activity_type,
     destination,
     difficulty,
+    duration: duration || null,
     date_start,
     price,
     total_slots,
-    remaining_slots: total_slots,
+    remaining_slots: is_template ? 0 : total_slots,
     meeting_point,
     description,
     includes: includes || null,
@@ -101,6 +99,8 @@ export async function createTrip(
     min_downpayment,
     cancellation_policy,
     cancellation_policy_custom,
+    is_template,
+    template_id: template_id || null,
   });
 
   if (error) {
@@ -146,14 +146,17 @@ export async function updateTrip(
     return { error: "Trip not found or you don't have permission to edit it." };
   }
 
+  const is_template = formData.get("is_template") === "true";
+  const template_id = (formData.get("template_id") as string) || null;
   const title = (formData.get("title") as string)?.trim();
   const activity_type = formData.get("activity_type") as string;
   const destination = (formData.get("destination") as string)?.trim();
   const difficulty = formData.get("difficulty") as string;
-  const date_start = formData.get("date_start") as string;
-  const price = parseFloat(formData.get("price") as string);
-  const total_slots = parseInt(formData.get("total_slots") as string, 10);
-  const meeting_point = (formData.get("meeting_point") as string)?.trim();
+  const duration = (formData.get("duration") as string) || null;
+  const date_start = is_template ? "2099-12-31" : (formData.get("date_start") as string);
+  const price = is_template ? 0 : parseFloat(formData.get("price") as string);
+  const total_slots = is_template ? 0 : parseInt(formData.get("total_slots") as string, 10);
+  const meeting_point = is_template ? "" : ((formData.get("meeting_point") as string)?.trim() ?? "");
   const description = (formData.get("description") as string)?.trim();
   const includes = (formData.get("includes") as string)?.trim();
   const what_to_bring = (formData.get("what_to_bring") as string)?.trim();
@@ -169,17 +172,11 @@ export async function updateTrip(
     ? ((formData.get("cancellation_policy_custom") as string)?.trim() || null)
     : null;
 
-  if (
-    !title ||
-    !activity_type ||
-    !destination ||
-    !difficulty ||
-    !date_start ||
-    isNaN(price) ||
-    isNaN(total_slots) ||
-    !meeting_point ||
-    !description
-  ) {
+  if (!title || !activity_type || !destination || !difficulty || !description) {
+    return { error: "Please fill in all required fields." };
+  }
+
+  if (!is_template && (!date_start || isNaN(price) || isNaN(total_slots) || !meeting_point)) {
     return { error: "Please fill in all required fields." };
   }
 
@@ -191,8 +188,10 @@ export async function updateTrip(
     return { error: "Please enter your custom cancellation policy." };
   }
 
-  const slotDiff = total_slots - existing.total_slots;
-  const remaining_slots = Math.max(0, existing.remaining_slots + slotDiff);
+  const slotDiff = is_template ? 0 : total_slots - existing.total_slots;
+  const remaining_slots = is_template
+    ? existing.remaining_slots
+    : Math.max(0, existing.remaining_slots + slotDiff);
 
   const { error } = await supabase
     .from("trips")
@@ -201,6 +200,7 @@ export async function updateTrip(
       activity_type,
       destination,
       difficulty,
+      duration: duration || null,
       date_start,
       price,
       total_slots,
@@ -214,6 +214,8 @@ export async function updateTrip(
       min_downpayment,
       cancellation_policy,
       cancellation_policy_custom,
+      is_template,
+      template_id: template_id || null,
     })
     .eq("id", tripId);
 

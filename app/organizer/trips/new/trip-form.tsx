@@ -64,7 +64,7 @@ export function TripForm({
   }
 
   const hasNewUploads = photoItems.some((i) => i.kind === "file");
-  const serverError = hasSubmitted && !editedAfterSubmit ? state?.error : null;
+  const serverError = hasSubmitted && !editedAfterSubmit && !isPending ? state?.error : null;
   const errorMessage = uploadError ?? serverError;
 
   return (
