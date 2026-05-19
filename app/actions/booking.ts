@@ -201,5 +201,6 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
   if (error) return { error: error.message };
 
   revalidatePath("/organizer/dashboard");
+  revalidatePath("/organizer/trips/[slug]/bookings", "page");
   return { success: true };
 }

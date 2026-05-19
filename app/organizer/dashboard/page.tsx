@@ -1,9 +1,6 @@
-import { Fragment } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { BookingActions } from "./booking-actions";
 import { ShareButton } from "@/app/components/share-button";
 
 type OrganizerTrip = {
@@ -11,13 +8,22 @@ type OrganizerTrip = {
   slug: string;
   title: string;
   activity_type: string | null;
+  difficulty: string;
   date_start: string;
   price: number;
   total_slots: number;
   remaining_slots: number;
   status: string;
-  bookings: { count: number }[];
 };
+
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat("en-PH", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(date));
+}
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -27,58 +33,128 @@ function formatPrice(price: number) {
   }).format(price);
 }
 
-type OrganizerBooking = {
-  id: string | number;
-  user_id: string | null;
-  full_name: string;
-  email: string;
-  phone: string;
-  slots: number;
-  total_amount: number;
-  status: string;
-  created_at: string;
-  trips: { title: string } | null;
-  participants: string[] | null;
-  emergency_contact_name: string | null;
-  emergency_contact_phone: string | null;
-  waiver_agreed: boolean;
-  medical_notes: string | null;
-};
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(date));
+function DifficultyBadge({ level }: { level: string }) {
+  const styles =
+    level === "Beginner"
+      ? "bg-emerald-100 text-emerald-800"
+      : level === "Intermediate"
+        ? "bg-amber-100 text-amber-900"
+        : level === "Advanced"
+          ? "bg-orange-100 text-orange-900"
+          : "bg-red-100 text-red-800";
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${styles}`}>
+      {level}
+    </span>
+  );
 }
 
-function formatDateTime(date: string) {
-  return new Intl.DateTimeFormat("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(date));
-}
+type TripCounts = { pending: number; confirmed: number };
 
-function calculateAge(birthdate: string | null | undefined): number | null {
-  if (!birthdate) return null;
-  const birth = new Date(birthdate);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
+function TripCard({
+  trip,
+  counts,
+}: {
+  trip: OrganizerTrip;
+  counts: TripCounts;
+}) {
+  const slotsBooked = trip.total_slots - trip.remaining_slots;
+  const fillPct = trip.total_slots > 0 ? Math.min(100, (slotsBooked / trip.total_slots) * 100) : 0;
+  const isPast = new Date(trip.date_start) < new Date();
+
+  return (
+    <div className={`flex flex-col rounded-2xl border bg-white shadow-sm transition hover:shadow-md ${isPast ? "border-stone-200 opacity-75" : "border-stone-200"}`}>
+      <div className="flex flex-1 flex-col p-5">
+        {/* Title + status */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <Link
+              href={`/trips/${trip.slug}`}
+              className="font-bold text-stone-900 underline-offset-2 hover:text-trailhead hover:underline"
+            >
+              {trip.title}
+            </Link>
+            <p className="mt-0.5 text-sm text-stone-500">
+              {formatDate(trip.date_start)}
+            </p>
+          </div>
+          <span
+            className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+              trip.status === "active" ? "bg-emerald-100 text-emerald-800" : "bg-stone-100 text-stone-600"
+            }`}
+          >
+            {trip.status}
+          </span>
+        </div>
+
+        {/* Badges */}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {trip.activity_type && (
+            <span className="rounded-full bg-trailhead-muted px-2 py-0.5 text-xs font-semibold text-trailhead">
+              {trip.activity_type}
+            </span>
+          )}
+          <DifficultyBadge level={trip.difficulty} />
+          <span className="text-xs text-stone-400">{formatPrice(trip.price)}</span>
+        </div>
+
+        {/* Slot fill bar */}
+        <div className="mt-4">
+          <div className="mb-1 flex items-center justify-between text-xs text-stone-500">
+            <span>{slotsBooked} / {trip.total_slots} slots filled</span>
+            <span>{Math.round(fillPct)}%</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-stone-100">
+            <div
+              className="h-2 rounded-full bg-trailhead transition-all"
+              style={{ width: `${fillPct}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Booking counts */}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {counts.pending > 0 && (
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
+              {counts.pending} pending
+            </span>
+          )}
+          <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+            {counts.confirmed} confirmed
+          </span>
+          {counts.pending === 0 && counts.confirmed === 0 && (
+            <span className="text-xs text-stone-400">No bookings yet</span>
+          )}
+        </div>
+      </div>
+
+      {/* Card footer: actions */}
+      <div className="flex items-center gap-2 border-t border-stone-100 px-5 py-3">
+        <Link
+          href={`/organizer/trips/${trip.slug}/bookings`}
+          className="flex-1 rounded-lg bg-trailhead px-3 py-1.5 text-center text-xs font-semibold text-white transition hover:bg-trailhead-dark"
+        >
+          View bookings
+        </Link>
+        <Link
+          href={`/organizer/trips/${trip.slug}/edit`}
+          className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:border-trailhead hover:text-trailhead"
+        >
+          Edit
+        </Link>
+        <ShareButton
+          url={`/trips/${trip.slug}`}
+          title={trip.title}
+          className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:border-trailhead hover:text-trailhead"
+        />
+      </div>
+    </div>
+  );
 }
 
 export default async function OrganizerDashboardPage() {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?redirectTo=/organizer/dashboard");
 
   const { data: organizer } = await supabase
@@ -95,19 +171,14 @@ export default async function OrganizerDashboardPage() {
         <div className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-8 text-center shadow-sm">
           <p className="text-4xl">{organizer.status === "rejected" ? "❌" : "⏳"}</p>
           <h1 className="mt-4 text-xl font-bold text-stone-900">
-            {organizer.status === "rejected"
-              ? "Application not approved"
-              : "Application under review"}
+            {organizer.status === "rejected" ? "Application not approved" : "Application under review"}
           </h1>
           <p className="mt-2 text-sm text-stone-600">
             {organizer.status === "rejected"
               ? "Your application wasn't approved. Reach out to us if you have questions."
               : "Your application is being reviewed. We'll notify you once it's approved."}
           </p>
-          <Link
-            href="/"
-            className="mt-6 inline-block text-sm font-semibold text-trailhead underline-offset-4 hover:underline"
-          >
+          <Link href="/" className="mt-6 inline-block text-sm font-semibold text-trailhead underline-offset-4 hover:underline">
             ← Back to site
           </Link>
         </div>
@@ -117,71 +188,57 @@ export default async function OrganizerDashboardPage() {
 
   const { data: tripsData } = await supabase
     .from("trips")
-    .select("id, slug, title, activity_type, date_start, price, total_slots, remaining_slots, status, bookings(count)")
+    .select("id, slug, title, activity_type, difficulty, date_start, price, total_slots, remaining_slots, status")
     .eq("organizer_id", organizer.id)
     .order("date_start", { ascending: true });
 
   const trips = (tripsData ?? []) as OrganizerTrip[];
-
   const tripIds = trips.map((t) => t.id);
-  const { data: bookingsData } =
+
+  const { data: bookingSummaries } =
     tripIds.length > 0
-      ? await supabase
-          .from("bookings")
-          .select(
-            "id, user_id, full_name, email, phone, slots, total_amount, status, created_at, trips(title), participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes"
-          )
-          .in("trip_id", tripIds)
-          .order("created_at", { ascending: false })
+      ? await supabase.from("bookings").select("trip_id, status").in("trip_id", tripIds)
       : { data: [] };
 
-  const bookings = (bookingsData ?? []) as unknown as OrganizerBooking[];
-
-  // Fetch profiles (birthdate → age) for all bookers via admin client to bypass RLS
-  const userIds = [...new Set(bookings.map((b) => b.user_id).filter(Boolean) as string[])];
-  let profilesByUserId: Record<string, { birthdate: string | null }> = {};
-  if (userIds.length > 0) {
-    const admin = createSupabaseAdminClient();
-    const { data: profilesData } = await admin
-      .from("profiles")
-      .select("id, birthdate")
-      .in("id", userIds);
-    for (const p of profilesData ?? []) {
-      profilesByUserId[p.id] = { birthdate: p.birthdate };
-    }
+  const countsByTrip = new Map<string | number, TripCounts>();
+  for (const b of bookingSummaries ?? []) {
+    const c = countsByTrip.get(b.trip_id) ?? { pending: 0, confirmed: 0 };
+    if (b.status === "pending") c.pending++;
+    if (b.status === "confirmed") c.confirmed++;
+    countsByTrip.set(b.trip_id, c);
   }
+
+  const now = new Date().toISOString();
+  const upcoming = trips.filter((t) => t.date_start > now);
+  const past = trips.filter((t) => t.date_start <= now);
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <div>
-            <Link
-              href="/"
-              className="text-lg font-bold tracking-tight hover:opacity-90"
-            >
+            <Link href="/" className="text-lg font-bold tracking-tight hover:opacity-90">
               ⛰ Sama
             </Link>
             <p className="mt-0.5 text-sm text-trailhead-muted">Organizer Dashboard</p>
           </div>
-          <Link
-            href="/"
-            className="text-sm font-medium text-trailhead-muted transition hover:text-white"
-          >
+          <Link href="/" className="text-sm font-medium text-trailhead-muted transition hover:text-white">
             ← Back to site
           </Link>
         </div>
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+        {/* Welcome */}
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
                 Welcome back, {organizer.full_name}! 👋
               </h1>
-              <p className="mt-2 text-stone-600">
-                Manage your trips and track your bookings from here.
+              <p className="mt-1 text-stone-600">
+                {trips.length} trip{trips.length !== 1 ? "s" : ""} total ·{" "}
+                {(bookingSummaries ?? []).filter((b) => b.status === "pending").length} pending bookings
               </p>
             </div>
             <Link
@@ -193,222 +250,55 @@ export default async function OrganizerDashboardPage() {
           </div>
         </div>
 
-        {/* Trips table */}
-        <div className="mt-8">
-          <h2 className="mb-4 text-xl font-bold tracking-tight text-stone-900">
-            Your trips
-          </h2>
-
-          <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-trailhead/20 bg-trailhead text-white">
-                    <th className="px-4 py-3 font-semibold">Title</th>
-                    <th className="px-4 py-3 font-semibold">Activity</th>
-                    <th className="px-4 py-3 font-semibold">Date</th>
-                    <th className="px-4 py-3 font-semibold">Price</th>
-                    <th className="px-4 py-3 font-semibold">Slots left</th>
-                    <th className="px-4 py-3 font-semibold">Bookings</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trips.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center text-stone-500">
-                        No trips yet.{" "}
-                        <Link href="/organizer/trips/new" className="font-semibold text-trailhead underline-offset-4 hover:underline">
-                          Create your first trip →
-                        </Link>
-                      </td>
-                    </tr>
-                  ) : (
-                    trips.map((trip) => (
-                      <tr
-                        key={trip.id}
-                        className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30"
-                      >
-                        <td className="px-4 py-3 font-medium text-stone-900">
-                          <Link
-                            href={`/trips/${trip.slug}`}
-                            className="hover:text-trailhead hover:underline underline-offset-4"
-                          >
-                            {trip.title}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3 text-stone-600">{trip.activity_type ?? "—"}</td>
-                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">{formatDate(trip.date_start)}</td>
-                        <td className="px-4 py-3 font-medium text-trailhead">{formatPrice(trip.price)}</td>
-                        <td className="px-4 py-3 text-stone-900">
-                          {trip.remaining_slots}{" "}
-                          <span className="text-stone-400">/ {trip.total_slots}</span>
-                        </td>
-                        <td className="px-4 py-3 text-stone-900">{trip.bookings[0]?.count ?? 0}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
-                              trip.status === "active"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-stone-100 text-stone-600"
-                            }`}
-                          >
-                            {trip.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Link
-                              href={`/organizer/trips/${trip.slug}/edit`}
-                              className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:border-trailhead hover:text-trailhead"
-                            >
-                              Edit
-                            </Link>
-                            <ShareButton
-                              url={`/trips/${trip.slug}`}
-                              title={trip.title}
-                              className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:border-trailhead hover:text-trailhead"
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+        {/* Upcoming trips */}
+        {upcoming.length > 0 && (
+          <section className="mt-10">
+            <h2 className="mb-4 text-xl font-bold tracking-tight text-stone-900">
+              Upcoming trips
+              <span className="ml-2 text-base font-normal text-stone-400">({upcoming.length})</span>
+            </h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {upcoming.map((trip) => (
+                <TripCard
+                  key={trip.id}
+                  trip={trip}
+                  counts={countsByTrip.get(trip.id) ?? { pending: 0, confirmed: 0 }}
+                />
+              ))}
             </div>
-          </div>
+          </section>
+        )}
 
-          {trips.length > 0 && (
-            <p className="mt-3 text-sm text-stone-500">
-              {trips.length} trip{trips.length !== 1 ? "s" : ""} total
-            </p>
-          )}
-        </div>
-
-        {/* Bookings table */}
-        <div className="mt-10">
-          <h2 className="mb-4 text-xl font-bold tracking-tight text-stone-900">
-            My bookings
-          </h2>
-
-          <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[960px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-trailhead/20 bg-trailhead text-white">
-                    <th className="px-4 py-3 font-semibold">Joiner name</th>
-                    <th className="px-4 py-3 font-semibold">Email</th>
-                    <th className="px-4 py-3 font-semibold">Phone</th>
-                    <th className="px-4 py-3 font-semibold">Trip</th>
-                    <th className="px-4 py-3 font-semibold">Slots</th>
-                    <th className="px-4 py-3 font-semibold">Total</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold">Date booked</th>
-                    <th className="px-4 py-3 font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookings.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="px-4 py-12 text-center text-stone-500">
-                        No bookings yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    bookings.map((booking) => {
-                      const profile = profilesByUserId[booking.user_id ?? ""];
-                      const age = calculateAge(profile?.birthdate);
-                      return (
-                        <Fragment key={booking.id}>
-                          {/* Summary row */}
-                          <tr className="border-b border-stone-100 hover:bg-trailhead-muted/20">
-                            <td className="px-4 py-3 font-medium text-stone-900">{booking.full_name}</td>
-                            <td className="px-4 py-3 text-stone-600">{booking.email}</td>
-                            <td className="px-4 py-3 text-stone-600">{booking.phone}</td>
-                            <td className="px-4 py-3 text-stone-900">{booking.trips?.title ?? "—"}</td>
-                            <td className="px-4 py-3 text-stone-900">{booking.slots}</td>
-                            <td className="px-4 py-3 font-medium text-trailhead">{formatPrice(booking.total_amount)}</td>
-                            <td className="px-4 py-3">
-                              <span
-                                className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
-                                  booking.status === "confirmed"
-                                    ? "bg-emerald-100 text-emerald-800"
-                                    : booking.status === "rejected"
-                                      ? "bg-red-100 text-red-800"
-                                      : booking.status === "cancelled"
-                                        ? "bg-stone-100 text-stone-600"
-                                        : "bg-amber-100 text-amber-900"
-                                }`}
-                              >
-                                {booking.status}
-                              </span>
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-stone-600">{formatDateTime(booking.created_at)}</td>
-                            <td className="px-4 py-3">
-                              {booking.status === "pending" && (
-                                <BookingActions bookingId={Number(booking.id)} />
-                              )}
-                            </td>
-                          </tr>
-                          {/* Detail row */}
-                          <tr className="border-b border-stone-100 bg-stone-50/60">
-                            <td colSpan={9} className="px-4 pb-3 pt-1">
-                              <dl className="flex flex-wrap gap-x-8 gap-y-2 text-xs">
-                                {booking.participants && booking.participants.length > 1 && (
-                                  <div>
-                                    <dt className="text-stone-400">Participants</dt>
-                                    <dd className="mt-0.5 font-medium text-stone-700">
-                                      {booking.participants.join(", ")}
-                                    </dd>
-                                  </div>
-                                )}
-                                <div>
-                                  <dt className="text-stone-400">Emergency contact</dt>
-                                  <dd className="mt-0.5 font-medium text-stone-700">
-                                    {booking.emergency_contact_name ?? "—"}{" "}
-                                    {booking.emergency_contact_phone
-                                      ? `· ${booking.emergency_contact_phone}`
-                                      : ""}
-                                  </dd>
-                                </div>
-                                {age !== null && (
-                                  <div>
-                                    <dt className="text-stone-400">Age</dt>
-                                    <dd className="mt-0.5 font-medium text-stone-700">{age} yrs</dd>
-                                  </div>
-                                )}
-                                {booking.medical_notes && (
-                                  <div>
-                                    <dt className="text-stone-400">Medical / allergies</dt>
-                                    <dd className="mt-0.5 font-medium text-stone-700">{booking.medical_notes}</dd>
-                                  </div>
-                                )}
-                                <div>
-                                  <dt className="text-stone-400">Waiver</dt>
-                                  <dd className={`mt-0.5 font-medium ${booking.waiver_agreed ? "text-emerald-700" : "text-red-600"}`}>
-                                    {booking.waiver_agreed ? "Agreed ✓" : "Not agreed ✗"}
-                                  </dd>
-                                </div>
-                              </dl>
-                            </td>
-                          </tr>
-                        </Fragment>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+        {/* Past trips */}
+        {past.length > 0 && (
+          <section className="mt-10">
+            <h2 className="mb-4 text-xl font-bold tracking-tight text-stone-900">
+              Past trips
+              <span className="ml-2 text-base font-normal text-stone-400">({past.length})</span>
+            </h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {past.map((trip) => (
+                <TripCard
+                  key={trip.id}
+                  trip={trip}
+                  counts={countsByTrip.get(trip.id) ?? { pending: 0, confirmed: 0 }}
+                />
+              ))}
             </div>
-          </div>
+          </section>
+        )}
 
-          {bookings.length > 0 && (
-            <p className="mt-3 text-sm text-stone-500">
-              {bookings.length} booking{bookings.length !== 1 ? "s" : ""} total
-            </p>
-          )}
-        </div>
+        {trips.length === 0 && (
+          <div className="mt-16 flex flex-col items-center gap-4 text-center">
+            <p className="text-stone-500">You haven&apos;t created any trips yet.</p>
+            <Link
+              href="/organizer/trips/new"
+              className="rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
+            >
+              Create your first trip
+            </Link>
+          </div>
+        )}
       </main>
     </div>
   );
