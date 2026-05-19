@@ -13,15 +13,30 @@ type TripRow = {
 
 async function fetchTrip(slug: string): Promise<TripRow | null> {
   const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const apiKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!baseUrl || !apiKey) return null;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  console.log("[og-image] env check — baseUrl:", !!baseUrl, "anonKey:", !!anonKey);
+
+  if (!baseUrl || !anonKey) {
+    console.error("[og-image] missing Supabase env vars");
+    return null;
+  }
 
   const url = `${baseUrl}/rest/v1/trips?slug=eq.${encodeURIComponent(slug)}&select=title,destination,photos&limit=1`;
+  console.log("[og-image] fetching trip from:", url);
+
   const res = await fetch(url, {
-    headers: { apikey: apiKey, Authorization: `Bearer ${apiKey}` },
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
+    },
   });
+
+  console.log("[og-image] trip fetch status:", res.status);
   if (!res.ok) return null;
+
   const rows: TripRow[] = await res.json();
+  console.log("[og-image] rows:", JSON.stringify(rows));
   return rows[0] ?? null;
 }
 
@@ -34,7 +49,6 @@ async function fetchPhotoDataUrl(photoUrl: string): Promise<string | null> {
     const buffer = await res.arrayBuffer();
     const mime = res.headers.get("content-type") ?? "image/jpeg";
     console.log("[og-image] photo buffer size:", buffer.byteLength, "mime:", mime);
-    // Buffer is available in the Vercel Edge runtime
     const base64 = Buffer.from(buffer).toString("base64");
     return `data:${mime};base64,${base64}`;
   } catch (err) {
@@ -49,17 +63,16 @@ export default async function Image({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  console.log("[og-image] generating for slug:", slug);
 
   const trip = await fetchTrip(slug);
-  console.log("[og-image] slug:", slug, "trip:", JSON.stringify(trip));
+  console.log("[og-image] trip:", JSON.stringify(trip));
 
   const title = trip?.title ?? "Adventure awaits";
   const destination = trip?.destination ?? "";
   const photoUrl = trip?.photos?.[0] ?? null;
   console.log("[og-image] photoUrl:", photoUrl);
 
-  // Embed the photo as a data URI so Satori doesn't need to make
-  // an outbound fetch from the Edge sandbox
   const photoDataUrl = photoUrl ? await fetchPhotoDataUrl(photoUrl) : null;
   console.log("[og-image] photoDataUrl present:", !!photoDataUrl);
 
@@ -76,7 +89,6 @@ export default async function Image({
           backgroundColor: "#1c1917",
         }}
       >
-        {/* Background photo embedded as data URI */}
         {photoDataUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -93,7 +105,6 @@ export default async function Image({
           />
         )}
 
-        {/* Dark gradient overlay */}
         <div
           style={{
             position: "absolute",
@@ -108,7 +119,6 @@ export default async function Image({
           }}
         />
 
-        {/* ⛰ Sama — top-left */}
         <div
           style={{
             position: "absolute",
@@ -124,7 +134,6 @@ export default async function Image({
           ⛰ Sama
         </div>
 
-        {/* Trip info — bottom-left */}
         <div
           style={{
             position: "absolute",
