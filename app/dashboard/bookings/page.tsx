@@ -18,6 +18,7 @@ type Booking = {
     photos: string[] | null;
     difficulty: string;
     activity_type: string | null;
+    duration: string | null;
     meeting_point: string;
   };
 };
@@ -121,7 +122,9 @@ function BookingCard({
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
           <div>
             <p className="text-xs text-stone-400">Date</p>
-            <p className="font-medium text-stone-700">{formatDate(trip.date_start)}</p>
+            <p className="font-medium text-stone-700">
+              {formatDate(trip.date_start)}{trip.duration && ` · ${trip.duration}`}
+            </p>
           </div>
           <div>
             <p className="text-xs text-stone-400">Slots</p>
@@ -170,7 +173,7 @@ export default async function BookingsPage() {
       slots,
       total_amount,
       status,
-      trip:trips(id, title, slug, date_start, destination, photos, difficulty, activity_type, meeting_point)
+      trip:trips(id, title, slug, date_start, destination, photos, difficulty, activity_type, duration, meeting_point)
     `)
     .eq("email", user.email ?? "")
     .order("created_at", { ascending: false });
