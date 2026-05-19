@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { BookingActions } from "@/app/organizer/dashboard/booking-actions";
 
 type PageProps = {
@@ -55,127 +54,21 @@ function formatDateTime(date: string) {
   }).format(new Date(date));
 }
 
-function calculateAge(birthdate: string | null | undefined): number | null {
-  if (!birthdate) return null;
-  const birth = new Date(birthdate);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
 
-function BookingCard({
-  booking,
-  age,
-  showActions,
-}: {
-  booking: Booking;
-  age: number | null;
-  showActions: boolean;
-}) {
-  const isGroup = (booking.participants?.length ?? 0) > 1;
-
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    confirmed: "bg-emerald-100 text-emerald-800",
+    pending: "bg-amber-100 text-amber-800",
+    cancelled: "bg-red-100 text-red-700",
+    rejected: "bg-red-100 text-red-700",
+  };
+  const label = status.charAt(0).toUpperCase() + status.slice(1);
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 p-5">
-        <div className="min-w-0">
-          <p className="font-semibold text-stone-900">{booking.full_name}</p>
-          <p className="mt-0.5 truncate text-sm text-stone-500">
-            {booking.email} · {booking.phone}
-          </p>
-          <p className="mt-1 text-sm text-stone-600">
-            {booking.slots} slot{booking.slots !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <div className="shrink-0 text-right">
-          <p className="font-semibold text-trailhead">{formatCurrency(booking.total_amount)}</p>
-          <p className="mt-0.5 text-xs text-stone-400">
-            {booking.payment_option === "downpayment" && booking.amount_due != null
-              ? `${formatCurrency(booking.amount_due)} due now`
-              : "Full payment"}
-          </p>
-        </div>
-      </div>
-
-      {/* Safety details */}
-      <dl className="space-y-2 border-t border-stone-100 px-5 py-4 text-sm">
-        {isGroup && (
-          <div className="flex gap-2">
-            <dt className="w-28 shrink-0 text-xs font-medium text-stone-400">Participants</dt>
-            <dd className="text-stone-700">{booking.participants!.join(", ")}</dd>
-          </div>
-        )}
-        <div className="flex gap-2">
-          <dt className="w-28 shrink-0 text-xs font-medium text-stone-400">Emergency</dt>
-          <dd className="text-stone-700">
-            {booking.emergency_contact_name || "—"}
-            {booking.emergency_contact_phone ? ` · ${booking.emergency_contact_phone}` : ""}
-          </dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="w-28 shrink-0 text-xs font-medium text-stone-400">Age</dt>
-          <dd className="text-stone-700">
-            {age != null ? `${age} yrs` : <span className="text-stone-400">not provided</span>}
-          </dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="w-28 shrink-0 text-xs font-medium text-stone-400">Medical</dt>
-          <dd className="text-stone-700">
-            {booking.medical_notes || <span className="text-stone-400">none</span>}
-          </dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="w-28 shrink-0 text-xs font-medium text-stone-400">Waiver</dt>
-          <dd className={`font-medium ${booking.waiver_agreed ? "text-emerald-700" : "text-red-600"}`}>
-            {booking.waiver_agreed ? "Agreed ✓" : "Not agreed ✗"}
-          </dd>
-        </div>
-        {booking.notes && (
-          <div className="flex gap-2">
-            <dt className="w-28 shrink-0 text-xs font-medium text-stone-400">Notes</dt>
-            <dd className="text-stone-700">{booking.notes}</dd>
-          </div>
-        )}
-      </dl>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between gap-3 border-t border-stone-100 px-5 py-3">
-        <p className="text-xs text-stone-400">Booked {formatDateTime(booking.created_at)}</p>
-        {showActions && <BookingActions bookingId={booking.id} />}
-      </div>
-    </div>
-  );
-}
-
-function Section({
-  title,
-  count,
-  children,
-  emptyText,
-}: {
-  title: string;
-  count: number;
-  children: React.ReactNode;
-  emptyText: string;
-}) {
-  return (
-    <section>
-      <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-stone-900">
-        {title}
-        <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-sm font-semibold text-stone-600">
-          {count}
-        </span>
-      </h2>
-      {count === 0 ? (
-        <p className="rounded-xl border border-stone-100 bg-white px-4 py-8 text-center text-sm text-stone-400">
-          {emptyText}
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
-      )}
-    </section>
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[status] ?? "bg-stone-100 text-stone-600"}`}
+    >
+      {label}
+    </span>
   );
 }
 
@@ -212,20 +105,6 @@ export default async function TripBookingsPage({ params }: PageProps) {
     .order("created_at", { ascending: false });
 
   const bookings = (bookingsData ?? []) as Booking[];
-
-  // Fetch profiles for age calculation via admin (bypasses RLS)
-  const userIds = [...new Set(bookings.map((b) => b.user_id).filter(Boolean) as string[])];
-  const profilesByUserId: Record<string, { birthdate: string | null }> = {};
-  if (userIds.length > 0) {
-    const admin = createSupabaseAdminClient();
-    const { data: profiles } = await admin
-      .from("profiles")
-      .select("id, birthdate")
-      .in("id", userIds);
-    for (const p of profiles ?? []) {
-      profilesByUserId[p.id] = { birthdate: p.birthdate };
-    }
-  }
 
   const pending = bookings.filter((b) => b.status === "pending");
   const confirmed = bookings.filter((b) => b.status === "confirmed");
@@ -300,50 +179,52 @@ export default async function TripBookingsPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Sections */}
-        <div className="mt-10 space-y-10">
-          <Section title="Pending" count={pending.length} emptyText="No pending bookings.">
-            {pending.map((b) => {
-              const age = calculateAge(profilesByUserId[b.user_id ?? ""]?.birthdate);
-              return (
-                <BookingCard
-                  key={b.id}
-                  booking={b}
-                  age={age}
-                  showActions={needsManualApproval}
-                />
-              );
-            })}
-          </Section>
-
-          <Section title="Confirmed" count={confirmed.length} emptyText="No confirmed bookings yet.">
-            {confirmed.map((b) => {
-              const age = calculateAge(profilesByUserId[b.user_id ?? ""]?.birthdate);
-              return (
-                <BookingCard
-                  key={b.id}
-                  booking={b}
-                  age={age}
-                  showActions={false}
-                />
-              );
-            })}
-          </Section>
-
-          {rejected.length > 0 && (
-            <Section title="Rejected / Cancelled" count={rejected.length} emptyText="">
-              {rejected.map((b) => {
-                const age = calculateAge(profilesByUserId[b.user_id ?? ""]?.birthdate);
-                return (
-                  <BookingCard
-                    key={b.id}
-                    booking={b}
-                    age={age}
-                    showActions={false}
-                  />
-                );
-              })}
-            </Section>
+        {/* Bookings table */}
+        <div className="mt-8 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+          {bookings.length === 0 ? (
+            <p className="px-6 py-12 text-center text-sm text-stone-400">No bookings yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead>
+                  <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
+                    <th className="px-5 py-3">Name</th>
+                    <th className="px-5 py-3">Email</th>
+                    <th className="px-5 py-3 text-center">Slots</th>
+                    <th className="px-5 py-3 text-right">Amount</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Booked on</th>
+                    {needsManualApproval && <th className="px-5 py-3" />}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {bookings.map((b) => (
+                    <tr key={b.id} className="hover:bg-stone-50">
+                      <td className="px-5 py-3.5 font-medium text-stone-900">{b.full_name}</td>
+                      <td className="px-5 py-3.5 text-stone-500">{b.email}</td>
+                      <td className="px-5 py-3.5 text-center text-stone-700">{b.slots}</td>
+                      <td className="px-5 py-3.5 text-right font-semibold text-trailhead">
+                        {formatCurrency(b.total_amount)}
+                        {b.payment_option === "downpayment" && b.amount_due != null && (
+                          <span className="ml-1 text-xs font-normal text-stone-400">
+                            ({formatCurrency(b.amount_due)} due)
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <StatusBadge status={b.status} />
+                      </td>
+                      <td className="px-5 py-3.5 text-stone-500">{formatDateTime(b.created_at)}</td>
+                      {needsManualApproval && (
+                        <td className="px-5 py-3.5 text-right">
+                          {b.status === "pending" && <BookingActions bookingId={b.id} />}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </main>
