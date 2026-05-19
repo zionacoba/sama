@@ -51,21 +51,24 @@ export async function submitReview(
     }
   }
 
-  // Check for duplicate review on this booking or trip
-  const dupQuery = supabase
+  // Check for duplicate review on this trip by this user
+  let dupQuery = supabase
     .from("reviews")
     .select("id")
     .eq("user_id", user.id)
     .eq("trip_id", tripId);
 
-  if (bookingId) dupQuery.eq("booking_id", bookingId);
+  if (bookingId) dupQuery = dupQuery.eq("booking_id", bookingId);
 
   const { data: existing } = await dupQuery.maybeSingle();
   if (existing) return { error: "You've already reviewed this trip." };
 
+  const fullName = (user.user_metadata?.full_name as string | undefined)?.trim() || null;
+
   const { error } = await supabase.from("reviews").insert({
     trip_id: tripId,
     user_id: user.id,
+    full_name: fullName,
     rating,
     body,
     ...(bookingId ? { booking_id: bookingId } : {}),
