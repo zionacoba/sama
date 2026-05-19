@@ -102,10 +102,10 @@ export default async function Home() {
         <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-12 sm:py-16">
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-balance text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl md:text-5xl">
-              Find your next hike
+              Your next adventure starts here
             </h1>
             <p className="mt-3 text-pretty text-stone-600 sm:text-lg">
-              Guided hikes across the Philippines — curated for every skill level.
+              Guided hikes, freediving weekends, and beach trips across the Philippines — for every level.
             </p>
             <form
               action="/trips"
@@ -139,12 +139,13 @@ export default async function Home() {
             </form>
             <div className="-mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0">
               {filterChips.map((chip) => (
-                <span
+                <Link
                   key={chip}
-                  className="shrink-0 rounded-full bg-trailhead px-3.5 py-1.5 text-xs font-medium text-white sm:text-sm"
+                  href={`/trips?activity=${encodeURIComponent(chip)}`}
+                  className="shrink-0 rounded-full bg-trailhead px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-trailhead-dark sm:text-sm"
                 >
                   {chip}
-                </span>
+                </Link>
               ))}
             </div>
           </div>

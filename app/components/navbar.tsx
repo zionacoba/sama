@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { signOut } from "@/app/actions/auth";
 
 const navLinks = [
-  { label: "Hike", href: "/trips?activity=Hiking" },
+  { label: "Explore", href: "/trips" },
 ] as const;
 
 type AuthLinksProps = {
