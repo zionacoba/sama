@@ -197,7 +197,8 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                             alt={trip.title}
                             fill
                             className="object-cover"
-                            sizes="(min-width: 640px) 50vw, 100vw"
+                            sizes="(min-width: 768px) 356px, (min-width: 640px) 50vw, 100vw"
+                            quality={80}
                           />
                         )}
                       </div>

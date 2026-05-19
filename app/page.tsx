@@ -174,7 +174,8 @@ export default async function Home() {
                         alt={trip.title}
                         fill
                         className="object-cover"
-                        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 75vw"
+                        quality={80}
                       />
                     )}
                   </div>

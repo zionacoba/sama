@@ -279,7 +279,8 @@ export default async function TripsPage({ searchParams }: PageProps) {
                             alt={trip.title}
                             fill
                             className="object-cover"
-                            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                            quality={80}
                           />
                         )}
                       </div>

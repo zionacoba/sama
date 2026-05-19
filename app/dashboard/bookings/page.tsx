@@ -90,6 +90,7 @@ function BookingCard({
             fill
             className="object-cover"
             sizes="(min-width: 640px) 160px, 100vw"
+            quality={75}
           />
         )}
       </div>

@@ -22,6 +22,7 @@ export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string })
           fill
           className="object-cover transition-all duration-300"
           sizes="(min-width: 768px) 768px, 100vw"
+          quality={85}
           priority
         />
       </div>
@@ -43,6 +44,7 @@ export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string })
                   fill
                   className="object-cover transition group-hover:scale-105"
                   sizes="(min-width: 768px) 180px, 25vw"
+                  quality={75}
                 />
               </div>
             </button>
