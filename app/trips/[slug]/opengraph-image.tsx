@@ -26,15 +26,19 @@ async function fetchTrip(slug: string): Promise<TripRow | null> {
 }
 
 async function fetchPhotoDataUrl(photoUrl: string): Promise<string | null> {
+  console.log("[og-image] fetching photo:", photoUrl);
   try {
     const res = await fetch(photoUrl);
+    console.log("[og-image] photo fetch status:", res.status, res.statusText);
     if (!res.ok) return null;
     const buffer = await res.arrayBuffer();
     const mime = res.headers.get("content-type") ?? "image/jpeg";
+    console.log("[og-image] photo buffer size:", buffer.byteLength, "mime:", mime);
     // Buffer is available in the Vercel Edge runtime
     const base64 = Buffer.from(buffer).toString("base64");
     return `data:${mime};base64,${base64}`;
-  } catch {
+  } catch (err) {
+    console.error("[og-image] photo fetch error:", err);
     return null;
   }
 }
@@ -47,13 +51,17 @@ export default async function Image({
   const { slug } = await params;
 
   const trip = await fetchTrip(slug);
+  console.log("[og-image] slug:", slug, "trip:", JSON.stringify(trip));
+
   const title = trip?.title ?? "Adventure awaits";
   const destination = trip?.destination ?? "";
   const photoUrl = trip?.photos?.[0] ?? null;
+  console.log("[og-image] photoUrl:", photoUrl);
 
   // Embed the photo as a data URI so Satori doesn't need to make
   // an outbound fetch from the Edge sandbox
   const photoDataUrl = photoUrl ? await fetchPhotoDataUrl(photoUrl) : null;
+  console.log("[og-image] photoDataUrl present:", !!photoDataUrl);
 
   const titleSize = title.length > 50 ? 54 : title.length > 35 ? 64 : 72;
 
