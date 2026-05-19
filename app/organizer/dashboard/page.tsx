@@ -308,12 +308,20 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                 {(bookingSummaries ?? []).filter((b) => b.status === "pending").length} pending bookings
               </p>
             </div>
-            <Link
-              href="/organizer/trips/new"
-              className="shrink-0 rounded-xl bg-trailhead px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
-            >
-              + Create new trip
-            </Link>
+            <div className="flex shrink-0 gap-2">
+              <Link
+                href="/organizer/trips"
+                className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-700 shadow-sm transition hover:border-trailhead hover:text-trailhead"
+              >
+                My trips
+              </Link>
+              <Link
+                href="/organizer/trips/new"
+                className="rounded-xl bg-trailhead px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
+              >
+                + New trip
+              </Link>
+            </div>
           </div>
         </div>
 
