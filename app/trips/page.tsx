@@ -118,8 +118,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
     query = query.or(`title.ilike.${term},destination.ilike.${term},activity_type.ilike.${term}`);
   }
   if (activity) query = query.eq("activity_type", activity);
-  // TODO: apply duration filter once the `duration` column is added to the trips table
-  void duration;
+  if (duration) query = query.eq("duration", duration);
   if (difficulty) query = query.eq("difficulty", difficulty);
   if (date_from) query = query.gte("date_start", `${date_from}T00:00:00`);
   if (date_to) query = query.lte("date_start", `${date_to}T23:59:59`);

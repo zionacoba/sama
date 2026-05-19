@@ -108,7 +108,20 @@ export function TripForm({ destinations = [] }: { destinations?: string[] }) {
           </select>
         </div>
       </div>
-      {/* TODO: add duration field (Day tour / Overnight / 2D1N / 3D2N / 4D3N+) once `duration` column is added to trips table */}
+      {/* Duration */}
+      <div>
+        <label htmlFor="duration" className={labelClass}>
+          Duration
+        </label>
+        <select id="duration" name="duration" required className={inputClass}>
+          <option value="">Select duration…</option>
+          <option value="Day tour">Day tour</option>
+          <option value="Overnight">Overnight</option>
+          <option value="2D1N">2D1N</option>
+          <option value="3D2N">3D2N</option>
+          <option value="4D3N+">4D3N+</option>
+        </select>
+      </div>
 
       {/* Destination */}
       <div>
