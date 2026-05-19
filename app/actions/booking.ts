@@ -40,6 +40,19 @@ export async function createBooking(input: CreateBookingInput) {
     return { error: "Not enough slots available. Please try booking fewer slots or check back later." };
   }
 
+  // Prevent duplicate bookings for the same trip
+  const { data: existingBooking } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("trip_id", input.tripId)
+    .eq("user_id", user.id)
+    .not("status", "eq", "rejected")
+    .maybeSingle();
+
+  if (existingBooking) {
+    return { error: "You already have a booking for this trip." };
+  }
+
   const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
   const bookingStatus = autoApprove ? "confirmed" : "pending";
 
@@ -150,7 +163,7 @@ export async function createBooking(input: CreateBookingInput) {
               <li><strong>Date:</strong> ${tripDate}</li>
               <li><strong>Slots booked:</strong> ${input.slots}</li>
             </ul>
-            <p>See you on the trail! You can view your booking at <a href="https://sama.ph/dashboard/bookings">sama.ph/dashboard/bookings</a>.</p>
+            <p>See you on the trail! You can view your booking at <a href="https://sama.ph/profile">sama.ph/dashboard/bookings</a>.</p>
             <p>— The Sama Team</p>
           `
           : `
@@ -161,7 +174,7 @@ export async function createBooking(input: CreateBookingInput) {
               <li><strong>Date:</strong> ${tripDate}</li>
               <li><strong>Slots booked:</strong> ${input.slots}</li>
             </ul>
-            <p>The organizer will review your request and be in touch to confirm. You can track your booking at <a href="https://sama.ph/dashboard/bookings">sama.ph/dashboard/bookings</a>.</p>
+            <p>The organizer will review your request and be in touch to confirm. You can track your booking at <a href="https://sama.ph/profile">sama.ph/dashboard/bookings</a>.</p>
             <p>— The Sama Team</p>
           `,
       });

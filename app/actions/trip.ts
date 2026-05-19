@@ -53,7 +53,8 @@ export async function createTrip(
   const includes = (formData.get("includes") as string)?.trim();
   const what_to_bring = (formData.get("what_to_bring") as string)?.trim();
   const photosJson = formData.get("photos_json") as string | null;
-  const photos: string[] = photosJson ? JSON.parse(photosJson) : [];
+  let photos: string[] = [];
+  try { photos = photosJson ? JSON.parse(photosJson) : []; } catch { return { error: "Invalid photo data." }; }
   const payment_type = (formData.get("payment_type") as string) || "full";
   const min_downpayment_raw = formData.get("min_downpayment") as string;
   const min_downpayment = payment_type === "downpayment" && min_downpayment_raw
@@ -175,7 +176,8 @@ export async function updateTrip(
   const includes = (formData.get("includes") as string)?.trim();
   const what_to_bring = (formData.get("what_to_bring") as string)?.trim();
   const photosJson = formData.get("photos_json") as string | null;
-  const photos: string[] = photosJson ? JSON.parse(photosJson) : [];
+  let photos: string[] = [];
+  try { photos = photosJson ? JSON.parse(photosJson) : []; } catch { return { error: "Invalid photo data." }; }
   const payment_type = (formData.get("payment_type") as string) || "full";
   const min_downpayment_raw = formData.get("min_downpayment") as string;
   const min_downpayment = payment_type === "downpayment" && min_downpayment_raw
