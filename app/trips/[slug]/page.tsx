@@ -29,7 +29,7 @@ type TripDetail = {
   min_downpayment: number | null;
   cancellation_policy: string | null;
   cancellation_policy_custom: string | null;
-  meeting_points: { location: string; time: string; extra_cost: number }[] | null;
+  meeting_points: { location: string; time: string }[] | null;
 };
 
 type OrganizerInfo = {
@@ -354,19 +354,14 @@ export default async function TripDetailPage({ params }: PageProps) {
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-trailhead">
                   Meeting points
                 </h2>
-                <div className="mt-3 divide-y divide-stone-100">
+                <ul className="mt-3 space-y-1.5">
                   {tripData.meeting_points.map((mp, idx) => (
-                    <div key={idx} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
-                      <div>
-                        <p className="font-medium text-stone-900">{mp.location}</p>
-                        {mp.time && <p className="text-sm text-stone-500">{mp.time}</p>}
-                      </div>
-                      <span className={`shrink-0 text-sm font-semibold ${mp.extra_cost > 0 ? "text-stone-700" : "text-emerald-700"}`}>
-                        {mp.extra_cost > 0 ? `+${formatPrice(mp.extra_cost)}` : "Included"}
-                      </span>
-                    </div>
+                    <li key={idx} className="text-stone-700">
+                      <span className="font-medium">{mp.location}</span>
+                      {mp.time && <span className="text-stone-400"> · {mp.time}</span>}
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             ) : tripData.meeting_point ? (
               <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">

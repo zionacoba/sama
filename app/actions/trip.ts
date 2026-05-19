@@ -43,7 +43,7 @@ export async function createTrip(
   const date_start = is_template ? "2099-12-31" : (formData.get("date_start") as string);
   const price = is_template ? 0 : parseFloat(formData.get("price") as string);
   const total_slots = is_template ? 0 : parseInt(formData.get("total_slots") as string, 10);
-  type MeetingPoint = { location: string; time: string; extra_cost: number };
+  type MeetingPoint = { location: string; time: string };
   let meeting_points: MeetingPoint[] = [];
   if (!is_template) {
     const mpJson = formData.get("meeting_points") as string | null;
@@ -165,7 +165,7 @@ export async function updateTrip(
   const date_start = is_template ? "2099-12-31" : (formData.get("date_start") as string);
   const price = is_template ? 0 : parseFloat(formData.get("price") as string);
   const total_slots = is_template ? 0 : parseInt(formData.get("total_slots") as string, 10);
-  type MeetingPoint = { location: string; time: string; extra_cost: number };
+  type MeetingPoint = { location: string; time: string };
   let meeting_points: MeetingPoint[] = [];
   if (!is_template) {
     const mpJson = formData.get("meeting_points") as string | null;

@@ -20,9 +20,9 @@ export function TripForm({
   const [state, action] = useActionState(createTrip, null);
   const [isPending, startTransition] = useTransition();
   const [photoItems, setPhotoItems] = useState<PhotoItem[]>([]);
-  type MeetingPoint = { location: string; time: string; extra_cost: number };
+  type MeetingPoint = { location: string; time: string };
   const [isTemplate, setIsTemplate] = useState(false);
-  const [meetingPoints, setMeetingPoints] = useState<MeetingPoint[]>([{ location: "", time: "", extra_cost: 0 }]);
+  const [meetingPoints, setMeetingPoints] = useState<MeetingPoint[]>([{ location: "", time: "" }]);
   const [paymentType, setPaymentType] = useState<"full" | "downpayment">("full");
   const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict" | "custom">("flexible");
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -254,18 +254,17 @@ export function TripForm({
           <div>
             <label className={labelClass}>Meeting points</label>
             <p className="mt-0.5 text-xs text-stone-500">
-              Add all pickup locations. Set extra cost to 0 if included in the trip price.
+              Add all pickup locations with optional pickup times.
             </p>
             <div className="mt-2 space-y-2">
-              <div className="hidden grid-cols-[1fr_1fr_110px_32px] gap-2 sm:grid">
+              <div className="hidden grid-cols-[1fr_1fr_32px] gap-2 sm:grid">
                 <span className="text-xs font-medium text-stone-500">Location</span>
                 <span className="text-xs font-medium text-stone-500">Pickup time</span>
-                <span className="text-xs font-medium text-stone-500">Extra cost (PHP)</span>
                 <span />
               </div>
               {meetingPoints.map((mp, idx) => (
                 <div key={idx} className="flex gap-2">
-                  <div className="grid flex-1 gap-2 sm:grid-cols-[1fr_1fr_110px]">
+                  <div className="grid flex-1 gap-2 sm:grid-cols-2">
                     <input
                       type="text"
                       value={mp.location}
@@ -277,16 +276,7 @@ export function TripForm({
                       type="text"
                       value={mp.time}
                       onChange={(e) => setMeetingPoints((prev) => prev.map((m, i) => i === idx ? { ...m, time: e.target.value } : m))}
-                      placeholder="4:00 AM"
-                      className={inputClass}
-                    />
-                    <input
-                      type="number"
-                      value={mp.extra_cost}
-                      min="0"
-                      step="1"
-                      onChange={(e) => setMeetingPoints((prev) => prev.map((m, i) => i === idx ? { ...m, extra_cost: parseFloat(e.target.value) || 0 } : m))}
-                      placeholder="0"
+                      placeholder="e.g. 4:00 AM (optional)"
                       className={inputClass}
                     />
                   </div>
@@ -304,7 +294,7 @@ export function TripForm({
             </div>
             <button
               type="button"
-              onClick={() => setMeetingPoints((prev) => [...prev, { location: "", time: "", extra_cost: 0 }])}
+              onClick={() => setMeetingPoints((prev) => [...prev, { location: "", time: "" }])}
               className="mt-2 w-full rounded-lg border border-dashed border-stone-300 py-2 text-sm text-stone-500 transition hover:border-trailhead hover:text-trailhead"
             >
               + Add meeting point
