@@ -130,7 +130,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
         </div>
       </header>
 
-      <div className="relative h-40 w-full overflow-hidden bg-trailhead sm:h-56">
+      <div className="relative h-32 w-full overflow-hidden bg-trailhead sm:h-44">
         {organizer.cover_image_url && (
           <Image
             src={organizer.cover_image_url}
@@ -141,49 +141,52 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
             priority
           />
         )}
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/20 to-transparent" />
       </div>
 
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:py-10">
-        {/* Organizer hero */}
-        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-sm font-bold text-trailhead">
-              {organizer.photo_url ? (
-                <Image
-                  src={organizer.photo_url}
-                  alt={publicName}
-                  fill
-                  className="object-cover"
-                  sizes="40px"
-                />
-              ) : (
-                initials
-              )}
+      <main className="mx-auto max-w-3xl px-4 pb-8 sm:pb-10">
+        {/* Organizer hero — overlaps banner by 40px */}
+        <div className="-mt-10">
+          <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-lg">
+            <div className="flex items-start gap-4">
+              <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-lg font-bold text-trailhead ring-2 ring-white">
+                {organizer.photo_url ? (
+                  <Image
+                    src={organizer.photo_url}
+                    alt={publicName}
+                    fill
+                    className="object-cover"
+                    sizes="64px"
+                  />
+                ) : (
+                  initials
+                )}
+              </div>
+              <div className="min-w-0 pt-1">
+                <h1 className="text-xl font-bold tracking-tight text-stone-900">
+                  {publicName}
+                </h1>
+                {avgRating !== null && (
+                  <div className="mt-0.5 flex items-center gap-1.5">
+                    <Stars rating={avgRating} />
+                    <span className="text-sm font-semibold text-stone-700">{avgRating.toFixed(1)}</span>
+                    <span className="text-sm text-stone-400">({reviews.length} review{reviews.length !== 1 ? "s" : ""})</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-stone-900">
-                {publicName}
-              </h1>
-              {avgRating !== null && (
-                <div className="mt-0.5 flex items-center gap-1.5">
-                  <Stars rating={avgRating} />
-                  <span className="text-sm font-semibold text-stone-700">{avgRating.toFixed(1)}</span>
-                  <span className="text-sm text-stone-400">({reviews.length} review{reviews.length !== 1 ? "s" : ""})</span>
-                </div>
-              )}
-            </div>
-          </div>
-          {organizer.bio && (
-            <p className="mt-3 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
-          )}
-          <div className="mt-4 flex flex-wrap gap-5 border-t border-stone-100 pt-4 text-sm">
-            <div>
-              <p className="text-lg font-bold text-stone-900">{trips.length}</p>
-              <p className="text-stone-500">trip{trips.length !== 1 ? "s" : ""} led</p>
-            </div>
-            <div>
-              <p className="text-lg font-bold text-stone-900">{reviews.length}</p>
-              <p className="text-stone-500">review{reviews.length !== 1 ? "s" : ""}</p>
+            {organizer.bio && (
+              <p className="mt-3 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
+            )}
+            <div className="mt-4 flex flex-wrap gap-5 border-t border-stone-100 pt-4 text-sm">
+              <div>
+                <p className="text-lg font-bold text-stone-900">{trips.length}</p>
+                <p className="text-stone-500">trip{trips.length !== 1 ? "s" : ""} led</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-stone-900">{reviews.length}</p>
+                <p className="text-stone-500">review{reviews.length !== 1 ? "s" : ""}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -199,7 +202,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
             <div className="-mx-4 mt-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
               <ul className="flex gap-4 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
                 {upcomingTrips.map((trip) => (
-                  <li key={trip.id} className="w-[75vw] shrink-0 snap-start sm:w-auto">
+                  <li key={trip.id} className="w-[75vw] shrink-0 snap-start sm:flex sm:w-auto sm:flex-col">
                     <Link
                       href={`/trips/${trip.slug}`}
                       className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
