@@ -28,6 +28,32 @@ export async function saveProfile(
     });
 
   if (error) return { error: error.message };
-  revalidatePath("/dashboard/profile");
+  revalidatePath("/profile");
+  return { success: true };
+}
+
+export async function saveUserProfile(
+  _prev: ProfileState,
+  formData: FormData,
+): Promise<ProfileState> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const full_name = (formData.get("full_name") as string)?.trim();
+  const phone = (formData.get("phone") as string)?.trim() || null;
+
+  if (!full_name) return { error: "Full name is required." };
+
+  const { error: authError } = await supabase.auth.updateUser({ data: { full_name } });
+  if (authError) return { error: authError.message };
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .upsert({ id: user.id, phone, updated_at: new Date().toISOString() });
+
+  if (profileError) return { error: profileError.message };
+
+  revalidatePath("/profile");
   return { success: true };
 }
