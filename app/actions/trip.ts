@@ -64,6 +64,7 @@ export async function createTrip(
   const cancellation_policy_custom = cancellation_policy === "custom"
     ? ((formData.get("cancellation_policy_custom") as string)?.trim() || null)
     : null;
+  const waiver_text = (formData.get("waiver_text") as string)?.trim() || null;
 
   if (!title || !activity_type || !destination || !difficulty || !description) {
     return { error: "Please fill in all required fields." };
@@ -109,6 +110,7 @@ export async function createTrip(
     min_downpayment,
     cancellation_policy,
     cancellation_policy_custom,
+    waiver_text,
     is_template,
     template_id: template_id || null,
   });
@@ -187,6 +189,7 @@ export async function updateTrip(
   const cancellation_policy_custom = cancellation_policy === "custom"
     ? ((formData.get("cancellation_policy_custom") as string)?.trim() || null)
     : null;
+  const waiver_text = (formData.get("waiver_text") as string)?.trim() || null;
 
   if (!title || !activity_type || !destination || !difficulty || !description) {
     return { error: "Please fill in all required fields." };
@@ -234,6 +237,7 @@ export async function updateTrip(
       min_downpayment,
       cancellation_policy,
       cancellation_policy_custom,
+      waiver_text,
       is_template,
       template_id: template_id || null,
     })

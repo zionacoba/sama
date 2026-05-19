@@ -10,6 +10,9 @@ const inputClass =
 
 const labelClass = "block text-sm font-medium text-stone-700";
 
+const DEFAULT_WAIVER_TEXT =
+  "I understand that outdoor activities involve inherent risks including but not limited to physical injury, accidents, and unpredictable weather conditions. I voluntarily participate in this trip organized by [Organizer Name] and assume all risks associated with it. I confirm that I am physically fit to participate and have disclosed any relevant medical conditions. I release the organizer from liability for any injury, loss, or damage arising from my participation, except in cases of gross negligence. I have read and understood the cancellation policy for this trip.";
+
 type MeetingPoint = { location: string; time: string };
 
 type TripForEdit = {
@@ -32,6 +35,7 @@ type TripForEdit = {
   min_downpayment: number | null;
   cancellation_policy: string | null;
   cancellation_policy_custom: string | null;
+  waiver_text: string | null;
   is_template: boolean | null;
   template_id: string | null;
 };
@@ -497,6 +501,24 @@ export function EditTripForm({
             onChange={setPhotoItems}
           />
         </div>
+      </div>
+
+      {/* Participant Waiver */}
+      <div>
+        <label htmlFor="waiver_text" className={labelClass}>
+          Participant Waiver
+        </label>
+        <textarea
+          id="waiver_text"
+          name="waiver_text"
+          rows={6}
+          defaultValue={trip.waiver_text ?? DEFAULT_WAIVER_TEXT}
+          className={`${inputClass} resize-y`}
+          placeholder="Enter waiver text…"
+        />
+        <p className="mt-1.5 text-xs text-stone-500">
+          This waiver will be shown to each participant when they confirm their spot. You can customize it or use the default template.
+        </p>
       </div>
 
       <div className="flex items-center justify-end gap-4 border-t border-stone-100 pt-6">

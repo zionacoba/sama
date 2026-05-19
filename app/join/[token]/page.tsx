@@ -31,7 +31,7 @@ export default async function JoinPage({ params }: PageProps) {
 
   const { data: trip } = await admin
     .from("trips")
-    .select("title, date_start, meeting_points")
+    .select("title, date_start, meeting_points, waiver_text")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -45,6 +45,11 @@ export default async function JoinPage({ params }: PageProps) {
   }).format(new Date(trip.date_start));
 
   const meetingPoints = (trip.meeting_points ?? []) as MeetingPoint[];
+
+  const DEFAULT_WAIVER_TEXT =
+    "I understand that outdoor activities involve inherent risks including but not limited to physical injury, accidents, and unpredictable weather conditions. I voluntarily participate in this trip organized by [Organizer Name] and assume all risks associated with it. I confirm that I am physically fit to participate and have disclosed any relevant medical conditions. I release the organizer from liability for any injury, loss, or damage arising from my participation, except in cases of gross negligence. I have read and understood the cancellation policy for this trip.";
+
+  const waiverText = (trip.waiver_text as string | null) ?? DEFAULT_WAIVER_TEXT;
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans text-stone-900">
@@ -84,7 +89,7 @@ export default async function JoinPage({ params }: PageProps) {
         ) : (
           <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-base font-bold text-stone-900">Confirm your spot</h2>
-            <ParticipantForm token={token} meetingPoints={meetingPoints} />
+            <ParticipantForm token={token} meetingPoints={meetingPoints} waiverText={waiverText} />
           </div>
         )}
       </main>

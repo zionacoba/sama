@@ -8,9 +8,10 @@ type MeetingPoint = { location: string; time: string };
 type Props = {
   token: string;
   meetingPoints: MeetingPoint[];
+  waiverText: string;
 };
 
-export function ParticipantForm({ token, meetingPoints }: Props) {
+export function ParticipantForm({ token, meetingPoints, waiverText }: Props) {
   const [state, action, pending] = useActionState(confirmParticipant, null);
 
   if (state && "success" in state) {
@@ -118,7 +119,11 @@ export function ParticipantForm({ token, meetingPoints }: Props) {
       </div>
 
       <div>
-        <label className="flex cursor-pointer items-start gap-3">
+        <p className="mb-1.5 text-sm font-medium text-stone-700">Waiver</p>
+        <div className="max-h-40 overflow-y-auto rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-xs leading-relaxed text-stone-600">
+          {waiverText}
+        </div>
+        <label className="mt-3 flex cursor-pointer items-start gap-3">
           <input
             type="checkbox"
             name="waiver_accepted"
