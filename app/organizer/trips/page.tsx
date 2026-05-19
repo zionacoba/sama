@@ -85,9 +85,6 @@ export default async function OrganizerTripsPage() {
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
-      <pre className="m-4 overflow-x-auto rounded-xl bg-stone-900 p-4 text-xs text-emerald-300">
-        {JSON.stringify(trips.map(t => ({ id: t.id, title: t.title, is_template: t.is_template, date_start: t.date_start })), null, 2)}
-      </pre>
       <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <div>
