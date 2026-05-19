@@ -162,23 +162,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? trip.description.slice(0, 157).trimEnd() + (trip.description.length > 157 ? "…" : "")
     : `An outdoor adventure in ${trip.destination} — book your spot on Sama.`;
 
-  const ogImageUrl = `/trips/${slug}/opengraph-image`;
-
   return {
     title: trip.title,
     description,
     openGraph: {
       title: `${trip.title} | Sama`,
       description,
-      url: `https://sama.ph/trips/${slug}`,
+      // Relative — resolves against metadataBase (VERCEL_URL or sama.ph)
+      url: `/trips/${slug}`,
       type: "website",
-      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: trip.title }],
+      // og:image is handled exclusively by opengraph-image.tsx (file convention)
+      // to avoid duplicate / conflicting tags that confuse Facebook's scraper
     },
     twitter: {
       card: "summary_large_image",
       title: `${trip.title} | Sama`,
       description,
-      images: [ogImageUrl],
     },
   };
 }
