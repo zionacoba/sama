@@ -43,7 +43,12 @@ export async function createTrip(
   const date_start = is_template ? "2099-12-31" : (formData.get("date_start") as string);
   const price = is_template ? 0 : parseFloat(formData.get("price") as string);
   const total_slots = is_template ? 0 : parseInt(formData.get("total_slots") as string, 10);
-  const meeting_point = is_template ? "" : ((formData.get("meeting_point") as string)?.trim() ?? "");
+  type MeetingPoint = { location: string; time: string; extra_cost: number };
+  let meeting_points: MeetingPoint[] = [];
+  if (!is_template) {
+    const mpJson = formData.get("meeting_points") as string | null;
+    try { meeting_points = mpJson ? JSON.parse(mpJson) : []; } catch { return { error: "Invalid meeting points data." }; }
+  }
   const description = (formData.get("description") as string)?.trim();
   const includes = (formData.get("includes") as string)?.trim();
   const what_to_bring = (formData.get("what_to_bring") as string)?.trim();
@@ -63,8 +68,12 @@ export async function createTrip(
     return { error: "Please fill in all required fields." };
   }
 
-  if (!is_template && (!date_start || isNaN(price) || isNaN(total_slots) || !meeting_point)) {
+  if (!is_template && (!date_start || isNaN(price) || isNaN(total_slots))) {
     return { error: "Please fill in all required fields." };
+  }
+
+  if (!is_template && meeting_points.length === 0) {
+    return { error: "Please add at least one meeting point." };
   }
 
   if (!is_template && payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
@@ -88,7 +97,7 @@ export async function createTrip(
     price,
     total_slots,
     remaining_slots: is_template ? 0 : total_slots,
-    meeting_point,
+    meeting_points: is_template ? [] : meeting_points,
     description,
     includes: includes || null,
     what_to_bring: what_to_bring || null,
@@ -156,7 +165,12 @@ export async function updateTrip(
   const date_start = is_template ? "2099-12-31" : (formData.get("date_start") as string);
   const price = is_template ? 0 : parseFloat(formData.get("price") as string);
   const total_slots = is_template ? 0 : parseInt(formData.get("total_slots") as string, 10);
-  const meeting_point = is_template ? "" : ((formData.get("meeting_point") as string)?.trim() ?? "");
+  type MeetingPoint = { location: string; time: string; extra_cost: number };
+  let meeting_points: MeetingPoint[] = [];
+  if (!is_template) {
+    const mpJson = formData.get("meeting_points") as string | null;
+    try { meeting_points = mpJson ? JSON.parse(mpJson) : []; } catch { return { error: "Invalid meeting points data." }; }
+  }
   const description = (formData.get("description") as string)?.trim();
   const includes = (formData.get("includes") as string)?.trim();
   const what_to_bring = (formData.get("what_to_bring") as string)?.trim();
@@ -176,8 +190,12 @@ export async function updateTrip(
     return { error: "Please fill in all required fields." };
   }
 
-  if (!is_template && (!date_start || isNaN(price) || isNaN(total_slots) || !meeting_point)) {
+  if (!is_template && (!date_start || isNaN(price) || isNaN(total_slots))) {
     return { error: "Please fill in all required fields." };
+  }
+
+  if (!is_template && meeting_points.length === 0) {
+    return { error: "Please add at least one meeting point." };
   }
 
   if (!is_template && payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
@@ -205,7 +223,7 @@ export async function updateTrip(
       price,
       total_slots,
       remaining_slots,
-      meeting_point,
+      meeting_points: is_template ? [] : meeting_points,
       description,
       includes: includes || null,
       what_to_bring: what_to_bring || null,
