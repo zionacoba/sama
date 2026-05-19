@@ -112,20 +112,21 @@ function formatReviewDate(date: string) {
 }
 
 const CANCELLATION_POLICIES: Record<string, { label: string; color: string; text: string }> = {
-  strict:   { label: "Strict",   color: "bg-red-100 text-red-800",     text: "No refund within 7 days of the trip date. Full refund if cancelled more than 7 days before." },
-  moderate: { label: "Moderate", color: "bg-amber-100 text-amber-900", text: "50% refund if cancelled 5 or more days before the trip. No refund within 5 days of the trip date." },
-  flexible: { label: "Flexible", color: "bg-emerald-100 text-emerald-800", text: "Full refund if cancelled 3 or more days before the trip. 50% refund if cancelled within 3 days." },
-  custom:   { label: "Custom",   color: "bg-stone-100 text-stone-700", text: "" },
+  flexible: { label: "Flexible", color: "bg-emerald-100 text-emerald-800", text: "Full refund if cancelled 7 or more days before the trip. 50% refund if cancelled 3–7 days before. No refund within 3 days." },
+  moderate: { label: "Moderate", color: "bg-amber-100 text-amber-900",    text: "Full refund if cancelled 14 or more days before the trip. 50% refund if cancelled 7–14 days before. No refund within 7 days." },
+  strict:   { label: "Strict",   color: "bg-red-100 text-red-800",        text: "Full refund if cancelled 30 or more days before the trip. No refund within 30 days." },
+  custom:   { label: "Custom",   color: "bg-stone-100 text-stone-700",    text: "" },
 };
 
 function CancellationPolicyCard({ policy, custom }: { policy: string | null; custom: string | null }) {
-  const key = policy ?? "flexible";
-  const meta = CANCELLATION_POLICIES[key] ?? CANCELLATION_POLICIES.flexible;
-  const text = key === "custom" ? (custom ?? "") : meta.text;
+  if (!policy) return null;
+  const meta = CANCELLATION_POLICIES[policy] ?? CANCELLATION_POLICIES.flexible;
+  const text = policy === "custom" ? (custom ?? "") : meta.text;
   if (!text) return null;
   return (
     <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
       <div className="flex items-center gap-3">
+        <span className="text-xl" aria-hidden>🛡️</span>
         <h2 className="text-lg font-bold text-stone-900">Cancellation policy</h2>
         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.color}`}>
           {meta.label}
