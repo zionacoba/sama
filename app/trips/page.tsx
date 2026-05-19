@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Navbar } from "@/app/components/navbar";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { SortSelect } from "./sort-select";
 
 export const metadata: Metadata = {
   title: "Browse trips",
@@ -33,8 +35,17 @@ type Trip = {
   photos: string[] | null;
 };
 
+type FilterParams = {
+  activity?: string;
+  difficulty?: string;
+  search?: string;
+  date_from?: string;
+  date_to?: string;
+  sort?: string;
+};
+
 type PageProps = {
-  searchParams: Promise<{ activity?: string; difficulty?: string; search?: string }>;
+  searchParams: Promise<FilterParams>;
 };
 
 function formatPrice(price: string | number) {
@@ -71,21 +82,24 @@ function DifficultyBadge({ level }: { level: string }) {
 }
 
 function filterUrl(
-  base: { activity?: string; difficulty?: string; search?: string },
+  base: FilterParams,
   key: "activity" | "difficulty",
   value: string,
 ) {
-  const next = { ...base, [key]: value === "All" ? undefined : value };
+  const next: FilterParams = { ...base, [key]: value === "All" ? undefined : value };
   const sp = new URLSearchParams();
   if (next.search) sp.set("search", next.search);
   if (next.activity) sp.set("activity", next.activity);
   if (next.difficulty) sp.set("difficulty", next.difficulty);
+  if (next.date_from) sp.set("date_from", next.date_from);
+  if (next.date_to) sp.set("date_to", next.date_to);
+  if (next.sort && next.sort !== "soonest") sp.set("sort", next.sort);
   const qs = sp.toString();
   return `/trips${qs ? `?${qs}` : ""}`;
 }
 
 export default async function TripsPage({ searchParams }: PageProps) {
-  const { activity, difficulty, search } = await searchParams;
+  const { activity, difficulty, search, date_from, date_to, sort = "soonest" } = await searchParams;
 
   const supabase = await createSupabaseServerClient();
   let query = supabase
@@ -100,13 +114,22 @@ export default async function TripsPage({ searchParams }: PageProps) {
   }
   if (activity) query = query.eq("activity_type", activity);
   if (difficulty) query = query.eq("difficulty", difficulty);
+  if (date_from) query = query.gte("date_start", `${date_from}T00:00:00`);
+  if (date_to) query = query.lte("date_start", `${date_to}T23:59:59`);
 
-  const { data } = await query.order("created_at", { ascending: false });
+  switch (sort) {
+    case "latest":     query = query.order("date_start", { ascending: false }); break;
+    case "price_asc":  query = query.order("price", { ascending: true });       break;
+    case "price_desc": query = query.order("price", { ascending: false });      break;
+    default:           query = query.order("date_start", { ascending: true });  break;
+  }
+
+  const { data } = await query;
   const trips = (data ?? []) as Trip[];
 
   const currentActivity = activity ?? "All";
   const currentDifficulty = difficulty ?? "All";
-  const current = { activity, difficulty, search };
+  const current = { activity, difficulty, search, date_from, date_to, sort };
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -119,40 +142,94 @@ export default async function TripsPage({ searchParams }: PageProps) {
               Browse trips
             </h1>
 
-            <form action="/trips" method="GET" className="mt-4 flex gap-2">
+            <form action="/trips" method="GET" className="mt-4 space-y-2">
               {activity && <input type="hidden" name="activity" value={activity} />}
               {difficulty && <input type="hidden" name="difficulty" value={difficulty} />}
-              <div className="relative flex-1">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden>
-                  🔍
-                </span>
-                <input
-                  name="search"
-                  type="search"
-                  defaultValue={search ?? ""}
-                  placeholder="Search destination, activity…"
-                  className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-900 shadow-sm outline-none placeholder:text-stone-400 focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
-                />
+              {sort && sort !== "soonest" && <input type="hidden" name="sort" value={sort} />}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden>
+                    🔍
+                  </span>
+                  <input
+                    name="search"
+                    type="search"
+                    defaultValue={search ?? ""}
+                    placeholder="Search destination, activity…"
+                    className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-900 shadow-sm outline-none placeholder:text-stone-400 focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="shrink-0 rounded-xl bg-trailhead px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark"
+                >
+                  Search
+                </button>
               </div>
-              <button
-                type="submit"
-                className="shrink-0 rounded-xl bg-trailhead px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark"
-              >
-                Search
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-stone-500">Dates</span>
+                <input
+                  name="date_from"
+                  type="date"
+                  defaultValue={date_from ?? ""}
+                  className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                />
+                <span className="text-xs text-stone-400">to</span>
+                <input
+                  name="date_to"
+                  type="date"
+                  defaultValue={date_to ?? ""}
+                  className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                />
+                {(date_from || date_to) && (() => {
+                  const sp = new URLSearchParams();
+                  if (search) sp.set("search", search);
+                  if (activity) sp.set("activity", activity);
+                  if (difficulty) sp.set("difficulty", difficulty);
+                  if (sort && sort !== "soonest") sp.set("sort", sort);
+                  const qs = sp.toString();
+                  return (
+                    <Link
+                      href={`/trips${qs ? `?${qs}` : ""}`}
+                      className="text-xs text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline"
+                    >
+                      Clear dates
+                    </Link>
+                  );
+                })()}
+              </div>
             </form>
 
-            <p className="mt-3 text-sm text-stone-600">
-              {trips.length} trip{trips.length !== 1 ? "s" : ""} found
-              {search && (
-                <>
-                  {" "}for &ldquo;{search}&rdquo;
-                  <Link href={filterUrl({ activity, difficulty }, "activity", currentActivity)} className="ml-2 text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline">
-                    Clear search
-                  </Link>
-                </>
-              )}
-            </p>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <p className="text-sm text-stone-600">
+                {trips.length} trip{trips.length !== 1 ? "s" : ""} found
+                {search && (
+                  <>
+                    {" "}for &ldquo;{search}&rdquo;
+                    {(() => {
+                      const sp = new URLSearchParams();
+                      if (activity) sp.set("activity", activity);
+                      if (difficulty) sp.set("difficulty", difficulty);
+                      if (date_from) sp.set("date_from", date_from);
+                      if (date_to) sp.set("date_to", date_to);
+                      if (sort && sort !== "soonest") sp.set("sort", sort);
+                      const qs = sp.toString();
+                      return (
+                        <Link
+                          href={`/trips${qs ? `?${qs}` : ""}`}
+                          className="ml-2 text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline"
+                        >
+                          Clear search
+                        </Link>
+                      );
+                    })()}
+                  </>
+                )}
+              </p>
+              <Suspense fallback={null}>
+                <SortSelect current={sort} />
+              </Suspense>
+            </div>
 
             <div className="mt-6 space-y-3">
               {/* Activity filter */}
