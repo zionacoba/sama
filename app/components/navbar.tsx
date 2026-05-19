@@ -10,10 +10,11 @@ type AuthLinksProps = {
   email: string;
   displayName: string;
   organizerStatus: string | null;
+  organizerId: string | null;
   className?: string;
 };
 
-function AuthLinks({ email: _email, displayName, organizerStatus, className }: AuthLinksProps) {
+function AuthLinks({ email: _email, displayName, organizerStatus, organizerId, className }: AuthLinksProps) {
   return (
     <div className={`flex items-center gap-2 sm:gap-3 ${className ?? ""}`}>
       <span className="hidden max-w-[200px] truncate text-sm text-stone-600 sm:inline">
@@ -26,11 +27,19 @@ function AuthLinks({ email: _email, displayName, organizerStatus, className }: A
         My Bookings
       </Link>
       <Link
-        href="/dashboard/profile"
+        href="/profile"
         className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
       >
-        Profile
+        My Profile
       </Link>
+      {organizerStatus === "approved" && organizerId && (
+        <Link
+          href={`/organizers/${organizerId}`}
+          className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
+        >
+          Organizer Profile
+        </Link>
+      )}
       {organizerStatus === "approved" ? (
         <Link
           href="/organizer/dashboard"
@@ -58,16 +67,18 @@ export async function Navbar() {
   const { data: { user } } = await supabase.auth.getUser();
 
   let organizerStatus: string | null = null;
+  let organizerId: string | null = null;
   let displayName = "";
 
   if (user) {
     const { data: organizer } = await supabase
       .from("organizers")
-      .select("status")
+      .select("id, status")
       .eq("user_id", user.id)
       .maybeSingle();
 
     organizerStatus = organizer?.status ?? null;
+    organizerId = organizer?.id ? String(organizer.id) : null;
 
     const fullName = user.user_metadata?.full_name as string | undefined;
     displayName = fullName?.trim()
@@ -106,7 +117,7 @@ export async function Navbar() {
           </div>
           <div className="sm:hidden">
             {user
-              ? <AuthLinks displayName={displayName} email={user.email ?? ""} organizerStatus={organizerStatus} />
+              ? <AuthLinks displayName={displayName} email={user.email ?? ""} organizerStatus={organizerStatus} organizerId={organizerId} />
               : loginLink}
           </div>
         </div>
@@ -123,7 +134,7 @@ export async function Navbar() {
         </nav>
         <div className="hidden sm:flex">
           {user
-            ? <AuthLinks displayName={displayName} email={user.email ?? ""} organizerStatus={organizerStatus} />
+            ? <AuthLinks displayName={displayName} email={user.email ?? ""} organizerStatus={organizerStatus} organizerId={organizerId} />
             : loginLink}
         </div>
       </div>
