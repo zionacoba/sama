@@ -16,17 +16,19 @@ export async function applyToBeOrganizer(
 
   if (!user) redirect("/login?redirectTo=/organizer/apply");
 
+  const displayName = (formData.get("display_name") as string)?.trim();
   const fullName = (formData.get("full_name") as string)?.trim();
   const bio = (formData.get("bio") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim();
 
-  if (!fullName || !bio || !phone) {
+  if (!displayName || !fullName || !bio || !phone) {
     return { error: "All fields are required." };
   }
 
   const { error } = await supabase.from("organizers").insert({
     user_id: user.id,
     email: user.email,
+    display_name: displayName,
     full_name: fullName,
     bio,
     phone,
@@ -40,6 +42,42 @@ export async function applyToBeOrganizer(
   }
 
   redirect("/organizer/apply");
+}
+
+export async function updateOrganizerProfile(
+  _prevState: { error: string } | null,
+  formData: FormData,
+) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login?redirectTo=/organizer/profile");
+
+  const { data: organizer } = await supabase
+    .from("organizers")
+    .select("id, status")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!organizer || organizer.status !== "approved") redirect("/organizer/apply");
+
+  const display_name = (formData.get("display_name") as string)?.trim();
+  const full_name = (formData.get("full_name") as string)?.trim();
+  const phone = (formData.get("phone") as string)?.trim();
+  const bio = (formData.get("bio") as string)?.trim();
+  const photo_url = (formData.get("photo_url") as string)?.trim() || null;
+
+  if (!display_name || !full_name || !phone || !bio) {
+    return { error: "Please fill in all required fields." };
+  }
+
+  const { error } = await supabase
+    .from("organizers")
+    .update({ display_name, full_name, phone, bio, photo_url })
+    .eq("id", organizer.id);
+
+  if (error) return { error: error.message };
+
+  redirect("/organizer/dashboard");
 }
 
 export async function updateOrganizerStatus(formData: FormData) {

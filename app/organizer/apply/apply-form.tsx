@@ -21,6 +21,21 @@ export function ApplyForm() {
       )}
 
       <div>
+        <label htmlFor="display_name" className="block text-sm font-medium text-stone-700">
+          Display name
+        </label>
+        <p className="mt-0.5 text-xs text-stone-500">Your public-facing name — club, brand, or trail name.</p>
+        <input
+          id="display_name"
+          name="display_name"
+          type="text"
+          required
+          className={inputClass}
+          placeholder="e.g. Summit Seekers PH, Pekeng Mountaineer"
+        />
+      </div>
+
+      <div>
         <label htmlFor="full_name" className="block text-sm font-medium text-stone-700">
           Full name
         </label>

@@ -33,6 +33,7 @@ type TripDetail = {
 };
 
 type OrganizerInfo = {
+  display_name: string | null;
   full_name: string;
   bio: string | null;
   photo_url: string | null;
@@ -246,7 +247,7 @@ export default async function TripDetailPage({ params }: PageProps) {
           .eq("organizer_id", tripData.organizer_id)
       : Promise.resolve({ count: 0 }),
     tripData.organizer_id
-      ? supabase.from("organizers").select("full_name, bio, photo_url").eq("id", tripData.organizer_id).maybeSingle()
+      ? supabase.from("organizers").select("display_name, full_name, bio, photo_url").eq("id", tripData.organizer_id).maybeSingle()
       : Promise.resolve({ data: null }),
     tripData.template_id
       ? supabase
@@ -458,13 +459,13 @@ export default async function TripDetailPage({ params }: PageProps) {
               >
                 <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-lg font-bold text-trailhead">
                   {organizer.photo_url ? (
-                    <Image src={organizer.photo_url} alt={organizer.full_name} fill className="object-cover" sizes="48px" />
+                    <Image src={organizer.photo_url} alt={organizer.display_name ?? organizer.full_name} fill className="object-cover" sizes="48px" />
                   ) : (
                     organizer.full_name.charAt(0).toUpperCase()
                   )}
                 </div>
                 <span className="font-semibold text-trailhead underline-offset-4 group-hover:underline">
-                  {organizer.full_name}
+                  {organizer.display_name ?? organizer.full_name}
                 </span>
               </Link>
               {organizer.bio && (
@@ -494,7 +495,7 @@ export default async function TripDetailPage({ params }: PageProps) {
             <div className="mt-12" id="reviews">
               <div className="flex items-baseline justify-between gap-4">
                 <h2 className="text-xl font-bold tracking-tight text-stone-900">
-                  Reviews for {organizer.full_name}
+                  Reviews for {organizer.display_name ?? organizer.full_name}
                   {totalReviewCount > 0 && (
                     <span className="ml-2 text-base font-normal text-stone-500">
                       ({totalReviewCount})

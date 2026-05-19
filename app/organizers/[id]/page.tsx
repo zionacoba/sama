@@ -76,7 +76,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
 
   const { data: organizer } = await supabase
     .from("organizers")
-    .select("id, full_name, bio, photo_url")
+    .select("id, display_name, full_name, bio, photo_url")
     .eq("id", id)
     .eq("status", "approved")
     .maybeSingle();
@@ -107,6 +107,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       : null;
 
+  const publicName = organizer.display_name ?? organizer.full_name;
   const initials = organizer.full_name
     .split(" ")
     .map((w: string) => w.charAt(0).toUpperCase())
@@ -137,7 +138,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
               {organizer.photo_url ? (
                 <Image
                   src={organizer.photo_url}
-                  alt={organizer.full_name}
+                  alt={publicName}
                   fill
                   className="object-cover"
                   sizes="64px"
@@ -148,7 +149,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
-                {organizer.full_name}
+                {publicName}
               </h1>
               {avgRating !== null && (
                 <div className="mt-1 flex items-center gap-1.5">

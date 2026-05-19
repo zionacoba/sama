@@ -233,9 +233,17 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
             </Link>
             <p className="mt-0.5 text-sm text-trailhead-muted">Organizer Dashboard</p>
           </div>
-          <Link href="/" className="text-sm font-medium text-trailhead-muted transition hover:text-white">
-            ← Back to site
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/organizer/profile"
+              className="text-sm font-medium text-trailhead-muted transition hover:text-white"
+            >
+              Edit profile
+            </Link>
+            <Link href="/" className="text-sm font-medium text-trailhead-muted transition hover:text-white">
+              ← Back to site
+            </Link>
+          </div>
         </div>
       </header>
 
