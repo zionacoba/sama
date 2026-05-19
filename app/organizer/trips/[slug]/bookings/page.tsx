@@ -31,7 +31,7 @@ type Booking = {
 
 type BookingParticipant = {
   booking_id: number;
-  slot_index: number;
+  slot_number: number;
   full_name: string | null;
   completed: boolean;
 };
@@ -121,9 +121,9 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
   if (multiSlotIds.length > 0) {
     const { data: participantsData } = await supabase
       .from("booking_participants")
-      .select("booking_id, slot_index, full_name, completed")
+      .select("booking_id, slot_number, full_name, completed")
       .in("booking_id", multiSlotIds)
-      .order("slot_index");
+      .order("slot_number");
 
     for (const p of (participantsData ?? []) as BookingParticipant[]) {
       if (!participantsMap.has(p.booking_id)) participantsMap.set(p.booking_id, []);
@@ -280,10 +280,10 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                 </summary>
                                 <ul className="mt-1 space-y-0.5 pl-0.5">
                                   {ps.map((p) => (
-                                    <li key={p.slot_index} className="flex items-center gap-1 text-xs">
+                                    <li key={p.slot_number} className="flex items-center gap-1 text-xs">
                                       <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
                                       <span className={p.completed ? "text-stone-700" : "text-stone-400"}>
-                                        {p.full_name ?? `Participant ${p.slot_index + 1}`}
+                                        {p.full_name ?? `Participant ${p.slot_number + 1}`}
                                       </span>
                                     </li>
                                   ))}
@@ -366,10 +366,10 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                     </summary>
                                     <ul className="mt-1 space-y-0.5 pl-0.5">
                                       {ps.map((p) => (
-                                        <li key={p.slot_index} className="flex items-center gap-1 text-xs">
+                                        <li key={p.slot_number} className="flex items-center gap-1 text-xs">
                                           <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
                                           <span className={p.completed ? "text-stone-700" : "text-stone-400"}>
-                                            {p.full_name ?? `Participant ${p.slot_index + 1}`}
+                                            {p.full_name ?? `Participant ${p.slot_number + 1}`}
                                           </span>
                                         </li>
                                       ))}

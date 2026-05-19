@@ -98,7 +98,7 @@ export async function createBooking(input: CreateBookingInput) {
   const now = new Date().toISOString();
   const participantRows = Array.from({ length: input.slots }, (_, i) => ({
     booking_id: newBooking.id,
-    slot_index: i,
+    slot_number: i,
     token: randomUUID(),
     full_name: i === 0 ? input.fullName : null,
     emergency_contact_name: i === 0 ? input.emergencyContactName : null,
@@ -114,7 +114,7 @@ export async function createBooking(input: CreateBookingInput) {
 
   const participantTokens =
     input.slots > 1
-      ? participantRows.slice(1).map((p) => ({ slotIndex: p.slot_index, token: p.token }))
+      ? participantRows.slice(1).map((p) => ({ slotIndex: p.slot_number, token: p.token }))
       : [];
 
   try {

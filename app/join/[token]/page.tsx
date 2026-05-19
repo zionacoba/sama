@@ -15,7 +15,7 @@ export default async function JoinPage({ params }: PageProps) {
 
   const { data: participant } = await admin
     .from("booking_participants")
-    .select("id, completed, booking_id, full_name, slot_index")
+    .select("id, completed, booking_id, full_name, slot_number")
     .eq("token", token)
     .maybeSingle();
 
