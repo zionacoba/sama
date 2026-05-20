@@ -301,7 +301,7 @@ export function BookingModal({
                         onClick={() => {
                           const allUrls = participantTokens
                             .map(({ slotIndex, token }) =>
-                              `Participant ${slotIndex + 1}: https://landas-zeta.vercel.app/join/${token}`
+                              `Participant ${slotIndex + 1}: ${window.location.origin}/join/${token}`
                             )
                             .join("\n");
                           navigator.clipboard.writeText(allUrls).then(() => {
@@ -315,7 +315,7 @@ export function BookingModal({
                       </button>
                       <div className="mt-3 space-y-3">
                         {participantTokens.map(({ slotIndex, token }) => {
-                          const url = `https://landas-zeta.vercel.app/join/${token}`;
+                          const url = `${window.location.origin}/join/${token}`;
                           return (
                             <div key={slotIndex} className="rounded-lg border border-stone-200 bg-white p-3">
                               <p className="text-sm font-semibold text-stone-900">

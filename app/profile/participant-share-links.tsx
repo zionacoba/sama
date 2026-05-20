@@ -10,7 +10,7 @@ export function ParticipantShareLinks({ participants }: { participants: Particip
   if (participants.length === 0) return null;
 
   function copy(token: string) {
-    navigator.clipboard.writeText(`https://landas-zeta.vercel.app/join/${token}`).then(() => {
+    navigator.clipboard.writeText(`${window.location.origin}/join/${token}`).then(() => {
       setCopiedToken(token);
       setTimeout(() => setCopiedToken(null), 2000);
     });

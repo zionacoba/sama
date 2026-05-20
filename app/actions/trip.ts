@@ -122,6 +122,8 @@ export async function createTrip(
     return { error: error.message };
   }
 
+  revalidatePath("/trips");
+  revalidatePath("/organizer/dashboard");
   redirect("/organizer/dashboard");
 }
 
@@ -149,7 +151,7 @@ export async function updateTrip(
 
   const { data: existing, error: fetchError } = await supabase
     .from("trips")
-    .select("id, organizer_id, total_slots, remaining_slots")
+    .select("id, slug, organizer_id, total_slots, remaining_slots")
     .eq("id", tripId)
     .maybeSingle();
 
@@ -248,6 +250,9 @@ export async function updateTrip(
 
   if (error) return { error: error.message };
 
+  revalidatePath("/trips");
+  revalidatePath(`/trips/${existing.slug}`);
+  revalidatePath("/organizer/dashboard");
   redirect("/organizer/dashboard");
 }
 

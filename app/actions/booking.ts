@@ -279,5 +279,6 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   revalidatePath("/organizer/dashboard");
   revalidatePath("/organizer/trips/[slug]/bookings", "page");
+  revalidatePath("/profile");
   return { success: true };
 }
