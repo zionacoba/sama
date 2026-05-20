@@ -1,7 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { resend } from "@/lib/resend";
 
 function slugify(title: string): string {
   return title
@@ -245,5 +248,79 @@ export async function updateTrip(
 
   if (error) return { error: error.message };
 
+  redirect("/organizer/dashboard");
+}
+
+export async function cancelTrip(tripSlug: string): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login?redirectTo=/organizer/dashboard");
+
+  const { data: organizer } = await supabase
+    .from("organizers")
+    .select("id, status")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!organizer || organizer.status !== "approved") redirect("/organizer/apply");
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: trip } = await admin
+    .from("trips")
+    .select("id, title, date_start, total_slots, organizer_id, status")
+    .eq("slug", tripSlug)
+    .maybeSingle();
+
+  if (!trip) return;
+  if (String(trip.organizer_id) !== String(organizer.id)) return;
+  if (trip.status !== "active") return;
+
+  const { data: bookings } = await admin
+    .from("bookings")
+    .select("id, full_name, email")
+    .eq("trip_id", trip.id)
+    .in("status", ["pending", "confirmed"]);
+
+  await admin
+    .from("trips")
+    .update({ status: "cancelled", remaining_slots: trip.total_slots })
+    .eq("id", trip.id);
+
+  await admin
+    .from("bookings")
+    .update({ status: "cancelled" })
+    .eq("trip_id", trip.id)
+    .in("status", ["pending", "confirmed"]);
+
+  const tripDate = new Intl.DateTimeFormat("en-PH", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(new Date(trip.date_start));
+
+  try {
+    for (const booking of bookings ?? []) {
+      // TODO: change to booking.email once sama.com.ph is verified in Resend
+      await resend.emails.send({
+        from: "Sama <onboarding@resend.dev>",
+        to: "acobapaulzion@gmail.com",
+        subject: `Trip cancelled — ${trip.title}`,
+        html: `
+          <p>Hi ${booking.full_name},</p>
+          <p>We're sorry to inform you that <strong>${trip.title}</strong> on ${tripDate} has been cancelled by the organizer.</p>
+          <p>If you paid a downpayment, please contact the organizer directly for a refund.</p>
+          <p>We hope to see you on a future trip!</p>
+          <p>— The Sama Team</p>
+        `,
+      });
+    }
+  } catch {
+    // Email failure is non-fatal
+  }
+
+  revalidatePath("/organizer/dashboard");
+  revalidatePath(`/trips/${tripSlug}`);
   redirect("/organizer/dashboard");
 }

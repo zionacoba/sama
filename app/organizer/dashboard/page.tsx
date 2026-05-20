@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { ShareButton } from "@/app/components/share-button";
+import { CancelTripButton } from "@/app/components/cancel-trip-button";
 import { DashboardFilters } from "./dashboard-filters";
 
 const PAGE_SIZE = 20;
@@ -55,6 +56,9 @@ function tripBadge(trip: OrganizerTrip) {
 function TripRow({ trip, counts }: { trip: OrganizerTrip; counts: TripCounts }) {
   const badge = tripBadge(trip);
   const slotsBooked = trip.total_slots - trip.remaining_slots;
+  const today = new Date().toISOString().slice(0, 10);
+  const canCancel = trip.status === "active" && trip.date_start >= today;
+  const totalBookings = counts.pending + counts.confirmed;
   return (
     <div className="flex flex-col gap-3 border-b border-stone-100 px-5 py-4 last:border-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 flex-1">
@@ -91,6 +95,13 @@ function TripRow({ trip, counts }: { trip: OrganizerTrip; counts: TripCounts }) 
           title={trip.title}
           className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
         />
+        {canCancel && (
+          <CancelTripButton
+            tripSlug={trip.slug}
+            tripTitle={trip.title}
+            totalBookings={totalBookings}
+          />
+        )}
       </div>
     </div>
   );
