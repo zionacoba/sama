@@ -175,44 +175,103 @@ export default async function TripsPage({ searchParams }: PageProps) {
       <Navbar />
 
       <main>
-        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-10 sm:py-12">
+        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-4 sm:py-5">
           <div className="mx-auto max-w-6xl">
-            <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+            <h1 className="text-xl font-bold tracking-tight text-stone-900 sm:text-2xl">
               Browse trips
             </h1>
 
-            <form action="/trips" method="GET" className="mt-4 flex gap-2">
-              {activity && <input type="hidden" name="activity" value={activity} />}
-              {duration && <input type="hidden" name="duration" value={duration} />}
-              {difficulty && <input type="hidden" name="difficulty" value={difficulty} />}
-              {sort && sort !== "soonest" && <input type="hidden" name="sort" value={sort} />}
-              {date_from && <input type="hidden" name="date_from" value={date_from} />}
-              {date_to && <input type="hidden" name="date_to" value={date_to} />}
-              <div className="relative flex-1">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden>
-                  🔍
-                </span>
-                <input
-                  name="search"
-                  type="search"
-                  defaultValue={search ?? ""}
-                  placeholder="Search destination, activity…"
-                  className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-900 shadow-sm outline-none placeholder:text-stone-400 focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
-                />
-              </div>
-              <button
-                type="submit"
-                className="shrink-0 rounded-xl bg-trailhead px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark"
-              >
-                Search
-              </button>
-            </form>
+            {/* Search + date pickers + sort on one row */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <form action="/trips" method="GET" className="flex min-w-0 flex-1 gap-2">
+                {activity && <input type="hidden" name="activity" value={activity} />}
+                {duration && <input type="hidden" name="duration" value={duration} />}
+                {difficulty && <input type="hidden" name="difficulty" value={difficulty} />}
+                {sort && sort !== "soonest" && <input type="hidden" name="sort" value={sort} />}
+                {date_from && <input type="hidden" name="date_from" value={date_from} />}
+                {date_to && <input type="hidden" name="date_to" value={date_to} />}
+                <div className="relative flex-1">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden>
+                    🔍
+                  </span>
+                  <input
+                    name="search"
+                    type="search"
+                    defaultValue={search ?? ""}
+                    placeholder="Search destination, activity…"
+                    className="w-full rounded-xl border border-stone-200 bg-white py-2 pl-9 pr-3 text-sm text-stone-900 shadow-sm outline-none placeholder:text-stone-400 focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="shrink-0 rounded-xl bg-trailhead px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark"
+                >
+                  Search
+                </button>
+              </form>
+              <Suspense fallback={null}>
+                <TripFilters sort={sort} dateFrom={date_from} dateTo={date_to} />
+              </Suspense>
+            </div>
 
-            <Suspense fallback={null}>
-              <TripFilters sort={sort} dateFrom={date_from} dateTo={date_to} />
-            </Suspense>
+            {/* All filter pills on one scrollable row */}
+            <div className="-mx-4 mt-2 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+              <span className="shrink-0 text-xs font-semibold text-stone-400">Activity</span>
+              {ACTIVITIES.map((a) => {
+                const active = a === currentActivity;
+                return (
+                  <Link
+                    key={a}
+                    href={filterUrl(current, "activity", a)}
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                      active
+                        ? "bg-trailhead text-white shadow-sm"
+                        : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
+                    }`}
+                  >
+                    {a}
+                  </Link>
+                );
+              })}
+              <span className="mx-1 shrink-0 text-stone-300" aria-hidden>|</span>
+              <span className="shrink-0 text-xs font-semibold text-stone-400">Duration</span>
+              {DURATIONS.map((d) => {
+                const active = d === currentDuration;
+                return (
+                  <Link
+                    key={d}
+                    href={filterUrl(current, "duration", d)}
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                      active
+                        ? "bg-trailhead text-white shadow-sm"
+                        : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
+                    }`}
+                  >
+                    {d}
+                  </Link>
+                );
+              })}
+              <span className="mx-1 shrink-0 text-stone-300" aria-hidden>|</span>
+              <span className="shrink-0 text-xs font-semibold text-stone-400">Level</span>
+              {DIFFICULTIES.map((d) => {
+                const active = d === currentDifficulty;
+                return (
+                  <Link
+                    key={d}
+                    href={filterUrl(current, "difficulty", d)}
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                      active
+                        ? "bg-trailhead text-white shadow-sm"
+                        : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
+                    }`}
+                  >
+                    {d}
+                  </Link>
+                );
+              })}
+            </div>
 
-            <p className="mt-3 text-sm text-stone-600">
+            <p className="mt-2 text-xs text-stone-500">
               {trips.length} trip{trips.length !== 1 ? "s" : ""} found
               {search && (
                 <>
@@ -238,87 +297,10 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 </>
               )}
             </p>
-
-            <div className="mt-6 space-y-3">
-              {/* Activity filter */}
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  Activity
-                </p>
-                <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
-                  {ACTIVITIES.map((a) => {
-                    const active = a === currentActivity;
-                    return (
-                      <Link
-                        key={a}
-                        href={filterUrl(current, "activity", a)}
-                        className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
-                          active
-                            ? "bg-trailhead text-white shadow-sm"
-                            : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
-                        }`}
-                      >
-                        {a}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Duration filter */}
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  Duration
-                </p>
-                <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
-                  {DURATIONS.map((d) => {
-                    const active = d === currentDuration;
-                    return (
-                      <Link
-                        key={d}
-                        href={filterUrl(current, "duration", d)}
-                        className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
-                          active
-                            ? "bg-trailhead text-white shadow-sm"
-                            : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
-                        }`}
-                      >
-                        {d}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Level filter */}
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  Level
-                </p>
-                <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
-                  {DIFFICULTIES.map((d) => {
-                    const active = d === currentDifficulty;
-                    return (
-                      <Link
-                        key={d}
-                        href={filterUrl(current, "difficulty", d)}
-                        className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
-                          active
-                            ? "bg-trailhead text-white shadow-sm"
-                            : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
-                        }`}
-                      >
-                        {d}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-10 sm:py-12">
+        <section className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
           {groups.length === 0 ? (
             <div className="py-20 text-center">
               <p className="text-stone-500">No trips match your filters.</p>
