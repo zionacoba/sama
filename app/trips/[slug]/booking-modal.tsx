@@ -53,7 +53,6 @@ export function BookingModal({
   const [participants, setParticipants] = useState<string[]>([]);
   const [emergencyContactName, setEmergencyContactName] = useState("");
   const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
-  const [medicalNotes, setMedicalNotes] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedMeetingPoint, setSelectedMeetingPoint] = useState("");
   const [waiverAccepted, setWaiverAccepted] = useState(false);
@@ -67,7 +66,10 @@ export function BookingModal({
 
   const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
   const totalAmount = unitPrice * slots;
-  const amountDue = paymentOption === "downpayment" && hasDownpayment ? minDownpayment * slots : totalAmount;
+  const canUseDownpayment = hasDownpayment && minDownpayment! < unitPrice;
+  const amountDue = paymentOption === "downpayment" && canUseDownpayment
+    ? Math.min(minDownpayment! * slots, totalAmount)
+    : totalAmount;
 
   // Keep a ref so the slots effect can read fullName without being a dependency
   const fullNameRef = useRef(fullName);
@@ -143,7 +145,6 @@ export function BookingModal({
     setParticipants([]);
     setEmergencyContactName("");
     setEmergencyContactPhone("");
-    setMedicalNotes("");
     setNotes("");
     setSelectedMeetingPoint("");
     setWaiverAccepted(false);
@@ -195,7 +196,7 @@ export function BookingModal({
       emergencyContactPhone,
       waiverAgreed: waiverAccepted,
       platformWaiverAgreed: platformWaiverAccepted,
-      medicalNotes: medicalNotes.trim() || null,
+      medicalNotes: notes.trim() || null,
       meetingPoint: selectedMeetingPoint || null,
     });
 
@@ -355,20 +356,15 @@ export function BookingModal({
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Pricing summary */}
-                  <div className="rounded-xl bg-trailhead-muted/60 px-4 py-3">
-                    <p className="text-sm font-medium text-stone-700">{tripTitle}</p>
-                    <p className="mt-1 text-lg font-bold text-trailhead">
-                      {paymentOption === "downpayment" && hasDownpayment
-                        ? <>Due now: {formatCurrency(amountDue)} <span className="text-sm font-normal text-stone-500">(downpayment)</span></>
-                        : <>Total: {formatCurrency(totalAmount)}</>
-                      }
-                    </p>
-                    <p className="text-xs text-stone-500">
-                      {formatCurrency(unitPrice)} × {slots} slot{slots !== 1 ? "s" : ""}
-                    </p>
-                  </div>
+                <form onSubmit={handleSubmit} className="space-y-3">
+                  {/* Compact price line */}
+                  <p className="text-sm text-stone-500">
+                    {tripTitle} · {formatCurrency(unitPrice)} × {slots} slot{slots !== 1 ? "s" : ""} ={" "}
+                    <span className="font-semibold text-stone-800">{formatCurrency(totalAmount)}</span>
+                    {paymentOption === "downpayment" && canUseDownpayment && (
+                      <> · <span className="font-semibold text-trailhead">Due now: {formatCurrency(amountDue)}</span></>
+                    )}
+                  </p>
 
                   {error && (
                     <p
@@ -532,7 +528,7 @@ export function BookingModal({
                   </div>
 
                   {/* Payment option */}
-                  {hasDownpayment && (
+                  {canUseDownpayment && (
                     <div>
                       <p className="block text-sm font-medium text-stone-700">Payment option</p>
                       <div className="mt-1.5 grid grid-cols-2 gap-2">
@@ -558,39 +554,23 @@ export function BookingModal({
                           }`}
                         >
                           <span className="block font-medium">Pay downpayment</span>
-                          <span className="block text-xs opacity-75">{formatCurrency(minDownpayment!)} minimum</span>
+                          <span className="block text-xs opacity-75">{formatCurrency(amountDue)} deposit</span>
                         </button>
                       </div>
                     </div>
                   )}
 
-                  {/* Medical notes */}
-                  <div>
-                    <label htmlFor="booking-medical" className="block text-sm font-medium text-stone-700">
-                      Medical conditions or allergies{" "}
-                      <span className="text-stone-400">(optional)</span>
-                    </label>
-                    <textarea
-                      id="booking-medical"
-                      rows={2}
-                      value={medicalNotes}
-                      onChange={(e) => setMedicalNotes(e.target.value)}
-                      placeholder="Any conditions or allergies the organizer should know about?"
-                      className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
-                    />
-                  </div>
-
-                  {/* General notes */}
+                  {/* Combined notes */}
                   <div>
                     <label htmlFor="booking-notes" className="block text-sm font-medium text-stone-700">
-                      Notes <span className="text-stone-400">(optional)</span>
+                      Notes for organizer <span className="text-stone-400">(optional)</span>
                     </label>
                     <textarea
                       id="booking-notes"
                       rows={2}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Questions, special requests…"
+                      placeholder="Medical conditions, allergies, special requests, or questions"
                       className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
                   </div>
@@ -598,7 +578,7 @@ export function BookingModal({
                   {/* Waivers */}
                   <div className="space-y-3">
                     <div>
-                      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                      <p className="mb-1.5 text-sm font-medium text-stone-700">
                         Platform terms
                       </p>
                       <label className="flex cursor-pointer items-start gap-3">
@@ -626,7 +606,7 @@ export function BookingModal({
                     </div>
 
                     <div>
-                      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                      <p className="mb-1.5 text-sm font-medium text-stone-700">
                         Organizer waiver
                       </p>
                       <label className="flex cursor-pointer items-start gap-3">
