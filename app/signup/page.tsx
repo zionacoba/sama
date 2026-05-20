@@ -149,6 +149,20 @@ export default function SignupPage() {
                 />
               </div>
 
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  required
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 accent-trailhead focus:ring-2 focus:ring-trailhead/30"
+                />
+                <span className="text-xs leading-relaxed text-stone-600">
+                  I agree to Sama&apos;s{" "}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-trailhead">Terms of Service</a>
+                  {" "}and{" "}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-trailhead">Privacy Policy</a>.
+                </span>
+              </label>
+
               <button
                 type="submit"
                 disabled={loading}
