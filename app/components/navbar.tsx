@@ -78,9 +78,11 @@ export async function Navbar() {
   if (user) {
     const { data: organizer } = await supabase
       .from("organizers")
-      .select("id, status")
+      .select("id, user_id, status")
       .eq("user_id", user.id)
       .maybeSingle();
+
+    console.log("[navbar] auth user.id:", user.id, "organizer row:", organizer);
 
     organizerStatus = organizer?.status ?? null;
     organizerId = organizer?.id ? String(organizer.id) : null;
