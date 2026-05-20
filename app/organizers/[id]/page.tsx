@@ -72,6 +72,8 @@ function DifficultyBadge({ level }: { level: string }) {
 export default async function OrganizerProfilePage({ params }: PageProps) {
   const { id } = await params;
 
+  console.log("[organizers/[id]] params id:", id);
+
   const admin = createSupabaseAdminClient();
 
   // All queries use admin client to bypass RLS on this public page
