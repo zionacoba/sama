@@ -17,6 +17,7 @@ type BookingModalProps = {
   paymentType: string;
   minDownpayment: number | null;
   meetingPoints: MeetingPoint[];
+  compact?: boolean;
 };
 
 function formatCurrency(amount: number) {
@@ -36,6 +37,7 @@ export function BookingModal({
   paymentType,
   minDownpayment,
   meetingPoints,
+  compact = false,
 }: BookingModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -217,7 +219,9 @@ export function BookingModal({
         <button
           type="button"
           disabled
-          className="mt-10 w-full cursor-not-allowed rounded-xl bg-stone-200 px-6 py-4 text-base font-semibold text-stone-500 sm:w-auto sm:min-w-[240px]"
+          className={compact
+            ? "w-full cursor-not-allowed rounded-xl bg-stone-200 px-5 py-3 text-sm font-semibold text-stone-500"
+            : "mt-10 w-full cursor-not-allowed rounded-xl bg-stone-200 px-6 py-4 text-base font-semibold text-stone-500 sm:w-auto sm:min-w-[240px]"}
         >
           Sold Out
         </button>
@@ -225,7 +229,9 @@ export function BookingModal({
         <button
           type="button"
           onClick={handleBookClick}
-          className="mt-10 w-full rounded-xl bg-trailhead px-6 py-4 text-base font-semibold text-white shadow-md transition hover:bg-trailhead-dark sm:w-auto sm:min-w-[240px]"
+          className={compact
+            ? "w-full rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
+            : "mt-10 w-full rounded-xl bg-trailhead px-6 py-4 text-base font-semibold text-white shadow-md transition hover:bg-trailhead-dark sm:w-auto sm:min-w-[240px]"}
         >
           Book This Trip
         </button>

@@ -10,6 +10,7 @@ type Props = {
   defaultName: string;
   defaultEmail: string;
   isOnWaitlist: boolean;
+  compact?: boolean;
 };
 
 const inputClass =
@@ -22,6 +23,7 @@ export function WaitlistModal({
   defaultName,
   defaultEmail,
   isOnWaitlist: initialOnWaitlist,
+  compact = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [joined, setJoined] = useState(initialOnWaitlist);
@@ -48,6 +50,11 @@ export function WaitlistModal({
   }
 
   if (joined) {
+    if (compact) {
+      return (
+        <p className="text-sm font-semibold text-emerald-700">On waitlist ✓</p>
+      );
+    }
     return (
       <div className="mt-10 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-5 text-center">
         <p className="font-semibold text-emerald-800">You&apos;re on the waitlist!</p>
@@ -58,19 +65,29 @@ export function WaitlistModal({
 
   return (
     <>
-      <div className="mt-10 rounded-2xl border border-stone-200 bg-stone-50 px-5 py-6 text-center">
-        <p className="font-semibold text-stone-700">This trip is full.</p>
-        <p className="mt-1 text-sm text-stone-500">
-          Join the waitlist and we&apos;ll notify you if a slot opens up.
-        </p>
+      {compact ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="mt-4 rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
+          className="w-full rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
         >
           Join Waitlist
         </button>
-      </div>
+      ) : (
+        <div className="mt-10 rounded-2xl border border-stone-200 bg-stone-50 px-5 py-6 text-center">
+          <p className="font-semibold text-stone-700">This trip is full.</p>
+          <p className="mt-1 text-sm text-stone-500">
+            Join the waitlist and we&apos;ll notify you if a slot opens up.
+          </p>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="mt-4 rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
+          >
+            Join Waitlist
+          </button>
+        </div>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

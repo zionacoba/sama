@@ -112,6 +112,15 @@ function formatDate(dateStart: string) {
   }).format(new Date(dateStart));
 }
 
+function formatDateShort(dateStart: string) {
+  return new Intl.DateTimeFormat("en-PH", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(dateStart));
+}
+
 function formatReviewDate(date: string) {
   return new Intl.DateTimeFormat("en-PH", {
     year: "numeric",
@@ -133,7 +142,7 @@ function CancellationPolicyCard({ policy, custom }: { policy: string | null; cus
   const text = policy === "custom" ? (custom ?? "") : meta.text;
   if (!text) return null;
   return (
-    <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
+    <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-center gap-3">
         <span className="text-xl" aria-hidden>🛡️</span>
         <h2 className="text-lg font-bold text-stone-900">Cancellation policy</h2>
@@ -305,41 +314,49 @@ export default async function TripDetailPage({ params }: PageProps) {
           <Link href="/" className="text-lg font-bold tracking-tight text-trailhead">
             ⛰ Sama
           </Link>
-          <Link
-            href="/trips"
-            className="text-sm font-medium text-stone-600 transition hover:text-trailhead"
-          >
+          <Link href="/trips" className="text-sm font-medium text-stone-600 transition hover:text-trailhead">
             ← All trips
           </Link>
         </div>
       </header>
 
       <main>
-        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-10 sm:py-14">
-          <div className="mx-auto max-w-3xl">
+        {/* Compact hero */}
+        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 pt-6 pb-4">
+          <div className="mx-auto max-w-6xl">
             <div className="flex flex-wrap items-center gap-2">
-              {tripData.activity_type && (
-                <ActivityBadge type={tripData.activity_type} />
-              )}
+              {tripData.activity_type && <ActivityBadge type={tripData.activity_type} />}
               <DifficultyBadge level={tripData.difficulty} />
-              <span className="text-sm text-stone-600">
-                {tripData.remaining_slots} of {tripData.total_slots} slots left
-              </span>
+              {totalReviewCount > 0 && avgRating !== null && (
+                <a href="#reviews" className="group flex items-center gap-1.5">
+                  <Stars rating={avgRating} />
+                  <span className="text-xs text-stone-500 underline-offset-4 group-hover:text-trailhead group-hover:underline">
+                    {avgRating.toFixed(1)} · {totalReviewCount} review{totalReviewCount !== 1 ? "s" : ""}
+                  </span>
+                </a>
+              )}
             </div>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
               {tripData.title}
             </h1>
-            <p className="mt-2 text-lg text-stone-600">{tripData.destination}</p>
-            {totalReviewCount > 0 && avgRating !== null && (
-              <a href="#reviews" className="mt-3 flex items-center gap-2 group w-fit">
-                <Stars rating={avgRating} size="lg" />
-                <span className="text-sm text-stone-600 group-hover:text-trailhead group-hover:underline underline-offset-4">
-                  {avgRating.toFixed(1)} · {totalReviewCount} review{totalReviewCount !== 1 ? "s" : ""}
-                </span>
-              </a>
-            )}
-            <div className="mt-4 flex items-center gap-4">
-              <p className="text-2xl font-bold text-trailhead">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-600">
+              <span>📍 {tripData.destination}</span>
+              <span>📅 {formatDateShort(tripData.date_start)}</span>
+              {tripData.duration && <span>⏱ {tripData.duration}</span>}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                tripData.remaining_slots === 0
+                  ? "bg-stone-100 text-stone-500"
+                  : tripData.remaining_slots < 5
+                    ? "bg-red-100 text-red-700"
+                    : "bg-stone-100 text-stone-600"
+              }`}>
+                {tripData.remaining_slots === 0
+                  ? "Full"
+                  : `${tripData.remaining_slots} of ${tripData.total_slots} slots left`}
+              </span>
+              <p className="text-xl font-bold text-trailhead lg:hidden">
                 {formatPrice(tripData.price)}
               </p>
               <ShareButton
@@ -351,36 +368,21 @@ export default async function TripDetailPage({ params }: PageProps) {
           </div>
         </section>
 
-        <section className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
-          {tripData.photos && tripData.photos.length > 0 ? (
-            <PhotoGallery photos={tripData.photos} alt={tripData.title} />
-          ) : (
-            <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80" />
-          )}
+        {/* Two-column layout */}
+        <div className="mx-auto max-w-6xl px-4 pt-4 pb-8 lg:grid lg:grid-cols-[1fr_280px] lg:items-start lg:gap-8 lg:pb-12">
 
-          <div className="mt-10 grid gap-6 sm:grid-cols-2">
-            <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-trailhead">
-                Date
-              </h2>
-              <p className="mt-2 font-medium text-stone-900">
-                {formatDate(tripData.date_start)}
-              </p>
-            </div>
-            {tripData.duration && (
-              <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-trailhead">
-                  Duration
-                </h2>
-                <p className="mt-2 font-medium text-stone-900">{tripData.duration}</p>
-              </div>
+          {/* Main column */}
+          <div className="space-y-4 pb-20 lg:pb-0">
+            {tripData.photos && tripData.photos.length > 0 ? (
+              <PhotoGallery photos={tripData.photos} alt={tripData.title} />
+            ) : (
+              <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80" />
             )}
+
             {tripData.meeting_points && tripData.meeting_points.length > 0 ? (
-              <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:col-span-2">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-trailhead">
-                  Meeting points
-                </h2>
-                <ul className="mt-3 space-y-1.5">
+              <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-trailhead">Meeting points</h2>
+                <ul className="mt-2 space-y-1">
                   {tripData.meeting_points.map((mp, idx) => (
                     <li key={idx} className="text-stone-700">
                       <span className="font-medium">{mp.location}</span>
@@ -390,199 +392,124 @@ export default async function TripDetailPage({ params }: PageProps) {
                 </ul>
               </div>
             ) : tripData.meeting_point ? (
-              <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-trailhead">
-                  Meeting point
-                </h2>
-                <p className="mt-2 font-medium text-stone-900">{tripData.meeting_point}</p>
+              <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-trailhead">Meeting point</h2>
+                <p className="mt-1.5 font-medium text-stone-900">{tripData.meeting_point}</p>
               </div>
             ) : null}
-            <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:col-span-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-trailhead">
-                Availability
-              </h2>
-              <p className="mt-2 font-medium text-stone-900">
-                {tripData.remaining_slots} remaining · {tripData.total_slots} total slots
-              </p>
-            </div>
-          </div>
 
-          {siblingRunsData && siblingRunsData.length > 0 && (
-            <div className="mt-6 rounded-2xl border border-trailhead/20 bg-trailhead-muted p-5 sm:p-6">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-trailhead">
-                Other available dates
-              </h2>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {siblingRunsData.map((run) => (
-                  <Link
-                    key={run.slug}
-                    href={`/trips/${run.slug}`}
-                    className="rounded-xl border border-trailhead/30 bg-white px-3.5 py-2 text-sm shadow-sm transition hover:border-trailhead"
-                  >
-                    <span className="font-semibold text-stone-900">
-                      {formatDate(run.date_start)}
-                    </span>
-                    {run.duration && (
-                      <span className="ml-1.5 text-stone-400">· {run.duration}</span>
-                    )}
-                    <span className="ml-2 font-bold text-trailhead">
-                      {formatPrice(run.price)}
-                    </span>
-                    {run.remaining_slots === 0 && (
-                      <span className="ml-1.5 text-xs text-stone-400">· Full</span>
-                    )}
-                    {run.remaining_slots > 0 && run.remaining_slots < 5 && (
-                      <span className="ml-1.5 text-xs text-red-600">· {run.remaining_slots} left</span>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="mt-10 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-            <h2 className="text-lg font-bold text-stone-900">About this trip</h2>
-            <p className="mt-4 whitespace-pre-line leading-relaxed text-stone-600">
-              {tripData.description}
-            </p>
-          </div>
-
-          {includesList.length > 0 && (
-            <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-              <h2 className="text-lg font-bold text-stone-900">What&apos;s included</h2>
-              <ul className="mt-4 space-y-2">
-                {includesList.map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-stone-600">
-                    <span className="mt-0.5 shrink-0 text-trailhead">✓</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {whatToBringList.length > 0 && (
-            <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-              <h2 className="text-lg font-bold text-stone-900">What to bring</h2>
-              <ul className="mt-4 space-y-2">
-                {whatToBringList.map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-stone-600">
-                    <span className="mt-0.5 shrink-0 text-stone-400">•</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {organizer && (
-            <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-              <h2 className="text-lg font-bold text-stone-900">Your organizer</h2>
-              <Link
-                href={`/organizers/${tripData.organizer_id}`}
-                className="mt-4 flex items-center gap-3 group"
-              >
-                <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-lg font-bold text-trailhead">
-                  {organizer.photo_url ? (
-                    <Image src={organizer.photo_url} alt={organizer.display_name ?? organizer.full_name} fill className="object-cover" sizes="48px" />
-                  ) : (
-                    organizer.full_name.charAt(0).toUpperCase()
-                  )}
+            {siblingRunsData && siblingRunsData.length > 0 && (
+              <div className="rounded-2xl border border-trailhead/20 bg-trailhead-muted p-4 sm:p-5">
+                <h2 className="text-sm font-bold uppercase tracking-wide text-trailhead">Other available dates</h2>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {siblingRunsData.map((run) => (
+                    <Link
+                      key={run.slug}
+                      href={`/trips/${run.slug}`}
+                      className="rounded-xl border border-trailhead/30 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-trailhead"
+                    >
+                      <span className="font-semibold text-stone-900">{formatDateShort(run.date_start)}</span>
+                      {run.duration && <span className="ml-1.5 text-stone-400">· {run.duration}</span>}
+                      <span className="ml-2 font-bold text-trailhead">{formatPrice(run.price)}</span>
+                      {run.remaining_slots === 0 && <span className="ml-1.5 text-xs text-stone-400">· Full</span>}
+                      {run.remaining_slots > 0 && run.remaining_slots < 5 && (
+                        <span className="ml-1.5 text-xs text-red-600">· {run.remaining_slots} left</span>
+                      )}
+                    </Link>
+                  ))}
                 </div>
-                <span className="font-semibold text-trailhead underline-offset-4 group-hover:underline">
-                  {organizer.display_name ?? organizer.full_name}
-                </span>
-              </Link>
-              {organizer.bio && (
-                <p className="mt-3 leading-relaxed text-stone-600">{organizer.bio}</p>
-              )}
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
+              <h2 className="text-lg font-bold text-stone-900">About this trip</h2>
+              <p className="mt-3 whitespace-pre-line leading-relaxed text-stone-600">{tripData.description}</p>
             </div>
-          )}
 
-          <CancellationPolicyCard
-            policy={tripData.cancellation_policy}
-            custom={tripData.cancellation_policy_custom}
-          />
-
-          {isOwnTrip ? (
-            <p className="mt-10 rounded-xl border border-stone-200 bg-stone-50 px-5 py-4 text-center text-sm text-stone-500">
-              You are the organizer of this trip.
-            </p>
-          ) : tripData.remaining_slots === 0 ? (
-            tripData.waitlist_enabled !== false ? (
-              <WaitlistModal
-                tripId={tripData.id}
-                tripSlug={slug}
-                tripTitle={tripData.title}
-                defaultName={
-                  (user?.user_metadata?.full_name as string | undefined)?.trim() ??
-                  user?.email?.split("@")[0] ??
-                  ""
-                }
-                defaultEmail={user?.email ?? ""}
-                isOnWaitlist={!!existingWaitlistEntry}
-              />
-            ) : (
-              <p className="mt-10 rounded-xl border border-stone-200 bg-stone-50 px-5 py-4 text-center text-sm text-stone-500">
-                This trip is full.
-              </p>
-            )
-          ) : (
-            <BookingModal
-              tripId={tripData.id}
-              tripSlug={slug}
-              tripTitle={tripData.title}
-              unitPrice={getUnitPrice(tripData.price)}
-              remainingSlots={tripData.remaining_slots}
-              paymentType={tripData.payment_type ?? "full"}
-              minDownpayment={tripData.min_downpayment ?? null}
-              meetingPoints={tripData.meeting_points ?? []}
-            />
-          )}
-
-          {/* Reviews */}
-          {organizer && (
-            <div className="mt-12" id="reviews">
-              <div className="flex items-baseline justify-between gap-4">
-                <h2 className="text-xl font-bold tracking-tight text-stone-900">
-                  Reviews for {organizer.display_name ?? organizer.full_name}
-                  {totalReviewCount > 0 && (
-                    <span className="ml-2 text-base font-normal text-stone-500">
-                      ({totalReviewCount})
-                    </span>
-                  )}
-                </h2>
-                {totalReviewCount > 3 && (
-                  <Link
-                    href={`/organizers/${tripData.organizer_id}`}
-                    className="shrink-0 text-sm font-semibold text-trailhead underline-offset-4 hover:underline"
-                  >
-                    See all →
-                  </Link>
+            {(includesList.length > 0 || whatToBringList.length > 0) && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {includesList.length > 0 && (
+                  <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+                    <h2 className="text-base font-bold text-stone-900">What&apos;s included</h2>
+                    <ul className="mt-3 space-y-1.5">
+                      {includesList.map((item) => (
+                        <li key={item} className="flex items-start gap-2 text-sm text-stone-600">
+                          <span className="mt-0.5 shrink-0 text-trailhead">✓</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {whatToBringList.length > 0 && (
+                  <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+                    <h2 className="text-base font-bold text-stone-900">What to bring</h2>
+                    <ul className="mt-3 space-y-1.5">
+                      {whatToBringList.map((item) => (
+                        <li key={item} className="flex items-start gap-2 text-sm text-stone-600">
+                          <span className="mt-0.5 shrink-0 text-stone-400">•</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
+            )}
 
-              {reviews.length === 0 && (
-                <p className="mt-4 text-stone-500">No reviews yet for this organizer.</p>
-              )}
+            {organizer && (
+              <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
+                <h2 className="text-lg font-bold text-stone-900">Your organizer</h2>
+                <Link href={`/organizers/${tripData.organizer_id}`} className="mt-3 flex items-center gap-3 group">
+                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-base font-bold text-trailhead">
+                    {organizer.photo_url ? (
+                      <Image src={organizer.photo_url} alt={organizer.display_name ?? organizer.full_name} fill className="object-cover" sizes="40px" />
+                    ) : (
+                      organizer.full_name.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <span className="font-semibold text-trailhead underline-offset-4 group-hover:underline">
+                    {organizer.display_name ?? organizer.full_name}
+                  </span>
+                </Link>
+                {organizer.bio && (
+                  <p className="mt-3 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
+                )}
+              </div>
+            )}
 
-              {reviews.length > 0 && (
-                <ul className="mt-6 space-y-4">
-                  {reviews.map((review) => (
-                    <li
-                      key={review.id}
-                      className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-4">
+            <CancellationPolicyCard
+              policy={tripData.cancellation_policy}
+              custom={tripData.cancellation_policy_custom}
+            />
+
+            {organizer && (
+              <div id="reviews">
+                <div className="flex items-baseline justify-between gap-4">
+                  <h2 className="text-xl font-bold tracking-tight text-stone-900">
+                    Reviews for {organizer.display_name ?? organizer.full_name}
+                    {totalReviewCount > 0 && (
+                      <span className="ml-2 text-base font-normal text-stone-500">({totalReviewCount})</span>
+                    )}
+                  </h2>
+                  {totalReviewCount > 3 && (
+                    <Link href={`/organizers/${tripData.organizer_id}`} className="shrink-0 text-sm font-semibold text-trailhead underline-offset-4 hover:underline">
+                      See all →
+                    </Link>
+                  )}
+                </div>
+                {reviews.length === 0 && (
+                  <p className="mt-4 text-stone-500">No reviews yet for this organizer.</p>
+                )}
+                {reviews.length > 0 && (
+                  <ul className="mt-4 space-y-4">
+                    {reviews.map((review) => (
+                      <li key={review.id} className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
                         <div>
-                          <p className="font-semibold text-stone-900">
-                            {review.full_name ?? "Verified adventurer"}
-                          </p>
+                          <p className="font-semibold text-stone-900">{review.full_name ?? "Verified adventurer"}</p>
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                             <Stars rating={review.rating} />
-                            <span className="text-xs text-stone-400">
-                              {formatReviewDate(review.created_at)}
-                            </span>
+                            <span className="text-xs text-stone-400">{formatReviewDate(review.created_at)}</span>
                           </div>
                           {review.trips && (
                             <p className="mt-1 text-xs text-stone-400">
@@ -590,24 +517,115 @@ export default async function TripDetailPage({ params }: PageProps) {
                             </p>
                           )}
                         </div>
-                      </div>
-                      <p className="mt-3 leading-relaxed text-stone-600">{review.body}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                        <p className="mt-3 leading-relaxed text-stone-600">{review.body}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {totalReviewCount > 3 && (
+                  <Link href={`/organizers/${tripData.organizer_id}`} className="mt-4 inline-block text-sm font-semibold text-trailhead underline-offset-4 hover:underline">
+                    See all {totalReviewCount} reviews →
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
 
-              {totalReviewCount > 3 && (
-                <Link
-                  href={`/organizers/${tripData.organizer_id}`}
-                  className="mt-6 inline-block text-sm font-semibold text-trailhead underline-offset-4 hover:underline"
-                >
-                  See all {totalReviewCount} reviews →
-                </Link>
+          {/* Desktop sidebar */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-[72px] space-y-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+              <div>
+                <p className="text-2xl font-bold text-trailhead">{formatPrice(tripData.price)}</p>
+                <p className="text-xs text-stone-500">per person</p>
+              </div>
+              <div className={`rounded-xl px-3 py-2 text-sm font-medium ${
+                tripData.remaining_slots === 0
+                  ? "bg-stone-100 text-stone-500"
+                  : tripData.remaining_slots < 5
+                    ? "bg-red-50 text-red-700"
+                    : "bg-stone-50 text-stone-600"
+              }`}>
+                {tripData.remaining_slots === 0
+                  ? "This trip is full"
+                  : `${tripData.remaining_slots} of ${tripData.total_slots} slots left`}
+              </div>
+              {isOwnTrip ? (
+                <p className="text-sm text-stone-500">You are the organizer of this trip.</p>
+              ) : tripData.remaining_slots === 0 ? (
+                tripData.waitlist_enabled !== false ? (
+                  <WaitlistModal
+                    compact
+                    tripId={tripData.id}
+                    tripSlug={slug}
+                    tripTitle={tripData.title}
+                    defaultName={(user?.user_metadata?.full_name as string | undefined)?.trim() ?? user?.email?.split("@")[0] ?? ""}
+                    defaultEmail={user?.email ?? ""}
+                    isOnWaitlist={!!existingWaitlistEntry}
+                  />
+                ) : (
+                  <p className="text-sm text-stone-500">This trip is full.</p>
+                )
+              ) : (
+                <BookingModal
+                  compact
+                  tripId={tripData.id}
+                  tripSlug={slug}
+                  tripTitle={tripData.title}
+                  unitPrice={getUnitPrice(tripData.price)}
+                  remainingSlots={tripData.remaining_slots}
+                  paymentType={tripData.payment_type ?? "full"}
+                  minDownpayment={tripData.min_downpayment ?? null}
+                  meetingPoints={tripData.meeting_points ?? []}
+                />
               )}
             </div>
-          )}
-        </section>
+          </aside>
+        </div>
+
+        {/* Mobile fixed bottom bar */}
+        {!isOwnTrip && (
+          <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur-sm lg:hidden">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-base font-bold text-trailhead">{formatPrice(tripData.price)}</p>
+                <p className="text-xs text-stone-500">
+                  {tripData.remaining_slots === 0 ? "Full" : `${tripData.remaining_slots} slots left`}
+                </p>
+              </div>
+              <div className="w-44 shrink-0">
+                {tripData.remaining_slots === 0 ? (
+                  tripData.waitlist_enabled !== false ? (
+                    <WaitlistModal
+                      compact
+                      tripId={tripData.id}
+                      tripSlug={slug}
+                      tripTitle={tripData.title}
+                      defaultName={(user?.user_metadata?.full_name as string | undefined)?.trim() ?? user?.email?.split("@")[0] ?? ""}
+                      defaultEmail={user?.email ?? ""}
+                      isOnWaitlist={!!existingWaitlistEntry}
+                    />
+                  ) : (
+                    <button disabled className="w-full cursor-not-allowed rounded-xl bg-stone-200 px-5 py-3 text-sm font-semibold text-stone-500">
+                      Full
+                    </button>
+                  )
+                ) : (
+                  <BookingModal
+                    compact
+                    tripId={tripData.id}
+                    tripSlug={slug}
+                    tripTitle={tripData.title}
+                    unitPrice={getUnitPrice(tripData.price)}
+                    remainingSlots={tripData.remaining_slots}
+                    paymentType={tripData.payment_type ?? "full"}
+                    minDownpayment={tripData.min_downpayment ?? null}
+                    meetingPoints={tripData.meeting_points ?? []}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       <footer className="border-t border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-500">
