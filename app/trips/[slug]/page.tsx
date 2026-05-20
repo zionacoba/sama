@@ -241,6 +241,7 @@ export default async function TripDetailPage({ params }: PageProps) {
     reviewCountResult,
     { data: organizerData },
     { data: siblingRunsData },
+    { data: userOrgData },
   ] = await Promise.all([
     tripData.organizer_id
       ? supabase
@@ -269,7 +270,15 @@ export default async function TripDetailPage({ params }: PageProps) {
           .gt("date_start", new Date().toISOString())
           .order("date_start", { ascending: true })
       : Promise.resolve({ data: null }),
+    user
+      ? supabase.from("organizers").select("id").eq("user_id", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+
+  const isOwnTrip =
+    !!userOrgData?.id &&
+    !!tripData.organizer_id &&
+    String(userOrgData.id) === String(tripData.organizer_id);
 
   const reviews = (reviewsData ?? []) as unknown as Review[];
   const totalReviewCount = reviewCountResult.count ?? reviews.length;
@@ -489,16 +498,22 @@ export default async function TripDetailPage({ params }: PageProps) {
             custom={tripData.cancellation_policy_custom}
           />
 
-          <BookingModal
-            tripId={tripData.id}
-            tripSlug={slug}
-            tripTitle={tripData.title}
-            unitPrice={getUnitPrice(tripData.price)}
-            remainingSlots={tripData.remaining_slots}
-            paymentType={tripData.payment_type ?? "full"}
-            minDownpayment={tripData.min_downpayment ?? null}
-            meetingPoints={tripData.meeting_points ?? []}
-          />
+          {isOwnTrip ? (
+            <p className="mt-10 rounded-xl border border-stone-200 bg-stone-50 px-5 py-4 text-center text-sm text-stone-500">
+              You are the organizer of this trip.
+            </p>
+          ) : (
+            <BookingModal
+              tripId={tripData.id}
+              tripSlug={slug}
+              tripTitle={tripData.title}
+              unitPrice={getUnitPrice(tripData.price)}
+              remainingSlots={tripData.remaining_slots}
+              paymentType={tripData.payment_type ?? "full"}
+              minDownpayment={tripData.min_downpayment ?? null}
+              meetingPoints={tripData.meeting_points ?? []}
+            />
+          )}
 
           {/* Reviews */}
           {organizer && (

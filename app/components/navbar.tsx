@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { signOut } from "@/app/actions/auth";
+import { MobileMenu } from "./mobile-menu";
 
 const ADMIN_EMAIL = "acobapaulzion@gmail.com";
 
@@ -101,45 +102,45 @@ export async function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-3.5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-1">
-            <Link href="/" className="text-lg font-bold tracking-tight text-trailhead">
-              ⛰ Sama
-            </Link>
-            <nav className="hidden items-center gap-1 sm:flex" aria-label="Main">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-trailhead-muted hover:text-trailhead"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-          <div className="sm:hidden">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
+        <div className="flex items-center gap-1">
+          <Link href="/" className="text-lg font-bold tracking-tight text-trailhead">
+            ⛰ Sama
+          </Link>
+          <nav className="hidden items-center gap-1 sm:flex" aria-label="Main">
+            {navLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-trailhead-muted hover:text-trailhead"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Desktop auth */}
+          <div className="hidden sm:flex">
             {user
-              ? <AuthLinks displayName={displayName} email={user.email ?? ""} organizerStatus={organizerStatus} organizerId={organizerId} />
+              ? <AuthLinks
+                  email={user.email ?? ""}
+                  displayName={displayName}
+                  organizerStatus={organizerStatus}
+                  organizerId={organizerId}
+                />
               : loginLink}
           </div>
-        </div>
-        <nav className="-mx-1 flex items-center gap-1 overflow-x-auto pb-1 sm:hidden" aria-label="Main mobile">
-          {navLinks.map((link) => (
-            <Link
-              key={link.label}
-              href={link.href}
-              className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-trailhead-muted hover:text-trailhead"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="hidden sm:flex">
-          {user
-            ? <AuthLinks displayName={displayName} email={user.email ?? ""} organizerStatus={organizerStatus} organizerId={organizerId} />
-            : loginLink}
+
+          {/* Mobile hamburger */}
+          <MobileMenu
+            isLoggedIn={!!user}
+            email={user?.email ?? ""}
+            displayName={displayName}
+            organizerStatus={organizerStatus}
+            organizerId={organizerId}
+          />
         </div>
       </div>
     </header>
