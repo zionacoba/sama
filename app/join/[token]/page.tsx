@@ -23,7 +23,7 @@ export default async function JoinPage({ params }: PageProps) {
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("trip_id, full_name")
+    .select("trip_id, full_name, meeting_point")
     .eq("id", participant.booking_id)
     .maybeSingle();
 
@@ -89,7 +89,12 @@ export default async function JoinPage({ params }: PageProps) {
         ) : (
           <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-base font-bold text-stone-900">Confirm your spot</h2>
-            <ParticipantForm token={token} meetingPoints={meetingPoints} waiverText={waiverText} />
+            <ParticipantForm
+              token={token}
+              meetingPoints={meetingPoints}
+              waiverText={waiverText}
+              defaultMeetingPoint={(booking.meeting_point as string | null) ?? null}
+            />
           </div>
         )}
       </main>

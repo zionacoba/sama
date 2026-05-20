@@ -9,9 +9,10 @@ type Props = {
   token: string;
   meetingPoints: MeetingPoint[];
   waiverText: string;
+  defaultMeetingPoint: string | null;
 };
 
-export function ParticipantForm({ token, meetingPoints, waiverText }: Props) {
+export function ParticipantForm({ token, meetingPoints, waiverText, defaultMeetingPoint }: Props) {
   const [state, action, pending] = useActionState(confirmParticipant, null);
 
   if (state && "success" in state) {
@@ -92,6 +93,11 @@ export function ParticipantForm({ token, meetingPoints, waiverText }: Props) {
             id="meeting_point"
             name="meeting_point"
             required
+            defaultValue={
+              defaultMeetingPoint && meetingPoints.some((mp) => mp.location === defaultMeetingPoint)
+                ? defaultMeetingPoint
+                : ""
+            }
             className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
           >
             <option value="">Select a pickup point…</option>
