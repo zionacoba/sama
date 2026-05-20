@@ -72,21 +72,14 @@ function DifficultyBadge({ level }: { level: string }) {
 export default async function OrganizerProfilePage({ params }: PageProps) {
   const { id } = await params;
 
-  console.log("[organizers/[id]] params id:", id);
-
   const admin = createSupabaseAdminClient();
 
-  const { data: testData, error: testError } = await admin.from("organizers").select("*").limit(1);
-  console.log("[organizers test] all organizers:", testData, testError);
-
   // All queries use admin client to bypass RLS on this public page
-  const { data: organizer, error: organizerError } = await admin
+  const { data: organizer } = await admin
     .from("organizers")
     .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links")
     .eq("id", id)
     .maybeSingle();
-
-  console.log("[organizers/[id]] id:", id, "organizer:", organizer, "error:", organizerError);
 
   if (!organizer) notFound();
 
@@ -137,7 +130,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
         </div>
       </header>
 
-      <div className="relative h-32 w-full overflow-hidden bg-trailhead sm:h-44">
+      <div className="relative h-36 w-full overflow-hidden bg-trailhead sm:h-48">
         {organizer.cover_image_url && (
           <Image
             src={organizer.cover_image_url}
@@ -151,39 +144,39 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/20 to-transparent" />
       </div>
 
-      <main className="mx-auto max-w-3xl px-4 pb-8 sm:pb-10">
-        {/* Organizer hero — card overlaps banner 20px, avatar peeks 20px above card top */}
-        <div className="-mt-5">
-          <div className="rounded-2xl border border-stone-200 bg-white shadow-lg">
-            <div className="flex items-end gap-4 px-5 pt-5">
-              <div className="-mt-10 relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-lg font-bold text-trailhead ring-2 ring-white">
-                {organizer.photo_url ? (
-                  <Image
-                    src={organizer.photo_url}
-                    alt={publicName}
-                    fill
-                    className="object-cover"
-                    sizes="64px"
-                  />
-                ) : (
-                  initials
-                )}
+      <main className="mx-auto max-w-3xl px-4 pb-10 sm:pb-12">
+        {/* Avatar sits half above the card top edge */}
+        <div className="relative -mt-8 px-5">
+          <div className="inline-flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-lg font-bold text-trailhead ring-4 ring-stone-50 sm:h-20 sm:w-20 sm:text-xl">
+            {organizer.photo_url ? (
+              <Image
+                src={organizer.photo_url}
+                alt={publicName}
+                fill
+                className="object-cover"
+                sizes="80px"
+              />
+            ) : (
+              initials
+            )}
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-2xl border border-stone-200 bg-white shadow-sm">
+          <div className="px-6 pt-5">
+            <h1 className="text-xl font-bold tracking-tight text-stone-900 sm:text-2xl">
+              {publicName}
+            </h1>
+            {avgRating !== null && (
+              <div className="mt-1 flex items-center gap-1.5">
+                <Stars rating={avgRating} />
+                <span className="text-sm font-semibold text-stone-700">{avgRating.toFixed(1)}</span>
+                <span className="text-sm text-stone-400">({reviews.length} review{reviews.length !== 1 ? "s" : ""})</span>
               </div>
-              <div className="min-w-0 pb-1">
-                <h1 className="text-xl font-bold tracking-tight text-stone-900">
-                  {publicName}
-                </h1>
-                {avgRating !== null && (
-                  <div className="mt-0.5 flex items-center gap-1.5">
-                    <Stars rating={avgRating} />
-                    <span className="text-sm font-semibold text-stone-700">{avgRating.toFixed(1)}</span>
-                    <span className="text-sm text-stone-400">({reviews.length} review{reviews.length !== 1 ? "s" : ""})</span>
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
+          </div>
             {organizer.bio && (
-              <p className="mt-3 px-5 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
+              <p className="mt-3 px-6 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
             )}
             {(() => {
               const sl = organizer.social_links as { facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
@@ -206,7 +199,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
               ].filter((l) => l.url);
               if (links.length === 0) return null;
               return (
-                <div className="mt-3 flex items-center gap-2 px-5">
+                <div className="mt-3 flex items-center gap-2 px-6">
                   {links.map(({ key, url, icon, label }) => (
                     <a
                       key={key}
@@ -222,7 +215,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                 </div>
               );
             })()}
-            <div className="mx-5 mt-4 flex flex-wrap gap-5 border-t border-stone-100 pb-5 pt-4 text-sm">
+            <div className="mx-6 mt-4 flex flex-wrap gap-5 border-t border-stone-100 pb-6 pt-4 text-sm">
               <div>
                 <p className="text-lg font-bold text-stone-900">{trips.length}</p>
                 <p className="text-stone-500">trip{trips.length !== 1 ? "s" : ""} led</p>
@@ -232,7 +225,6 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                 <p className="text-stone-500">review{reviews.length !== 1 ? "s" : ""}</p>
               </div>
             </div>
-          </div>
         </div>
 
         {/* Upcoming trips */}
