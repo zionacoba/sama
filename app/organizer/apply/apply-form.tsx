@@ -177,6 +177,7 @@ export function ApplyForm() {
         <label className="flex cursor-pointer items-start gap-3">
           <input
             type="checkbox"
+            name="terms_agreed"
             required
             className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 accent-trailhead focus:ring-2 focus:ring-trailhead/30"
           />
@@ -191,6 +192,7 @@ export function ApplyForm() {
         <label className="flex cursor-pointer items-start gap-3">
           <input
             type="checkbox"
+            name="accuracy_confirmed"
             required
             className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 accent-trailhead focus:ring-2 focus:ring-trailhead/30"
           />

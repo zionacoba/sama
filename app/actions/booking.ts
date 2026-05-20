@@ -46,6 +46,9 @@ export async function createBooking(input: CreateBookingInput) {
   console.log("Looking for slug:", input.tripSlug, "Result:", trip, "Error:", tripFetchError);
 
   if (!trip) return { error: "Trip not found." };
+  if (!input.waiverAgreed || !input.platformWaiverAgreed) {
+    return { error: "You must agree to both waivers before booking." };
+  }
   if (trip.remaining_slots < input.slots) {
     return { error: "Not enough slots available. Please try booking fewer slots or check back later." };
   }

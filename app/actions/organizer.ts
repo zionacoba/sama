@@ -25,9 +25,14 @@ export async function applyToBeOrganizer(
   const activityTypes = formData.getAll("activity_types") as string[];
   const yearsOfExperience = Number((formData.get("years_of_experience") as string)?.trim());
   const emergencyCertified = formData.get("emergency_certified") === "on";
+  const termsAgreed = formData.get("terms_agreed") === "on";
+  const accuracyConfirmed = formData.get("accuracy_confirmed") === "on";
 
   if (!displayName || !fullName || !bio || !phone || !facebookUrl || !pastTripsEvidence) {
     return { error: "All required fields must be filled in." };
+  }
+  if (!termsAgreed || !accuracyConfirmed) {
+    return { error: "You must agree to the terms and confirm the accuracy of your application." };
   }
   if (activityTypes.length === 0) {
     return { error: "Please select at least one activity type." };

@@ -28,12 +28,22 @@ export async function confirmParticipant(
 
   const { data: participant } = await admin
     .from("booking_participants")
-    .select("id, completed")
+    .select("id, completed, booking_id")
     .eq("token", token)
     .maybeSingle();
 
   if (!participant) return { error: "Invalid or expired link." };
   if (participant.completed) return { error: "This spot has already been confirmed." };
+
+  const { data: booking } = await admin
+    .from("bookings")
+    .select("status")
+    .eq("id", participant.booking_id)
+    .maybeSingle();
+
+  if (!booking || booking.status === "cancelled") {
+    return { error: "This booking has been cancelled." };
+  }
 
   const { error } = await admin
     .from("booking_participants")
