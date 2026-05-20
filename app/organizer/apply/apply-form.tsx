@@ -9,14 +9,26 @@ const inputClass =
 export function ApplyForm() {
   const [state, action, pending] = useActionState(applyToBeOrganizer, null);
 
+  if (state && "success" in state) {
+    return (
+      <div className="text-center">
+        <p className="text-4xl">⏳</p>
+        <h2 className="mt-4 text-xl font-bold text-stone-900">Application submitted!</h2>
+        <p className="mt-2 text-sm text-stone-600">
+          We&apos;ll review it and get back to you within 24 hours.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form action={action} className="space-y-5">
-      {state?.error && (
+      {"error" in (state ?? {}) && (
         <p
           role="alert"
           className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
         >
-          {state.error}
+          {(state as { error: string }).error}
         </p>
       )}
 

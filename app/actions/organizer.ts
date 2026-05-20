@@ -6,9 +6,9 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 const ADMIN_EMAIL = "acobapaulzion@gmail.com";
 
 export async function applyToBeOrganizer(
-  _prevState: { error: string } | null,
+  _prevState: { error: string } | { success: true } | null,
   formData: FormData,
-) {
+): Promise<{ error: string } | { success: true }> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -41,7 +41,7 @@ export async function applyToBeOrganizer(
     return { error: error.message };
   }
 
-  redirect("/organizer/apply");
+  return { success: true };
 }
 
 export async function updateOrganizerProfile(

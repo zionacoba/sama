@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { signOut } from "@/app/actions/auth";
 
+const ADMIN_EMAIL = "acobapaulzion@gmail.com";
+
 const navLinks = [
   { label: "Explore", href: "/trips" },
 ] as const;
@@ -14,12 +16,20 @@ type AuthLinksProps = {
   className?: string;
 };
 
-function AuthLinks({ email: _email, displayName, organizerStatus, organizerId, className }: AuthLinksProps) {
+function AuthLinks({ email, displayName, organizerStatus, organizerId, className }: AuthLinksProps) {
   return (
     <div className={`flex items-center gap-2 sm:gap-3 ${className ?? ""}`}>
       <span className="hidden max-w-[200px] truncate text-sm text-stone-600 sm:inline">
         {displayName}
       </span>
+      {email === ADMIN_EMAIL && (
+        <Link
+          href="/admin/organizers"
+          className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
+        >
+          Admin
+        </Link>
+      )}
       <Link
         href="/profile"
         className="shrink-0 text-sm font-medium text-stone-600 transition hover:text-trailhead"
