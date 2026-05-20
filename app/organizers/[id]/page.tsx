@@ -343,6 +343,14 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
         <Link href="/organizer/apply" className="underline-offset-4 hover:text-trailhead hover:underline">
           Become an Organizer
         </Link>
+        {" · "}
+        <Link href="/terms" className="underline-offset-4 hover:text-trailhead hover:underline">
+          Terms of Service
+        </Link>
+        {" · "}
+        <Link href="/privacy" className="underline-offset-4 hover:text-trailhead hover:underline">
+          Privacy Policy
+        </Link>
       </footer>
     </div>
   );
