@@ -96,35 +96,35 @@ function BookingCard({
 }) {
   const { trip } = booking;
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm sm:flex-row">
-      <div className="relative aspect-[16/9] shrink-0 overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:aspect-auto sm:w-40">
+    <article className="flex overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
+      <div className="relative w-24 shrink-0 overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:w-32">
         {trip.photos?.[0] && (
           <Image
             src={trip.photos[0]}
             alt={trip.title}
             fill
             className="object-cover"
-            sizes="(min-width: 640px) 160px, 100vw"
+            sizes="(min-width: 640px) 128px, 96px"
             quality={75}
           />
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
+        <div className="flex flex-wrap items-start justify-between gap-1.5">
           <div>
             <Link
               href={`/trips/${trip.slug}`}
-              className="font-bold text-stone-900 underline-offset-4 hover:text-trailhead hover:underline"
+              className="text-sm font-semibold text-stone-900 underline-offset-4 hover:text-trailhead hover:underline"
             >
               {trip.title}
             </Link>
-            <p className="mt-0.5 text-sm text-stone-500">{trip.destination}</p>
+            <p className="text-xs text-stone-500">{trip.destination}</p>
           </div>
           <StatusBadge status={booking.status} />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           <DifficultyBadge level={trip.difficulty} />
           {trip.activity_type && (
             <span className="inline-flex items-center rounded-full bg-trailhead-muted px-2 py-0.5 text-xs font-semibold text-trailhead">
@@ -133,26 +133,12 @@ function BookingCard({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
-          <div>
-            <p className="text-xs text-stone-400">Date</p>
-            <p className="font-medium text-stone-700">
-              {formatDate(trip.date_start)}{trip.duration && ` · ${trip.duration}`}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-stone-400">Slots</p>
-            <p className="font-medium text-stone-700">{booking.slots}</p>
-          </div>
-          <div>
-            <p className="text-xs text-stone-400">Total paid</p>
-            <p className="font-medium text-stone-700">{formatCurrency(booking.total_amount)}</p>
-          </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-stone-500">
+          <span>{formatDate(trip.date_start)}{trip.duration && ` · ${trip.duration}`}</span>
+          <span>{booking.slots} slot{booking.slots !== 1 ? "s" : ""}</span>
+          <span>{formatCurrency(booking.total_amount)}</span>
           {!past && trip.meeting_point && (
-            <div className="col-span-2 sm:col-span-3">
-              <p className="text-xs text-stone-400">Meeting point</p>
-              <p className="font-medium text-stone-700">{trip.meeting_point}</p>
-            </div>
+            <span className="w-full text-stone-400">Meet: {trip.meeting_point}</span>
           )}
         </div>
 
@@ -169,7 +155,7 @@ function BookingCard({
         )}
 
         {past && booking.status === "confirmed" && reviewed && (
-          <p className="mt-auto pt-1 text-xs text-stone-400">Review submitted ✓</p>
+          <p className="text-xs text-stone-400">Review submitted ✓</p>
         )}
       </div>
     </article>
