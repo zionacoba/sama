@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type PageProps = {
@@ -73,26 +72,27 @@ function DifficultyBadge({ level }: { level: string }) {
 export default async function OrganizerProfilePage({ params }: PageProps) {
   const { id } = await params;
 
-  const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
 
-  // Use admin client to bypass RLS — organizer profiles are public pages
-  const { data: organizer } = await admin
+  // All queries use admin client to bypass RLS on this public page
+  const { data: organizer, error: organizerError } = await admin
     .from("organizers")
     .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links")
     .eq("id", id)
     .maybeSingle();
 
+  console.log("[organizers/[id]] id:", id, "organizer:", organizer, "error:", organizerError);
+
   if (!organizer) notFound();
 
   const [{ data: allTrips }, { data: reviewsData }] = await Promise.all([
-    supabase
+    admin
       .from("trips")
       .select("id, slug, title, activity_type, difficulty, date_start, price, total_slots, remaining_slots, photos")
       .eq("organizer_id", id)
       .eq("status", "active")
       .order("date_start", { ascending: true }),
-    supabase
+    admin
       .from("reviews")
       .select("id, full_name, rating, body, created_at, trips(title, slug, date_start)")
       .eq("organizer_id", id)
