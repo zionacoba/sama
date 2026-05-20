@@ -322,7 +322,7 @@ export default async function TripDetailPage({ params }: PageProps) {
 
       <main>
         {/* Compact hero */}
-        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 pt-6 pb-4">
+        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 pt-8 pb-6">
           <div className="mx-auto max-w-6xl">
             <div className="flex flex-wrap items-center gap-2">
               {tripData.activity_type && <ActivityBadge type={tripData.activity_type} />}
@@ -336,15 +336,15 @@ export default async function TripDetailPage({ params }: PageProps) {
                 </a>
               )}
             </div>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+            <h1 className="mt-3 text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
               {tripData.title}
             </h1>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-600">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-600">
               <span>📍 {tripData.destination}</span>
               <span>📅 {formatDateShort(tripData.date_start)}</span>
               {tripData.duration && <span>⏱ {tripData.duration}</span>}
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 tripData.remaining_slots === 0
                   ? "bg-stone-100 text-stone-500"
@@ -381,7 +381,7 @@ export default async function TripDetailPage({ params }: PageProps) {
 
             {tripData.meeting_points && tripData.meeting_points.length > 0 ? (
               <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-trailhead">Meeting points</h2>
+                <h2 className="text-xs font-semibold text-stone-500">Meeting points</h2>
                 <ul className="mt-2 space-y-1">
                   {tripData.meeting_points.map((mp, idx) => (
                     <li key={idx} className="text-stone-700">
@@ -393,14 +393,14 @@ export default async function TripDetailPage({ params }: PageProps) {
               </div>
             ) : tripData.meeting_point ? (
               <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-trailhead">Meeting point</h2>
+                <h2 className="text-xs font-semibold text-stone-500">Meeting point</h2>
                 <p className="mt-1.5 font-medium text-stone-900">{tripData.meeting_point}</p>
               </div>
             ) : null}
 
             {siblingRunsData && siblingRunsData.length > 0 && (
               <div className="rounded-2xl border border-trailhead/20 bg-trailhead-muted p-4 sm:p-5">
-                <h2 className="text-sm font-bold uppercase tracking-wide text-trailhead">Other available dates</h2>
+                <h2 className="text-xs font-semibold text-stone-500">Other available dates</h2>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {siblingRunsData.map((run) => (
                     <Link

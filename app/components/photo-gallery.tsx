@@ -73,7 +73,7 @@ export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string })
     <div className="space-y-2">
       {/* Hero */}
       <div
-        className="relative aspect-[16/9] select-none overflow-hidden rounded-2xl bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80"
+        className="relative aspect-[16/9] max-h-80 select-none overflow-hidden rounded-2xl bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
