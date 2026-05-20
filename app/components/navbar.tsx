@@ -83,7 +83,7 @@ export async function Navbar() {
       .maybeSingle();
 
     organizerStatus = organizer?.status ?? null;
-    organizerId = organizer ? user.id : null;
+    organizerId = organizer?.id ? String(organizer.id) : null;
 
     const fullName = user.user_metadata?.full_name as string | undefined;
     displayName = fullName?.trim()

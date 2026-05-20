@@ -41,7 +41,6 @@ type OrganizerInfo = {
   full_name: string;
   bio: string | null;
   photo_url: string | null;
-  user_id: string | null;
 };
 
 type Review = {
@@ -272,7 +271,7 @@ export default async function TripDetailPage({ params }: PageProps) {
           .eq("organizer_id", tripData.organizer_id)
       : Promise.resolve({ count: 0 }),
     tripData.organizer_id
-      ? createSupabaseAdminClient().from("organizers").select("display_name, full_name, bio, photo_url, user_id").eq("id", tripData.organizer_id).maybeSingle()
+      ? createSupabaseAdminClient().from("organizers").select("display_name, full_name, bio, photo_url").eq("id", tripData.organizer_id).maybeSingle()
       : Promise.resolve({ data: null }),
     tripData.template_id
       ? supabase
@@ -463,7 +462,7 @@ export default async function TripDetailPage({ params }: PageProps) {
             {organizer && (
               <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
                 <h2 className="text-lg font-bold text-stone-900">Your organizer</h2>
-                <Link href={`/organizers/${organizer?.user_id ?? tripData.organizer_id}`} className="mt-3 flex items-center gap-3 group">
+                <Link href={`/organizers/${tripData.organizer_id}`} className="mt-3 flex items-center gap-3 group">
                   <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-base font-bold text-trailhead">
                     {organizer.photo_url ? (
                       <Image src={organizer.photo_url} alt={organizer.display_name ?? organizer.full_name} fill className="object-cover" sizes="40px" />
@@ -496,7 +495,7 @@ export default async function TripDetailPage({ params }: PageProps) {
                     )}
                   </h2>
                   {totalReviewCount > 3 && (
-                    <Link href={`/organizers/${organizer?.user_id ?? tripData.organizer_id}`} className="shrink-0 text-sm font-semibold text-trailhead underline-offset-4 hover:underline">
+                    <Link href={`/organizers/${tripData.organizer_id}`} className="shrink-0 text-sm font-semibold text-trailhead underline-offset-4 hover:underline">
                       See all →
                     </Link>
                   )}
@@ -526,7 +525,7 @@ export default async function TripDetailPage({ params }: PageProps) {
                   </ul>
                 )}
                 {totalReviewCount > 3 && (
-                  <Link href={`/organizers/${organizer?.user_id ?? tripData.organizer_id}`} className="mt-4 inline-block text-sm font-semibold text-trailhead underline-offset-4 hover:underline">
+                  <Link href={`/organizers/${tripData.organizer_id}`} className="mt-4 inline-block text-sm font-semibold text-trailhead underline-offset-4 hover:underline">
                     See all {totalReviewCount} reviews →
                   </Link>
                 )}

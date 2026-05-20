@@ -77,27 +77,25 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
   const admin = createSupabaseAdminClient();
 
   // Use admin client to bypass RLS — organizer profiles are public pages
-  // URL param is user_id (auth UUID), not the organizers table PK
   const { data: organizer } = await admin
     .from("organizers")
     .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links")
-    .eq("user_id", id)
+    .eq("id", id)
     .maybeSingle();
 
   if (!organizer) notFound();
 
-  // trips and reviews use organizer.id (the PK), not the URL param
   const [{ data: allTrips }, { data: reviewsData }] = await Promise.all([
     supabase
       .from("trips")
       .select("id, slug, title, activity_type, difficulty, date_start, price, total_slots, remaining_slots, photos")
-      .eq("organizer_id", organizer.id)
+      .eq("organizer_id", id)
       .eq("status", "active")
       .order("date_start", { ascending: true }),
     supabase
       .from("reviews")
       .select("id, full_name, rating, body, created_at, trips(title, slug, date_start)")
-      .eq("organizer_id", organizer.id)
+      .eq("organizer_id", id)
       .order("created_at", { ascending: false }),
   ]);
 
