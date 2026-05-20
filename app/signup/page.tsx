@@ -63,10 +63,10 @@ export default function SignupPage() {
         <div className="w-full max-w-md">
           <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
             <h1 className="text-2xl font-bold tracking-tight text-stone-900">
-              Create your account
+              Sama ka ba?
             </h1>
             <p className="mt-1 text-sm text-stone-600">
-              Join Sama to discover and book outdoor adventures.
+              Start exploring the Philippines with people who love the outdoors.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
