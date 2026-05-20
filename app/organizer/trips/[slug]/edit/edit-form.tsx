@@ -51,7 +51,9 @@ export function EditTripForm({
 }) {
   const [state, action] = useActionState(updateTrip, null);
   const [isPending, startTransition] = useTransition();
-  const [photoItems, setPhotoItems] = useState<PhotoItem[]>([]);
+  const [photoItems, setPhotoItems] = useState<PhotoItem[]>(
+    (trip.photos ?? []).map((url) => ({ kind: "url" as const, url })),
+  );
   const [isTemplate, setIsTemplate] = useState(trip.is_template ?? false);
   const [meetingPoints, setMeetingPoints] = useState<MeetingPoint[]>(
     trip.meeting_points?.length ? trip.meeting_points : [{ location: "", time: "" }],
@@ -66,6 +68,8 @@ export function EditTripForm({
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [editedAfterSubmit, setEditedAfterSubmit] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const photosJsonRef = useRef<HTMLInputElement>(null);
+  const meetingPointsJsonRef = useRef<HTMLInputElement>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -74,8 +78,8 @@ export function EditTripForm({
     setHasSubmitted(true);
     setEditedAfterSubmit(false);
     setUploadError(null);
-    const formData = new FormData(formRef.current);
 
+    // Step 1: upload any new files, collect all URLs
     const uploadedUrls: string[] = [];
     for (const item of photoItems) {
       if (item.kind === "url") {
@@ -95,8 +99,12 @@ export function EditTripForm({
       }
     }
 
-    formData.set("photos_json", JSON.stringify(uploadedUrls));
-    formData.set("meeting_points", JSON.stringify(meetingPoints));
+    // Step 2: patch hidden inputs in the DOM before capturing FormData
+    if (photosJsonRef.current) photosJsonRef.current.value = JSON.stringify(uploadedUrls);
+    if (meetingPointsJsonRef.current) meetingPointsJsonRef.current.value = JSON.stringify(meetingPoints);
+
+    // Step 3: capture FormData once — after all async work and DOM patches
+    const formData = new FormData(formRef.current);
 
     startTransition(async () => {
       await action(formData);
@@ -115,6 +123,8 @@ export function EditTripForm({
       className="space-y-6"
     >
       <input type="hidden" name="trip_id" value={trip.id} />
+      <input type="hidden" name="photos_json" ref={photosJsonRef} defaultValue={JSON.stringify(trip.photos ?? [])} />
+      <input type="hidden" name="meeting_points" ref={meetingPointsJsonRef} defaultValue={JSON.stringify(trip.meeting_points?.length ? trip.meeting_points : meetingPoints)} />
 
       {errorMessage && (
         <p
