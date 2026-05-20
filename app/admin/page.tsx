@@ -20,7 +20,7 @@ type OrganizerApplication = {
   facebook_url: string | null;
   past_trips_evidence: string | null;
   activity_types: string[] | null;
-  years_of_experience: number | null;
+  years_experience: number | null;
   emergency_certified: boolean;
   status: string;
   created_at: string;
@@ -112,15 +112,16 @@ export default async function AdminPage({ searchParams }: PageProps) {
   const totalPages = Math.ceil(totalBookings / PAGE_SIZE);
 
   // Organizers — all, sorted pending first
-  const { data: orgData, error: orgError } = await authClient
+  const { data: orgData, error: orgError } = await adminClient
     .from("organizers")
-    .select("id, full_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_of_experience, emergency_certified, status, created_at")
+    .select("id, full_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_experience, emergency_certified, status, created_at")
     .order("created_at", { ascending: false });
 
   const allApplications = (orgData ?? []) as OrganizerApplication[];
   const applications = [
     ...allApplications.filter((a) => a.status === "pending"),
-    ...allApplications.filter((a) => a.status !== "pending"),
+    ...allApplications.filter((a) => a.status === "approved"),
+    ...allApplications.filter((a) => a.status === "rejected"),
   ];
 
   const tabClass = (t: string) =>
@@ -322,7 +323,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                               : <span className="text-stone-300">—</span>}
                           </td>
                           <td className="px-4 py-3 text-center text-stone-700">
-                            {app.years_of_experience ?? <span className="text-stone-300">—</span>}
+                            {app.years_experience ?? <span className="text-stone-300">—</span>}
                           </td>
                           <td className="px-4 py-3 text-center">
                             {app.emergency_certified
