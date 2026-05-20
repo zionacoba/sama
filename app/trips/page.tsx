@@ -330,7 +330,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
               </Link>
             </div>
           ) : (
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
               {groups.map(({ key, representative: trip, runs }) => {
                 const isGrouped = runs.length > 1;
                 const minPrice = isGrouped
