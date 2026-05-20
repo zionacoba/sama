@@ -56,6 +56,8 @@ export function BookingModal({
   const [selectedMeetingPoint, setSelectedMeetingPoint] = useState("");
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [waiverError, setWaiverError] = useState(false);
+  const [platformWaiverAccepted, setPlatformWaiverAccepted] = useState(false);
+  const [platformWaiverError, setPlatformWaiverError] = useState(false);
   const [bookingStatus, setBookingStatus] = useState<"confirmed" | "pending" | null>(null);
   const [paymentOption, setPaymentOption] = useState<"full" | "downpayment">("full");
   const [participantTokens, setParticipantTokens] = useState<{ slotIndex: number; token: string }[]>([]);
@@ -144,6 +146,8 @@ export function BookingModal({
     setSelectedMeetingPoint("");
     setWaiverAccepted(false);
     setWaiverError(false);
+    setPlatformWaiverAccepted(false);
+    setPlatformWaiverError(false);
     setError(null);
     setSuccess(false);
     setBookingStatus(null);
@@ -167,10 +171,10 @@ export function BookingModal({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!waiverAccepted) {
-      setWaiverError(true);
-      return;
-    }
+    const hasErrors = !platformWaiverAccepted || !waiverAccepted;
+    if (!platformWaiverAccepted) setPlatformWaiverError(true);
+    if (!waiverAccepted) setWaiverError(true);
+    if (hasErrors) return;
     setError(null);
     setLoading(true);
 
@@ -188,6 +192,7 @@ export function BookingModal({
       emergencyContactName,
       emergencyContactPhone,
       waiverAgreed: waiverAccepted,
+      platformWaiverAgreed: platformWaiverAccepted,
       medicalNotes: medicalNotes.trim() || null,
       meetingPoint: selectedMeetingPoint || null,
     });
@@ -584,27 +589,57 @@ export function BookingModal({
                     />
                   </div>
 
-                  {/* Waiver */}
-                  <div>
-                    <label className="flex cursor-pointer items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={waiverAccepted}
-                        onChange={(e) => {
-                          setWaiverAccepted(e.target.checked);
-                          if (e.target.checked) setWaiverError(false);
-                        }}
-                        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
-                      />
-                      <span className="text-xs leading-relaxed text-stone-600">
-                        I confirm that I have informed all participants listed in this booking of the trip risks, cancellation policy, and terms. I am booking on their behalf with their full knowledge and consent. Each participant will receive a link to confirm their own details and sign their individual waiver.
-                      </span>
-                    </label>
-                    {waiverError && (
-                      <p role="alert" className="mt-1.5 text-xs text-red-600">
-                        You must accept the waiver before confirming your booking.
+                  {/* Waivers */}
+                  <div className="space-y-3">
+                    <div>
+                      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                        Platform terms
                       </p>
-                    )}
+                      <label className="flex cursor-pointer items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={platformWaiverAccepted}
+                          onChange={(e) => {
+                            setPlatformWaiverAccepted(e.target.checked);
+                            if (e.target.checked) setPlatformWaiverError(false);
+                          }}
+                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
+                        />
+                        <span className="text-xs leading-relaxed text-stone-600">
+                          I understand that Sama is a technology marketplace connecting independent trip organizers with participants. Sama does not operate, guide, or take responsibility for any trip listed on the platform. By booking, I agree to Sama&apos;s Terms of Service and Privacy Policy.
+                        </span>
+                      </label>
+                      {platformWaiverError && (
+                        <p role="alert" className="mt-1.5 text-xs text-red-600">
+                          You must agree to the platform terms before confirming your booking.
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                        Organizer waiver
+                      </p>
+                      <label className="flex cursor-pointer items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={waiverAccepted}
+                          onChange={(e) => {
+                            setWaiverAccepted(e.target.checked);
+                            if (e.target.checked) setWaiverError(false);
+                          }}
+                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
+                        />
+                        <span className="text-xs leading-relaxed text-stone-600">
+                          I confirm that I have informed all participants listed in this booking of the trip risks, cancellation policy, and terms. I am booking on their behalf with their full knowledge and consent. Each participant will receive a link to confirm their own details and sign their individual waiver.
+                        </span>
+                      </label>
+                      {waiverError && (
+                        <p role="alert" className="mt-1.5 text-xs text-red-600">
+                          You must accept the organizer waiver before confirming your booking.
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">

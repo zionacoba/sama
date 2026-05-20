@@ -20,6 +20,7 @@ type CreateBookingInput = {
   emergencyContactName: string;
   emergencyContactPhone: string;
   waiverAgreed: boolean;
+  platformWaiverAgreed: boolean;
   medicalNotes: string | null;
   meetingPoint: string | null;
 };
@@ -83,6 +84,7 @@ export async function createBooking(input: CreateBookingInput) {
       emergency_contact_name: input.emergencyContactName,
       emergency_contact_phone: input.emergencyContactPhone,
       waiver_agreed: input.waiverAgreed,
+      platform_waiver_agreed: input.platformWaiverAgreed,
       medical_notes: input.medicalNotes,
       meeting_point: input.meetingPoint,
     })
