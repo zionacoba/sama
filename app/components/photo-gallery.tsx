@@ -1,26 +1,37 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string }) {
-  const [heroIndex, setHeroIndex] = useState(0);
-  const [thumbOffset, setThumbOffset] = useState(0);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const touchStartX = useRef<number | null>(null);
+  const isOpen = lightboxIndex !== null;
 
-  if (photos.length === 0) return null;
+  const prev = useCallback(() => {
+    setLightboxIndex((i) => (i !== null ? (i - 1 + photos.length) % photos.length : null));
+  }, [photos.length]);
 
-  const nonHero = photos.map((_, i) => i).filter((i) => i !== heroIndex);
-  const needsArrows = nonHero.length > 4;
-  const visible = nonHero.slice(thumbOffset, thumbOffset + 4);
-  const canPrev = thumbOffset > 0;
-  const canNext = thumbOffset + 4 < nonHero.length;
+  const next = useCallback(() => {
+    setLightboxIndex((i) => (i !== null ? (i + 1) % photos.length : null));
+  }, [photos.length]);
 
-  function goTo(idx: number) {
-    setHeroIndex(idx);
-    const newNonHero = photos.map((_, i) => i).filter((i) => i !== idx);
-    setThumbOffset((o) => Math.min(o, Math.max(0, newNonHero.length - 4)));
-  }
+  const close = useCallback(() => setLightboxIndex(null), []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") prev();
+      else if (e.key === "ArrowRight") next();
+      else if (e.key === "Escape") close();
+    };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [isOpen, prev, next, close]);
 
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
@@ -31,84 +42,188 @@ export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string })
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     touchStartX.current = null;
     if (Math.abs(dx) < 40) return;
-    goTo(dx < 0
-      ? (heroIndex + 1) % photos.length
-      : (heroIndex - 1 + photos.length) % photos.length
-    );
+    dx < 0 ? next() : prev();
   }
 
-  const arrowBtn = (onClick: () => void, label: string, hidden: boolean, glyph: string) => (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-lg leading-none text-stone-600 shadow-sm transition hover:border-trailhead hover:text-trailhead focus:outline-none focus:ring-2 focus:ring-trailhead focus:ring-offset-1 ${hidden ? "invisible" : ""}`}
-    >
-      {glyph}
-    </button>
-  );
+  if (photos.length === 0) return null;
 
-  const thumbEl = (i: number) => (
-    <button
-      key={i}
-      type="button"
-      onClick={() => goTo(i)}
-      aria-label={`View photo ${i + 1}`}
-      className="group relative flex-1 overflow-hidden rounded-xl border-2 border-transparent transition hover:border-trailhead focus:outline-none focus:ring-2 focus:ring-trailhead focus:ring-offset-2"
-    >
-      <div className="relative aspect-[4/3]">
-        <Image
-          src={photos[i]}
-          alt={`${alt} — photo ${i + 1}`}
-          fill
-          className="object-cover transition group-hover:scale-105"
-          sizes="(min-width: 768px) 180px, 25vw"
-          quality={75}
-        />
-      </div>
-    </button>
-  );
+  const rightPhotos = photos.slice(1, 5); // show up to 4 right-side photos
+  const rightCount = rightPhotos.length;
+  const totalCount = photos.length;
+
+  const rightGridCls =
+    rightCount === 1 ? "grid-cols-1" :
+    rightCount === 2 ? "grid-cols-1 grid-rows-2" :
+    "grid-cols-2 grid-rows-2"; // 3 or 4
 
   return (
-    <div className="space-y-2">
-      {/* Hero */}
-      <div
-        className="relative aspect-[16/9] max-h-80 select-none overflow-hidden rounded-2xl bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
-        <Image
-          src={photos[heroIndex]}
-          alt={alt}
-          fill
-          className="object-cover transition-all duration-300"
-          sizes="(min-width: 768px) 768px, 100vw"
-          quality={85}
-          priority
-        />
-        {photos.length > 1 && (
-          <span className="absolute bottom-2 right-3 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white tabular-nums">
-            {heroIndex + 1} / {photos.length}
-          </span>
+    <>
+      {/* Photo grid */}
+      <div className="relative h-60 sm:h-[400px] overflow-hidden rounded-2xl bg-stone-100">
+
+        {/* Mobile: main photo only */}
+        <button
+          type="button"
+          className="absolute inset-0 sm:hidden"
+          onClick={() => setLightboxIndex(0)}
+          aria-label="View photos"
+        >
+          <Image
+            src={photos[0]}
+            alt={alt}
+            fill
+            className="object-cover"
+            sizes="100vw"
+            priority
+          />
+        </button>
+
+        {/* Desktop: Airbnb-style grid */}
+        <div className="hidden sm:flex h-full gap-1">
+          {/* Main (left) photo */}
+          <button
+            type="button"
+            className={`relative overflow-hidden group ${rightCount > 0 ? "flex-[3]" : "flex-1"}`}
+            onClick={() => setLightboxIndex(0)}
+            aria-label="View photo 1"
+          >
+            <Image
+              src={photos[0]}
+              alt={alt}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+              sizes="(min-width: 640px) 60vw, 100vw"
+              priority
+            />
+          </button>
+
+          {/* Right photo grid */}
+          {rightCount > 0 && (
+            <div className={`flex-[2] grid gap-1 ${rightGridCls}`}>
+              {rightPhotos.map((photo, i) => {
+                const isLast = i === rightCount - 1;
+                const showMoreOverlay = isLast && totalCount > 5;
+                // 3-photo layout: first right photo spans both columns
+                const colSpan = rightCount === 3 && i === 0 ? "col-span-2" : "";
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`relative overflow-hidden group ${colSpan}`}
+                    onClick={() => setLightboxIndex(i + 1)}
+                    aria-label={`View photo ${i + 2}`}
+                  >
+                    <Image
+                      src={photo}
+                      alt={`${alt} — photo ${i + 2}`}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                      sizes="20vw"
+                    />
+                    {showMoreOverlay && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                        <span className="text-sm font-semibold text-white">
+                          +{totalCount - 5} more
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* "Show all photos" button — visible on all screen sizes */}
+        {totalCount > 1 && (
+          <button
+            type="button"
+            onClick={() => setLightboxIndex(0)}
+            className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-stone-700 shadow-sm backdrop-blur-sm transition hover:bg-white"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-3.5 w-3.5 shrink-0">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+            </svg>
+            Show all {totalCount} photos
+          </button>
         )}
       </div>
 
-      {/* Thumbnail strip */}
-      {nonHero.length > 0 && (
-        needsArrows ? (
-          <div className="flex items-center gap-2">
-            {arrowBtn(() => setThumbOffset((o) => o - 1), "Previous photos", !canPrev, "‹")}
-            <div className="flex flex-1 gap-2">
-              {visible.map(thumbEl)}
+      {/* Lightbox */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-black/90"
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
+          {/* Top bar: counter + close */}
+          <div className="shrink-0 flex items-center justify-between px-4 py-3">
+            <span className="tabular-nums text-sm font-medium text-white/70">
+              {lightboxIndex! + 1} / {totalCount}
+            </span>
+            <button
+              type="button"
+              onClick={close}
+              className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+              aria-label="Close"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Image area */}
+          <div className="relative flex-1">
+            {/* Backdrop — click to close */}
+            <button
+              type="button"
+              className="absolute inset-0"
+              onClick={close}
+              aria-label="Close lightbox"
+            />
+
+            {/* Centered image */}
+            <div className="absolute inset-0 flex items-center justify-center px-14 py-2 sm:px-20">
+              <div className="relative h-full w-full">
+                <Image
+                  src={photos[lightboxIndex!]}
+                  alt={`${alt} — ${lightboxIndex! + 1} of ${totalCount}`}
+                  fill
+                  className="object-contain"
+                  sizes="100vw"
+                  priority
+                />
+              </div>
             </div>
-            {arrowBtn(() => setThumbOffset((o) => o + 1), "Next photos", !canNext, "›")}
+
+            {/* Prev / Next arrows */}
+            {totalCount > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); prev(); }}
+                  className="absolute left-2 top-1/2 z-10 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-2xl leading-none text-white transition hover:bg-white/20"
+                  aria-label="Previous photo"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); next(); }}
+                  className="absolute right-2 top-1/2 z-10 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-2xl leading-none text-white transition hover:bg-white/20"
+                  aria-label="Next photo"
+                >
+                  ›
+                </button>
+              </>
+            )}
           </div>
-        ) : (
-          <div className="flex gap-2">
-            {nonHero.map(thumbEl)}
-          </div>
-        )
+        </div>
       )}
-    </div>
+    </>
   );
 }

@@ -368,17 +368,18 @@ export default async function TripDetailPage({ params }: PageProps) {
           </div>
         </section>
 
+        {/* Photo grid — full width, between hero and content */}
+        {tripData.photos && tripData.photos.length > 0 && (
+          <div className="mx-auto max-w-6xl px-4 pt-4 pb-2">
+            <PhotoGallery photos={tripData.photos} alt={tripData.title} />
+          </div>
+        )}
+
         {/* Two-column layout */}
         <div className="mx-auto max-w-6xl px-4 pt-4 pb-8 lg:grid lg:grid-cols-[1fr_280px] lg:items-start lg:gap-8 lg:pb-12">
 
           {/* Main column */}
           <div className="space-y-4 pb-20 lg:pb-0">
-            {tripData.photos && tripData.photos.length > 0 ? (
-              <PhotoGallery photos={tripData.photos} alt={tripData.title} />
-            ) : (
-              <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80" />
-            )}
-
             {tripData.meeting_points && tripData.meeting_points.length > 0 ? (
               <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
                 <h2 className="text-xs font-semibold text-stone-500">Meeting points</h2>
