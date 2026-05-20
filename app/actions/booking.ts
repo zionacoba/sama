@@ -45,9 +45,6 @@ export async function createBooking(input: CreateBookingInput) {
   if (!input.waiverAgreed || !input.platformWaiverAgreed) {
     return { error: "You must agree to both waivers before booking." };
   }
-  if (trip.remaining_slots < input.slots) {
-    return { error: "Not enough slots available. Please try booking fewer slots or check back later." };
-  }
 
   // Prevent duplicate bookings for the same trip
   const { data: existingBooking } = await admin
@@ -60,6 +57,18 @@ export async function createBooking(input: CreateBookingInput) {
 
   if (existingBooking) {
     return { error: "You already have a booking for this trip." };
+  }
+
+  // Atomically check availability and decrement remaining_slots.
+  const { error: slotError } = await supabase.rpc("book_slot", {
+    p_trip_id: trip.id,
+    p_slots_requested: input.slots,
+  });
+  if (slotError) {
+    if (slotError.message.includes("not_enough_slots")) {
+      return { error: "This trip is fully booked." };
+    }
+    throw slotError;
   }
 
   const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
@@ -92,12 +101,6 @@ export async function createBooking(input: CreateBookingInput) {
 
   if (insertError) return { error: insertError.message };
   if (!newBooking) return { error: "Failed to create booking." };
-
-  // Decrement remaining slots.
-  await admin
-    .from("trips")
-    .update({ remaining_slots: trip.remaining_slots - input.slots })
-    .eq("id", trip.id);
 
   // Insert one booking_participants row per slot.
   const now = new Date().toISOString();
@@ -159,7 +162,6 @@ export async function createBooking(input: CreateBookingInput) {
             <ul>
               <li><strong>Trip:</strong> ${trip.title}</li>
               <li><strong>Date:</strong> ${tripDate}</li>
-              <li><strong>Remaining slots after this booking:</strong> ${Math.max(0, trip.remaining_slots - input.slots)}</li>
               ${participantsRow}
               <li><strong>Emergency contact:</strong> ${input.emergencyContactName} — ${input.emergencyContactPhone}</li>
               ${medicalRow}
