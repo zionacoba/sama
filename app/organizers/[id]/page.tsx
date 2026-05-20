@@ -76,6 +76,9 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
 
   const admin = createSupabaseAdminClient();
 
+  const { data: testData, error: testError } = await admin.from("organizers").select("*").limit(1);
+  console.log("[organizers test] all organizers:", testData, testError);
+
   // All queries use admin client to bypass RLS on this public page
   const { data: organizer, error: organizerError } = await admin
     .from("organizers")
