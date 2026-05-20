@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { BookingModal } from "@/app/trips/[slug]/booking-modal";
+import { WaitlistModal } from "@/app/trips/[slug]/waitlist-modal";
 import { ShareButton } from "@/app/components/share-button";
 import { PhotoGallery } from "@/app/components/photo-gallery";
 
@@ -31,6 +32,7 @@ type TripDetail = {
   cancellation_policy: string | null;
   cancellation_policy_custom: string | null;
   meeting_points: { location: string; time: string }[] | null;
+  waitlist_enabled: boolean | null;
 };
 
 type OrganizerInfo = {
@@ -242,6 +244,7 @@ export default async function TripDetailPage({ params }: PageProps) {
     { data: organizerData },
     { data: siblingRunsData },
     { data: userOrgData },
+    { data: existingWaitlistEntry },
   ] = await Promise.all([
     tripData.organizer_id
       ? supabase
@@ -272,6 +275,9 @@ export default async function TripDetailPage({ params }: PageProps) {
       : Promise.resolve({ data: null }),
     user
       ? supabase.from("organizers").select("id").eq("user_id", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    user && tripData.remaining_slots === 0
+      ? supabase.from("waitlist").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
@@ -502,6 +508,25 @@ export default async function TripDetailPage({ params }: PageProps) {
             <p className="mt-10 rounded-xl border border-stone-200 bg-stone-50 px-5 py-4 text-center text-sm text-stone-500">
               You are the organizer of this trip.
             </p>
+          ) : tripData.remaining_slots === 0 ? (
+            tripData.waitlist_enabled !== false ? (
+              <WaitlistModal
+                tripId={tripData.id}
+                tripSlug={slug}
+                tripTitle={tripData.title}
+                defaultName={
+                  (user?.user_metadata?.full_name as string | undefined)?.trim() ??
+                  user?.email?.split("@")[0] ??
+                  ""
+                }
+                defaultEmail={user?.email ?? ""}
+                isOnWaitlist={!!existingWaitlistEntry}
+              />
+            ) : (
+              <p className="mt-10 rounded-xl border border-stone-200 bg-stone-50 px-5 py-4 text-center text-sm text-stone-500">
+                This trip is full.
+              </p>
+            )
           ) : (
             <BookingModal
               tripId={tripData.id}

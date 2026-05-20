@@ -1,7 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { BookingActions } from "@/app/organizer/dashboard/booking-actions";
+import { notifyWaitlistEntry } from "@/app/actions/waitlist";
+
+type WaitlistEntry = {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  slots: number;
+  created_at: string;
+  notified: boolean;
+};
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -82,7 +94,7 @@ const NO_PICKUP = "No pickup point selected";
 
 export default async function TripBookingsPage({ params, searchParams }: PageProps) {
   const [{ slug }, { view }] = await Promise.all([params, searchParams]);
-  const isGrouped = view === "grouped";
+  const activeView = view === "waitlist" ? "waitlist" : view === "grouped" ? "grouped" : "list";
 
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -114,6 +126,14 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
     .order("created_at", { ascending: false });
 
   const bookings = (bookingsData ?? []) as Booking[];
+
+  const admin = createSupabaseAdminClient();
+  const { data: waitlistData } = await admin
+    .from("waitlist")
+    .select("id, full_name, email, phone, slots, created_at, notified")
+    .eq("trip_id", trip.id)
+    .order("created_at", { ascending: true });
+  const waitlist = (waitlistData ?? []) as WaitlistEntry[];
 
   const multiSlotIds = bookings.filter((b) => b.slots > 1).map((b) => b.id);
   const participantsMap = new Map<number, BookingParticipant[]>();
@@ -217,35 +237,39 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                 {rejected.length} rejected
               </span>
             )}
+            {waitlist.length > 0 && (
+              <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-700">
+                {waitlist.length} waitlisted
+              </span>
+            )}
           </div>
         </div>
 
         {/* View toggle */}
-        <div className="mt-6 flex items-center gap-2">
-          <Link
-            href={baseUrl}
-            className={`rounded-lg px-3.5 py-2 text-sm font-medium transition ${
-              !isGrouped
-                ? "bg-trailhead text-white shadow-sm"
-                : "bg-white text-stone-600 border border-stone-200 hover:border-stone-300 hover:text-stone-900"
-            }`}
-          >
-            All bookings
-          </Link>
-          <Link
-            href={`${baseUrl}?view=grouped`}
-            className={`rounded-lg px-3.5 py-2 text-sm font-medium transition ${
-              isGrouped
-                ? "bg-trailhead text-white shadow-sm"
-                : "bg-white text-stone-600 border border-stone-200 hover:border-stone-300 hover:text-stone-900"
-            }`}
-          >
-            By pickup point
-          </Link>
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          {(
+            [
+              { key: "list", label: "All bookings", href: baseUrl },
+              { key: "grouped", label: "By pickup point", href: `${baseUrl}?view=grouped` },
+              { key: "waitlist", label: `Waitlist${waitlist.length > 0 ? ` (${waitlist.length})` : ""}`, href: `${baseUrl}?view=waitlist` },
+            ] as const
+          ).map(({ key, label, href }) => (
+            <Link
+              key={key}
+              href={href}
+              className={`rounded-lg px-3.5 py-2 text-sm font-medium transition ${
+                activeView === key
+                  ? "bg-trailhead text-white shadow-sm"
+                  : "border border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-stone-900"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
         </div>
 
         {/* Flat table */}
-        {!isGrouped && (
+        {activeView === "list" && (
           <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
             {bookings.length === 0 ? (
               <p className="px-6 py-12 text-center text-sm text-stone-400">No bookings yet.</p>
@@ -319,7 +343,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
         )}
 
         {/* Grouped view */}
-        {isGrouped && (
+        {activeView === "grouped" && (
           <div className="mt-4 space-y-4">
             {activeBookings.length === 0 && (
               <div className="rounded-2xl border border-stone-200 bg-white px-6 py-12 text-center text-sm text-stone-400">
@@ -395,6 +419,58 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Waitlist tab */}
+        {activeView === "waitlist" && (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+            {waitlist.length === 0 ? (
+              <p className="px-6 py-12 text-center text-sm text-stone-400">No waitlist entries yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm">
+                  <thead>
+                    <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
+                      <th className="px-5 py-3">Name</th>
+                      <th className="px-5 py-3">Email</th>
+                      <th className="px-5 py-3">Phone</th>
+                      <th className="px-5 py-3 text-center">Slots</th>
+                      <th className="px-5 py-3">Joined on</th>
+                      <th className="px-5 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {waitlist.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-stone-50">
+                        <td className="px-5 py-3.5 font-medium text-stone-900">{entry.full_name}</td>
+                        <td className="px-5 py-3.5 text-stone-500">{entry.email}</td>
+                        <td className="px-5 py-3.5 text-stone-500">{entry.phone ?? "—"}</td>
+                        <td className="px-5 py-3.5 text-center text-stone-700">{entry.slots}</td>
+                        <td className="px-5 py-3.5 text-stone-500">{formatDateTime(entry.created_at)}</td>
+                        <td className="px-5 py-3.5 text-right">
+                          {entry.notified ? (
+                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                              Notified ✓
+                            </span>
+                          ) : (
+                            <form action={notifyWaitlistEntry}>
+                              <input type="hidden" name="id" value={entry.id} />
+                              <button
+                                type="submit"
+                                className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-trailhead hover:text-trailhead"
+                              >
+                                Notify
+                              </button>
+                            </form>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </main>
