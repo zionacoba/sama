@@ -141,6 +141,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
     .select("*")
     .eq("status", "active")
     .gt("date_start", new Date().toISOString())
+    .gt("remaining_slots", 0)
     .or("is_template.is.null,is_template.eq.false");
 
   if (search) {
