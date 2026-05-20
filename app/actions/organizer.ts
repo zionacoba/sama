@@ -66,6 +66,11 @@ export async function updateOrganizerProfile(
   const bio = (formData.get("bio") as string)?.trim();
   const photo_url = (formData.get("photo_url") as string)?.trim() || null;
   const cover_image_url = (formData.get("cover_image_url") as string)?.trim() || null;
+  const social_links = {
+    facebook: (formData.get("social_facebook") as string)?.trim() || null,
+    instagram: (formData.get("social_instagram") as string)?.trim() || null,
+    tiktok: (formData.get("social_tiktok") as string)?.trim() || null,
+  };
 
   if (!display_name || !full_name || !phone || !bio) {
     return { error: "Please fill in all required fields." };
@@ -73,7 +78,7 @@ export async function updateOrganizerProfile(
 
   const { error } = await supabase
     .from("organizers")
-    .update({ display_name, full_name, phone, bio, photo_url, cover_image_url })
+    .update({ display_name, full_name, phone, bio, photo_url, cover_image_url, social_links })
     .eq("id", organizer.id);
 
   if (error) return { error: error.message };

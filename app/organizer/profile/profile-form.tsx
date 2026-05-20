@@ -7,6 +7,8 @@ const inputClass =
   "mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2";
 const labelClass = "block text-sm font-medium text-stone-700";
 
+type SocialLinks = { facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
+
 type OrganizerData = {
   display_name: string | null;
   full_name: string;
@@ -14,6 +16,7 @@ type OrganizerData = {
   bio: string;
   photo_url: string | null;
   cover_image_url: string | null;
+  social_links: SocialLinks;
 };
 
 export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
@@ -115,6 +118,33 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
           className={inputClass}
           placeholder="https://…"
         />
+      </div>
+
+      <div>
+        <p className={`${labelClass} mb-1`}>Social links <span className="font-normal text-stone-400">(optional)</span></p>
+        <div className="space-y-2">
+          <input
+            name="social_facebook"
+            type="url"
+            defaultValue={organizer.social_links?.facebook ?? ""}
+            className={inputClass}
+            placeholder="https://facebook.com/yourpage"
+          />
+          <input
+            name="social_instagram"
+            type="url"
+            defaultValue={organizer.social_links?.instagram ?? ""}
+            className={inputClass}
+            placeholder="https://instagram.com/yourhandle"
+          />
+          <input
+            name="social_tiktok"
+            type="url"
+            defaultValue={organizer.social_links?.tiktok ?? ""}
+            className={inputClass}
+            placeholder="https://tiktok.com/@yourhandle"
+          />
+        </div>
       </div>
 
       <div className="flex items-center justify-end gap-4 border-t border-stone-100 pt-4">
