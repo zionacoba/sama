@@ -145,38 +145,39 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
       </div>
 
       <main className="mx-auto max-w-3xl px-4 pb-10 sm:pb-12">
-        {/* Avatar sits half above the card top edge */}
-        <div className="relative -mt-8 px-5">
-          <div className="inline-flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-lg font-bold text-trailhead ring-4 ring-stone-50 sm:h-20 sm:w-20 sm:text-xl">
-            {organizer.photo_url ? (
-              <Image
-                src={organizer.photo_url}
-                alt={publicName}
-                fill
-                className="object-cover"
-                sizes="80px"
-              />
-            ) : (
-              initials
-            )}
-          </div>
-        </div>
-
-        <div className="mt-3 rounded-2xl border border-stone-200 bg-white shadow-sm">
-          <div className="px-6 pt-5">
-            <h1 className="text-xl font-bold tracking-tight text-stone-900 sm:text-2xl">
-              {publicName}
-            </h1>
-            {avgRating !== null && (
-              <div className="mt-1 flex items-center gap-1.5">
-                <Stars rating={avgRating} />
-                <span className="text-sm font-semibold text-stone-700">{avgRating.toFixed(1)}</span>
-                <span className="text-sm text-stone-400">({reviews.length} review{reviews.length !== 1 ? "s" : ""})</span>
+        {/* Card overlaps the banner; avatar straddles the card top edge */}
+        <div className="-mt-6 rounded-2xl border border-stone-200 bg-white shadow-sm">
+          <div className="px-5 sm:px-6">
+            {/* Avatar + name: stacked on mobile, side-by-side on desktop */}
+            <div className="flex flex-col sm:flex-row sm:items-end sm:gap-5">
+              <div className="relative -mt-10 h-20 w-20 shrink-0 overflow-hidden rounded-full bg-trailhead-muted text-xl font-bold text-trailhead ring-4 ring-white">
+                {organizer.photo_url ? (
+                  <Image
+                    src={organizer.photo_url}
+                    alt={publicName}
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center">{initials}</span>
+                )}
               </div>
-            )}
-          </div>
+              <div className="mt-3 pb-2 sm:mt-0">
+                <h1 className="text-xl font-bold tracking-tight text-stone-900 sm:text-2xl">
+                  {publicName}
+                </h1>
+                {avgRating !== null && (
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <Stars rating={avgRating} />
+                    <span className="text-sm font-semibold text-stone-700">{avgRating.toFixed(1)}</span>
+                    <span className="text-sm text-stone-400">({reviews.length} review{reviews.length !== 1 ? "s" : ""})</span>
+                  </div>
+                )}
+              </div>
+            </div>
             {organizer.bio && (
-              <p className="mt-3 px-6 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
+              <p className="mt-3 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
             )}
             {(() => {
               const sl = organizer.social_links as { facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
@@ -199,7 +200,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
               ].filter((l) => l.url);
               if (links.length === 0) return null;
               return (
-                <div className="mt-3 flex items-center gap-2 px-6">
+                <div className="mt-3 flex items-center gap-2">
                   {links.map(({ key, url, icon, label }) => (
                     <a
                       key={key}
@@ -215,7 +216,8 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                 </div>
               );
             })()}
-            <div className="mx-6 mt-4 flex flex-wrap gap-5 border-t border-stone-100 pb-6 pt-4 text-sm">
+          </div>
+          <div className="mx-5 mt-4 flex flex-wrap gap-5 border-t border-stone-100 pb-6 pt-4 text-sm sm:mx-6">
               <div>
                 <p className="text-lg font-bold text-stone-900">{trips.length}</p>
                 <p className="text-stone-500">trip{trips.length !== 1 ? "s" : ""} led</p>
