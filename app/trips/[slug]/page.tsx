@@ -584,7 +584,7 @@ export default async function TripDetailPage({ params }: PageProps) {
 
         {/* Mobile fixed bottom bar */}
         {!isOwnTrip && (
-          <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur-sm lg:hidden">
+          <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white/95 px-4 pt-3 backdrop-blur-sm lg:hidden" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-base font-bold text-trailhead">{formatPrice(tripData.price)}</p>

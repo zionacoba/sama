@@ -277,7 +277,7 @@ export function BookingModal({
               </button>
             </div>
 
-            <div className="overflow-y-auto px-6 py-5">
+            <div className="overflow-y-auto overscroll-contain px-6 py-5">
               {success ? (
                 <div className="space-y-4">
                   <p
@@ -356,7 +356,7 @@ export function BookingModal({
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-3">
+                <form id="booking-form" onSubmit={handleSubmit} className="space-y-3">
                   {/* Compact price line */}
                   <p className="text-sm text-stone-500">
                     {tripTitle} · {formatCurrency(unitPrice)} × {slots} slot{slots !== 1 ? "s" : ""} ={" "}
@@ -386,7 +386,7 @@ export function BookingModal({
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
                   </div>
 
@@ -400,7 +400,7 @@ export function BookingModal({
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
                   </div>
 
@@ -414,7 +414,7 @@ export function BookingModal({
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
                   </div>
 
@@ -433,7 +433,7 @@ export function BookingModal({
                       onChange={(e) =>
                         setSlots(Math.min(remainingSlots, Math.max(1, Number(e.target.value) || 1)))
                       }
-                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
                   </div>
 
@@ -448,7 +448,7 @@ export function BookingModal({
                         required
                         value={selectedMeetingPoint}
                         onChange={(e) => setSelectedMeetingPoint(e.target.value)}
-                        className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                        className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                       >
                         <option value="">Select a pickup point…</option>
                         {meetingPoints.map((mp) => (
@@ -483,7 +483,7 @@ export function BookingModal({
                                 next[i] = e.target.value;
                                 setParticipants(next);
                               }}
-                              className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                              className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                               placeholder="Full name"
                             />
                           </div>
@@ -508,7 +508,7 @@ export function BookingModal({
                         value={emergencyContactName}
                         onChange={(e) => setEmergencyContactName(e.target.value)}
                         placeholder="Full name"
-                        className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                        className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                       />
                     </div>
                     <div>
@@ -522,7 +522,7 @@ export function BookingModal({
                         value={emergencyContactPhone}
                         onChange={(e) => setEmergencyContactPhone(e.target.value)}
                         placeholder="+63 9XX XXX XXXX"
-                        className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                        className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                       />
                     </div>
                   </div>
@@ -535,7 +535,7 @@ export function BookingModal({
                         <button
                           type="button"
                           onClick={() => setPaymentOption("full")}
-                          className={`rounded-xl border px-4 py-2.5 text-left text-sm transition ${
+                          className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
                             paymentOption === "full"
                               ? "border-trailhead bg-trailhead-muted font-semibold text-trailhead"
                               : "border-stone-200 bg-white text-stone-700 hover:border-trailhead"
@@ -547,7 +547,7 @@ export function BookingModal({
                         <button
                           type="button"
                           onClick={() => setPaymentOption("downpayment")}
-                          className={`rounded-xl border px-4 py-2.5 text-left text-sm transition ${
+                          className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
                             paymentOption === "downpayment"
                               ? "border-trailhead bg-trailhead-muted font-semibold text-trailhead"
                               : "border-stone-200 bg-white text-stone-700 hover:border-trailhead"
@@ -571,7 +571,7 @@ export function BookingModal({
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Medical conditions, allergies, special requests, or questions"
-                      className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
                   </div>
 
@@ -634,25 +634,31 @@ export function BookingModal({
                     </div>
                   </div>
 
-                  <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={handleClose}
-                      className="rounded-xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition hover:border-trailhead hover:text-trailhead"
-                    >
-                      Close
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {loading ? "Submitting…" : "Confirm booking"}
-                    </button>
-                  </div>
                 </form>
               )}
             </div>
+
+            {!success && (
+              <div className="shrink-0 border-t border-stone-100 px-6 py-3">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="flex-1 rounded-xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition hover:border-trailhead hover:text-trailhead"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="submit"
+                    form="booking-form"
+                    disabled={loading}
+                    className="flex-1 rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {loading ? "Submitting…" : "Confirm booking"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
