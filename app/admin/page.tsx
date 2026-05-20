@@ -288,30 +288,30 @@ export default async function AdminPage() {
                         {formatCreatedAt(app.created_at)}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <form action={updateOrganizerStatus}>
-                            <input type="hidden" name="id" value={app.id} />
-                            <input type="hidden" name="status" value="approved" />
-                            <button
-                              type="submit"
-                              disabled={app.status === "approved"}
-                              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              Approve
-                            </button>
-                          </form>
-                          <form action={updateOrganizerStatus}>
-                            <input type="hidden" name="id" value={app.id} />
-                            <input type="hidden" name="status" value="rejected" />
-                            <button
-                              type="submit"
-                              disabled={app.status === "rejected"}
-                              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              Reject
-                            </button>
-                          </form>
-                        </div>
+                        {app.status === "pending" && (
+                          <div className="flex items-center gap-2">
+                            <form action={updateOrganizerStatus}>
+                              <input type="hidden" name="id" value={app.id} />
+                              <input type="hidden" name="status" value="approved" />
+                              <button
+                                type="submit"
+                                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                              >
+                                Approve
+                              </button>
+                            </form>
+                            <form action={updateOrganizerStatus}>
+                              <input type="hidden" name="id" value={app.id} />
+                              <input type="hidden" name="status" value="rejected" />
+                              <button
+                                type="submit"
+                                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
+                              >
+                                Reject
+                              </button>
+                            </form>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))
