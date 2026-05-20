@@ -246,7 +246,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
           </div>
           <div className="flex items-center gap-4">
             <Link
-              href={`/organizers/${organizer.id}`}
+              href={`/organizers/${user.id}`}
               target="_blank"
               className="text-sm font-medium text-trailhead-muted transition hover:text-white"
             >
