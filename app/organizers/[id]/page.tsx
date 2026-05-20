@@ -78,7 +78,6 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
     .from("organizers")
     .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links")
     .eq("id", id)
-    .eq("status", "approved")
     .maybeSingle();
 
   if (!organizer) notFound();
