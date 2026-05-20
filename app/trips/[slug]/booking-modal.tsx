@@ -237,7 +237,7 @@ export function BookingModal({
             type="button"
             className="absolute inset-0 bg-stone-900/50"
             aria-label="Close booking form"
-            onClick={handleClose}
+            onClick={success ? undefined : handleClose}
           />
 
           <div className="relative z-10 flex w-full max-w-lg flex-col max-h-[calc(100dvh-2rem)] rounded-2xl border border-stone-200 bg-white shadow-xl">
@@ -279,36 +279,55 @@ export function BookingModal({
                   </p>
 
                   {participantTokens.length > 0 && (
-                    <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
-                      <p className="text-sm font-semibold text-stone-900">Share with your group</p>
-                      <p className="mt-0.5 text-xs text-stone-500">
-                        Each participant needs to confirm their own details via their personal link.
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-base font-bold text-stone-900">Share with your group</p>
+                      <p className="mt-1 text-sm text-stone-600">
+                        Each participant must confirm their own details and sign their individual waiver. Send them their personal link.
                       </p>
-                      <div className="mt-3 space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allUrls = participantTokens
+                            .map(({ slotIndex, token }) =>
+                              `Participant ${slotIndex + 1}: https://landas-zeta.vercel.app/join/${token}`
+                            )
+                            .join("\n");
+                          navigator.clipboard.writeText(allUrls).then(() => {
+                            setCopiedIndex(-1);
+                            setTimeout(() => setCopiedIndex(null), 2000);
+                          });
+                        }}
+                        className="mt-3 w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-trailhead hover:text-trailhead"
+                      >
+                        {copiedIndex === -1 ? "✓ All links copied!" : "Copy all links"}
+                      </button>
+                      <div className="mt-3 space-y-3">
                         {participantTokens.map(({ slotIndex, token }) => {
                           const url = `https://landas-zeta.vercel.app/join/${token}`;
                           return (
-                            <div key={slotIndex} className="flex items-center gap-2">
-                              <span className="shrink-0 text-xs text-stone-500">
-                                Participant {slotIndex + 1}
-                              </span>
-                              <input
-                                readOnly
-                                value={url}
-                                className="min-w-0 flex-1 truncate rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-700 outline-none"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(url).then(() => {
-                                    setCopiedIndex(slotIndex);
-                                    setTimeout(() => setCopiedIndex(null), 2000);
-                                  });
-                                }}
-                                className="shrink-0 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-medium text-stone-600 transition hover:border-trailhead hover:text-trailhead"
-                              >
-                                {copiedIndex === slotIndex ? "Copied!" : "Copy"}
-                              </button>
+                            <div key={slotIndex} className="rounded-lg border border-stone-200 bg-white p-3">
+                              <p className="text-sm font-semibold text-stone-900">
+                                Send this link to Participant {slotIndex + 1}
+                              </p>
+                              <div className="mt-2 flex items-center gap-2">
+                                <input
+                                  readOnly
+                                  value={url}
+                                  className="min-w-0 flex-1 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(url).then(() => {
+                                      setCopiedIndex(slotIndex);
+                                      setTimeout(() => setCopiedIndex(null), 2000);
+                                    });
+                                  }}
+                                  className="shrink-0 rounded-xl bg-trailhead px-3 py-2 text-sm font-semibold text-white transition hover:bg-trailhead-dark"
+                                >
+                                  {copiedIndex === slotIndex ? "Copied!" : "Copy"}
+                                </button>
+                              </div>
                             </div>
                           );
                         })}
