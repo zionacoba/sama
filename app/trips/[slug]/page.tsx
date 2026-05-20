@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { BookingModal } from "@/app/trips/[slug]/booking-modal";
 import { WaitlistModal } from "@/app/trips/[slug]/waitlist-modal";
 import { ShareButton } from "@/app/components/share-button";
@@ -270,7 +271,7 @@ export default async function TripDetailPage({ params }: PageProps) {
           .eq("organizer_id", tripData.organizer_id)
       : Promise.resolve({ count: 0 }),
     tripData.organizer_id
-      ? supabase.from("organizers").select("display_name, full_name, bio, photo_url").eq("id", tripData.organizer_id).maybeSingle()
+      ? createSupabaseAdminClient().from("organizers").select("display_name, full_name, bio, photo_url").eq("id", tripData.organizer_id).maybeSingle()
       : Promise.resolve({ data: null }),
     tripData.template_id
       ? supabase

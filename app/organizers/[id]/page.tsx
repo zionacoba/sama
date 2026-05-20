@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -73,8 +74,10 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
   const { id } = await params;
 
   const supabase = await createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
 
-  const { data: organizer } = await supabase
+  // Use admin client to bypass RLS — organizer profiles are public pages
+  const { data: organizer } = await admin
     .from("organizers")
     .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links")
     .eq("id", id)
