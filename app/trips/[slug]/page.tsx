@@ -323,7 +323,7 @@ export default async function TripDetailPage({ params }: PageProps) {
 
       <main>
         {/* Compact hero */}
-        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 pt-6 pb-5">
+        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 pt-4 pb-5">
           <div className="mx-auto max-w-6xl">
             <div className="flex flex-wrap items-center gap-2">
               {tripData.activity_type && <ActivityBadge type={tripData.activity_type} />}
