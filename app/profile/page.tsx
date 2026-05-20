@@ -72,7 +72,9 @@ function StatusBadge({ status }: { status: string }) {
       ? "bg-emerald-100 text-emerald-800"
       : status === "pending"
         ? "bg-amber-100 text-amber-900"
-        : "bg-stone-100 text-stone-600";
+        : status === "cancelled" || status === "rejected"
+          ? "bg-red-100 text-red-700"
+          : "bg-stone-100 text-stone-600";
   const label = status.charAt(0).toUpperCase() + status.slice(1);
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${styles}`}>
@@ -239,8 +241,10 @@ export default async function AccountPage({ searchParams }: PageProps) {
     }
   }
 
-  const upcoming = bookings.filter((b) => b.trip.date_start > now);
-  const past = bookings.filter((b) => b.trip.date_start <= now);
+  const isCancelledOrRejected = (b: Booking) => b.status === "cancelled" || b.status === "rejected";
+  const upcoming = bookings.filter((b) => b.trip.date_start > now && !isCancelledOrRejected(b));
+  const past = bookings.filter((b) => b.trip.date_start <= now && !isCancelledOrRejected(b));
+  const cancelled = bookings.filter(isCancelledOrRejected);
 
   const fullName = (user.user_metadata?.full_name as string | undefined) ?? "";
 
@@ -331,6 +335,27 @@ export default async function AccountPage({ searchParams }: PageProps) {
                         past={true}
                         reviewed={reviewedBookingIds.has(b.id)}
                         incompleteParticipants={incompleteParticipantsMap.get(b.id) ?? []}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {cancelled.length > 0 && (
+              <section className="mt-8">
+                <h2 className="text-lg font-bold text-stone-900">
+                  Cancelled / rejected
+                  <span className="ml-2 text-base font-normal text-stone-400">({cancelled.length})</span>
+                </h2>
+                <ul className="mt-4 space-y-4">
+                  {cancelled.map((b) => (
+                    <li key={b.id}>
+                      <BookingCard
+                        booking={b}
+                        past={false}
+                        reviewed={false}
+                        incompleteParticipants={[]}
                       />
                     </li>
                   ))}

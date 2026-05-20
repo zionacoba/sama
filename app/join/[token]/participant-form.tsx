@@ -133,6 +133,7 @@ export function ParticipantForm({ token, meetingPoints, waiverText, defaultMeeti
           <input
             type="checkbox"
             name="waiver_accepted"
+            required
             className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
           />
           <span className="text-xs leading-relaxed text-stone-600">

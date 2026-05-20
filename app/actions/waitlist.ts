@@ -67,11 +67,12 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
 
   const { data: entry } = await admin
     .from("waitlist")
-    .select("id, full_name, email, trips(title, slug, organizer_id)")
+    .select("id, full_name, email, notified, trips(title, slug, organizer_id)")
     .eq("id", id)
     .maybeSingle();
 
   if (!entry) return;
+  if (entry.notified) return;
 
   type TripRef = { title: string; slug: string; organizer_id: string };
   const trip = entry.trips as unknown as TripRef | null;
