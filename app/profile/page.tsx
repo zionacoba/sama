@@ -2,9 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { BookingReviewForm } from "@/app/dashboard/bookings/booking-review-form";
 import { ProfileForm as SafetyForm } from "@/app/dashboard/profile/profile-form";
 import { ProfileForm } from "./profile-form";
+import { ParticipantShareLinks } from "./participant-share-links";
 
 type PageProps = {
   searchParams: Promise<{ tab?: string }>;
@@ -62,6 +64,8 @@ function DifficultyBadge({ level }: { level: string }) {
   );
 }
 
+type IncompleteParticipant = { slotNumber: number; token: string };
+
 function StatusBadge({ status }: { status: string }) {
   const styles =
     status === "confirmed"
@@ -81,10 +85,12 @@ function BookingCard({
   booking,
   past,
   reviewed,
+  incompleteParticipants,
 }: {
   booking: Booking;
   past: boolean;
   reviewed: boolean;
+  incompleteParticipants: IncompleteParticipant[];
 }) {
   const { trip } = booking;
   return (
@@ -148,6 +154,10 @@ function BookingCard({
           )}
         </div>
 
+        {incompleteParticipants.length > 0 && (
+          <ParticipantShareLinks participants={incompleteParticipants} />
+        )}
+
         {past && booking.status === "confirmed" && !reviewed && (
           <BookingReviewForm
             tripId={trip.id}
@@ -209,6 +219,24 @@ export default async function AccountPage({ searchParams }: PageProps) {
     reviewedBookingIds = new Set(
       (reviewsData ?? []).map((r) => r.booking_id).filter(Boolean)
     );
+  }
+
+  const multiSlotIds = bookings.filter((b) => b.slots > 1).map((b) => b.id);
+  const incompleteParticipantsMap = new Map<number, IncompleteParticipant[]>();
+
+  if (multiSlotIds.length > 0) {
+    const admin = createSupabaseAdminClient();
+    const { data: participantsData } = await admin
+      .from("booking_participants")
+      .select("booking_id, slot_number, token")
+      .in("booking_id", multiSlotIds)
+      .eq("completed", false)
+      .order("slot_number");
+
+    for (const p of (participantsData ?? []) as { booking_id: number; slot_number: number; token: string }[]) {
+      if (!incompleteParticipantsMap.has(p.booking_id)) incompleteParticipantsMap.set(p.booking_id, []);
+      incompleteParticipantsMap.get(p.booking_id)!.push({ slotNumber: p.slot_number, token: p.token });
+    }
   }
 
   const upcoming = bookings.filter((b) => b.trip.date_start > now);
@@ -277,7 +305,12 @@ export default async function AccountPage({ searchParams }: PageProps) {
                 <ul className="mt-4 space-y-4">
                   {upcoming.map((b) => (
                     <li key={b.id}>
-                      <BookingCard booking={b} past={false} reviewed={false} />
+                      <BookingCard
+                        booking={b}
+                        past={false}
+                        reviewed={false}
+                        incompleteParticipants={incompleteParticipantsMap.get(b.id) ?? []}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -297,6 +330,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
                         booking={b}
                         past={true}
                         reviewed={reviewedBookingIds.has(b.id)}
+                        incompleteParticipants={incompleteParticipantsMap.get(b.id) ?? []}
                       />
                     </li>
                   ))}
