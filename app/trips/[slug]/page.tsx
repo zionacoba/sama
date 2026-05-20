@@ -322,7 +322,7 @@ export default async function TripDetailPage({ params }: PageProps) {
 
       <main>
         {/* Compact hero */}
-        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 pt-8 pb-6">
+        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 pt-10 pb-8">
           <div className="mx-auto max-w-6xl">
             <div className="flex flex-wrap items-center gap-2">
               {tripData.activity_type && <ActivityBadge type={tripData.activity_type} />}
@@ -336,15 +336,15 @@ export default async function TripDetailPage({ params }: PageProps) {
                 </a>
               )}
             </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+            <h1 className="mt-4 text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
               {tripData.title}
             </h1>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-600">
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-stone-600">
               <span>📍 {tripData.destination}</span>
               <span>📅 {formatDateShort(tripData.date_start)}</span>
               {tripData.duration && <span>⏱ {tripData.duration}</span>}
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="mt-5 flex flex-wrap items-center gap-3">
               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 tripData.remaining_slots === 0
                   ? "bg-stone-100 text-stone-500"
