@@ -26,8 +26,6 @@ type CreateBookingInput = {
 };
 
 export async function createBooking(input: CreateBookingInput) {
-  console.log("createBooking called with tripSlug:", input.tripSlug);
-
   const supabase = await createSupabaseServerClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -42,8 +40,6 @@ export async function createBooking(input: CreateBookingInput) {
     .select("id, title, date_start, remaining_slots, organizer_id, difficulty")
     .eq("slug", input.tripSlug)
     .maybeSingle();
-
-  console.log("Looking for slug:", input.tripSlug, "Result:", trip, "Error:", tripFetchError);
 
   if (!trip) return { error: "Trip not found." };
   if (!input.waiverAgreed || !input.platformWaiverAgreed) {

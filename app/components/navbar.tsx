@@ -82,8 +82,6 @@ export async function Navbar() {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    console.log("[navbar] auth user.id:", user.id, "organizer row:", organizer);
-
     organizerStatus = organizer?.status ?? null;
     organizerId = organizer?.id ? String(organizer.id) : null;
 
