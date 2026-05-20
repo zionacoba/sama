@@ -647,7 +647,7 @@ export function BookingModal({
                       disabled={loading}
                       className="rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {loading ? "Submitting…" : "Confirm Booking"}
+                      {loading ? "Submitting…" : "Confirm booking"}
                     </button>
                   </div>
                 </form>
