@@ -145,11 +145,17 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
       </div>
 
       <main className="mx-auto max-w-3xl px-4 pb-10 sm:pb-12">
-        {/* Card overlaps the banner; avatar straddles the card top edge */}
-        <div className="-mt-6 rounded-2xl border border-stone-200 bg-white shadow-sm">
+        {/*
+          Card sits fully below the banner (no negative margin on the card).
+          Avatar uses -mt-10 to pop 40 px upward into the banner area,
+          so exactly half the avatar (h-20 = 80 px) is above the card edge.
+          On desktop the name is to the right of the avatar (flex-row items-end).
+          On mobile the name is below the avatar; pt-3 on the name div keeps spacing.
+        */}
+        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
           <div className="px-5 sm:px-6">
-            {/* Avatar + name: stacked on mobile, side-by-side on desktop */}
-            <div className="flex flex-col sm:flex-row sm:items-end sm:gap-5">
+            <div className="flex items-end gap-4">
+              {/* Avatar: -mt-10 = 40 px above card top edge */}
               <div className="relative -mt-10 h-20 w-20 shrink-0 overflow-hidden rounded-full bg-trailhead-muted text-xl font-bold text-trailhead ring-4 ring-white">
                 {organizer.photo_url ? (
                   <Image
@@ -163,7 +169,8 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                   <span className="flex h-full w-full items-center justify-center">{initials}</span>
                 )}
               </div>
-              <div className="mt-3 pb-2 sm:mt-0">
+              {/* Name + rating — sits to the right, bottom-aligned with avatar */}
+              <div className="min-w-0 pb-3">
                 <h1 className="text-xl font-bold tracking-tight text-stone-900 sm:text-2xl">
                   {publicName}
                 </h1>
@@ -177,7 +184,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
               </div>
             </div>
             {organizer.bio && (
-              <p className="mt-3 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
+              <p className="mt-4 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
             )}
             {(() => {
               const sl = organizer.social_links as { facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
