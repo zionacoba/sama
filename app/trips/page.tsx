@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 const ACTIVITIES = ["All", "Hiking", "Freediving", "Beach & Island"] as const;
-const DURATIONS  = ["All", "Day tour", "Overnight", "2D1N", "3D2N", "4D3N+"] as const;
+const DURATIONS  = ["All", "Day tour", "2D1N", "3D2N", "4D3N+"] as const;
 const DIFFICULTIES = ["All", "Chill", "Beginner", "Intermediate", "Advanced", "Expert"] as const;
 
 type Trip = {

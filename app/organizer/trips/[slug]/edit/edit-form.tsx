@@ -235,7 +235,6 @@ export function EditTripForm({
         >
           <option value="">Select duration…</option>
           <option value="Day tour">Day tour</option>
-          <option value="Overnight">Overnight</option>
           <option value="2D1N">2D1N</option>
           <option value="3D2N">3D2N</option>
           <option value="4D3N+">4D3N+</option>
