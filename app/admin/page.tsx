@@ -17,6 +17,11 @@ type OrganizerApplication = {
   email: string;
   bio: string;
   phone: string;
+  facebook_url: string | null;
+  past_trips_evidence: string | null;
+  activity_types: string[] | null;
+  years_of_experience: number | null;
+  emergency_certified: boolean;
   status: string;
   created_at: string;
 };
@@ -109,7 +114,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
   // Organizers — all, sorted pending first
   const { data: orgData, error: orgError } = await authClient
     .from("organizers")
-    .select("id, full_name, email, bio, phone, status, created_at")
+    .select("id, full_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_of_experience, emergency_certified, status, created_at")
     .order("created_at", { ascending: false });
 
   const allApplications = (orgData ?? []) as OrganizerApplication[];
@@ -267,7 +272,12 @@ export default async function AdminPage({ searchParams }: PageProps) {
                       <th className="px-4 py-3 font-semibold">Full name</th>
                       <th className="px-4 py-3 font-semibold">Email</th>
                       <th className="px-4 py-3 font-semibold">Phone</th>
+                      <th className="px-4 py-3 font-semibold">Facebook</th>
                       <th className="px-4 py-3 font-semibold">Bio</th>
+                      <th className="px-4 py-3 font-semibold">Past trips</th>
+                      <th className="px-4 py-3 font-semibold">Activity types</th>
+                      <th className="px-4 py-3 font-semibold">Yrs exp</th>
+                      <th className="px-4 py-3 font-semibold">First aid</th>
                       <th className="px-4 py-3 font-semibold">Status</th>
                       <th className="px-4 py-3 font-semibold">Date applied</th>
                       <th className="px-4 py-3 font-semibold">Actions</th>
@@ -276,7 +286,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                   <tbody>
                     {applications.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-12 text-center text-stone-500">
+                        <td colSpan={12} className="px-4 py-12 text-center text-stone-500">
                           No applications yet.
                         </td>
                       </tr>
@@ -286,8 +296,38 @@ export default async function AdminPage({ searchParams }: PageProps) {
                           <td className="px-4 py-3 font-medium text-stone-900">{app.full_name}</td>
                           <td className="px-4 py-3 text-stone-600">{app.email}</td>
                           <td className="px-4 py-3 text-stone-600">{app.phone}</td>
+                          <td className="px-4 py-3">
+                            {app.facebook_url ? (
+                              <a
+                                href={app.facebook_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-trailhead underline-offset-2 hover:underline"
+                              >
+                                View
+                              </a>
+                            ) : <span className="text-stone-300">—</span>}
+                          </td>
                           <td className="max-w-xs px-4 py-3 text-stone-600">
                             <p className="line-clamp-2">{app.bio}</p>
+                          </td>
+                          <td className="max-w-xs px-4 py-3 text-stone-600">
+                            {app.past_trips_evidence ? (
+                              <p className="line-clamp-3 whitespace-pre-line text-xs">{app.past_trips_evidence}</p>
+                            ) : <span className="text-stone-300">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-stone-600">
+                            {app.activity_types?.length
+                              ? <span className="text-xs">{app.activity_types.join(", ")}</span>
+                              : <span className="text-stone-300">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center text-stone-700">
+                            {app.years_of_experience ?? <span className="text-stone-300">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {app.emergency_certified
+                              ? <span className="text-emerald-600">✓</span>
+                              : <span className="text-stone-300">—</span>}
                           </td>
                           <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
                           <td className="whitespace-nowrap px-4 py-3 text-stone-600">{formatCreatedAt(app.created_at)}</td>

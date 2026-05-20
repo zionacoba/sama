@@ -20,9 +20,20 @@ export async function applyToBeOrganizer(
   const fullName = (formData.get("full_name") as string)?.trim();
   const bio = (formData.get("bio") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim();
+  const facebookUrl = (formData.get("facebook_url") as string)?.trim();
+  const pastTripsEvidence = (formData.get("past_trips_evidence") as string)?.trim();
+  const activityTypes = formData.getAll("activity_types") as string[];
+  const yearsOfExperience = Number((formData.get("years_of_experience") as string)?.trim());
+  const emergencyCertified = formData.get("emergency_certified") === "on";
 
-  if (!displayName || !fullName || !bio || !phone) {
-    return { error: "All fields are required." };
+  if (!displayName || !fullName || !bio || !phone || !facebookUrl || !pastTripsEvidence) {
+    return { error: "All required fields must be filled in." };
+  }
+  if (activityTypes.length === 0) {
+    return { error: "Please select at least one activity type." };
+  }
+  if (!yearsOfExperience || yearsOfExperience < 1) {
+    return { error: "Please enter your years of experience." };
   }
 
   const { error } = await supabase.from("organizers").insert({
@@ -32,6 +43,11 @@ export async function applyToBeOrganizer(
     full_name: fullName,
     bio,
     phone,
+    facebook_url: facebookUrl,
+    past_trips_evidence: pastTripsEvidence,
+    activity_types: activityTypes,
+    years_of_experience: yearsOfExperience,
+    emergency_certified: emergencyCertified,
   });
 
   if (error) {
