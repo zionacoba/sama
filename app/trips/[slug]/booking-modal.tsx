@@ -631,7 +631,10 @@ export function BookingModal({
                           className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
                         />
                         <span className="text-xs leading-relaxed text-stone-600">
-                          I confirm that I have informed all participants listed in this booking of the trip risks, cancellation policy, and terms. I am booking on their behalf with their full knowledge and consent. Each participant will receive a link to confirm their own details and sign their individual waiver.
+                          {slots === 1
+                            ? "I understand the risks of this outdoor activity and agree to participate at my own risk. I have read and agree to the cancellation policy for this trip."
+                            : "I understand the risks of this outdoor activity and agree to participate at my own risk. I confirm that I have informed all other participants listed in this booking of the trip risks, cancellation policy, and terms. I am booking on their behalf with their full knowledge and consent. Each participant will receive a personal link to confirm their own details and sign their individual waiver."
+                          }
                         </span>
                       </label>
                       {waiverError && (
