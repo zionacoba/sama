@@ -7,7 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
 
 type CreateBookingInput = {
-  tripId: number;
+  tripSlug: string;
   fullName: string;
   email: string;
   phone: string;
@@ -36,8 +36,8 @@ export async function createBooking(input: CreateBookingInput) {
 
   const { data: trip } = await admin
     .from("trips")
-    .select("title, date_start, remaining_slots, organizer_id, difficulty")
-    .eq("id", input.tripId)
+    .select("id, title, date_start, remaining_slots, organizer_id, difficulty")
+    .eq("slug", input.tripSlug)
     .maybeSingle();
 
   if (!trip) return { error: "Trip not found." };
@@ -49,7 +49,7 @@ export async function createBooking(input: CreateBookingInput) {
   const { data: existingBooking } = await admin
     .from("bookings")
     .select("id")
-    .eq("trip_id", input.tripId)
+    .eq("trip_id", trip.id)
     .eq("user_id", user.id)
     .not("status", "eq", "rejected")
     .maybeSingle();
@@ -64,7 +64,7 @@ export async function createBooking(input: CreateBookingInput) {
   const { data: newBooking, error: insertError } = await admin
     .from("bookings")
     .insert({
-      trip_id: input.tripId,
+      trip_id: trip.id,
       user_id: user.id,
       full_name: input.fullName,
       email: input.email,
@@ -92,7 +92,7 @@ export async function createBooking(input: CreateBookingInput) {
   await admin
     .from("trips")
     .update({ remaining_slots: trip.remaining_slots - input.slots })
-    .eq("id", input.tripId);
+    .eq("id", trip.id);
 
   // Insert one booking_participants row per slot.
   const now = new Date().toISOString();
@@ -214,7 +214,7 @@ export async function createBooking(input: CreateBookingInput) {
     // Email failure is non-fatal
   }
 
-  revalidatePath(`/trips/${input.tripId}`);
+  revalidatePath(`/trips/${input.tripSlug}`);
   return {
     success: true as const,
     status: bookingStatus,

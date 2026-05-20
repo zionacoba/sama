@@ -175,7 +175,7 @@ export function BookingModal({
     setLoading(true);
 
     const result = await createBooking({
-      tripId: Number(tripId),
+      tripSlug,
       fullName,
       email,
       phone,
