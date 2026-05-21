@@ -28,7 +28,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">1. Acceptance of Terms</h2>
               <p className="mt-2 leading-relaxed">
-                By accessing or using Sama (landas-zeta.vercel.app), you agree to be bound by these Terms of Service. If you do not agree, do not use the platform.
+                By accessing or using Sama (sama.com.ph), you agree to be bound by these Terms of Service. If you do not agree, do not use the platform.
               </p>
             </section>
 
