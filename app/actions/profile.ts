@@ -43,19 +43,11 @@ export async function saveUserProfile(
   if (!user) return { error: "Not authenticated." };
 
   const full_name = (formData.get("full_name") as string)?.trim();
-  const phone = (formData.get("phone") as string)?.trim() || null;
 
   if (!full_name) return { error: "Full name is required." };
 
   const { error: authError } = await supabase.auth.updateUser({ data: { full_name } });
   if (authError) return { error: authError.message };
-
-  const admin = createSupabaseAdminClient();
-  const { error: profileError } = await admin
-    .from("profiles")
-    .upsert({ id: user.id, phone, updated_at: new Date().toISOString() });
-
-  if (profileError) return { error: profileError.message };
 
   revalidatePath("/profile");
   return { success: true };

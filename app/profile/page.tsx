@@ -174,7 +174,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
   if (!user) redirect("/login?redirectTo=/profile");
 
   const admin = createSupabaseAdminClient();
-  const [{ data: bookingsData }, { data: profileData, error: profileError }] = await Promise.all([
+  const [{ data: bookingsData }, { data: profileData }] = await Promise.all([
     supabase
       .from("bookings")
       .select(`
@@ -193,11 +193,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
       .maybeSingle(),
   ]);
 
-  console.log("PROFILE DEBUG:", JSON.stringify(profileData));
-  console.log("PROFILE ERROR:", JSON.stringify(profileError));
-  console.log("PROFILE USER ID:", user.id);
-
-  const bookings = (bookingsData ?? []) as unknown as Booking[];
+const bookings = (bookingsData ?? []) as unknown as Booking[];
   const now = new Date().toISOString();
 
   const pastConfirmedBookingIds = bookings
@@ -366,7 +362,6 @@ export default async function AccountPage({ searchParams }: PageProps) {
                 <ProfileForm
                   fullName={fullName}
                   email={user.email ?? ""}
-                  phone={null}
                 />
               </div>
             </div>

@@ -6,10 +6,9 @@ import { saveUserProfile } from "@/app/actions/profile";
 type Props = {
   fullName: string;
   email: string;
-  phone: string | null;
 };
 
-export function ProfileForm({ fullName, email, phone }: Props) {
+export function ProfileForm({ fullName, email }: Props) {
   const [state, action, pending] = useActionState(saveUserProfile, null);
 
   return (
@@ -49,20 +48,6 @@ export function ProfileForm({ fullName, email, phone }: Props) {
           value={email}
           readOnly
           className="mt-1.5 w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm text-stone-400 outline-none cursor-not-allowed"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-stone-700">
-          Phone
-        </label>
-        <input
-          id="phone"
-          name="phone"
-          type="tel"
-          defaultValue={phone ?? ""}
-          placeholder="+63 9xx xxx xxxx"
-          className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
       </div>
 
