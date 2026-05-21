@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { BookingActions } from "@/app/organizer/dashboard/booking-actions";
 import { notifyWaitlistEntry } from "@/app/actions/waitlist";
+import { ExportCsvButton } from "./export-csv-button";
 
 type WaitlistEntry = {
   id: string;
@@ -246,7 +247,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
         </div>
 
         {/* View toggle */}
-        <div className="mt-6 flex flex-wrap items-center gap-2">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
           {(
             [
               { key: "list", label: "All bookings", href: baseUrl },
@@ -266,6 +267,11 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
               {label}
             </Link>
           ))}
+          <ExportCsvButton
+            bookings={bookings}
+            tripTitle={trip.title}
+            tripDate={trip.date_start}
+          />
         </div>
 
         {/* Flat table */}

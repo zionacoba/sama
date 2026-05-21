@@ -9,6 +9,7 @@ import { BookingReviewForm } from "@/app/dashboard/bookings/booking-review-form"
 import { ProfileForm as SafetyForm } from "@/app/dashboard/profile/profile-form";
 import { ProfileForm } from "./profile-form";
 import { ParticipantShareLinks } from "./participant-share-links";
+import { WaiverModal } from "./waiver-modal";
 
 type PageProps = {
   searchParams: Promise<{ tab?: string }>;
@@ -16,9 +17,12 @@ type PageProps = {
 
 type Booking = {
   id: number;
+  full_name: string;
   slots: number;
   total_amount: number;
   status: string;
+  waiver_agreed: boolean;
+  created_at: string;
   trip: {
     id: number;
     title: string;
@@ -30,6 +34,7 @@ type Booking = {
     activity_type: string | null;
     duration: string | null;
     meeting_point: string;
+    waiver_text: string | null;
   };
 };
 
@@ -90,11 +95,13 @@ function BookingCard({
   past,
   reviewed,
   incompleteParticipants,
+  fullName,
 }: {
   booking: Booking;
   past: boolean;
   reviewed: boolean;
   incompleteParticipants: IncompleteParticipant[];
+  fullName: string;
 }) {
   const { trip } = booking;
   return (
@@ -159,6 +166,15 @@ function BookingCard({
         {past && booking.status === "confirmed" && reviewed && (
           <p className="text-xs text-stone-400">Review submitted ✓</p>
         )}
+
+        {booking.status === "confirmed" && booking.waiver_agreed && booking.trip.waiver_text && (
+          <WaiverModal
+            tripTitle={booking.trip.title}
+            fullName={booking.full_name || fullName}
+            agreedAt={booking.created_at}
+            waiverText={booking.trip.waiver_text}
+          />
+        )}
       </div>
     </article>
   );
@@ -179,10 +195,13 @@ export default async function AccountPage({ searchParams }: PageProps) {
       .from("bookings")
       .select(`
         id,
+        full_name,
         slots,
         total_amount,
         status,
-        trip:trips(id, title, slug, date_start, destination, photos, difficulty, activity_type, duration, meeting_point)
+        waiver_agreed,
+        created_at,
+        trip:trips(id, title, slug, date_start, destination, photos, difficulty, activity_type, duration, meeting_point, waiver_text)
       `)
       .eq("email", user.email ?? "")
       .order("created_at", { ascending: false }),
@@ -303,6 +322,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
                         past={false}
                         reviewed={false}
                         incompleteParticipants={incompleteParticipantsMap.get(b.id) ?? []}
+                        fullName={fullName}
                       />
                     </li>
                   ))}
@@ -324,6 +344,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
                         past={true}
                         reviewed={reviewedBookingIds.has(b.id)}
                         incompleteParticipants={incompleteParticipantsMap.get(b.id) ?? []}
+                        fullName={fullName}
                       />
                     </li>
                   ))}
@@ -345,6 +366,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
                         past={false}
                         reviewed={false}
                         incompleteParticipants={[]}
+                        fullName={fullName}
                       />
                     </li>
                   ))}
