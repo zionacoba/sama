@@ -171,6 +171,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
 
   if (!user) redirect("/login?redirectTo=/profile");
 
+  const admin = createSupabaseAdminClient();
   const [{ data: bookingsData }, { data: profileData }] = await Promise.all([
     supabase
       .from("bookings")
@@ -183,7 +184,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
       `)
       .eq("email", user.email ?? "")
       .order("created_at", { ascending: false }),
-    supabase
+    admin
       .from("profiles")
       .select("birthdate, emergency_contact_name, emergency_contact_phone, phone")
       .eq("id", user.id)
