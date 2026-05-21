@@ -276,7 +276,7 @@ export function BookingModal({
           />
 
           <div className="relative z-10 flex w-full flex-col max-h-[85dvh] rounded-t-2xl border border-stone-200 bg-white pt-8 shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl">
-            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stone-100 px-6 pb-4">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stone-100 px-6 pb-4" style={{ paddingTop: '24px' }}>
               <div>
                 <h2
                   id="booking-modal-title"
