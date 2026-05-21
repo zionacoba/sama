@@ -188,7 +188,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
       .order("created_at", { ascending: false }),
     admin
       .from("profiles")
-      .select("birthdate, emergency_contact_name, emergency_contact_phone")
+      .select("birthdate, emergency_contact_name, emergency_contact_phone, phone")
       .eq("id", user.id)
       .maybeSingle(),
   ]);
@@ -362,6 +362,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
                 <ProfileForm
                   fullName={fullName}
                   email={user.email ?? ""}
+                  phone={profileData?.phone ?? null}
                 />
               </div>
             </div>
