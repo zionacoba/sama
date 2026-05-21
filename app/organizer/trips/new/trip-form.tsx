@@ -32,6 +32,7 @@ export function TripForm({
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [editedAfterSubmit, setEditedAfterSubmit] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const submitIntentRef = useRef<"active" | "draft">("active");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -63,6 +64,7 @@ export function TripForm({
 
     formData.set("photos_json", JSON.stringify(uploadedUrls));
     formData.set("meeting_points", JSON.stringify(meetingPoints));
+    formData.set("status", submitIntentRef.current);
 
     startTransition(async () => {
       await action(formData);
@@ -476,14 +478,24 @@ export function TripForm({
           Cancel
         </a>
         <button
+          type="button"
+          disabled={isPending}
+          onClick={() => {
+            submitIntentRef.current = "draft";
+            formRef.current?.requestSubmit();
+          }}
+          className="rounded-xl border border-stone-200 px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isPending && submitIntentRef.current === "draft" ? "Saving…" : "Save as Draft"}
+        </button>
+        <button
           type="submit"
           disabled={isPending}
+          onClick={() => { submitIntentRef.current = "active"; }}
           className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isPending
-            ? hasNewUploads
-              ? "Uploading…"
-              : "Creating trip…"
+          {isPending && submitIntentRef.current === "active"
+            ? hasNewUploads ? "Uploading…" : "Creating trip…"
             : "Create trip"}
         </button>
       </div>

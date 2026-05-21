@@ -69,46 +69,55 @@ export async function createTrip(
     : null;
   const waiver_text = (formData.get("waiver_text") as string)?.trim() || null;
   const messenger_gc_link = (formData.get("messenger_gc_link") as string)?.trim() || null;
+  const status = (formData.get("status") as string) === "draft" ? "draft" : "active";
+  const isDraft = status === "draft";
 
-  if (!title || !activity_type || !destination || !difficulty || !description) {
-    return { error: "Please fill in all required fields." };
+  if (!title) {
+    return { error: "Please enter a trip title." };
   }
 
-  if (!is_template && (!date_start || isNaN(price) || isNaN(total_slots))) {
-    return { error: "Please fill in all required fields." };
+  if (!isDraft) {
+    if (!activity_type || !destination || !difficulty || !description) {
+      return { error: "Please fill in all required fields." };
+    }
+    if (!is_template && (!date_start || isNaN(price) || isNaN(total_slots))) {
+      return { error: "Please fill in all required fields." };
+    }
+    if (!is_template && meeting_points.length === 0) {
+      return { error: "Please add at least one meeting point." };
+    }
+    if (!is_template && payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
+      return { error: "Please enter a minimum downpayment amount." };
+    }
+    if (!is_template && cancellation_policy === "custom" && !cancellation_policy_custom) {
+      return { error: "Please enter your custom cancellation policy." };
+    }
   }
 
-  if (!is_template && meeting_points.length === 0) {
-    return { error: "Please add at least one meeting point." };
-  }
-
-  if (!is_template && payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
-    return { error: "Please enter a minimum downpayment amount." };
-  }
-
-  if (!is_template && cancellation_policy === "custom" && !cancellation_policy_custom) {
-    return { error: "Please enter your custom cancellation policy." };
-  }
+  // Normalise numerics for drafts so the DB insert never gets NaN.
+  const safePrice = isNaN(price) ? 0 : price;
+  const safeTotalSlots = isNaN(total_slots) ? 0 : total_slots;
+  const safeDateStart = is_template ? "2099-12-31" : (date_start || "2099-12-31");
 
   const slug = `${slugify(title)}-${Date.now().toString(36)}`;
 
   const { error } = await supabase.from("trips").insert({
     title,
     slug,
-    activity_type,
-    destination,
-    difficulty,
+    activity_type: activity_type || null,
+    destination: destination || null,
+    difficulty: difficulty || null,
     duration: duration || null,
-    date_start,
-    price,
-    total_slots,
-    remaining_slots: is_template ? 0 : total_slots,
+    date_start: safeDateStart,
+    price: safePrice,
+    total_slots: safeTotalSlots,
+    remaining_slots: 0,
     meeting_points: is_template ? [] : meeting_points,
-    description,
+    description: description || null,
     includes: includes || null,
     what_to_bring: what_to_bring || null,
     photos,
-    status: "active",
+    status,
     organizer_id: organizer.id,
     payment_type,
     min_downpayment,
@@ -153,7 +162,7 @@ export async function updateTrip(
 
   const { data: existing, error: fetchError } = await supabase
     .from("trips")
-    .select("id, slug, title, organizer_id, total_slots, remaining_slots, date_start, price, meeting_points")
+    .select("id, slug, status, title, organizer_id, total_slots, remaining_slots, date_start, price, meeting_points")
     .eq("id", tripId)
     .maybeSingle();
 
@@ -198,28 +207,35 @@ export async function updateTrip(
     : null;
   const waiver_text = (formData.get("waiver_text") as string)?.trim() || null;
   const messenger_gc_link = (formData.get("messenger_gc_link") as string)?.trim() || null;
+  const statusInput = formData.get("status") as string | null;
+  const status = statusInput === "active" ? "active" : statusInput === "draft" ? "draft" : (existing.status ?? "active");
+  const isDraft = status === "draft";
 
-  if (!title || !activity_type || !destination || !difficulty || !description) {
+  if (!title) {
+    return { error: "Please enter a trip title." };
+  }
+
+  if (!isDraft && !activity_type || !isDraft && !destination || !isDraft && !difficulty || !isDraft && !description) {
     return { error: "Please fill in all required fields." };
   }
 
-  if (!is_template && (!date_start || isNaN(price) || isNaN(total_slots))) {
+  if (!isDraft && !is_template && (!date_start || isNaN(price) || isNaN(total_slots))) {
     return { error: "Please fill in all required fields." };
   }
 
-  if (!is_template && meeting_points.length === 0) {
+  if (!isDraft && !is_template && meeting_points.length === 0) {
     return { error: "Please add at least one meeting point." };
   }
 
-  if (!is_template && payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
+  if (!isDraft && !is_template && payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
     return { error: "Please enter a minimum downpayment amount." };
   }
 
-  if (!is_template && cancellation_policy === "custom" && !cancellation_policy_custom) {
+  if (!isDraft && !is_template && cancellation_policy === "custom" && !cancellation_policy_custom) {
     return { error: "Please enter your custom cancellation policy." };
   }
 
-  if (!is_template && total_slots < existing.total_slots) {
+  if (!isDraft && !is_template && total_slots < existing.total_slots) {
     const admin = createSupabaseAdminClient();
     const { count } = await admin
       .from("bookings")
@@ -232,28 +248,34 @@ export async function updateTrip(
     }
   }
 
-  const slotDiff = is_template ? 0 : total_slots - existing.total_slots;
-  const remaining_slots = is_template
+  const slotDiff = (isDraft || is_template) ? 0 : total_slots - existing.total_slots;
+  const remaining_slots = (isDraft || is_template)
     ? existing.remaining_slots
     : Math.max(0, existing.remaining_slots + slotDiff);
+
+  // Normalise numerics for drafts.
+  const safePrice = isDraft && isNaN(price) ? existing.price ?? 0 : price;
+  const safeTotalSlots = isDraft && isNaN(total_slots) ? existing.total_slots ?? 0 : total_slots;
+  const safeDateStart = is_template ? "2099-12-31" : (isDraft && !date_start ? existing.date_start ?? "2099-12-31" : date_start);
 
   const { error } = await supabase
     .from("trips")
     .update({
       title,
-      activity_type,
-      destination,
-      difficulty,
+      activity_type: activity_type || null,
+      destination: destination || null,
+      difficulty: difficulty || null,
       duration: duration || null,
-      date_start,
-      price,
-      total_slots,
+      date_start: safeDateStart,
+      price: safePrice,
+      total_slots: safeTotalSlots,
       remaining_slots,
       meeting_points: is_template ? [] : meeting_points,
-      description,
+      description: description || null,
       includes: includes || null,
       what_to_bring: what_to_bring || null,
       photos,
+      status,
       payment_type,
       min_downpayment,
       cancellation_policy,

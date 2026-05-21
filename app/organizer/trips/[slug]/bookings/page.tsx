@@ -156,7 +156,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
   const confirmed = bookings.filter((b) => b.status === "confirmed");
   const rejected = bookings.filter((b) => b.status === "rejected" || b.status === "cancelled");
 
-  const needsManualApproval = trip.difficulty === "Advanced" || trip.difficulty === "Expert";
+  const needsManualApproval = trip.difficulty === "Advanced";
   const slotsBooked = trip.total_slots - trip.remaining_slots;
 
   // Grouped view: confirmed + pending only, grouped by meeting_point

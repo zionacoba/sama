@@ -17,6 +17,7 @@ type MeetingPoint = { location: string; time: string };
 
 type TripForEdit = {
   id: number;
+  status: string;
   title: string;
   activity_type: string | null;
   difficulty: string;
@@ -71,6 +72,7 @@ export function EditTripForm({
   const formRef = useRef<HTMLFormElement>(null);
   const photosJsonRef = useRef<HTMLInputElement>(null);
   const meetingPointsJsonRef = useRef<HTMLInputElement>(null);
+  const submitIntentRef = useRef<"active" | "draft">(trip.status === "draft" ? "draft" : "active");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -106,6 +108,7 @@ export function EditTripForm({
 
     // Step 3: capture FormData once — after all async work and DOM patches
     const formData = new FormData(formRef.current);
+    formData.set("status", submitIntentRef.current);
 
     startTransition(async () => {
       await action(formData);
@@ -557,17 +560,47 @@ export function EditTripForm({
         >
           Cancel
         </a>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isPending
-            ? hasNewUploads
-              ? "Uploading…"
-              : "Saving…"
-            : "Save changes"}
-        </button>
+        {trip.status === "draft" ? (
+          <>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                submitIntentRef.current = "draft";
+                formRef.current?.requestSubmit();
+              }}
+              className="rounded-xl border border-stone-200 px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending && submitIntentRef.current === "draft" ? "Saving…" : "Save as Draft"}
+            </button>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                submitIntentRef.current = "active";
+                formRef.current?.requestSubmit();
+              }}
+              className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending && submitIntentRef.current === "active"
+                ? hasNewUploads ? "Uploading…" : "Publishing…"
+                : "Publish Trip"}
+            </button>
+          </>
+        ) : (
+          <button
+            type="submit"
+            disabled={isPending}
+            onClick={() => { submitIntentRef.current = "active"; }}
+            className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isPending
+              ? hasNewUploads
+                ? "Uploading…"
+                : "Saving…"
+              : "Save changes"}
+          </button>
+        )}
       </div>
     </form>
   );
