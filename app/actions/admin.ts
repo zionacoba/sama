@@ -31,6 +31,7 @@ export async function approveOrganizer(id: string): Promise<void> {
     await resend.emails.send({
       from: "Sama <onboarding@resend.dev>",
       to: organizer.email,
+      replyTo: "sama.com.ph@gmail.com",
       subject: "Your Sama organizer application has been approved!",
       html: `
         <p>Hi ${organizer.full_name},</p>
@@ -66,6 +67,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
     await resend.emails.send({
       from: "Sama <onboarding@resend.dev>",
       to: organizer.email,
+      replyTo: "sama.com.ph@gmail.com",
       subject: "Update on your Sama organizer application",
       html: `
         <p>Hi ${organizer.full_name},</p>

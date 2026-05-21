@@ -166,6 +166,7 @@ export async function createBooking(input: CreateBookingInput) {
         await resend.emails.send({
           from: "Sama <onboarding@resend.dev>",
           to: organizerEmail,
+          replyTo: "sama.com.ph@gmail.com",
           subject: `New booking for ${trip.title}`,
           html: `
             <p>Hi,</p>
@@ -196,10 +197,10 @@ export async function createBooking(input: CreateBookingInput) {
         day: "numeric",
       }).format(new Date(trip.date_start));
 
-      // TODO: change to input.email once sama.com.ph is verified in Resend
       await resend.emails.send({
         from: "Sama <onboarding@resend.dev>",
-        to: "acobapaulzion@gmail.com",
+        to: input.email,
+        replyTo: "sama.com.ph@gmail.com",
         subject: autoApprove
           ? `Booking confirmed — ${trip.title}`
           : `Booking request received — ${trip.title}`,

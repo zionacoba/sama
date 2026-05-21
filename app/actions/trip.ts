@@ -262,10 +262,10 @@ export async function updateTrip(
     if (waitlistEntries && waitlistEntries.length > 0) {
       try {
         for (const entry of waitlistEntries) {
-          // TODO: change to entry.email once sama.com.ph is verified in Resend
           await resend.emails.send({
             from: "Sama <onboarding@resend.dev>",
-            to: "acobapaulzion@gmail.com",
+            to: entry.email,
+            replyTo: "sama.com.ph@gmail.com",
             subject: `Slots available — ${title}`,
             html: `
               <p>Hi ${entry.full_name},</p>
@@ -339,10 +339,10 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
 
   try {
     for (const booking of bookings ?? []) {
-      // TODO: change to booking.email once sama.com.ph is verified in Resend
       await resend.emails.send({
         from: "Sama <onboarding@resend.dev>",
-        to: "acobapaulzion@gmail.com",
+        to: booking.email,
+        replyTo: "sama.com.ph@gmail.com",
         subject: `Trip cancelled — ${trip.title}`,
         html: `
           <p>Hi ${booking.full_name},</p>

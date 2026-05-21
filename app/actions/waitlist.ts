@@ -79,10 +79,10 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
   if (!trip || String(trip.organizer_id) !== String(organizer.id)) return;
 
   try {
-    // TODO: change to entry.email once sama.com.ph is verified in Resend
     await resend.emails.send({
       from: "Sama <onboarding@resend.dev>",
-      to: "acobapaulzion@gmail.com",
+      to: entry.email,
+      replyTo: "sama.com.ph@gmail.com",
       subject: `A slot opened up — ${trip.title}`,
       html: `
         <p>Hi ${entry.full_name},</p>
