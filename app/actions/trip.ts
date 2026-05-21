@@ -64,8 +64,11 @@ export async function createTrip(
     ? parseFloat(min_downpayment_raw)
     : null;
   const downpayment_cutoff_days_raw = formData.get("downpayment_cutoff_days") as string;
-  const downpayment_cutoff_days = payment_type === "downpayment" && downpayment_cutoff_days_raw
+  const _cutoffParsed = payment_type === "downpayment" && downpayment_cutoff_days_raw
     ? parseInt(downpayment_cutoff_days_raw, 10)
+    : null;
+  const downpayment_cutoff_days = _cutoffParsed !== null
+    ? (isNaN(_cutoffParsed) || _cutoffParsed < 0 ? 10 : _cutoffParsed)
     : null;
   const cancellation_policy = (formData.get("cancellation_policy") as string) || "flexible";
   const cancellation_policy_custom = cancellation_policy === "custom"
@@ -207,8 +210,11 @@ export async function updateTrip(
     ? parseFloat(min_downpayment_raw)
     : null;
   const downpayment_cutoff_days_raw = formData.get("downpayment_cutoff_days") as string;
-  const downpayment_cutoff_days = payment_type === "downpayment" && downpayment_cutoff_days_raw
+  const _cutoffParsed2 = payment_type === "downpayment" && downpayment_cutoff_days_raw
     ? parseInt(downpayment_cutoff_days_raw, 10)
+    : null;
+  const downpayment_cutoff_days = _cutoffParsed2 !== null
+    ? (isNaN(_cutoffParsed2) || _cutoffParsed2 < 0 ? 10 : _cutoffParsed2)
     : null;
   const cancellation_policy = (formData.get("cancellation_policy") as string) || "flexible";
   const cancellation_policy_custom = cancellation_policy === "custom"

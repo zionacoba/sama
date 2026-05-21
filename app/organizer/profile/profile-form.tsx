@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { updateOrganizerProfile } from "@/app/actions/organizer";
 
 const inputClass =
@@ -17,10 +17,17 @@ type OrganizerData = {
   photo_url: string | null;
   cover_image_url: string | null;
   social_links: SocialLinks;
+  payout_method: string | null;
+  gcash_number: string | null;
+  gcash_name: string | null;
+  bank_name: string | null;
+  bank_account_number: string | null;
+  bank_account_name: string | null;
 };
 
 export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
   const [state, action, pending] = useActionState(updateOrganizerProfile, null);
+  const [payoutMethod, setPayoutMethod] = useState<string>(organizer.payout_method ?? "");
 
   return (
     <form action={action} className="space-y-5">
@@ -144,6 +151,104 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
             className={inputClass}
             placeholder="https://tiktok.com/@yourhandle"
           />
+        </div>
+      </div>
+
+      <div className="border-t border-stone-100 pt-5">
+        <p className={`${labelClass} mb-1`}>Payout details <span className="font-normal text-stone-400">(optional)</span></p>
+        <p className="mb-3 text-xs text-stone-500">Used to process your earnings after each trip.</p>
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="payout_method" className={labelClass}>
+              Preferred payout method
+            </label>
+            <select
+              id="payout_method"
+              name="payout_method"
+              value={payoutMethod}
+              onChange={(e) => setPayoutMethod(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">Select method…</option>
+              <option value="gcash">GCash</option>
+              <option value="bank_transfer">Bank Transfer</option>
+            </select>
+          </div>
+
+          {payoutMethod === "gcash" && (
+            <>
+              <div>
+                <label htmlFor="gcash_number" className={labelClass}>
+                  GCash number
+                </label>
+                <input
+                  id="gcash_number"
+                  name="gcash_number"
+                  type="text"
+                  defaultValue={organizer.gcash_number ?? ""}
+                  className={inputClass}
+                  placeholder="09XXXXXXXXX"
+                />
+              </div>
+              <div>
+                <label htmlFor="gcash_name" className={labelClass}>
+                  Account name
+                </label>
+                <input
+                  id="gcash_name"
+                  name="gcash_name"
+                  type="text"
+                  defaultValue={organizer.gcash_name ?? ""}
+                  className={inputClass}
+                  placeholder="Full name on GCash"
+                />
+              </div>
+            </>
+          )}
+
+          {payoutMethod === "bank_transfer" && (
+            <>
+              <div>
+                <label htmlFor="bank_name" className={labelClass}>
+                  Bank name
+                </label>
+                <input
+                  id="bank_name"
+                  name="bank_name"
+                  type="text"
+                  defaultValue={organizer.bank_name ?? ""}
+                  className={inputClass}
+                  placeholder="BDO, BPI, etc."
+                />
+              </div>
+              <div>
+                <label htmlFor="bank_account_number" className={labelClass}>
+                  Account number
+                </label>
+                <input
+                  id="bank_account_number"
+                  name="bank_account_number"
+                  type="text"
+                  defaultValue={organizer.bank_account_number ?? ""}
+                  className={inputClass}
+                  placeholder="Account number"
+                />
+              </div>
+              <div>
+                <label htmlFor="bank_account_name" className={labelClass}>
+                  Account name
+                </label>
+                <input
+                  id="bank_account_name"
+                  name="bank_account_name"
+                  type="text"
+                  defaultValue={organizer.bank_account_name ?? ""}
+                  className={inputClass}
+                  placeholder="Full name on bank account"
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
 

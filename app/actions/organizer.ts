@@ -93,13 +93,24 @@ export async function updateOrganizerProfile(
     tiktok: (formData.get("social_tiktok") as string)?.trim() || null,
   };
 
+  const payout_method = (formData.get("payout_method") as string)?.trim() || null;
+  const gcash_number = payout_method === "gcash" ? (formData.get("gcash_number") as string)?.trim() || null : null;
+  const gcash_name = payout_method === "gcash" ? (formData.get("gcash_name") as string)?.trim() || null : null;
+  const bank_name = payout_method === "bank_transfer" ? (formData.get("bank_name") as string)?.trim() || null : null;
+  const bank_account_number = payout_method === "bank_transfer" ? (formData.get("bank_account_number") as string)?.trim() || null : null;
+  const bank_account_name = payout_method === "bank_transfer" ? (formData.get("bank_account_name") as string)?.trim() || null : null;
+
   if (!display_name || !full_name || !phone || !bio) {
     return { error: "Please fill in all required fields." };
   }
 
   const { error } = await supabase
     .from("organizers")
-    .update({ display_name, full_name, phone, bio, photo_url, cover_image_url, social_links })
+    .update({
+      display_name, full_name, phone, bio, photo_url, cover_image_url, social_links,
+      payout_method, gcash_number, gcash_name,
+      bank_name, bank_account_number, bank_account_name,
+    })
     .eq("id", organizer.id);
 
   if (error) return { error: error.message };

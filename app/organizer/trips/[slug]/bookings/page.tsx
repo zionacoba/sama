@@ -337,7 +337,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                             return (
                               <div className="mt-0.5 flex flex-col items-end gap-1">
                                 {b.balance_collected ? (
-                                  <span className="text-xs font-semibold text-emerald-600">Fully Paid</span>
+                                  <span className="text-xs font-semibold text-emerald-600">Fully paid</span>
                                 ) : (
                                   <>
                                     <span className="text-xs font-normal text-stone-400">
