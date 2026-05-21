@@ -151,7 +151,7 @@ export async function updateTrip(
 
   const { data: existing, error: fetchError } = await supabase
     .from("trips")
-    .select("id, slug, organizer_id, total_slots, remaining_slots")
+    .select("id, slug, title, organizer_id, total_slots, remaining_slots, date_start, price, meeting_points")
     .eq("id", tripId)
     .maybeSingle();
 
@@ -262,6 +262,62 @@ export async function updateTrip(
     .eq("id", tripId);
 
   if (error) return { error: error.message };
+
+  // Notify confirmed/pending bookers if key booking fields changed.
+  if (!is_template) {
+    const dateChanged = existing.date_start && existing.date_start !== date_start;
+    const priceChanged = existing.price != null && existing.price !== price;
+    const mpChanged = JSON.stringify(existing.meeting_points ?? []) !== JSON.stringify(meeting_points);
+
+    if (dateChanged || priceChanged || mpChanged) {
+      const admin = createSupabaseAdminClient();
+      const { data: affectedBookings } = await admin
+        .from("bookings")
+        .select("id, full_name, email")
+        .eq("trip_id", tripId)
+        .in("status", ["confirmed", "pending"]);
+
+      if (affectedBookings && affectedBookings.length > 0) {
+        const fmt = (d: string) => new Intl.DateTimeFormat("en-PH", {
+          weekday: "long", year: "numeric", month: "long", day: "numeric",
+        }).format(new Date(d));
+
+        const changeLines: string[] = [];
+        if (dateChanged) {
+          changeLines.push(`<li><strong>Date:</strong> ${fmt(existing.date_start)} → ${fmt(date_start)}</li>`);
+        }
+        if (priceChanged) {
+          changeLines.push(`<li><strong>Price:</strong> ₱${Number(existing.price).toLocaleString()} → ₱${price.toLocaleString()}</li>`);
+        }
+        if (mpChanged) {
+          changeLines.push(`<li><strong>Meeting point:</strong> updated — check the trip page for details</li>`);
+        }
+
+        const changeHtml = `<ul>${changeLines.join("")}</ul>`;
+
+        try {
+          for (const booking of affectedBookings) {
+            await resend.emails.send({
+              from: "Sama <onboarding@resend.dev>",
+              to: booking.email,
+              replyTo: "sama.com.ph@gmail.com",
+              subject: `Important update to your booking: ${title}`,
+              html: `
+                <p>Hi ${booking.full_name},</p>
+                <p>The organizer has made changes to <strong>${title}</strong> that may affect your booking:</p>
+                ${changeHtml}
+                <p>Please review the updated trip details here: <a href="https://landas-zeta.vercel.app/trips/${existing.slug}">sama.ph/trips/${existing.slug}</a></p>
+                <p>If you have questions, contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
+                <p>— The Sama Team</p>
+              `,
+            });
+          }
+        } catch {
+          // Email failure is non-fatal
+        }
+      }
+    }
+  }
 
   // Notify waitlist when the organizer increases slots on a previously full trip
   if (existing.remaining_slots === 0 && remaining_slots > 0) {

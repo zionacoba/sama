@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 
 const ACTIVITIES = ["All", "Hiking", "Freediving", "Beach & Island"] as const;
 const DURATIONS  = ["All", "Day tour", "2D1N", "3D2N", "4D3N+"] as const;
-const DIFFICULTIES = ["All", "Beginner", "Intermediate", "Advanced", "Expert"] as const;
+const DIFFICULTIES = ["All", "Beginner", "Intermediate", "Advanced"] as const;
 
 type Trip = {
   id: string | number;
@@ -136,7 +136,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from("trips")
-    .select("*")
+    .select("id, slug, title, activity_type, difficulty, price, date_start, remaining_slots, total_slots, photos, destination, duration, is_template, template_id")
     .eq("status", "active")
     .gt("date_start", new Date().toISOString())
     .gt("remaining_slots", 0)

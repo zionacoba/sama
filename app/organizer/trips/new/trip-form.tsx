@@ -162,7 +162,6 @@ export function TripForm({
             <option value="Beginner">Beginner</option>
             <option value="Intermediate">Intermediate</option>
             <option value="Advanced">Advanced</option>
-            <option value="Expert">Expert</option>
           </select>
         </div>
       </div>
@@ -286,7 +285,7 @@ export function TripForm({
                     onClick={() => setMeetingPoints((prev) => prev.filter((_, i) => i !== idx))}
                     disabled={meetingPoints.length === 1}
                     aria-label="Remove meeting point"
-                    className="mt-1.5 shrink-0 self-start rounded-lg border border-stone-200 px-2.5 py-2.5 text-sm text-stone-400 transition hover:border-red-200 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
+                    className="mt-1.5 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center self-start rounded-lg border border-stone-200 text-sm text-stone-400 transition hover:border-red-200 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     ×
                   </button>
