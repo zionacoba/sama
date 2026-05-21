@@ -419,6 +419,26 @@ export function TripForm({
         </>
       )}
 
+      {/* Messenger GC link (only for dated trips, not templates) */}
+      {!isTemplate && (
+        <div>
+          <label htmlFor="messenger_gc_link" className={labelClass}>
+            Messenger Group Chat Link{" "}
+            <span className="font-normal text-stone-400">(optional)</span>
+          </label>
+          <input
+            id="messenger_gc_link"
+            name="messenger_gc_link"
+            type="url"
+            className={inputClass}
+            placeholder="https://m.me/j/..."
+          />
+          <p className="mt-1.5 text-xs text-stone-500">
+            Participants will receive this link after their booking is confirmed. You can add or update this anytime.
+          </p>
+        </div>
+      )}
+
       {/* Photo upload */}
       <div>
         <p className={labelClass}>

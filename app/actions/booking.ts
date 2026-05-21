@@ -41,7 +41,7 @@ export async function createBooking(input: CreateBookingInput) {
 
   const { data: trip, error: tripFetchError } = await admin
     .from("trips")
-    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment")
+    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, messenger_gc_link")
     .eq("slug", input.tripSlug)
     .maybeSingle();
 
@@ -224,6 +224,11 @@ export async function createBooking(input: CreateBookingInput) {
               <li><strong>Date:</strong> ${tripDate}</li>
               <li><strong>Slots booked:</strong> ${input.slots}</li>
             </ul>
+            ${trip.messenger_gc_link ? `
+            <p>Join the group chat for trip updates and coordination:<br>
+            <a href="${trip.messenger_gc_link}">${trip.messenger_gc_link}</a></p>
+            <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
+            ` : ""}
             <p>The organizer will be in touch with trip details closer to the date. You can view your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
             <p>— The Sama Team</p>
           `
@@ -277,7 +282,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   const { data: trip } = await supabase
     .from("trips")
-    .select("id, title, date_start, organizer_id, remaining_slots, total_slots")
+    .select("id, title, date_start, organizer_id, remaining_slots, total_slots, messenger_gc_link")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -319,6 +324,11 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
         html: `
           <p>Hi ${booking.full_name},</p>
           <p>Great news! Your booking request for <strong>${trip.title}</strong> on ${tripDate} has been approved by the organizer.</p>
+          ${trip.messenger_gc_link ? `
+          <p>Join the group chat for trip updates and coordination:<br>
+          <a href="${trip.messenger_gc_link}">${trip.messenger_gc_link}</a></p>
+          <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
+          ` : ""}
           <p>They will be in touch with trip details closer to the date. You can view your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
           <p>— The Sama Team</p>
         `,

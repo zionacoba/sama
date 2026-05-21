@@ -68,6 +68,7 @@ export async function createTrip(
     ? ((formData.get("cancellation_policy_custom") as string)?.trim() || null)
     : null;
   const waiver_text = (formData.get("waiver_text") as string)?.trim() || null;
+  const messenger_gc_link = (formData.get("messenger_gc_link") as string)?.trim() || null;
 
   if (!title || !activity_type || !destination || !difficulty || !description) {
     return { error: "Please fill in all required fields." };
@@ -114,6 +115,7 @@ export async function createTrip(
     cancellation_policy,
     cancellation_policy_custom,
     waiver_text,
+    messenger_gc_link,
     is_template,
     template_id: template_id || null,
   });
@@ -195,6 +197,7 @@ export async function updateTrip(
     ? ((formData.get("cancellation_policy_custom") as string)?.trim() || null)
     : null;
   const waiver_text = (formData.get("waiver_text") as string)?.trim() || null;
+  const messenger_gc_link = (formData.get("messenger_gc_link") as string)?.trim() || null;
 
   if (!title || !activity_type || !destination || !difficulty || !description) {
     return { error: "Please fill in all required fields." };
@@ -256,6 +259,7 @@ export async function updateTrip(
       cancellation_policy,
       cancellation_policy_custom,
       waiver_text,
+      messenger_gc_link,
       is_template,
       template_id: template_id || null,
     })
