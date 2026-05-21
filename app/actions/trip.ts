@@ -250,6 +250,38 @@ export async function updateTrip(
 
   if (error) return { error: error.message };
 
+  // Notify waitlist when the organizer increases slots on a previously full trip
+  if (existing.remaining_slots === 0 && remaining_slots > 0) {
+    const admin = createSupabaseAdminClient();
+    const { data: waitlistEntries } = await admin
+      .from("waitlist")
+      .select("id, full_name, email")
+      .eq("trip_id", tripId)
+      .eq("notified", false);
+
+    if (waitlistEntries && waitlistEntries.length > 0) {
+      try {
+        for (const entry of waitlistEntries) {
+          // TODO: change to entry.email once sama.com.ph is verified in Resend
+          await resend.emails.send({
+            from: "Sama <onboarding@resend.dev>",
+            to: "acobapaulzion@gmail.com",
+            subject: `Slots available — ${title}`,
+            html: `
+              <p>Hi ${entry.full_name},</p>
+              <p>Good news! New slots have opened up for <strong>${title}</strong>. Book now before it fills up again:</p>
+              <p><a href="https://sama.ph/trips/${existing.slug}">sama.ph/trips/${existing.slug}</a></p>
+              <p>— The Sama Team</p>
+            `,
+          });
+          await admin.from("waitlist").update({ notified: true }).eq("id", entry.id);
+        }
+      } catch {
+        // Email failure is non-fatal
+      }
+    }
+  }
+
   revalidatePath("/trips");
   revalidatePath(`/trips/${existing.slug}`);
   revalidatePath("/organizer/dashboard");
