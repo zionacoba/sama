@@ -392,6 +392,27 @@ export function TripForm({
             )}
           </div>
 
+          {paymentType === "downpayment" && (
+            <div>
+              <label htmlFor="downpayment_cutoff_days" className={labelClass}>
+                Accept downpayments until
+              </label>
+              <input
+                id="downpayment_cutoff_days"
+                name="downpayment_cutoff_days"
+                type="number"
+                min="0"
+                step="1"
+                defaultValue={10}
+                className={inputClass}
+                placeholder="e.g. 10"
+              />
+              <p className="mt-1.5 text-xs text-stone-500">
+                After this many days before the trip, participants must pay in full. Recommended: 10 days.
+              </p>
+            </div>
+          )}
+
           <div>
             <label htmlFor="cancellation_policy" className={labelClass}>
               Cancellation policy

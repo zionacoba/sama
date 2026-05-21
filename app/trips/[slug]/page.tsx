@@ -30,6 +30,7 @@ type TripDetail = {
   is_template: boolean | null;
   payment_type: string | null;
   min_downpayment: number | null;
+  downpayment_cutoff_days: number | null;
   cancellation_policy: string | null;
   cancellation_policy_custom: string | null;
   meeting_points: { location: string; time: string }[] | null;
@@ -571,10 +572,12 @@ export default async function TripDetailPage({ params }: PageProps) {
                   tripId={tripData.id}
                   tripSlug={slug}
                   tripTitle={tripData.title}
+                  tripDateStart={tripData.date_start}
                   unitPrice={getUnitPrice(tripData.price)}
                   remainingSlots={tripData.remaining_slots}
                   paymentType={tripData.payment_type ?? "full"}
                   minDownpayment={tripData.min_downpayment ?? null}
+                  downpaymentCutoffDays={tripData.downpayment_cutoff_days ?? 10}
                   meetingPoints={tripData.meeting_points ?? []}
                   difficulty={tripData.difficulty}
                   cancellationPolicy={tripData.cancellation_policy ?? null}
@@ -618,10 +621,12 @@ export default async function TripDetailPage({ params }: PageProps) {
                     tripId={tripData.id}
                     tripSlug={slug}
                     tripTitle={tripData.title}
+                    tripDateStart={tripData.date_start}
                     unitPrice={getUnitPrice(tripData.price)}
                     remainingSlots={tripData.remaining_slots}
                     paymentType={tripData.payment_type ?? "full"}
                     minDownpayment={tripData.min_downpayment ?? null}
+                    downpaymentCutoffDays={tripData.downpayment_cutoff_days ?? 10}
                     meetingPoints={tripData.meeting_points ?? []}
                     difficulty={tripData.difficulty}
                     cancellationPolicy={tripData.cancellation_policy ?? null}

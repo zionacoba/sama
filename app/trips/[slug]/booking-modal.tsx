@@ -18,10 +18,12 @@ type BookingModalProps = {
   tripId: number;
   tripSlug: string;
   tripTitle: string;
+  tripDateStart: string;
   unitPrice: number;
   remainingSlots: number;
   paymentType: string;
   minDownpayment: number | null;
+  downpaymentCutoffDays: number;
   meetingPoints: MeetingPoint[];
   difficulty: string;
   cancellationPolicy: string | null;
@@ -41,10 +43,12 @@ export function BookingModal({
   tripId,
   tripSlug,
   tripTitle,
+  tripDateStart,
   unitPrice,
   remainingSlots,
   paymentType,
   minDownpayment,
+  downpaymentCutoffDays,
   meetingPoints,
   difficulty,
   cancellationPolicy,
@@ -78,7 +82,8 @@ export function BookingModal({
 
   const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
   const totalAmount = unitPrice * slots;
-  const canUseDownpayment = hasDownpayment && minDownpayment! < unitPrice;
+  const daysUntilTrip = Math.floor((new Date(tripDateStart).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const canUseDownpayment = hasDownpayment && minDownpayment! < unitPrice && daysUntilTrip > downpaymentCutoffDays;
   const amountDue = paymentOption === "downpayment" && canUseDownpayment
     ? Math.min(minDownpayment! * slots, totalAmount)
     : totalAmount;

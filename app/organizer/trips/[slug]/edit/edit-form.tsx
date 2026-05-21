@@ -34,6 +34,7 @@ type TripForEdit = {
   photos: string[] | null;
   payment_type: string | null;
   min_downpayment: number | null;
+  downpayment_cutoff_days: number | null;
   cancellation_policy: string | null;
   cancellation_policy_custom: string | null;
   waiver_text: string | null;
@@ -469,6 +470,27 @@ export function EditTripForm({
               </div>
             )}
           </div>
+
+          {paymentType === "downpayment" && (
+            <div>
+              <label htmlFor="downpayment_cutoff_days" className={labelClass}>
+                Accept downpayments until
+              </label>
+              <input
+                id="downpayment_cutoff_days"
+                name="downpayment_cutoff_days"
+                type="number"
+                min="0"
+                step="1"
+                defaultValue={trip.downpayment_cutoff_days ?? 10}
+                className={inputClass}
+                placeholder="e.g. 10"
+              />
+              <p className="mt-1.5 text-xs text-stone-500">
+                After this many days before the trip, participants must pay in full. Recommended: 10 days.
+              </p>
+            </div>
+          )}
 
           <div>
             <label htmlFor="cancellation_policy" className={labelClass}>
