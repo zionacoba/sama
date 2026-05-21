@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { saveProfile } from "@/app/actions/profile";
 
 export function ProfileForm({
@@ -13,6 +13,9 @@ export function ProfileForm({
   emergencyContactPhone: string | null;
 }) {
   const [state, action, pending] = useActionState(saveProfile, null);
+  const [birthdateVal, setBirthdateVal] = useState(birthdate ?? "");
+  const [ecName, setEcName] = useState(emergencyContactName ?? "");
+  const [ecPhone, setEcPhone] = useState(emergencyContactPhone ?? "");
 
   return (
     <form action={action} className="space-y-5">
@@ -27,7 +30,8 @@ export function ProfileForm({
           id="birthdate"
           name="birthdate"
           type="date"
-          defaultValue={birthdate ?? ""}
+          value={birthdateVal}
+          onChange={(e) => setBirthdateVal(e.target.value)}
           className="mt-1.5 w-full max-w-xs rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
       </div>
@@ -43,7 +47,8 @@ export function ProfileForm({
           id="emergency_contact_name"
           name="emergency_contact_name"
           type="text"
-          defaultValue={emergencyContactName ?? ""}
+          value={ecName}
+          onChange={(e) => setEcName(e.target.value)}
           placeholder="Full name"
           className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
@@ -57,7 +62,8 @@ export function ProfileForm({
           id="emergency_contact_phone"
           name="emergency_contact_phone"
           type="tel"
-          defaultValue={emergencyContactPhone ?? ""}
+          value={ecPhone}
+          onChange={(e) => setEcPhone(e.target.value)}
           placeholder="+63 9XX XXX XXXX"
           className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
