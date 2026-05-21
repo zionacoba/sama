@@ -263,7 +263,7 @@ export function BookingModal({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:px-4 sm:py-16"
+          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="booking-modal-title"
@@ -275,7 +275,7 @@ export function BookingModal({
             onClick={success ? undefined : handleClose}
           />
 
-          <div className="relative z-10 flex w-full flex-col max-h-[85dvh] rounded-t-2xl border border-stone-200 bg-white shadow-xl sm:max-h-[calc(100dvh-8rem)] sm:max-w-lg sm:rounded-2xl">
+          <div className="relative z-10 flex w-full flex-col max-h-[85dvh] rounded-t-2xl border border-stone-200 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl">
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stone-100 px-6 py-4">
               <div>
                 <h2
