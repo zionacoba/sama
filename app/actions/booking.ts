@@ -37,11 +37,15 @@ export async function createBooking(input: CreateBookingInput) {
 
   const { data: trip, error: tripFetchError } = await admin
     .from("trips")
-    .select("id, title, date_start, remaining_slots, organizer_id, difficulty")
+    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status")
     .eq("slug", input.tripSlug)
     .maybeSingle();
 
   if (!trip) return { error: "Trip not found." };
+
+  if (trip.status !== "active" || new Date(trip.date_start) < new Date()) {
+    return { error: "This trip is no longer available for booking." };
+  }
   if (!input.waiverAgreed || !input.platformWaiverAgreed) {
     return { error: "You must agree to both waivers before booking." };
   }
@@ -99,8 +103,15 @@ export async function createBooking(input: CreateBookingInput) {
     .select("id")
     .single();
 
-  if (insertError) return { error: insertError.message };
-  if (!newBooking) return { error: "Failed to create booking." };
+  if (insertError || !newBooking) {
+    // book_slot already decremented remaining_slots — restore it so the
+    // capacity isn't permanently lost.
+    await supabase.rpc("restore_slot", {
+      p_trip_id: trip.id,
+      p_slots_requested: input.slots,
+    });
+    return { error: insertError?.message ?? "Failed to create booking." };
+  }
 
   // Insert one booking_participants row per slot.
   const now = new Date().toISOString();

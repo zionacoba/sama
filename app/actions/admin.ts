@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
 
-const ADMIN_EMAIL = "acobapaulzion@gmail.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 
 async function requireAdmin() {
   const supabase = await createSupabaseServerClient();
