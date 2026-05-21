@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { redirect } from "next/navigation";
 
 type ReviewState = { success: true } | { error: string } | null;
@@ -28,7 +29,8 @@ export async function submitReview(
   }
 
   // Fetch trip to get organizer_id and validate it exists
-  const { data: trip } = await supabase
+  const admin = createSupabaseAdminClient();
+  const { data: trip } = await admin
     .from("trips")
     .select("organizer_id")
     .eq("id", tripId)
