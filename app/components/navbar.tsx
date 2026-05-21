@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { signOut } from "@/app/actions/auth";
 import { MobileMenu } from "./mobile-menu";
 
-const ADMIN_EMAIL = "acobapaulzion@gmail.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 
 const navLinks = [
   { label: "Explore", href: "/trips" },

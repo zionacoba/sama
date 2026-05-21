@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
-const ADMIN_EMAIL = "acobapaulzion@gmail.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 
 export async function applyToBeOrganizer(
   _prevState: { error: string } | { success: true } | null,
