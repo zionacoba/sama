@@ -356,3 +356,91 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
   revalidatePath("/profile");
   return { success: true };
 }
+
+export async function cancelBooking(bookingId: number) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: booking } = await admin
+    .from("bookings")
+    .select("id, trip_id, slots, status, email, full_name, user_id")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking) return { error: "Booking not found." };
+  if (booking.user_id !== user.id) return { error: "You don't have permission to cancel this booking." };
+  if (booking.status === "cancelled") return { error: "This booking is already cancelled." };
+
+  const { error } = await admin
+    .from("bookings")
+    .update({ status: "cancelled" })
+    .eq("id", bookingId);
+
+  if (error) return { error: error.message };
+
+  const { data: trip } = await admin
+    .from("trips")
+    .select("id, title, date_start, total_slots, remaining_slots, organizer_id")
+    .eq("id", booking.trip_id)
+    .maybeSingle();
+
+  if (trip) {
+    await admin
+      .from("trips")
+      .update({
+        remaining_slots: Math.min(trip.total_slots, trip.remaining_slots + booking.slots),
+      })
+      .eq("id", trip.id);
+
+    try {
+      const tripDate = new Intl.DateTimeFormat("en-PH", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }).format(new Date(trip.date_start));
+
+      if (trip.organizer_id) {
+        const { data: organizer } = await admin
+          .from("organizers")
+          .select("email")
+          .eq("id", trip.organizer_id)
+          .maybeSingle();
+
+        if (organizer?.email) {
+          await resend.emails.send({
+            from: "Sama <onboarding@resend.dev>",
+            to: organizer.email,
+            replyTo: "sama.com.ph@gmail.com",
+            subject: `${booking.full_name} cancelled their booking for ${trip.title}`,
+            html: `
+              <p>Hi,</p>
+              <p><strong>${booking.full_name}</strong> has cancelled their <strong>${booking.slots} slot${booking.slots !== 1 ? "s" : ""}</strong> for <strong>${trip.title}</strong> on ${tripDate}. Their slot${booking.slots !== 1 ? "s" : ""} have been returned to the available pool.</p>
+              <p>— The Sama Team</p>
+            `,
+          });
+        }
+      }
+
+      await resend.emails.send({
+        from: "Sama <onboarding@resend.dev>",
+        to: booking.email,
+        replyTo: "sama.com.ph@gmail.com",
+        subject: `Booking cancelled: ${trip.title}`,
+        html: `
+          <p>Hi ${booking.full_name},</p>
+          <p>Your booking for <strong>${trip.title}</strong> on ${tripDate} has been cancelled. If you are eligible for a refund, please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> with your booking details and we'll process it for you.</p>
+          <p>— The Sama Team</p>
+        `,
+      });
+    } catch {
+      // Email failure is non-fatal
+    }
+  }
+
+  revalidatePath("/profile");
+  return { success: true };
+}

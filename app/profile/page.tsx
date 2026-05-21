@@ -10,6 +10,7 @@ import { ProfileForm as SafetyForm } from "@/app/dashboard/profile/profile-form"
 import { ProfileForm } from "./profile-form";
 import { ParticipantShareLinks } from "./participant-share-links";
 import { WaiverModal } from "./waiver-modal";
+import { CancelBookingButton } from "./cancel-booking-button";
 
 type PageProps = {
   searchParams: Promise<{ tab?: string }>;
@@ -173,6 +174,14 @@ function BookingCard({
             fullName={booking.full_name || fullName}
             agreedAt={booking.created_at}
             waiverText={booking.trip.waiver_text}
+          />
+        )}
+
+        {!past && (booking.status === "confirmed" || booking.status === "pending") && (
+          <CancelBookingButton
+            bookingId={booking.id}
+            tripTitle={trip.title}
+            tripDate={formatDate(trip.date_start)}
           />
         )}
       </div>
