@@ -121,6 +121,28 @@ export function BookingModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Push a history entry when the modal opens so the Android back button
+  // closes the modal instead of navigating away from the page.
+  useEffect(() => {
+    if (!open) return;
+
+    history.pushState({ modal: "booking" }, "");
+
+    function handlePopState() {
+      setOpen(false);
+      resetForm();
+    }
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  // resetForm is stable enough; excluding it avoids re-pushing history on
+  // every render while the modal is open.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -160,6 +182,7 @@ export function BookingModal({
   }
 
   function handleClose() {
+    history.back(); // pop the modal history entry pushed on open
     setOpen(false);
     resetForm();
   }
@@ -240,19 +263,19 @@ export function BookingModal({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:px-4 sm:py-16"
           role="dialog"
           aria-modal="true"
           aria-labelledby="booking-modal-title"
         >
           <button
             type="button"
-            className="absolute inset-0 bg-stone-900/50"
+            className="absolute inset-0 bg-black/50"
             aria-label="Close booking form"
             onClick={success ? undefined : handleClose}
           />
 
-          <div className="relative z-10 flex w-full flex-col max-h-[85dvh] rounded-t-2xl border border-stone-200 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl">
+          <div className="relative z-10 flex w-full flex-col max-h-[85dvh] rounded-t-2xl border border-stone-200 bg-white shadow-xl sm:max-h-[calc(100dvh-8rem)] sm:max-w-lg sm:rounded-2xl">
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stone-100 px-6 py-4">
               <div>
                 <h2
