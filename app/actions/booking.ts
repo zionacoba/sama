@@ -35,9 +35,13 @@ export async function createBooking(input: CreateBookingInput) {
   // writes, and RETURNING clauses always get back the new row's id.
   const admin = createSupabaseAdminClient();
 
+  if (!input.slots || input.slots < 1) {
+    return { error: "Please select at least 1 slot." };
+  }
+
   const { data: trip, error: tripFetchError } = await admin
     .from("trips")
-    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status")
+    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment")
     .eq("slug", input.tripSlug)
     .maybeSingle();
 
@@ -50,18 +54,25 @@ export async function createBooking(input: CreateBookingInput) {
     return { error: "You must agree to both waivers before booking." };
   }
 
-  // Prevent duplicate bookings for the same trip
+  // Prevent duplicate bookings for the same trip (cancelled bookings allow re-booking).
   const { data: existingBooking } = await admin
     .from("bookings")
     .select("id")
     .eq("trip_id", trip.id)
     .eq("user_id", user.id)
-    .not("status", "eq", "rejected")
+    .in("status", ["confirmed", "pending"])
     .maybeSingle();
 
   if (existingBooking) {
     return { error: "You already have a booking for this trip." };
   }
+
+  // Compute amounts server-side — never trust client-provided values.
+  const computedTotal = trip.price * input.slots;
+  const canDownpay = trip.payment_type === "downpayment" && trip.min_downpayment != null && trip.min_downpayment < trip.price;
+  const computedAmountDue = input.paymentOption === "downpayment" && canDownpay
+    ? Math.min((trip.min_downpayment as number) * input.slots, computedTotal)
+    : computedTotal;
 
   // Atomically check availability and decrement remaining_slots.
   const { error: slotError } = await supabase.rpc("book_slot", {
@@ -87,11 +98,11 @@ export async function createBooking(input: CreateBookingInput) {
       email: input.email,
       phone: input.phone,
       slots: input.slots,
-      total_amount: input.totalAmount,
+      total_amount: computedTotal,
       status: bookingStatus,
       notes: input.notes,
       payment_option: input.paymentOption,
-      amount_due: input.amountDue,
+      amount_due: computedAmountDue,
       participants: input.participants,
       emergency_contact_name: input.emergencyContactName,
       emergency_contact_phone: input.emergencyContactPhone,

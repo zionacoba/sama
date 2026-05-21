@@ -7,4 +7,4 @@ Allow: /
 User-agent: Twitterbot
 Allow: /
 
-Sitemap: https://sama.ph/sitemap.xml
+Sitemap: https://landas-zeta.vercel.app/sitemap.xml

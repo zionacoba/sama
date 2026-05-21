@@ -25,6 +25,18 @@ export async function joinWaitlist(
 
   const admin = createSupabaseAdminClient();
 
+  const { data: existingBooking } = await admin
+    .from("bookings")
+    .select("id")
+    .eq("trip_id", input.tripId)
+    .eq("user_id", user.id)
+    .in("status", ["confirmed", "pending"])
+    .maybeSingle();
+
+  if (existingBooking) {
+    return { error: "You already have a booking for this trip." };
+  }
+
   const { error } = await admin.from("waitlist").insert({
     trip_id: input.tripId,
     user_id: user.id,

@@ -350,6 +350,13 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
     day: "numeric",
   }).format(new Date(trip.date_start));
 
+  const { data: waitlistEntries } = await admin
+    .from("waitlist")
+    .select("id, full_name, email")
+    .eq("trip_id", trip.id);
+
+  await admin.from("waitlist").delete().eq("trip_id", trip.id);
+
   try {
     for (const booking of bookings ?? []) {
       await resend.emails.send({
@@ -362,6 +369,20 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
           <p>We're sorry to inform you that <strong>${trip.title}</strong> on ${tripDate} has been cancelled by the organizer.</p>
           <p>If you paid a downpayment, please contact the organizer directly for a refund.</p>
           <p>We hope to see you on a future trip!</p>
+          <p>— The Sama Team</p>
+        `,
+      });
+    }
+    for (const entry of waitlistEntries ?? []) {
+      await resend.emails.send({
+        from: "Sama <onboarding@resend.dev>",
+        to: entry.email,
+        replyTo: "sama.com.ph@gmail.com",
+        subject: `Trip cancelled: ${trip.title}`,
+        html: `
+          <p>Hi ${entry.full_name},</p>
+          <p><strong>${trip.title}</strong> on ${tripDate} has been cancelled by the organizer.</p>
+          <p>If you have questions, please contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
           <p>— The Sama Team</p>
         `,
       });
