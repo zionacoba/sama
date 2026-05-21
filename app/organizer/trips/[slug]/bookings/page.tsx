@@ -5,6 +5,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { BookingActions } from "@/app/organizer/dashboard/booking-actions";
 import { notifyWaitlistEntry } from "@/app/actions/waitlist";
 import { ExportCsvButton } from "./export-csv-button";
+import { MarkBalanceButton } from "./mark-balance-button";
 
 type WaitlistEntry = {
   id: string;
@@ -31,6 +32,7 @@ type Booking = {
   total_amount: number;
   amount_due: number | null;
   payment_option: string;
+  balance_collected: boolean;
   status: string;
   created_at: string;
   participants: string[] | null;
@@ -121,7 +123,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
   const { data: bookingsData } = await supabase
     .from("bookings")
     .select(
-      "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point"
+      "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, balance_collected, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point"
     )
     .eq("trip_id", trip.id)
     .order("created_at", { ascending: false });
@@ -330,11 +332,29 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                         </td>
                         <td className="px-5 py-3.5 text-right font-semibold text-trailhead">
                           {formatCurrency(b.total_amount)}
-                          {b.payment_option === "downpayment" && b.amount_due != null && (
-                            <span className="ml-1 text-xs font-normal text-stone-400">
-                              ({formatCurrency(b.amount_due)} due)
-                            </span>
-                          )}
+                          {b.payment_option === "downpayment" && b.amount_due != null && (() => {
+                            const balance = b.total_amount - b.amount_due;
+                            return (
+                              <div className="mt-0.5 flex flex-col items-end gap-1">
+                                {b.balance_collected ? (
+                                  <span className="text-xs font-semibold text-emerald-600">Fully Paid</span>
+                                ) : (
+                                  <>
+                                    <span className="text-xs font-normal text-stone-400">
+                                      ({formatCurrency(b.amount_due)} deposit)
+                                    </span>
+                                    {b.status === "confirmed" && (
+                                      <MarkBalanceButton
+                                        bookingId={b.id}
+                                        participantName={b.full_name}
+                                        balanceAmount={formatCurrency(balance)}
+                                      />
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="px-5 py-3.5">
                           <StatusBadge status={b.status} />

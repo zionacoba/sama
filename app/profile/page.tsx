@@ -21,6 +21,9 @@ type Booking = {
   full_name: string;
   slots: number;
   total_amount: number;
+  amount_due: number | null;
+  payment_option: string;
+  balance_collected: boolean;
   status: string;
   waiver_agreed: boolean;
   created_at: string;
@@ -147,6 +150,15 @@ function BookingCard({
           <span>{formatDate(trip.date_start)}{trip.duration && ` · ${trip.duration}`}</span>
           <span>{booking.slots} slot{booking.slots !== 1 ? "s" : ""}</span>
           <span>{formatCurrency(booking.total_amount)}</span>
+          {booking.payment_option === "downpayment" && booking.amount_due != null && (
+            booking.balance_collected ? (
+              <span className="font-semibold text-emerald-600">Fully paid</span>
+            ) : (
+              <span className="font-semibold text-amber-600">
+                {formatCurrency(booking.total_amount - booking.amount_due)} balance pending
+              </span>
+            )
+          )}
           {!past && trip.meeting_point && (
             <span className="w-full text-stone-400">Meet: {trip.meeting_point}</span>
           )}
@@ -207,6 +219,9 @@ export default async function AccountPage({ searchParams }: PageProps) {
         full_name,
         slots,
         total_amount,
+        amount_due,
+        payment_option,
+        balance_collected,
         status,
         waiver_agreed,
         created_at,
