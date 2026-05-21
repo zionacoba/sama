@@ -216,6 +216,19 @@ export async function updateTrip(
     return { error: "Please enter your custom cancellation policy." };
   }
 
+  if (!is_template && total_slots < existing.total_slots) {
+    const admin = createSupabaseAdminClient();
+    const { count } = await admin
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("trip_id", tripId)
+      .in("status", ["confirmed", "pending"]);
+    const confirmed = count ?? 0;
+    if (total_slots < confirmed) {
+      return { error: `Cannot reduce slots below current confirmed bookings (${confirmed} confirmed).` };
+    }
+  }
+
   const slotDiff = is_template ? 0 : total_slots - existing.total_slots;
   const remaining_slots = is_template
     ? existing.remaining_slots

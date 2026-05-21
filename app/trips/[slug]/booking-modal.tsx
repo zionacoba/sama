@@ -663,6 +663,12 @@ export function BookingModal({
 
             {!success && (
               <div className="shrink-0 border-t border-stone-100 px-6 py-3">
+                <p className="mb-2 text-center text-xs text-stone-400">
+                  Need help?{" "}
+                  <a href="mailto:sama.com.ph@gmail.com" className="underline hover:text-stone-600">
+                    sama.com.ph@gmail.com
+                  </a>
+                </p>
                 <div className="flex gap-2">
                   <button
                     type="button"

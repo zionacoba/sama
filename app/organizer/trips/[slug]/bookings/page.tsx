@@ -280,6 +280,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                     <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
                       <th className="px-5 py-3">Name</th>
                       <th className="px-5 py-3">Email</th>
+                      <th className="px-5 py-3">Emergency contact</th>
                       <th className="px-5 py-3 text-center">Slots</th>
                       <th className="px-5 py-3 text-right">Amount</th>
                       <th className="px-5 py-3">Status</th>
@@ -292,6 +293,11 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                       <tr key={b.id} className="hover:bg-stone-50">
                         <td className="px-5 py-3.5 font-medium text-stone-900">{b.full_name}</td>
                         <td className="px-5 py-3.5 text-stone-500">{b.email}</td>
+                        <td className="px-5 py-3.5 text-stone-700">
+                          {b.emergency_contact_name
+                            ? <><span className="font-medium">{b.emergency_contact_name}</span>{b.emergency_contact_phone && <><br /><span className="text-stone-400">{b.emergency_contact_phone}</span></>}</>
+                            : <span className="text-stone-300">—</span>}
+                        </td>
                         <td className="px-5 py-3.5 text-center text-stone-700">
                           {b.slots}
                           {b.slots > 1 && participantsMap.has(b.id) && (() => {
