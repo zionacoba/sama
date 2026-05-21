@@ -8,6 +8,12 @@ import { createBooking } from "@/app/actions/booking";
 
 type MeetingPoint = { location: string; time: string };
 
+const CANCELLATION_POLICIES: Record<string, { label: string; text: string }> = {
+  flexible: { label: "Flexible", text: "Full refund if cancelled 7 or more days before the trip. 50% refund if cancelled 3–7 days before. No refund within 3 days." },
+  moderate: { label: "Moderate", text: "Full refund if cancelled 14 or more days before the trip. 50% refund if cancelled 7–14 days before. No refund within 7 days." },
+  strict:   { label: "Strict",   text: "Full refund if cancelled 30 or more days before the trip. No refund within 30 days." },
+};
+
 type BookingModalProps = {
   tripId: number;
   tripSlug: string;
@@ -17,6 +23,9 @@ type BookingModalProps = {
   paymentType: string;
   minDownpayment: number | null;
   meetingPoints: MeetingPoint[];
+  difficulty: string;
+  cancellationPolicy: string | null;
+  cancellationPolicyCustom: string | null;
   compact?: boolean;
 };
 
@@ -37,6 +46,9 @@ export function BookingModal({
   paymentType,
   minDownpayment,
   meetingPoints,
+  difficulty,
+  cancellationPolicy,
+  cancellationPolicyCustom,
   compact = false,
 }: BookingModalProps) {
   const router = useRouter();
@@ -257,7 +269,7 @@ export function BookingModal({
             ? "w-full rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
             : "mt-10 w-full rounded-xl bg-trailhead px-6 py-4 text-base font-semibold text-white shadow-md transition hover:bg-trailhead-dark sm:w-auto sm:min-w-[240px]"}
         >
-          Book This Trip
+          {difficulty === "Advanced" ? "Apply to Join" : "Book This Trip"}
         </button>
       )}
 
@@ -283,7 +295,7 @@ export function BookingModal({
                   className="text-lg font-bold text-stone-900"
                 >
                   {success
-                    ? bookingStatus === "confirmed" ? "Booking confirmed!" : "Booking received"
+                    ? bookingStatus === "confirmed" ? "You're in! 🎉" : "Booking request sent!"
                     : "Book this trip"}
                 </h2>
                 {!success && (
@@ -308,8 +320,8 @@ export function BookingModal({
                     className="rounded-lg border border-trailhead/30 bg-trailhead-muted px-4 py-3 text-sm text-trailhead"
                   >
                     {bookingStatus === "confirmed"
-                      ? <>Your booking for <strong>{tripTitle}</strong> is confirmed! See you on the trail.</>
-                      : <>Your booking request for <strong>{tripTitle}</strong> has been submitted — the organizer will review and confirm shortly.</>
+                      ? <>Your booking for <strong>{tripTitle}</strong> is confirmed. The organizer will be in touch with trip details closer to the date.</>
+                      : <>Your request to join <strong>{tripTitle}</strong> has been sent to the organizer. You&apos;ll receive a confirmation email once they review your booking. This usually takes 24&ndash;48 hours.</>
                     }
                   </p>
 
@@ -663,6 +675,17 @@ export function BookingModal({
 
             {!success && (
               <div className="shrink-0 border-t border-stone-100 px-6 py-3">
+                {cancellationPolicy && (() => {
+                  const meta = CANCELLATION_POLICIES[cancellationPolicy];
+                  const text = cancellationPolicy === "custom"
+                    ? (cancellationPolicyCustom ?? "")
+                    : (meta?.text ?? "");
+                  return text ? (
+                    <p className="mb-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-500">
+                      <span className="font-semibold text-stone-600">Cancellation: </span>{text}
+                    </p>
+                  ) : null;
+                })()}
                 <p className="mb-2 text-center text-xs text-stone-400">
                   Need help?{" "}
                   <a href="mailto:sama.com.ph@gmail.com" className="underline hover:text-stone-600">

@@ -576,6 +576,9 @@ export default async function TripDetailPage({ params }: PageProps) {
                   paymentType={tripData.payment_type ?? "full"}
                   minDownpayment={tripData.min_downpayment ?? null}
                   meetingPoints={tripData.meeting_points ?? []}
+                  difficulty={tripData.difficulty}
+                  cancellationPolicy={tripData.cancellation_policy ?? null}
+                  cancellationPolicyCustom={tripData.cancellation_policy_custom ?? null}
                 />
               )}
             </div>
@@ -620,6 +623,9 @@ export default async function TripDetailPage({ params }: PageProps) {
                     paymentType={tripData.payment_type ?? "full"}
                     minDownpayment={tripData.min_downpayment ?? null}
                     meetingPoints={tripData.meeting_points ?? []}
+                    difficulty={tripData.difficulty}
+                    cancellationPolicy={tripData.cancellation_policy ?? null}
+                    cancellationPolicyCustom={tripData.cancellation_policy_custom ?? null}
                   />
                 )}
               </div>

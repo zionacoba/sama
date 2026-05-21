@@ -202,29 +202,29 @@ export async function createBooking(input: CreateBookingInput) {
         to: input.email,
         replyTo: "sama.com.ph@gmail.com",
         subject: autoApprove
-          ? `Booking confirmed — ${trip.title}`
-          : `Booking request received — ${trip.title}`,
+          ? `You're confirmed for ${trip.title}!`
+          : `Booking request received for ${trip.title}`,
         html: autoApprove
           ? `
             <p>Hi ${input.fullName},</p>
-            <p>Your booking is confirmed! Here's a summary:</p>
+            <p>You're in! Your booking for <strong>${trip.title}</strong> is confirmed. Here's a summary:</p>
             <ul>
               <li><strong>Trip:</strong> ${trip.title}</li>
               <li><strong>Date:</strong> ${tripDate}</li>
               <li><strong>Slots booked:</strong> ${input.slots}</li>
             </ul>
-            <p>See you on the trail! You can view your booking at <a href="https://sama.ph/profile">sama.ph/dashboard/bookings</a>.</p>
+            <p>The organizer will be in touch with trip details closer to the date. You can view your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
             <p>— The Sama Team</p>
           `
           : `
             <p>Hi ${input.fullName},</p>
-            <p>We've received your booking request. Here's a summary:</p>
+            <p>We've received your request to join <strong>${trip.title}</strong>. Here's a summary:</p>
             <ul>
               <li><strong>Trip:</strong> ${trip.title}</li>
               <li><strong>Date:</strong> ${tripDate}</li>
-              <li><strong>Slots booked:</strong> ${input.slots}</li>
+              <li><strong>Slots requested:</strong> ${input.slots}</li>
             </ul>
-            <p>The organizer will review your request and be in touch to confirm. You can track your booking at <a href="https://sama.ph/profile">sama.ph/dashboard/bookings</a>.</p>
+            <p>The organizer will review your request and confirm your spot. This usually takes 24–48 hours. You can track your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
             <p>— The Sama Team</p>
           `,
       });
@@ -258,7 +258,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, trip_id, slots, status")
+    .select("id, trip_id, slots, status, email, full_name")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -266,7 +266,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   const { data: trip } = await supabase
     .from("trips")
-    .select("id, organizer_id, remaining_slots, total_slots")
+    .select("id, title, date_start, organizer_id, remaining_slots, total_slots")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -289,6 +289,45 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
         remaining_slots: Math.min(trip.total_slots, trip.remaining_slots + booking.slots),
       })
       .eq("id", trip.id);
+  }
+
+  // Notify participant of the status change.
+  try {
+    const tripDate = new Intl.DateTimeFormat("en-PH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }).format(new Date(trip.date_start));
+
+    if (status === "confirmed") {
+      await resend.emails.send({
+        from: "Sama <onboarding@resend.dev>",
+        to: booking.email,
+        replyTo: "sama.com.ph@gmail.com",
+        subject: `You're confirmed for ${trip.title}!`,
+        html: `
+          <p>Hi ${booking.full_name},</p>
+          <p>Great news! Your booking request for <strong>${trip.title}</strong> on ${tripDate} has been approved by the organizer.</p>
+          <p>They will be in touch with trip details closer to the date. You can view your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
+          <p>— The Sama Team</p>
+        `,
+      });
+    } else if (status === "rejected") {
+      await resend.emails.send({
+        from: "Sama <onboarding@resend.dev>",
+        to: booking.email,
+        replyTo: "sama.com.ph@gmail.com",
+        subject: `Update on your booking request for ${trip.title}`,
+        html: `
+          <p>Hi ${booking.full_name},</p>
+          <p>Unfortunately your booking request for <strong>${trip.title}</strong> on ${tripDate} was not approved by the organizer.</p>
+          <p>If you have questions, please contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
+          <p>— The Sama Team</p>
+        `,
+      });
+    }
+  } catch {
+    // Email failure is non-fatal
   }
 
   revalidatePath("/organizer/dashboard");
