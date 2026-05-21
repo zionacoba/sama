@@ -402,6 +402,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                           <th className="px-5 py-3">Name</th>
                           <th className="px-5 py-3 text-center">Slots</th>
                           <th className="px-5 py-3">Status</th>
+                          <th className="px-5 py-3">Payment</th>
                           <th className="px-5 py-3">Booked on</th>
                           {needsManualApproval && <th className="px-5 py-3" />}
                         </tr>
@@ -436,6 +437,28 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                             </td>
                             <td className="px-5 py-3.5">
                               <StatusBadge status={b.status} />
+                            </td>
+                            <td className="px-5 py-3.5">
+                              {b.payment_option === "downpayment" && b.amount_due != null ? (
+                                b.balance_collected ? (
+                                  <span className="text-xs font-semibold text-emerald-600">Fully paid</span>
+                                ) : (
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-xs text-stone-500">
+                                      {formatCurrency(b.amount_due)} deposit · {formatCurrency(b.total_amount - b.amount_due)} due
+                                    </span>
+                                    {b.status === "confirmed" && (
+                                      <MarkBalanceButton
+                                        bookingId={b.id}
+                                        participantName={b.full_name}
+                                        balanceAmount={formatCurrency(b.total_amount - b.amount_due)}
+                                      />
+                                    )}
+                                  </div>
+                                )
+                              ) : (
+                                <span className="text-xs text-stone-500">Paid in full</span>
+                              )}
                             </td>
                             <td className="px-5 py-3.5 text-stone-500">{formatDateTime(b.created_at)}</td>
                             {needsManualApproval && (

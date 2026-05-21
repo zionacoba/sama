@@ -1,0 +1,2 @@
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS is_template boolean NOT NULL DEFAULT false;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS template_id bigint REFERENCES trips(id) ON DELETE SET NULL;

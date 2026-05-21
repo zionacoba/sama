@@ -73,6 +73,7 @@ export async function createBooking(input: CreateBookingInput) {
   const computedAmountDue = input.paymentOption === "downpayment" && canDownpay
     ? Math.min((trip.min_downpayment as number) * input.slots, computedTotal)
     : computedTotal;
+  const platformCommission = parseFloat((computedTotal * 0.04).toFixed(2));
 
   // Atomically check availability and decrement remaining_slots.
   const { error: slotError } = await supabase.rpc("book_slot", {
@@ -110,6 +111,7 @@ export async function createBooking(input: CreateBookingInput) {
       platform_waiver_agreed: input.platformWaiverAgreed,
       medical_notes: input.medicalNotes,
       meeting_point: input.meetingPoint,
+      platform_commission: platformCommission,
     })
     .select("id")
     .single();
