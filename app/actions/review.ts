@@ -1,7 +1,6 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { redirect } from "next/navigation";
 
 type ReviewState = { success: true } | { error: string } | null;
@@ -28,15 +27,6 @@ export async function submitReview(
     return { error: "Please fill in all fields and select a rating." };
   }
 
-  // Fetch trip to get organizer_id and validate it exists
-  const admin = createSupabaseAdminClient();
-  const { data: trip } = await admin
-    .from("trips")
-    .select("organizer_id")
-    .eq("id", tripId)
-    .maybeSingle();
-
-  if (!trip) return { error: "Trip not found." };
 
   // If a booking_id is provided, verify it's confirmed and belongs to this user
   if (bookingId) {
@@ -74,7 +64,6 @@ export async function submitReview(
     rating,
     body,
     ...(bookingId ? { booking_id: bookingId } : {}),
-    ...(trip.organizer_id ? { organizer_id: trip.organizer_id } : {}),
   });
 
   if (error) return { error: error.message };
