@@ -381,6 +381,11 @@ export default async function TripDetailPage({ params }: PageProps) {
 
           {/* Main column */}
           <div className="space-y-4 pb-20 lg:pb-0">
+            <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
+              <h2 className="text-lg font-bold text-stone-900">About this trip</h2>
+              <p className="mt-3 whitespace-pre-line leading-relaxed text-stone-600">{tripData.description}</p>
+            </div>
+
             {tripData.meeting_points && tripData.meeting_points.length > 0 ? (
               <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
                 <h2 className="text-xs font-semibold text-stone-500">Meeting points</h2>
@@ -422,11 +427,6 @@ export default async function TripDetailPage({ params }: PageProps) {
                 </div>
               </div>
             )}
-
-            <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
-              <h2 className="text-lg font-bold text-stone-900">About this trip</h2>
-              <p className="mt-3 whitespace-pre-line leading-relaxed text-stone-600">{tripData.description}</p>
-            </div>
 
             {(includesList.length > 0 || whatToBringList.length > 0) && (
               <div className="grid gap-4 sm:grid-cols-2">
