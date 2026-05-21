@@ -223,7 +223,6 @@ export function EditTripForm({
             className={inputClass}
           >
             <option value="">Select level…</option>
-            <option value="Chill">Chill</option>
             <option value="Beginner">Beginner</option>
             <option value="Intermediate">Intermediate</option>
             <option value="Advanced">Advanced</option>

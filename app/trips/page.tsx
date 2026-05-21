@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 
 const ACTIVITIES = ["All", "Hiking", "Freediving", "Beach & Island"] as const;
 const DURATIONS  = ["All", "Day tour", "2D1N", "3D2N", "4D3N+"] as const;
-const DIFFICULTIES = ["All", "Chill", "Beginner", "Intermediate", "Advanced", "Expert"] as const;
+const DIFFICULTIES = ["All", "Beginner", "Intermediate", "Advanced", "Expert"] as const;
 
 type Trip = {
   id: string | number;
@@ -72,9 +72,7 @@ function formatDate(date: string) {
 
 function DifficultyBadge({ level }: { level: string }) {
   const styles =
-    level === "Chill"
-      ? "bg-sky-100 text-sky-800"
-      : level === "Beginner"
+    level === "Beginner"
         ? "bg-emerald-100 text-emerald-800"
         : level === "Intermediate"
           ? "bg-amber-100 text-amber-900"
