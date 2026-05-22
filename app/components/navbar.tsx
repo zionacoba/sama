@@ -136,6 +136,7 @@ export async function Navbar() {
           {/* Mobile hamburger */}
           <MobileMenu
             isLoggedIn={!!user}
+            isAdmin={!!user && user.email === ADMIN_EMAIL}
             email={user?.email ?? ""}
             displayName={displayName}
             organizerStatus={organizerStatus}

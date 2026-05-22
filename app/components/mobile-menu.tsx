@@ -5,17 +5,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
 
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
-
 type Props = {
   isLoggedIn: boolean;
+  isAdmin: boolean;
   email: string;
   displayName: string;
   organizerStatus: string | null;
   organizerId: string | null;
 };
 
-export function MobileMenu({ isLoggedIn, email, displayName, organizerStatus, organizerId }: Props) {
+export function MobileMenu({ isLoggedIn, isAdmin, email, displayName, organizerStatus, organizerId }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -63,7 +62,7 @@ export function MobileMenu({ isLoggedIn, email, displayName, organizerStatus, or
                     {displayName}
                   </p>
                 )}
-                {email === ADMIN_EMAIL && (
+                {isAdmin && (
                   <Link
                     href="/admin"
                     onClick={close}
@@ -98,7 +97,15 @@ export function MobileMenu({ isLoggedIn, email, displayName, organizerStatus, or
                   </Link>
                 ) : organizerStatus === "pending" ? (
                   <span className="px-4 py-3 text-stone-400">Application pending</span>
-                ) : null}
+                ) : (
+                  <Link
+                    href="/organizer/apply"
+                    onClick={close}
+                    className="px-4 py-3 font-medium text-stone-700 transition hover:bg-trailhead-muted hover:text-trailhead"
+                  >
+                    Become an organizer
+                  </Link>
+                )}
                 <form action={signOut} className="border-t border-stone-100">
                   <button
                     type="submit"
@@ -109,13 +116,22 @@ export function MobileMenu({ isLoggedIn, email, displayName, organizerStatus, or
                 </form>
               </>
             ) : (
-              <Link
-                href="/login"
-                onClick={close}
-                className="border-t border-stone-100 px-4 py-3 font-medium text-stone-700 transition hover:bg-trailhead-muted hover:text-trailhead"
-              >
-                Login
-              </Link>
+              <>
+                <Link
+                  href="/login"
+                  onClick={close}
+                  className="border-t border-stone-100 px-4 py-3 font-medium text-stone-700 transition hover:bg-trailhead-muted hover:text-trailhead"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  onClick={close}
+                  className="border-t border-stone-100 px-4 py-3 font-medium text-trailhead transition hover:bg-trailhead-muted"
+                >
+                  Sign up
+                </Link>
+              </>
             )}
           </nav>
         </div>

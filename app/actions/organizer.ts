@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { resend } from "@/lib/resend";
+import { escapeHtml } from "@/lib/escape-html";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 
@@ -61,6 +63,23 @@ export async function applyToBeOrganizer(
       return { error: "You have already submitted an application." };
     }
     return { error: error.message };
+  }
+
+  try {
+    await resend.emails.send({
+      from: "Sama <onboarding@resend.dev>",
+      to: user.email!,
+      replyTo: "sama.com.ph@gmail.com",
+      subject: "We received your Sama organizer application!",
+      html: `
+        <p>Hi ${escapeHtml(fullName)},</p>
+        <p>Thanks for applying to be a Sama organizer. We'll review your application and get back to you within 24 hours.</p>
+        <p>In the meantime, feel free to browse trips at <a href="https://sama.ph">sama.ph</a>.</p>
+        <p>— The Sama Team</p>
+      `,
+    });
+  } catch {
+    // Email failure is non-fatal
   }
 
   return { success: true };

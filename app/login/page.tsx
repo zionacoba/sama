@@ -122,6 +122,12 @@ export default function LoginPage() {
               >
                 {loading ? "Signing in…" : "Sign in"}
               </button>
+
+              <p className="text-center text-sm text-stone-500">
+                <Link href="/forgot-password" className="underline-offset-4 hover:text-trailhead hover:underline">
+                  Forgot password?
+                </Link>
+              </p>
             </form>
 
             <p className="mt-6 text-center text-sm text-stone-600">
