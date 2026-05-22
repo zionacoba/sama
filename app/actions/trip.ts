@@ -107,6 +107,8 @@ export async function createTrip(
         if (min_downpayment < 0) return { error: "Minimum downpayment cannot be negative." };
         if (price > 0 && min_downpayment >= price) return { error: "Minimum downpayment must be less than the full price." };
       }
+      const today = new Date().toISOString().split("T")[0];
+      if (date_start < today) return { error: "Trip date cannot be in the past." };
     }
   }
 
@@ -266,6 +268,8 @@ export async function updateTrip(
       if (min_downpayment < 0) return { error: "Minimum downpayment cannot be negative." };
       if (price > 0 && min_downpayment >= price) return { error: "Minimum downpayment must be less than the full price." };
     }
+    const today = new Date().toISOString().split("T")[0];
+    if (date_start < today) return { error: "Trip date cannot be in the past." };
   }
 
   if (!isDraft && !is_template && total_slots < existing.total_slots) {
@@ -366,7 +370,7 @@ export async function updateTrip(
                 <p>Hi ${escapeHtml(booking.full_name)},</p>
                 <p>The organizer has made changes to <strong>${escapeHtml(title)}</strong> that may affect your booking:</p>
                 ${changeHtml}
-                <p>Please review the updated trip details here: <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? "https://landas-zeta.vercel.app"}/trips/${existing.slug}">sama.ph/trips/${existing.slug}</a></p>
+                <p>Please review the updated trip details here: <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? "https://sama.ph"}/trips/${existing.slug}">sama.ph/trips/${existing.slug}</a></p>
                 <p>If you have questions, contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
                 <p>— The Sama Team</p>
               `,

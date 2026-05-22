@@ -249,6 +249,7 @@ export function TripForm({
                 name="date_start"
                 type="date"
                 required
+                min={new Date().toISOString().split("T")[0]}
                 className={inputClass}
               />
             </div>

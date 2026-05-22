@@ -1,32 +1,42 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
-export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
+export default function UpdatePasswordPage() {
+  const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: (process.env.NEXT_PUBLIC_SITE_URL ?? "https://sama.ph") + "/update-password",
-    });
-
-    setLoading(false);
-
-    if (authError) {
-      setError(authError.message);
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Passwords do not match.");
       return;
     }
 
-    setSent(true);
+    setLoading(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    setDone(true);
+    setTimeout(() => router.push("/login"), 2500);
   }
 
   return (
@@ -42,27 +52,21 @@ export default function ForgotPasswordPage() {
       <main className="flex flex-1 items-center justify-center px-4 py-12 sm:py-16">
         <div className="w-full max-w-md">
           <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-            {sent ? (
+            {done ? (
               <div className="text-center">
-                <p className="text-4xl">📬</p>
-                <h1 className="mt-4 text-xl font-bold text-stone-900">Check your email</h1>
+                <p className="text-4xl">✅</p>
+                <h1 className="mt-4 text-xl font-bold text-stone-900">Password updated!</h1>
                 <p className="mt-2 text-sm text-stone-600">
-                  We sent a password reset link to <strong>{email}</strong>. Check your inbox and follow the link to reset your password.
+                  Redirecting you to login…
                 </p>
-                <Link
-                  href="/login"
-                  className="mt-6 inline-block text-sm font-semibold text-trailhead underline-offset-4 hover:underline"
-                >
-                  ← Back to login
-                </Link>
               </div>
             ) : (
               <>
                 <h1 className="text-2xl font-bold tracking-tight text-stone-900">
-                  Reset your password
+                  Set a new password
                 </h1>
                 <p className="mt-1 text-sm text-stone-600">
-                  Enter your email and we&apos;ll send you a reset link.
+                  Choose a strong password of at least 8 characters.
                 </p>
 
                 <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -76,19 +80,35 @@ export default function ForgotPasswordPage() {
                   )}
 
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-stone-700">
-                      Email
+                    <label htmlFor="password" className="block text-sm font-medium text-stone-700">
+                      New password
                     </label>
                     <input
-                      id="email"
-                      type="email"
-                      name="email"
-                      autoComplete="email"
+                      id="password"
+                      type="password"
+                      autoComplete="new-password"
                       required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      minLength={8}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2"
-                      placeholder="you@example.com"
+                      placeholder="At least 8 characters"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="confirm" className="block text-sm font-medium text-stone-700">
+                      Confirm password
+                    </label>
+                    <input
+                      id="confirm"
+                      type="password"
+                      autoComplete="new-password"
+                      required
+                      value={confirm}
+                      onChange={(e) => setConfirm(e.target.value)}
+                      className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2"
+                      placeholder="Repeat your password"
                     />
                   </div>
 
@@ -97,16 +117,9 @@ export default function ForgotPasswordPage() {
                     disabled={loading}
                     className="w-full rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {loading ? "Sending…" : "Send reset link"}
+                    {loading ? "Updating…" : "Update password"}
                   </button>
                 </form>
-
-                <p className="mt-6 text-center text-sm text-stone-600">
-                  Remembered it?{" "}
-                  <Link href="/login" className="font-semibold text-trailhead underline-offset-4 hover:underline">
-                    Sign in
-                  </Link>
-                </p>
               </>
             )}
           </div>

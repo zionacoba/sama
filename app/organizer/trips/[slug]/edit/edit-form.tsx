@@ -291,6 +291,7 @@ export function EditTripForm({
                 name="date_start"
                 type="date"
                 required
+                min={new Date().toISOString().split("T")[0]}
                 defaultValue={trip.date_start.slice(0, 10)}
                 className={inputClass}
               />

@@ -150,7 +150,17 @@ export default async function TripsPage({ searchParams }: PageProps) {
 
   if (search) {
     const term = `%${search}%`;
-    query = query.or(`title.ilike.${term},destination.ilike.${term},activity_type.ilike.${term}`);
+    const { data: matchingOrgs } = await supabase
+      .from("organizers")
+      .select("id")
+      .or(`display_name.ilike.${term},full_name.ilike.${term}`);
+    const orgIds = (matchingOrgs ?? []).map((o: { id: string }) => o.id);
+    if (orgIds.length > 0) {
+      const orgFilters = orgIds.map((id: string) => `organizer_id.eq.${id}`).join(",");
+      query = query.or(`title.ilike.${term},destination.ilike.${term},activity_type.ilike.${term},${orgFilters}`);
+    } else {
+      query = query.or(`title.ilike.${term},destination.ilike.${term},activity_type.ilike.${term}`);
+    }
   }
   if (activity) query = query.eq("activity_type", activity);
   if (duration) query = query.eq("duration", duration);
