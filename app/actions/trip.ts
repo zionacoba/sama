@@ -348,7 +348,7 @@ export async function updateTrip(
                 <p>Hi ${booking.full_name},</p>
                 <p>The organizer has made changes to <strong>${title}</strong> that may affect your booking:</p>
                 ${changeHtml}
-                <p>Please review the updated trip details here: <a href="https://landas-zeta.vercel.app/trips/${existing.slug}">sama.ph/trips/${existing.slug}</a></p>
+                <p>Please review the updated trip details here: <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? "https://landas-zeta.vercel.app"}/trips/${existing.slug}">sama.ph/trips/${existing.slug}</a></p>
                 <p>If you have questions, contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
                 <p>— The Sama Team</p>
               `,

@@ -33,6 +33,7 @@ type TripDetail = {
   downpayment_cutoff_days: number | null;
   cancellation_policy: string | null;
   cancellation_policy_custom: string | null;
+  waiver_text: string | null;
   meeting_points: { location: string; time: string }[] | null;
   waitlist_enabled: boolean | null;
 };
@@ -592,6 +593,7 @@ export default async function TripDetailPage({ params }: PageProps) {
                   difficulty={tripData.difficulty}
                   cancellationPolicy={tripData.cancellation_policy ?? null}
                   cancellationPolicyCustom={tripData.cancellation_policy_custom ?? null}
+                  waiverText={tripData.waiver_text ?? null}
                 />
               )}
             </div>
@@ -641,6 +643,7 @@ export default async function TripDetailPage({ params }: PageProps) {
                     difficulty={tripData.difficulty}
                     cancellationPolicy={tripData.cancellation_policy ?? null}
                     cancellationPolicyCustom={tripData.cancellation_policy_custom ?? null}
+                    waiverText={tripData.waiver_text ?? null}
                   />
                 )}
               </div>
