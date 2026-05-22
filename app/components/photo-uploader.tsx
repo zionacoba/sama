@@ -3,6 +3,37 @@
 import { useEffect, useRef, useState } from "react";
 
 const MAX_PHOTOS = 5;
+const MAX_DIMENSION = 1920;
+const JPEG_QUALITY = 0.8;
+
+async function compressImage(file: File): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const { naturalWidth: w, naturalHeight: h } = img;
+      const scale = Math.min(1, MAX_DIMENSION / Math.max(w, h));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(w * scale);
+      canvas.height = Math.round(h * scale);
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return; }
+          const compressed = new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" });
+          console.log(`[photo] ${file.name}: ${(file.size / 1024).toFixed(0)} KB → ${(compressed.size / 1024).toFixed(0)} KB`);
+          resolve(compressed);
+        },
+        "image/jpeg",
+        JPEG_QUALITY,
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+    img.src = objectUrl;
+  });
+}
 
 export type PhotoItem =
   | { kind: "url"; url: string }
@@ -37,16 +68,16 @@ export function PhotoUploader({
     onChange(next);
   }
 
-  function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    const remaining = MAX_PHOTOS - items.length;
-    const newItems: PhotoItem[] = files.slice(0, remaining).map((file) => ({
-      kind: "file",
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }));
-    update([...items, ...newItems]);
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS - items.length);
     e.target.value = "";
+    const newItems: PhotoItem[] = await Promise.all(
+      files.map(async (file) => {
+        const compressed = await compressImage(file);
+        return { kind: "file" as const, file: compressed, previewUrl: URL.createObjectURL(compressed) };
+      }),
+    );
+    update([...items, ...newItems]);
   }
 
   function remove(index: number) {
