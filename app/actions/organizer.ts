@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 
@@ -134,4 +135,21 @@ export async function updateOrganizerStatus(formData: FormData) {
   await supabase.from("organizers").update({ status }).eq("id", id);
 
   redirect("/admin");
+}
+
+export async function toggleFoundingPartner(formData: FormData) {
+  const id = formData.get("id") as string;
+  const value = formData.get("is_founding_partner") === "true";
+
+  if (!id) return;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user?.email !== ADMIN_EMAIL) return;
+
+  const admin = createSupabaseAdminClient();
+  await admin.from("organizers").update({ is_founding_partner: value }).eq("id", id);
+
+  redirect("/admin?tab=organizers");
 }

@@ -77,7 +77,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
   // All queries use admin client to bypass RLS on this public page
   const { data: organizer } = await admin
     .from("organizers")
-    .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links")
+    .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links, is_founding_partner")
     .eq("id", id)
     .maybeSingle();
 
@@ -171,9 +171,16 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
               </div>
               {/* Name + rating — sits to the right, bottom-aligned with avatar */}
               <div className="min-w-0 pb-3">
-                <h1 className="text-xl font-bold tracking-tight text-stone-900 sm:text-2xl">
-                  {publicName}
-                </h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-bold tracking-tight text-stone-900 sm:text-2xl">
+                    {publicName}
+                  </h1>
+                  {organizer.is_founding_partner && (
+                    <span className="inline-flex items-center rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+                      Founding Partner
+                    </span>
+                  )}
+                </div>
                 {avgRating !== null && (
                   <div className="mt-1 flex items-center gap-1.5">
                     <Stars rating={avgRating} />

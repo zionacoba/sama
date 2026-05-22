@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { updateOrganizerStatus } from "@/app/actions/organizer";
+import { updateOrganizerStatus, toggleFoundingPartner } from "@/app/actions/organizer";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
@@ -23,6 +23,7 @@ type OrganizerApplication = {
   years_experience: number | null;
   emergency_certified: boolean;
   status: string;
+  is_founding_partner: boolean;
   created_at: string;
 };
 
@@ -114,7 +115,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
   // Organizers — all, sorted pending first
   const { data: orgData, error: orgError } = await adminClient
     .from("organizers")
-    .select("id, full_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_experience, emergency_certified, status, created_at")
+    .select("id, full_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_experience, emergency_certified, status, is_founding_partner, created_at")
     .order("created_at", { ascending: false });
 
   const allApplications = (orgData ?? []) as OrganizerApplication[];
@@ -333,30 +334,46 @@ export default async function AdminPage({ searchParams }: PageProps) {
                           <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
                           <td className="whitespace-nowrap px-4 py-3 text-stone-600">{formatCreatedAt(app.created_at)}</td>
                           <td className="px-4 py-3">
-                            {app.status === "pending" && (
-                              <div className="flex items-center gap-2">
-                                <form action={updateOrganizerStatus}>
-                                  <input type="hidden" name="id" value={app.id} />
-                                  <input type="hidden" name="status" value="approved" />
-                                  <button
-                                    type="submit"
-                                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
-                                  >
-                                    Approve
-                                  </button>
-                                </form>
-                                <form action={updateOrganizerStatus}>
-                                  <input type="hidden" name="id" value={app.id} />
-                                  <input type="hidden" name="status" value="rejected" />
-                                  <button
-                                    type="submit"
-                                    className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
-                                  >
-                                    Reject
-                                  </button>
-                                </form>
-                              </div>
-                            )}
+                            <div className="flex flex-col gap-2">
+                              {app.status === "pending" && (
+                                <div className="flex items-center gap-2">
+                                  <form action={updateOrganizerStatus}>
+                                    <input type="hidden" name="id" value={app.id} />
+                                    <input type="hidden" name="status" value="approved" />
+                                    <button
+                                      type="submit"
+                                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                                    >
+                                      Approve
+                                    </button>
+                                  </form>
+                                  <form action={updateOrganizerStatus}>
+                                    <input type="hidden" name="id" value={app.id} />
+                                    <input type="hidden" name="status" value="rejected" />
+                                    <button
+                                      type="submit"
+                                      className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
+                                    >
+                                      Reject
+                                    </button>
+                                  </form>
+                                </div>
+                              )}
+                              <form action={toggleFoundingPartner}>
+                                <input type="hidden" name="id" value={app.id} />
+                                <input type="hidden" name="is_founding_partner" value={(!app.is_founding_partner).toString()} />
+                                <button
+                                  type="submit"
+                                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                                    app.is_founding_partner
+                                      ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                      : "border border-stone-200 text-stone-500 hover:border-stone-400 hover:text-stone-700"
+                                  }`}
+                                >
+                                  {app.is_founding_partner ? "✦ Founding" : "Mark founding"}
+                                </button>
+                              </form>
+                            </div>
                           </td>
                         </tr>
                       ))
