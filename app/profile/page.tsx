@@ -26,6 +26,7 @@ type Booking = {
   balance_collected: boolean;
   status: string;
   waiver_agreed: boolean;
+  waiver_agreed_at: string | null;
   created_at: string;
   trip: {
     id: number;
@@ -184,7 +185,7 @@ function BookingCard({
           <WaiverModal
             tripTitle={booking.trip.title}
             fullName={booking.full_name || fullName}
-            agreedAt={booking.created_at}
+            agreedAt={booking.waiver_agreed_at ?? booking.created_at}
             waiverText={booking.trip.waiver_text}
           />
         )}
@@ -224,6 +225,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
         balance_collected,
         status,
         waiver_agreed,
+        waiver_agreed_at,
         created_at,
         trip:trips(id, title, slug, date_start, destination, photos, difficulty, activity_type, duration, meeting_point, waiver_text)
       `)

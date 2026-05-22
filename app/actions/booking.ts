@@ -108,6 +108,7 @@ export async function createBooking(input: CreateBookingInput) {
       emergency_contact_name: input.emergencyContactName,
       emergency_contact_phone: input.emergencyContactPhone,
       waiver_agreed: input.waiverAgreed,
+      waiver_agreed_at: input.waiverAgreed ? new Date().toISOString() : null,
       platform_waiver_agreed: input.platformWaiverAgreed,
       medical_notes: input.medicalNotes,
       meeting_point: input.meetingPoint,
