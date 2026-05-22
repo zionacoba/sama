@@ -54,6 +54,46 @@ export async function joinWaitlist(
     return { error: error.message };
   }
 
+  // Notify the organizer of the new waitlist entry.
+  try {
+    const { data: trip } = await admin
+      .from("trips")
+      .select("title, date_start, organizer_id")
+      .eq("id", input.tripId)
+      .maybeSingle();
+
+    if (trip?.organizer_id) {
+      const { data: organizer } = await admin
+        .from("organizers")
+        .select("email")
+        .eq("id", trip.organizer_id)
+        .maybeSingle();
+
+      if (organizer?.email) {
+        const tripDate = new Intl.DateTimeFormat("en-PH", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }).format(new Date(trip.date_start));
+
+        await resend.emails.send({
+          from: "Sama <onboarding@resend.dev>",
+          to: organizer.email,
+          replyTo: "sama.com.ph@gmail.com",
+          subject: `New waitlist entry for ${trip.title}`,
+          html: `
+            <p>Hi,</p>
+            <p><strong>${escapeHtml(input.fullName)}</strong> has joined the waitlist for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}. They'll be notified automatically if you add more slots.</p>
+            <p>— The Sama Team</p>
+          `,
+        });
+      }
+    }
+  } catch {
+    // Email failure is non-fatal
+  }
+
   revalidatePath(`/trips/${input.tripSlug}`);
   return { success: true as const };
 }

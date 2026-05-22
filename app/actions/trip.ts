@@ -511,6 +511,7 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
     // Email failure is non-fatal
   }
 
+  revalidatePath("/trips");
   revalidatePath("/organizer/dashboard");
   revalidatePath(`/trips/${tripSlug}`);
   redirect("/organizer/dashboard");

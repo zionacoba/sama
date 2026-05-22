@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordForm() {
+  const searchParams = useSearchParams();
+  const expired = searchParams.get("expired") === "1";
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -66,6 +69,14 @@ export default function ForgotPasswordPage() {
                 </p>
 
                 <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+                  {expired && (
+                    <p
+                      role="alert"
+                      className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+                    >
+                      Your reset link has expired. Please request a new one.
+                    </p>
+                  )}
                   {error && (
                     <p
                       role="alert"
@@ -113,5 +124,13 @@ export default function ForgotPasswordPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ForgotPasswordForm />
+    </Suspense>
   );
 }

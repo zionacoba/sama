@@ -180,6 +180,8 @@ export async function createBooking(input: CreateBookingInput) {
           day: "numeric",
         }).format(new Date(trip.date_start));
 
+        const orgBookingRef = newBooking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
+
         const participantsRow =
           input.participants && input.participants.length > 1
             ? `<li><strong>Participants:</strong> ${input.participants.map((n) => escapeHtml(n || "(unnamed)")).join(", ")}</li>`
@@ -198,6 +200,7 @@ export async function createBooking(input: CreateBookingInput) {
             <p>Hi,</p>
             <p><strong>${escapeHtml(input.fullName)}</strong> (${input.email}) just booked <strong>${input.slots} slot${input.slots !== 1 ? "s" : ""}</strong> on your trip:</p>
             <ul>
+              <li><strong>Booking ref:</strong> ${orgBookingRef}</li>
               <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
               <li><strong>Date:</strong> ${tripDate}</li>
               ${participantsRow}
@@ -223,6 +226,16 @@ export async function createBooking(input: CreateBookingInput) {
         day: "numeric",
       }).format(new Date(trip.date_start));
 
+      const bookingRef = newBooking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
+      const fmt = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+      const isDownpay = input.paymentOption === "downpayment" && computedAmountDue < computedTotal;
+      const amountLine = isDownpay
+        ? `<li><strong>Amount due now:</strong> ${fmt(computedAmountDue)} downpayment</li><li><strong>Remaining balance:</strong> ${fmt(computedTotal - computedAmountDue)} due on trip day</li>`
+        : `<li><strong>Total amount:</strong> ${fmt(computedTotal)}</li>`;
+      const meetingLine = input.meetingPoint
+        ? `<li><strong>Meeting point:</strong> ${escapeHtml(input.meetingPoint)}</li>`
+        : "";
+
       await resend.emails.send({
         from: "Sama <onboarding@resend.dev>",
         to: input.email,
@@ -235,25 +248,31 @@ export async function createBooking(input: CreateBookingInput) {
             <p>Hi ${escapeHtml(input.fullName)},</p>
             <p>You're in! Your booking for <strong>${escapeHtml(trip.title)}</strong> is confirmed. Here's a summary:</p>
             <ul>
+              <li><strong>Booking ref:</strong> ${bookingRef}</li>
               <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
               <li><strong>Date:</strong> ${tripDate}</li>
               <li><strong>Slots booked:</strong> ${input.slots}</li>
+              ${amountLine}
+              ${meetingLine}
             </ul>
             ${trip.messenger_gc_link ? `
             <p>Join the group chat for trip updates and coordination:<br>
             <a href="${trip.messenger_gc_link}">${escapeHtml(trip.messenger_gc_link)}</a></p>
             <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
             ` : ""}
-            <p>The organizer will be in touch with trip details closer to the date. You can view your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
+            <p>You can view your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
             <p>— The Sama Team</p>
           `
           : `
             <p>Hi ${escapeHtml(input.fullName)},</p>
             <p>We've received your request to join <strong>${escapeHtml(trip.title)}</strong>. Here's a summary:</p>
             <ul>
+              <li><strong>Booking ref:</strong> ${bookingRef}</li>
               <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
               <li><strong>Date:</strong> ${tripDate}</li>
               <li><strong>Slots requested:</strong> ${input.slots}</li>
+              ${amountLine}
+              ${meetingLine}
             </ul>
             <p>The organizer will review your request and confirm your spot. This usually takes 24–48 hours. You can track your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
             <p>— The Sama Team</p>

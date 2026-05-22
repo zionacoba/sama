@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
 export default function UpdatePasswordPage() {
@@ -12,6 +12,17 @@ export default function UpdatePasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.replace("/forgot-password?expired=1");
+      } else {
+        setSessionChecked(true);
+      }
+    });
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -52,7 +63,9 @@ export default function UpdatePasswordPage() {
       <main className="flex flex-1 items-center justify-center px-4 py-12 sm:py-16">
         <div className="w-full max-w-md">
           <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-            {done ? (
+            {!sessionChecked && !done ? (
+              <p className="text-center text-sm text-stone-500">Checking your link…</p>
+            ) : done ? (
               <div className="text-center">
                 <p className="text-4xl">✅</p>
                 <h1 className="mt-4 text-xl font-bold text-stone-900">Password updated!</h1>

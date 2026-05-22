@@ -140,6 +140,8 @@ export async function updateOrganizerProfile(
 
   if (error) return { error: error.message };
 
+  revalidatePath("/trips");
+  revalidatePath(`/organizers/${organizer.id}`);
   redirect("/organizer/dashboard");
 }
 
