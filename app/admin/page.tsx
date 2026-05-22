@@ -295,7 +295,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
                     ) : (
                       applications.map((app) => (
                         <tr key={app.id} className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30">
-                          <td className="w-36 max-w-[9rem] truncate px-3 py-3 font-medium text-stone-900" title={app.full_name}>{app.full_name}</td>
+                          <td className="w-36 max-w-[9rem] truncate px-3 py-3 font-medium text-stone-900" title={app.full_name}>
+                            <a href={`/organizers/${app.id}`} target="_blank" rel="noopener noreferrer" className="hover:text-trailhead hover:underline underline-offset-2">{app.full_name}</a>
+                          </td>
                           <td className="w-40 max-w-[10rem] truncate px-3 py-3 text-stone-600" title={app.email}>{app.email}</td>
                           <td className="w-28 px-3 py-3 text-stone-600">{app.phone}</td>
                           <td className="w-14 px-3 py-3">
