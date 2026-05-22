@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 
@@ -140,33 +139,16 @@ export async function updateOrganizerStatus(formData: FormData) {
 
 export async function toggleFoundingPartner(formData: FormData) {
   const id = formData.get("id") as string;
-  const rawValue = formData.get("is_founding_partner");
-  const value = rawValue === "true";
+  const value = formData.get("is_founding_partner") === "true";
 
-  console.log("[toggleFoundingPartner] id:", id, "| raw is_founding_partner:", rawValue, "| parsed value:", value);
-
-  if (!id) {
-    console.log("[toggleFoundingPartner] EARLY RETURN: no id");
-    return;
-  }
+  if (!id) return;
 
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  console.log("[toggleFoundingPartner] user email:", user?.email, "| ADMIN_EMAIL:", ADMIN_EMAIL);
+  if (user?.email !== ADMIN_EMAIL) return;
 
-  if (user?.email !== ADMIN_EMAIL) {
-    console.log("[toggleFoundingPartner] EARLY RETURN: not admin");
-    return;
-  }
-
-  const admin = createSupabaseAdminClient();
-  const { error } = await admin
-    .from("organizers")
-    .update({ is_founding_partner: value })
-    .eq("id", id);
-
-  console.log("[toggleFoundingPartner] update error:", error ?? "none");
+  await supabase.from("organizers").update({ is_founding_partner: value }).eq("id", id);
 
   revalidatePath("/admin");
   revalidatePath(`/organizers/${id}`);
