@@ -33,7 +33,6 @@ export async function confirmParticipant(
     .maybeSingle();
 
   if (!participant) return { error: "Invalid or expired link." };
-  if (participant.completed) return { error: "This spot has already been confirmed." };
 
   const { data: booking } = await admin
     .from("bookings")
@@ -45,7 +44,7 @@ export async function confirmParticipant(
     return { error: "This booking has been cancelled." };
   }
 
-  const { error } = await admin
+  const { data: updated, error } = await admin
     .from("booking_participants")
     .update({
       full_name: fullName,
@@ -57,9 +56,13 @@ export async function confirmParticipant(
       waiver_accepted_at: new Date().toISOString(),
       completed: true,
     })
-    .eq("id", participant.id);
+    .eq("id", participant.id)
+    .eq("completed", false)
+    .select("id")
+    .maybeSingle();
 
   if (error) return { error: error.message };
+  if (!updated) return { error: "This waiver has already been submitted." };
 
   return { success: true };
 }

@@ -229,7 +229,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
         created_at,
         trip:trips(id, title, slug, date_start, destination, photos, difficulty, activity_type, duration, meeting_point, waiver_text)
       `)
-      .eq("email", user.email ?? "")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
     admin
       .from("profiles")

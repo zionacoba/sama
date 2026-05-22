@@ -68,6 +68,17 @@ export async function createBooking(input: CreateBookingInput) {
     return { error: "You already have a booking for this trip." };
   }
 
+  const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
+  const { count: recentCount } = await admin
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .gte("created_at", oneMinuteAgo);
+
+  if ((recentCount ?? 0) >= 3) {
+    return { error: "Too many booking attempts. Please wait a moment and try again." };
+  }
+
   // Compute amounts server-side — never trust client-provided values.
   const computedTotal = trip.price * input.slots;
   const canDownpay = trip.payment_type === "downpayment" && trip.min_downpayment != null && trip.min_downpayment < trip.price;

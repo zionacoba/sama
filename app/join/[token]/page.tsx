@@ -23,11 +23,28 @@ export default async function JoinPage({ params }: PageProps) {
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("trip_id, full_name, meeting_point")
+    .select("trip_id, full_name, meeting_point, status")
     .eq("id", participant.booking_id)
     .maybeSingle();
 
   if (!booking) notFound();
+
+  if (booking.status === "cancelled") {
+    return (
+      <div className="min-h-screen bg-stone-50 font-sans text-stone-900">
+        <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
+          <div className="mx-auto flex max-w-xl items-center px-4 py-4 sm:px-6">
+            <Link href="/" className="text-lg font-bold tracking-tight hover:opacity-90">⛰ Sama</Link>
+          </div>
+        </header>
+        <main className="mx-auto max-w-xl px-4 py-16 sm:px-6 text-center">
+          <p className="text-4xl">✕</p>
+          <h1 className="mt-4 text-xl font-bold text-stone-900">This booking has been cancelled</h1>
+          <p className="mt-2 text-sm text-stone-500">This waiver link is no longer active.</p>
+        </main>
+      </div>
+    );
+  }
 
   const { data: trip } = await admin
     .from("trips")
@@ -36,6 +53,23 @@ export default async function JoinPage({ params }: PageProps) {
     .maybeSingle();
 
   if (!trip) notFound();
+
+  if (new Date(trip.date_start) < new Date()) {
+    return (
+      <div className="min-h-screen bg-stone-50 font-sans text-stone-900">
+        <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
+          <div className="mx-auto flex max-w-xl items-center px-4 py-4 sm:px-6">
+            <Link href="/" className="text-lg font-bold tracking-tight hover:opacity-90">⛰ Sama</Link>
+          </div>
+        </header>
+        <main className="mx-auto max-w-xl px-4 py-16 sm:px-6 text-center">
+          <p className="text-4xl">⏱</p>
+          <h1 className="mt-4 text-xl font-bold text-stone-900">This waiver link has expired</h1>
+          <p className="mt-2 text-sm text-stone-500">The trip date has already passed.</p>
+        </main>
+      </div>
+    );
+  }
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {
     weekday: "long",
