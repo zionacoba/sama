@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -151,5 +152,6 @@ export async function toggleFoundingPartner(formData: FormData) {
   const admin = createSupabaseAdminClient();
   await admin.from("organizers").update({ is_founding_partner: value }).eq("id", id);
 
-  redirect("/admin?tab=organizers");
+  revalidatePath("/admin");
+  redirect("/admin?tab=organizers&_r=" + Date.now());
 }
