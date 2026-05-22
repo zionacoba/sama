@@ -169,5 +169,6 @@ export async function toggleFoundingPartner(formData: FormData) {
   console.log("[toggleFoundingPartner] update error:", error ?? "none");
 
   revalidatePath("/admin");
+  revalidatePath(`/organizers/${id}`);
   redirect("/admin?tab=organizers&_r=" + Date.now());
 }
