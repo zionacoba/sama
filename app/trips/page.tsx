@@ -234,61 +234,70 @@ export default async function TripsPage({ searchParams }: PageProps) {
               </Suspense>
             </div>
 
-            {/* All filter pills on one scrollable row */}
-            <div className="-mx-4 mt-2 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-              <span className="shrink-0 text-xs font-semibold text-stone-400">Activity</span>
-              {ACTIVITIES.map((a) => {
-                const active = a === currentActivity;
-                return (
-                  <Link
-                    key={a}
-                    href={filterUrl(current, "activity", a)}
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
-                      active
-                        ? "bg-trailhead text-white shadow-sm"
-                        : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
-                    }`}
-                  >
-                    {a}
-                  </Link>
-                );
-              })}
-              <span className="mx-1 shrink-0 text-stone-300" aria-hidden>|</span>
-              <span className="shrink-0 text-xs font-semibold text-stone-400">Duration</span>
-              {DURATIONS.map((d) => {
-                const active = d === currentDuration;
-                return (
-                  <Link
-                    key={d}
-                    href={filterUrl(current, "duration", d)}
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
-                      active
-                        ? "bg-trailhead text-white shadow-sm"
-                        : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
-                    }`}
-                  >
-                    {d}
-                  </Link>
-                );
-              })}
-              <span className="mx-1 shrink-0 text-stone-300" aria-hidden>|</span>
-              <span className="shrink-0 text-xs font-semibold text-stone-400">Level</span>
-              {DIFFICULTIES.map((d) => {
-                const active = d === currentDifficulty;
-                return (
-                  <Link
-                    key={d}
-                    href={filterUrl(current, "difficulty", d)}
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
-                      active
-                        ? "bg-trailhead text-white shadow-sm"
-                        : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
-                    }`}
-                  >
-                    {d}
-                  </Link>
-                );
-              })}
+            {/* Filter pills — stacked rows on mobile, one scrollable row on desktop */}
+            <div className="mt-2 flex flex-col gap-2 md:flex-row md:flex-nowrap md:items-center md:gap-1.5 md:overflow-x-auto md:pb-1">
+              {/* Activity */}
+              <div className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
+                <span className="shrink-0 text-xs font-semibold text-stone-400">Activity</span>
+                {ACTIVITIES.map((a) => {
+                  const active = a === currentActivity;
+                  return (
+                    <Link
+                      key={a}
+                      href={filterUrl(current, "activity", a)}
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                        active
+                          ? "bg-trailhead text-white shadow-sm"
+                          : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
+                      }`}
+                    >
+                      {a}
+                    </Link>
+                  );
+                })}
+                <span className="mx-1 hidden shrink-0 text-stone-300 md:inline" aria-hidden>|</span>
+              </div>
+              {/* Level */}
+              <div className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
+                <span className="shrink-0 text-xs font-semibold text-stone-400">Level</span>
+                {DIFFICULTIES.map((d) => {
+                  const active = d === currentDifficulty;
+                  return (
+                    <Link
+                      key={d}
+                      href={filterUrl(current, "difficulty", d)}
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                        active
+                          ? "bg-trailhead text-white shadow-sm"
+                          : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
+                      }`}
+                    >
+                      {d}
+                    </Link>
+                  );
+                })}
+                <span className="mx-1 hidden shrink-0 text-stone-300 md:inline" aria-hidden>|</span>
+              </div>
+              {/* Duration */}
+              <div className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
+                <span className="shrink-0 text-xs font-semibold text-stone-400">Duration</span>
+                {DURATIONS.map((d) => {
+                  const active = d === currentDuration;
+                  return (
+                    <Link
+                      key={d}
+                      href={filterUrl(current, "duration", d)}
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                        active
+                          ? "bg-trailhead text-white shadow-sm"
+                          : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
+                      }`}
+                    >
+                      {d}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
 
             <p className="mt-2 text-xs text-stone-500">
