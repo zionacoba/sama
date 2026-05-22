@@ -268,37 +268,36 @@ export default async function AdminPage({ searchParams }: PageProps) {
 
             <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[800px] text-left text-sm">
+                <table className="w-full min-w-[760px] text-left text-sm">
                   <thead>
                     <tr className="border-b border-trailhead/20 bg-trailhead text-white">
-                      <th className="px-4 py-3 font-semibold">Full name</th>
-                      <th className="px-4 py-3 font-semibold">Email</th>
-                      <th className="px-4 py-3 font-semibold">Phone</th>
-                      <th className="px-4 py-3 font-semibold">Facebook</th>
-                      <th className="px-4 py-3 font-semibold">Bio</th>
-                      <th className="px-4 py-3 font-semibold">Past trips</th>
-                      <th className="px-4 py-3 font-semibold">Activity types</th>
-                      <th className="px-4 py-3 font-semibold">Yrs exp</th>
-                      <th className="px-4 py-3 font-semibold">First aid</th>
-                      <th className="px-4 py-3 font-semibold">Status</th>
-                      <th className="px-4 py-3 font-semibold">Date applied</th>
-                      <th className="px-4 py-3 font-semibold">Actions</th>
+                      <th className="w-36 px-3 py-3 font-semibold">Full name</th>
+                      <th className="w-40 px-3 py-3 font-semibold">Email</th>
+                      <th className="w-28 px-3 py-3 font-semibold">Phone</th>
+                      <th className="w-14 px-3 py-3 font-semibold">FB</th>
+                      <th className="w-32 px-3 py-3 font-semibold">Bio</th>
+                      <th className="w-28 px-3 py-3 font-semibold">Activity</th>
+                      <th className="w-10 px-3 py-3 font-semibold">Exp</th>
+                      <th className="w-10 px-3 py-3 font-semibold">FA</th>
+                      <th className="w-20 px-3 py-3 font-semibold">Status</th>
+                      <th className="w-24 px-3 py-3 font-semibold">Applied</th>
+                      <th className="w-32 px-3 py-3 font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {applications.length === 0 ? (
                       <tr>
-                        <td colSpan={12} className="px-4 py-12 text-center text-stone-500">
+                        <td colSpan={11} className="px-4 py-12 text-center text-stone-500">
                           No applications yet.
                         </td>
                       </tr>
                     ) : (
                       applications.map((app) => (
                         <tr key={app.id} className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30">
-                          <td className="px-4 py-3 font-medium text-stone-900">{app.full_name}</td>
-                          <td className="px-4 py-3 text-stone-600">{app.email}</td>
-                          <td className="px-4 py-3 text-stone-600">{app.phone}</td>
-                          <td className="px-4 py-3">
+                          <td className="w-36 max-w-[9rem] truncate px-3 py-3 font-medium text-stone-900" title={app.full_name}>{app.full_name}</td>
+                          <td className="w-40 max-w-[10rem] truncate px-3 py-3 text-stone-600" title={app.email}>{app.email}</td>
+                          <td className="w-28 px-3 py-3 text-stone-600">{app.phone}</td>
+                          <td className="w-14 px-3 py-3">
                             {app.facebook_url ? (
                               <a
                                 href={app.facebook_url}
@@ -310,30 +309,27 @@ export default async function AdminPage({ searchParams }: PageProps) {
                               </a>
                             ) : <span className="text-stone-300">—</span>}
                           </td>
-                          <td className="max-w-xs px-4 py-3 text-stone-600">
-                            <p className="line-clamp-2">{app.bio}</p>
+                          <td className="w-32 max-w-[8rem] px-3 py-3 text-stone-600">
+                            <p className="truncate text-xs" title={app.bio ?? ""}>{app.bio}</p>
                           </td>
-                          <td className="max-w-xs px-4 py-3 text-stone-600">
-                            {app.past_trips_evidence ? (
-                              <p className="line-clamp-3 whitespace-pre-line text-xs">{app.past_trips_evidence}</p>
-                            ) : <span className="text-stone-300">—</span>}
-                          </td>
-                          <td className="px-4 py-3 text-stone-600">
+                          <td className="w-28 max-w-[7rem] px-3 py-3 text-stone-600">
                             {app.activity_types?.length
-                              ? <span className="text-xs">{app.activity_types.join(", ")}</span>
+                              ? <span className="block truncate text-xs" title={app.activity_types.join(", ")}>{app.activity_types.join(", ")}</span>
                               : <span className="text-stone-300">—</span>}
                           </td>
-                          <td className="px-4 py-3 text-center text-stone-700">
+                          <td className="w-10 px-3 py-3 text-center text-stone-700">
                             {app.years_experience ?? <span className="text-stone-300">—</span>}
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="w-10 px-3 py-3 text-center">
                             {app.emergency_certified
                               ? <span className="text-emerald-600">✓</span>
                               : <span className="text-stone-300">—</span>}
                           </td>
-                          <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
-                          <td className="whitespace-nowrap px-4 py-3 text-stone-600">{formatCreatedAt(app.created_at)}</td>
-                          <td className="px-4 py-3">
+                          <td className="w-20 px-3 py-3"><StatusBadge status={app.status} /></td>
+                          <td className="w-24 whitespace-nowrap px-3 py-3 text-xs text-stone-500">
+                            {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric" }).format(new Date(app.created_at))}
+                          </td>
+                          <td className="w-32 px-3 py-3">
                             <div className="flex flex-col gap-2">
                               {app.status === "pending" && (
                                 <div className="flex items-center gap-2">
