@@ -105,6 +105,11 @@ export async function updateOrganizerProfile(
     return { error: "Please fill in all required fields." };
   }
 
+  const urlFields = [social_links.facebook, social_links.instagram, social_links.tiktok];
+  if (urlFields.some((u) => u && !u.startsWith("https://"))) {
+    return { error: "Social links must start with https://" };
+  }
+
   const { error } = await supabase
     .from("organizers")
     .update({

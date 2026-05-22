@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
+import { escapeHtml } from "@/lib/escape-html";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 
@@ -35,7 +36,7 @@ export async function approveOrganizer(id: string): Promise<void> {
       replyTo: "sama.com.ph@gmail.com",
       subject: "Your Sama organizer application has been approved!",
       html: `
-        <p>Hi ${organizer.full_name},</p>
+        <p>Hi ${escapeHtml(organizer.full_name)},</p>
         <p>Great news — your application to become a Sama organizer has been <strong>approved</strong>!</p>
         <p>You can now log in to your organizer dashboard to create and publish trips:</p>
         <p><a href="https://sama.ph/organizer/dashboard">sama.ph/organizer/dashboard</a></p>
@@ -72,7 +73,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
       replyTo: "sama.com.ph@gmail.com",
       subject: "Update on your Sama organizer application",
       html: `
-        <p>Hi ${organizer.full_name},</p>
+        <p>Hi ${escapeHtml(organizer.full_name)},</p>
         <p>Thank you for your interest in becoming a Sama organizer.</p>
         <p>After reviewing your application, we're unable to approve it at this time.</p>
         <p>If you have questions or would like to reapply in the future, feel free to reach out to us.</p>

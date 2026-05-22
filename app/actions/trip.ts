@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
+import { escapeHtml } from "@/lib/escape-html";
 
 function slugify(title: string): string {
   return title
@@ -345,8 +346,8 @@ export async function updateTrip(
               replyTo: "sama.com.ph@gmail.com",
               subject: `Important update to your booking: ${title}`,
               html: `
-                <p>Hi ${booking.full_name},</p>
-                <p>The organizer has made changes to <strong>${title}</strong> that may affect your booking:</p>
+                <p>Hi ${escapeHtml(booking.full_name)},</p>
+                <p>The organizer has made changes to <strong>${escapeHtml(title)}</strong> that may affect your booking:</p>
                 ${changeHtml}
                 <p>Please review the updated trip details here: <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? "https://landas-zeta.vercel.app"}/trips/${existing.slug}">sama.ph/trips/${existing.slug}</a></p>
                 <p>If you have questions, contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
@@ -379,8 +380,8 @@ export async function updateTrip(
             replyTo: "sama.com.ph@gmail.com",
             subject: `Slots available — ${title}`,
             html: `
-              <p>Hi ${entry.full_name},</p>
-              <p>Good news! New slots have opened up for <strong>${title}</strong>. Book now before it fills up again:</p>
+              <p>Hi ${escapeHtml(entry.full_name)},</p>
+              <p>Good news! New slots have opened up for <strong>${escapeHtml(title)}</strong>. Book now before it fills up again:</p>
               <p><a href="https://sama.ph/trips/${existing.slug}">sama.ph/trips/${existing.slug}</a></p>
               <p>— The Sama Team</p>
             `,
@@ -463,8 +464,8 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
         replyTo: "sama.com.ph@gmail.com",
         subject: `Trip cancelled — ${trip.title}`,
         html: `
-          <p>Hi ${booking.full_name},</p>
-          <p>We're sorry to inform you that <strong>${trip.title}</strong> on ${tripDate} has been cancelled by the organizer.</p>
+          <p>Hi ${escapeHtml(booking.full_name)},</p>
+          <p>We're sorry to inform you that <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled by the organizer.</p>
           <p>If you paid a downpayment, please contact the organizer directly for a refund.</p>
           <p>We hope to see you on a future trip!</p>
           <p>— The Sama Team</p>
@@ -478,8 +479,8 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
         replyTo: "sama.com.ph@gmail.com",
         subject: `Trip cancelled: ${trip.title}`,
         html: `
-          <p>Hi ${entry.full_name},</p>
-          <p><strong>${trip.title}</strong> on ${tripDate} has been cancelled by the organizer.</p>
+          <p>Hi ${escapeHtml(entry.full_name)},</p>
+          <p><strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled by the organizer.</p>
           <p>If you have questions, please contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
           <p>— The Sama Team</p>
         `,

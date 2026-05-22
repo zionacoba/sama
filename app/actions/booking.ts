@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
+import { escapeHtml } from "@/lib/escape-html";
 
 type CreateBookingInput = {
   tripSlug: string;
@@ -170,11 +171,11 @@ export async function createBooking(input: CreateBookingInput) {
 
         const participantsRow =
           input.participants && input.participants.length > 1
-            ? `<li><strong>Participants:</strong> ${input.participants.map((n) => n || "(unnamed)").join(", ")}</li>`
+            ? `<li><strong>Participants:</strong> ${input.participants.map((n) => escapeHtml(n || "(unnamed)")).join(", ")}</li>`
             : "";
 
         const medicalRow = input.medicalNotes
-          ? `<li><strong>Medical / allergies:</strong> ${input.medicalNotes}</li>`
+          ? `<li><strong>Medical / allergies:</strong> ${escapeHtml(input.medicalNotes)}</li>`
           : "";
 
         await resend.emails.send({
@@ -184,12 +185,12 @@ export async function createBooking(input: CreateBookingInput) {
           subject: `New booking for ${trip.title}`,
           html: `
             <p>Hi,</p>
-            <p><strong>${input.fullName}</strong> (${input.email}) just booked <strong>${input.slots} slot${input.slots !== 1 ? "s" : ""}</strong> on your trip:</p>
+            <p><strong>${escapeHtml(input.fullName)}</strong> (${input.email}) just booked <strong>${input.slots} slot${input.slots !== 1 ? "s" : ""}</strong> on your trip:</p>
             <ul>
-              <li><strong>Trip:</strong> ${trip.title}</li>
+              <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
               <li><strong>Date:</strong> ${tripDate}</li>
               ${participantsRow}
-              <li><strong>Emergency contact:</strong> ${input.emergencyContactName} — ${input.emergencyContactPhone}</li>
+              <li><strong>Emergency contact:</strong> ${escapeHtml(input.emergencyContactName)} — ${escapeHtml(input.emergencyContactPhone)}</li>
               ${medicalRow}
               <li><strong>Waiver agreed:</strong> ${input.waiverAgreed ? "✓ Yes" : "✗ No"}</li>
             </ul>
@@ -220,26 +221,26 @@ export async function createBooking(input: CreateBookingInput) {
           : `Booking request received for ${trip.title}`,
         html: autoApprove
           ? `
-            <p>Hi ${input.fullName},</p>
-            <p>You're in! Your booking for <strong>${trip.title}</strong> is confirmed. Here's a summary:</p>
+            <p>Hi ${escapeHtml(input.fullName)},</p>
+            <p>You're in! Your booking for <strong>${escapeHtml(trip.title)}</strong> is confirmed. Here's a summary:</p>
             <ul>
-              <li><strong>Trip:</strong> ${trip.title}</li>
+              <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
               <li><strong>Date:</strong> ${tripDate}</li>
               <li><strong>Slots booked:</strong> ${input.slots}</li>
             </ul>
             ${trip.messenger_gc_link ? `
             <p>Join the group chat for trip updates and coordination:<br>
-            <a href="${trip.messenger_gc_link}">${trip.messenger_gc_link}</a></p>
+            <a href="${trip.messenger_gc_link}">${escapeHtml(trip.messenger_gc_link)}</a></p>
             <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
             ` : ""}
             <p>The organizer will be in touch with trip details closer to the date. You can view your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
             <p>— The Sama Team</p>
           `
           : `
-            <p>Hi ${input.fullName},</p>
-            <p>We've received your request to join <strong>${trip.title}</strong>. Here's a summary:</p>
+            <p>Hi ${escapeHtml(input.fullName)},</p>
+            <p>We've received your request to join <strong>${escapeHtml(trip.title)}</strong>. Here's a summary:</p>
             <ul>
-              <li><strong>Trip:</strong> ${trip.title}</li>
+              <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
               <li><strong>Date:</strong> ${tripDate}</li>
               <li><strong>Slots requested:</strong> ${input.slots}</li>
             </ul>
@@ -325,11 +326,11 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
         replyTo: "sama.com.ph@gmail.com",
         subject: `You're confirmed for ${trip.title}!`,
         html: `
-          <p>Hi ${booking.full_name},</p>
-          <p>Great news! Your booking request for <strong>${trip.title}</strong> on ${tripDate} has been approved by the organizer.</p>
+          <p>Hi ${escapeHtml(booking.full_name)},</p>
+          <p>Great news! Your booking request for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been approved by the organizer.</p>
           ${trip.messenger_gc_link ? `
           <p>Join the group chat for trip updates and coordination:<br>
-          <a href="${trip.messenger_gc_link}">${trip.messenger_gc_link}</a></p>
+          <a href="${trip.messenger_gc_link}">${escapeHtml(trip.messenger_gc_link)}</a></p>
           <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
           ` : ""}
           <p>They will be in touch with trip details closer to the date. You can view your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
@@ -343,8 +344,8 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
         replyTo: "sama.com.ph@gmail.com",
         subject: `Update on your booking request for ${trip.title}`,
         html: `
-          <p>Hi ${booking.full_name},</p>
-          <p>Unfortunately your booking request for <strong>${trip.title}</strong> on ${tripDate} was not approved by the organizer.</p>
+          <p>Hi ${escapeHtml(booking.full_name)},</p>
+          <p>Unfortunately your booking request for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} was not approved by the organizer.</p>
           <p>If you have questions, please contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
           <p>— The Sama Team</p>
         `,
@@ -467,7 +468,7 @@ export async function cancelBooking(bookingId: number) {
             subject: `${booking.full_name} cancelled their booking for ${trip.title}`,
             html: `
               <p>Hi,</p>
-              <p><strong>${booking.full_name}</strong> has cancelled their <strong>${booking.slots} slot${booking.slots !== 1 ? "s" : ""}</strong> for <strong>${trip.title}</strong> on ${tripDate}. Their slot${booking.slots !== 1 ? "s" : ""} have been returned to the available pool.</p>
+              <p><strong>${escapeHtml(booking.full_name)}</strong> has cancelled their <strong>${booking.slots} slot${booking.slots !== 1 ? "s" : ""}</strong> for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}. Their slot${booking.slots !== 1 ? "s" : ""} have been returned to the available pool.</p>
               <p>— The Sama Team</p>
             `,
           });
@@ -480,8 +481,8 @@ export async function cancelBooking(bookingId: number) {
         replyTo: "sama.com.ph@gmail.com",
         subject: `Booking cancelled: ${trip.title}`,
         html: `
-          <p>Hi ${booking.full_name},</p>
-          <p>Your booking for <strong>${trip.title}</strong> on ${tripDate} has been cancelled. If you are eligible for a refund, please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> with your booking details and we'll process it for you.</p>
+          <p>Hi ${escapeHtml(booking.full_name)},</p>
+          <p>Your booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled. If you are eligible for a refund, please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> with your booking details and we'll process it for you.</p>
           <p>— The Sama Team</p>
         `,
       });

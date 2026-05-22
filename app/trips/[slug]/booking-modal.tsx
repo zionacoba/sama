@@ -73,6 +73,7 @@ export function BookingModal({
   const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedMeetingPoint, setSelectedMeetingPoint] = useState("");
+  const [phoneError, setPhoneError] = useState(false);
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [waiverError, setWaiverError] = useState(false);
   const [platformWaiverAccepted, setPlatformWaiverAccepted] = useState(false);
@@ -216,7 +217,9 @@ export function BookingModal({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const hasErrors = !platformWaiverAccepted || !waiverAccepted;
+    const phoneValid = phone.startsWith("09") || phone.startsWith("+63");
+    if (!phoneValid) setPhoneError(true);
+    const hasErrors = !platformWaiverAccepted || !waiverAccepted || !phoneValid;
     if (!platformWaiverAccepted) setPlatformWaiverError(true);
     if (!waiverAccepted) setWaiverError(true);
     if (hasErrors) return;
@@ -426,6 +429,7 @@ export function BookingModal({
                       id="booking-full-name"
                       type="text"
                       required
+                      maxLength={100}
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
@@ -454,10 +458,17 @@ export function BookingModal({
                       id="booking-phone"
                       type="tel"
                       required
+                      maxLength={20}
+                      pattern="[0-9+\-\s]+"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      onChange={(e) => { setPhone(e.target.value); setPhoneError(false); }}
+                      className={`mt-1.5 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-trailhead/30 ${phoneError ? "border-red-400 focus:border-red-400" : "border-stone-200 focus:border-trailhead"}`}
                     />
+                    {phoneError && (
+                      <p role="alert" className="mt-1.5 text-xs text-red-600">
+                        Please enter a valid Philippine phone number (09XX or +63)
+                      </p>
+                    )}
                   </div>
 
                   {/* Slots */}
@@ -519,6 +530,7 @@ export function BookingModal({
                               id={`participant-${i}`}
                               type="text"
                               required
+                              maxLength={100}
                               value={name}
                               onChange={(e) => {
                                 const next = [...participants];
@@ -547,6 +559,7 @@ export function BookingModal({
                         id="booking-ec-name"
                         type="text"
                         required
+                        maxLength={100}
                         value={emergencyContactName}
                         onChange={(e) => setEmergencyContactName(e.target.value)}
                         placeholder="Full name"
@@ -561,6 +574,8 @@ export function BookingModal({
                         id="booking-ec-phone"
                         type="tel"
                         required
+                        maxLength={20}
+                        pattern="[0-9+\-\s]+"
                         value={emergencyContactPhone}
                         onChange={(e) => setEmergencyContactPhone(e.target.value)}
                         placeholder="+63 9XX XXX XXXX"
@@ -610,6 +625,7 @@ export function BookingModal({
                     <textarea
                       id="booking-notes"
                       rows={2}
+                      maxLength={500}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Medical conditions, allergies, special requests, or questions"

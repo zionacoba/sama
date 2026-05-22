@@ -39,6 +39,8 @@ type Trip = {
   template_id: string | null;
 };
 
+const PAGE_SIZE = 12;
+
 type FilterParams = {
   activity?: string;
   duration?: string;
@@ -47,6 +49,7 @@ type FilterParams = {
   date_from?: string;
   date_to?: string;
   sort?: string;
+  page?: string;
 };
 
 type PageProps = {
@@ -131,12 +134,15 @@ function filterUrl(
 }
 
 export default async function TripsPage({ searchParams }: PageProps) {
-  const { activity, duration, difficulty, search, date_from, date_to, sort = "soonest" } = await searchParams;
+  const { activity, duration, difficulty, search, date_from, date_to, sort = "soonest", page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
 
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from("trips")
-    .select("id, slug, title, activity_type, difficulty, price, date_start, remaining_slots, total_slots, photos, destination, duration, is_template, template_id")
+    .select("id, slug, title, activity_type, difficulty, price, date_start, remaining_slots, total_slots, photos, destination, duration, is_template, template_id", { count: "exact" })
     .eq("status", "active")
     .gt("date_start", new Date().toISOString())
     .gt("remaining_slots", 0)
@@ -159,14 +165,30 @@ export default async function TripsPage({ searchParams }: PageProps) {
     default:           query = query.order("date_start", { ascending: true });  break;
   }
 
-  const { data } = await query;
+  const { data, count } = await query.range(from, to);
   const trips = (data ?? []) as Trip[];
+  const totalTrips = count ?? 0;
+  const totalPages = Math.ceil(totalTrips / PAGE_SIZE);
 
   const currentActivity = activity ?? "All";
   const currentDuration = duration ?? "All";
   const currentDifficulty = difficulty ?? "All";
   const current = { activity, duration, difficulty, search, date_from, date_to, sort };
   const groups = groupByTemplate(trips);
+
+  function pageUrl(p: number) {
+    const sp = new URLSearchParams();
+    if (search) sp.set("search", search);
+    if (activity) sp.set("activity", activity);
+    if (duration) sp.set("duration", duration);
+    if (difficulty) sp.set("difficulty", difficulty);
+    if (date_from) sp.set("date_from", date_from);
+    if (date_to) sp.set("date_to", date_to);
+    if (sort && sort !== "soonest") sp.set("sort", sort);
+    if (p > 1) sp.set("page", String(p));
+    const qs = sp.toString();
+    return `/trips${qs ? `?${qs}` : ""}`;
+  }
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -270,7 +292,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
             </div>
 
             <p className="mt-2 text-xs text-stone-500">
-              {trips.length} trip{trips.length !== 1 ? "s" : ""} found
+              {totalTrips} trip{totalTrips !== 1 ? "s" : ""} found
               {search && (
                 <>
                   {" "}for &ldquo;{search}&rdquo;
@@ -310,6 +332,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
               </Link>
             </div>
           ) : (
+            <>
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
               {groups.map(({ key, representative: trip, runs }) => {
                 const isGrouped = runs.length > 1;
@@ -405,6 +428,40 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 );
               })}
             </ul>
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-between">
+              <p className="text-sm text-stone-500">
+                Page {page} of {totalPages}
+              </p>
+              <div className="flex gap-2">
+                {page > 1 ? (
+                  <Link
+                    href={pageUrl(page - 1)}
+                    className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-trailhead hover:text-trailhead"
+                  >
+                    ← Previous
+                  </Link>
+                ) : (
+                  <span className="rounded-xl border border-stone-100 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-300">
+                    ← Previous
+                  </span>
+                )}
+                {page < totalPages ? (
+                  <Link
+                    href={pageUrl(page + 1)}
+                    className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-trailhead hover:text-trailhead"
+                  >
+                    Next →
+                  </Link>
+                ) : (
+                  <span className="rounded-xl border border-stone-100 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-300">
+                    Next →
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+            </>
           )}
         </section>
       </main>

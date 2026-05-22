@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
+import { escapeHtml } from "@/lib/escape-html";
 
 type JoinWaitlistInput = {
   tripId: number;
@@ -97,8 +98,8 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
       replyTo: "sama.com.ph@gmail.com",
       subject: `A slot opened up — ${trip.title}`,
       html: `
-        <p>Hi ${entry.full_name},</p>
-        <p>Good news! A slot has opened up for <strong>${trip.title}</strong>. Book now before it fills up again:</p>
+        <p>Hi ${escapeHtml(entry.full_name)},</p>
+        <p>Good news! A slot has opened up for <strong>${escapeHtml(trip.title)}</strong>. Book now before it fills up again:</p>
         <p><a href="https://sama.ph/trips/${trip.slug}">sama.ph/trips/${trip.slug}</a></p>
         <p>— The Sama Team</p>
       `,
