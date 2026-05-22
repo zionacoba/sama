@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { updateOrganizerStatus, toggleFoundingPartner } from "@/app/actions/organizer";
+import { toggleFoundingPartner } from "@/app/actions/organizer";
+import { approveOrganizer, rejectOrganizer } from "@/app/actions/admin";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
@@ -333,9 +334,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                             <div className="flex flex-col gap-2">
                               {app.status === "pending" && (
                                 <div className="flex items-center gap-2">
-                                  <form action={updateOrganizerStatus}>
-                                    <input type="hidden" name="id" value={app.id} />
-                                    <input type="hidden" name="status" value="approved" />
+                                  <form action={approveOrganizer.bind(null, app.id)}>
                                     <button
                                       type="submit"
                                       className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
@@ -343,9 +342,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                                       Approve
                                     </button>
                                   </form>
-                                  <form action={updateOrganizerStatus}>
-                                    <input type="hidden" name="id" value={app.id} />
-                                    <input type="hidden" name="status" value="rejected" />
+                                  <form action={rejectOrganizer.bind(null, app.id)}>
                                     <button
                                       type="submit"
                                       className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
