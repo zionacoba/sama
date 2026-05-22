@@ -34,30 +34,32 @@ export function TripFilters({
   const inputClass = "rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-stone-700 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30";
 
   return (
-    <>
-      <span className="shrink-0 text-xs font-medium text-stone-500">Dates</span>
-      <input
-        type="date"
-        value={dateFrom ?? ""}
-        onChange={(e) => navigate({ date_from: e.target.value })}
-        className={inputClass}
-      />
-      <span className="shrink-0 text-xs text-stone-400">–</span>
-      <input
-        type="date"
-        value={dateTo ?? ""}
-        onChange={(e) => navigate({ date_to: e.target.value })}
-        className={inputClass}
-      />
-      {(dateFrom || dateTo) && (
-        <button
-          type="button"
-          onClick={() => navigate({ date_from: "", date_to: "" })}
-          className="shrink-0 text-xs text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline"
-        >
-          Clear
-        </button>
-      )}
+    <div className="flex flex-col gap-2 md:contents">
+      <div className="flex items-center gap-1.5">
+        <span className="shrink-0 text-xs font-medium text-stone-500">Dates</span>
+        <input
+          type="date"
+          value={dateFrom ?? ""}
+          onChange={(e) => navigate({ date_from: e.target.value })}
+          className={inputClass}
+        />
+        <span className="shrink-0 text-xs text-stone-400">–</span>
+        <input
+          type="date"
+          value={dateTo ?? ""}
+          onChange={(e) => navigate({ date_to: e.target.value })}
+          className={inputClass}
+        />
+        {(dateFrom || dateTo) && (
+          <button
+            type="button"
+            onClick={() => navigate({ date_from: "", date_to: "" })}
+            className="shrink-0 text-xs text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline"
+          >
+            Clear
+          </button>
+        )}
+      </div>
       <select
         value={sort}
         onChange={(e) =>
@@ -72,6 +74,6 @@ export function TripFilters({
           </option>
         ))}
       </select>
-    </>
+    </div>
   );
 }

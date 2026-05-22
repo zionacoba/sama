@@ -201,8 +201,8 @@ export default async function TripsPage({ searchParams }: PageProps) {
               Browse trips
             </h1>
 
-            {/* Search + date pickers + sort on one row */}
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+            {/* Search + date pickers + sort */}
+            <div className="mt-3 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
               <form action="/trips" method="GET" className="flex min-w-0 flex-1 gap-2">
                 {activity && <input type="hidden" name="activity" value={activity} />}
                 {duration && <input type="hidden" name="duration" value={duration} />}
