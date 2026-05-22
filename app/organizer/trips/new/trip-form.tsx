@@ -13,12 +13,36 @@ const labelClass = "block text-sm font-medium text-stone-700";
 const DEFAULT_WAIVER_TEXT =
   "I understand that outdoor activities involve inherent risks including but not limited to physical injury, accidents, and unpredictable weather conditions. I voluntarily participate in this trip organized by [Organizer Name] and assume all risks associated with it. I confirm that I am physically fit to participate and have disclosed any relevant medical conditions. I release the organizer from liability for any injury, loss, or damage arising from my participation, except in cases of gross negligence. I have read and understood the cancellation policy for this trip.";
 
+type TripDefaults = {
+  id?: string | number | null;
+  title?: string | null;
+  activity_type?: string | null;
+  difficulty?: string | null;
+  destination?: string | null;
+  duration?: string | null;
+  description?: string | null;
+  includes?: string | null;
+  what_to_bring?: string | null;
+  photos?: string[] | null;
+  payment_type?: string | null;
+  min_downpayment?: number | null;
+  downpayment_cutoff_days?: number | null;
+  cancellation_policy?: string | null;
+  cancellation_policy_custom?: string | null;
+  waiver_text?: string | null;
+  messenger_gc_link?: string | null;
+};
+
 export function TripForm({
   destinations = [],
   templates = [],
+  defaultValues,
+  preselectedTemplateId,
 }: {
   destinations?: string[];
   templates?: { id: string | number; title: string }[];
+  defaultValues?: TripDefaults | null;
+  preselectedTemplateId?: string;
 }) {
   const [state, action] = useActionState(createTrip, null);
   const [isPending, startTransition] = useTransition();
@@ -26,8 +50,14 @@ export function TripForm({
   type MeetingPoint = { location: string; time: string };
   const [isTemplate, setIsTemplate] = useState(false);
   const [meetingPoints, setMeetingPoints] = useState<MeetingPoint[]>([{ location: "", time: "" }]);
-  const [paymentType, setPaymentType] = useState<"full" | "downpayment">("full");
-  const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict" | "custom">("flexible");
+  const [paymentType, setPaymentType] = useState<"full" | "downpayment">(
+    defaultValues?.payment_type === "downpayment" ? "downpayment" : "full",
+  );
+  const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict" | "custom">(
+    (["flexible", "moderate", "strict", "custom"].includes(defaultValues?.cancellation_policy ?? "")
+      ? defaultValues!.cancellation_policy
+      : "flexible") as "flexible" | "moderate" | "strict" | "custom",
+  );
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [editedAfterSubmit, setEditedAfterSubmit] = useState(false);
@@ -116,7 +146,7 @@ export function TripForm({
           <label htmlFor="template_id" className={labelClass}>
             Link to template <span className="font-normal text-stone-400">(optional)</span>
           </label>
-          <select id="template_id" name="template_id" className={inputClass}>
+          <select id="template_id" name="template_id" defaultValue={preselectedTemplateId ?? ""} className={inputClass}>
             <option value="">No template — standalone trip</option>
             {templates.map((t) => (
               <option key={t.id} value={String(t.id)}>
@@ -137,6 +167,7 @@ export function TripForm({
           name="title"
           type="text"
           required
+          defaultValue={defaultValues?.title ?? ""}
           className={inputClass}
           placeholder="Mt. Pulag Summit Hike"
         />
@@ -148,7 +179,7 @@ export function TripForm({
           <label htmlFor="activity_type" className={labelClass}>
             Activity type
           </label>
-          <select id="activity_type" name="activity_type" required className={inputClass}>
+          <select id="activity_type" name="activity_type" required defaultValue={defaultValues?.activity_type ?? ""} className={inputClass}>
             <option value="">Select activity…</option>
             <option value="Hiking">Hiking</option>
             <option value="Freediving">Freediving</option>
@@ -159,7 +190,7 @@ export function TripForm({
           <label htmlFor="difficulty" className={labelClass}>
             Level
           </label>
-          <select id="difficulty" name="difficulty" required className={inputClass}>
+          <select id="difficulty" name="difficulty" required defaultValue={defaultValues?.difficulty ?? ""} className={inputClass}>
             <option value="">Select level…</option>
             <option value="Beginner">Beginner</option>
             <option value="Intermediate">Intermediate</option>
@@ -172,7 +203,7 @@ export function TripForm({
         <label htmlFor="duration" className={labelClass}>
           Duration
         </label>
-        <select id="duration" name="duration" required className={inputClass}>
+        <select id="duration" name="duration" required defaultValue={defaultValues?.duration ?? ""} className={inputClass}>
           <option value="">Select duration…</option>
           <option value="Day tour">Day tour</option>
           <option value="2D1N">2D1N</option>
@@ -192,6 +223,7 @@ export function TripForm({
           type="text"
           required
           list="destination-suggestions"
+          defaultValue={defaultValues?.destination ?? ""}
           className={inputClass}
           placeholder="Mt. Pulag, Benguet"
         />
@@ -315,6 +347,7 @@ export function TripForm({
           name="description"
           required
           rows={5}
+          defaultValue={defaultValues?.description ?? ""}
           className={`${inputClass} resize-none`}
           placeholder="Describe the trip experience, highlights, and what participants can expect…"
         />
@@ -332,6 +365,7 @@ export function TripForm({
           id="includes"
           name="includes"
           rows={4}
+          defaultValue={defaultValues?.includes ?? ""}
           className={`${inputClass} mt-1.5 resize-none`}
           placeholder={"Guide fee\nCamping gear\nBreakfast and dinner"}
         />
@@ -349,6 +383,7 @@ export function TripForm({
           id="what_to_bring"
           name="what_to_bring"
           rows={4}
+          defaultValue={defaultValues?.what_to_bring ?? ""}
           className={`${inputClass} mt-1.5 resize-none`}
           placeholder={"Sleeping bag\nRain jacket\nHeadlamp\nExtra clothes"}
         />
@@ -385,6 +420,7 @@ export function TripForm({
                   min="0"
                   step="1"
                   required
+                  defaultValue={defaultValues?.min_downpayment ?? ""}
                   className={inputClass}
                   placeholder="500"
                 />
@@ -403,7 +439,7 @@ export function TripForm({
                 type="number"
                 min="0"
                 step="1"
-                defaultValue={10}
+                defaultValue={defaultValues?.downpayment_cutoff_days ?? 10}
                 className={inputClass}
                 placeholder="e.g. 10"
               />
@@ -434,6 +470,7 @@ export function TripForm({
                 name="cancellation_policy_custom"
                 required
                 rows={3}
+                defaultValue={defaultValues?.cancellation_policy_custom ?? ""}
                 className={`${inputClass} mt-3 resize-none`}
                 placeholder="Describe your cancellation and refund terms…"
               />
@@ -453,6 +490,7 @@ export function TripForm({
             id="messenger_gc_link"
             name="messenger_gc_link"
             type="url"
+            defaultValue={defaultValues?.messenger_gc_link ?? ""}
             className={inputClass}
             placeholder="https://m.me/j/..."
           />
@@ -469,7 +507,7 @@ export function TripForm({
           <span className="font-normal text-stone-400">(up to 5 — first is cover)</span>
         </p>
         <div className="mt-1.5">
-          <PhotoUploader onChange={setPhotoItems} />
+          <PhotoUploader initial={defaultValues?.photos ?? []} onChange={setPhotoItems} />
         </div>
       </div>
 
@@ -482,7 +520,7 @@ export function TripForm({
           id="waiver_text"
           name="waiver_text"
           rows={6}
-          defaultValue={DEFAULT_WAIVER_TEXT}
+          defaultValue={defaultValues?.waiver_text ?? DEFAULT_WAIVER_TEXT}
           className={`${inputClass} resize-y`}
           placeholder="Enter waiver text…"
         />

@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { TripForm } from "./trip-form";
 
-export default async function NewTripPage() {
+type PageProps = { searchParams: Promise<{ template_id?: string }> };
+
+export default async function NewTripPage({ searchParams }: PageProps) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -21,25 +23,41 @@ export default async function NewTripPage() {
     redirect("/organizer/apply");
   }
 
-  const [{ data: destinationsData }, { data: templatesData }] = await Promise.all([
-    supabase
-      .from("trips")
-      .select("destination")
-      .not("destination", "is", null)
-      .order("destination"),
-    supabase
-      .from("trips")
-      .select("id, title")
-      .eq("organizer_id", organizer.id)
-      .eq("is_template", true)
-      .order("title"),
-  ]);
+  const { template_id } = await searchParams;
+
+  const [{ data: destinationsData }, { data: templatesData }, { data: templateData }] =
+    await Promise.all([
+      supabase
+        .from("trips")
+        .select("destination")
+        .not("destination", "is", null)
+        .order("destination"),
+      supabase
+        .from("trips")
+        .select("id, title")
+        .eq("organizer_id", organizer.id)
+        .eq("is_template", true)
+        .order("title"),
+      template_id
+        ? supabase
+            .from("trips")
+            .select(
+              "id, title, activity_type, difficulty, destination, duration, description, includes, what_to_bring, photos, payment_type, min_downpayment, downpayment_cutoff_days, cancellation_policy, cancellation_policy_custom, waiver_text, messenger_gc_link",
+            )
+            .eq("id", template_id)
+            .eq("organizer_id", organizer.id)
+            .eq("is_template", true)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
 
   const destinations = [
     ...new Set((destinationsData ?? []).map((t: { destination: string }) => t.destination).filter(Boolean)),
   ] as string[];
 
   const templates = (templatesData ?? []) as { id: string | number; title: string }[];
+
+  const fromTemplate = templateData ?? null;
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -68,15 +86,22 @@ export default async function NewTripPage() {
       <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
-            Create a new trip
+            {fromTemplate ? `New run from ${fromTemplate.title}` : "Create a new trip"}
           </h1>
           <p className="mt-1 text-stone-600">
-            Fill in the details below to publish your trip on Sama.
+            {fromTemplate
+              ? "Fill in the date, price, and slots for this run."
+              : "Fill in the details below to publish your trip on Sama."}
           </p>
         </div>
 
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-          <TripForm destinations={destinations} templates={templates} />
+          <TripForm
+            destinations={destinations}
+            templates={templates}
+            defaultValues={fromTemplate}
+            preselectedTemplateId={fromTemplate ? String(fromTemplate.id) : undefined}
+          />
         </div>
       </main>
     </div>
