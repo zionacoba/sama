@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
@@ -46,7 +47,8 @@ export async function approveOrganizer(id: string): Promise<void> {
     // Email failure is non-fatal
   }
 
-  revalidatePath("/admin/organizers");
+  revalidatePath("/admin");
+  redirect("/admin?tab=organizers");
 }
 
 export async function rejectOrganizer(id: string): Promise<void> {
@@ -81,5 +83,6 @@ export async function rejectOrganizer(id: string): Promise<void> {
     // Email failure is non-fatal
   }
 
-  revalidatePath("/admin/organizers");
+  revalidatePath("/admin");
+  redirect("/admin?tab=organizers");
 }
