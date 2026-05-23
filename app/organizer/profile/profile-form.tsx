@@ -1,7 +1,38 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
+import Image from "next/image";
 import { updateOrganizerProfile } from "@/app/actions/organizer";
+import { supabaseBrowser } from "@/lib/supabase-browser";
+
+async function compressToSquare(file: File): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const size = Math.min(400, img.naturalWidth, img.naturalHeight);
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d")!;
+      const scale = size / Math.min(img.naturalWidth, img.naturalHeight);
+      const w = img.naturalWidth * scale;
+      const h = img.naturalHeight * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return; }
+          resolve(new File([blob], "photo.jpg", { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        0.8,
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+    img.src = objectUrl;
+  });
+}
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2";
@@ -28,6 +59,37 @@ type OrganizerData = {
 export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
   const [state, action, pending] = useActionState(updateOrganizerProfile, null);
   const [payoutMethod, setPayoutMethod] = useState<string>(organizer.payout_method ?? "");
+  const [photoUrl, setPhotoUrl] = useState<string>(organizer.photo_url ?? "");
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const initials = organizer.full_name
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase())
+    .slice(0, 2)
+    .join("");
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setPhotoUploading(true);
+    setPhotoError(null);
+    const compressed = await compressToSquare(file);
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+    const { data, error } = await supabaseBrowser.storage
+      .from("organizer-photos")
+      .upload(path, compressed, { upsert: false });
+    if (error || !data) {
+      setPhotoError(error?.message ?? "Upload failed. Please try again.");
+      setPhotoUploading(false);
+      return;
+    }
+    const { data: { publicUrl } } = supabaseBrowser.storage.from("organizer-photos").getPublicUrl(data.path);
+    setPhotoUrl(publicUrl);
+    setPhotoUploading(false);
+  }
 
   return (
     <form action={action} className="space-y-5">
@@ -36,6 +98,46 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
           {state.error}
         </p>
       )}
+
+      {/* Profile photo */}
+      <div>
+        <p className={labelClass}>Profile photo <span className="font-normal text-stone-400">(optional)</span></p>
+        <div className="mt-2 flex items-center gap-4">
+          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-trailhead-muted text-lg font-bold text-trailhead">
+            {photoUrl ? (
+              <Image src={photoUrl} alt="Profile photo" fill className="object-cover" sizes="64px" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center">{initials}</span>
+            )}
+            {photoUploading && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              </div>
+            )}
+          </div>
+          <div className="space-y-1">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handlePhotoChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              disabled={photoUploading}
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 shadow-sm transition hover:border-trailhead hover:text-trailhead disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {photoUploading ? "Uploading…" : "Change photo"}
+            </button>
+            {photoError && (
+              <p className="text-xs text-red-600">{photoError}</p>
+            )}
+          </div>
+        </div>
+        <input type="hidden" name="photo_url" value={photoUrl} />
+      </div>
 
       <div>
         <label htmlFor="display_name" className={labelClass}>
@@ -95,20 +197,6 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
           defaultValue={organizer.bio}
           className={`${inputClass} resize-none`}
           placeholder="Tell adventurers about your experience…"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="photo_url" className={labelClass}>
-          Profile photo URL <span className="font-normal text-stone-400">(optional)</span>
-        </label>
-        <input
-          id="photo_url"
-          name="photo_url"
-          type="url"
-          defaultValue={organizer.photo_url ?? ""}
-          className={inputClass}
-          placeholder="https://…"
         />
       </div>
 
