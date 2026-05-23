@@ -45,6 +45,7 @@ export async function createTrip(
   const difficulty = formData.get("difficulty") as string;
   const duration = (formData.get("duration") as string) || null;
   const date_start = is_template ? "2099-12-31" : (formData.get("date_start") as string);
+  const date_end = is_template ? null : ((formData.get("date_end") as string) || null);
   const price = is_template ? 0 : parseFloat(formData.get("price") as string);
   const total_slots = is_template ? 0 : parseInt(formData.get("total_slots") as string, 10);
   type MeetingPoint = { location: string; time: string };
@@ -109,6 +110,8 @@ export async function createTrip(
       }
       const today = new Date().toISOString().split("T")[0];
       if (date_start < today) return { error: "Trip date cannot be in the past." };
+      if (date_end && date_end < date_start) return { error: "End date cannot be before start date." };
+      if (duration && duration !== "Day tour" && !date_end) return { error: "Please enter an end date for overnight/multi-day trips." };
     }
   }
 
@@ -127,6 +130,7 @@ export async function createTrip(
     difficulty: difficulty || null,
     duration: duration || null,
     date_start: safeDateStart,
+    date_end: date_end || null,
     price: safePrice,
     total_slots: safeTotalSlots,
     remaining_slots: 0,
@@ -181,7 +185,7 @@ export async function updateTrip(
 
   const { data: existing, error: fetchError } = await supabase
     .from("trips")
-    .select("id, slug, status, title, organizer_id, total_slots, remaining_slots, date_start, price, meeting_points")
+    .select("id, slug, status, title, organizer_id, total_slots, remaining_slots, date_start, date_end, price, meeting_points")
     .eq("id", tripId)
     .maybeSingle();
 
@@ -201,6 +205,7 @@ export async function updateTrip(
   const difficulty = formData.get("difficulty") as string;
   const duration = (formData.get("duration") as string) || null;
   const date_start = is_template ? "2099-12-31" : (formData.get("date_start") as string);
+  const date_end = is_template ? null : ((formData.get("date_end") as string) || null);
   const price = is_template ? 0 : parseFloat(formData.get("price") as string);
   const total_slots = is_template ? 0 : parseInt(formData.get("total_slots") as string, 10);
   type MeetingPoint = { location: string; time: string };
@@ -270,6 +275,8 @@ export async function updateTrip(
     }
     const today = new Date().toISOString().split("T")[0];
     if (date_start < today) return { error: "Trip date cannot be in the past." };
+    if (date_end && date_end < date_start) return { error: "End date cannot be before start date." };
+    if (duration && duration !== "Day tour" && !date_end) return { error: "Please enter an end date for overnight/multi-day trips." };
   }
 
   if (!isDraft && !is_template && total_slots < existing.total_slots) {
@@ -304,6 +311,7 @@ export async function updateTrip(
       difficulty: difficulty || null,
       duration: duration || null,
       date_start: safeDateStart,
+      date_end: date_end || null,
       price: safePrice,
       total_slots: safeTotalSlots,
       remaining_slots,
@@ -329,7 +337,7 @@ export async function updateTrip(
 
   // Notify confirmed/pending bookers if key booking fields changed.
   if (!is_template) {
-    const dateChanged = existing.date_start && existing.date_start !== date_start;
+    const dateChanged = existing.date_start && (existing.date_start !== date_start || (existing.date_end ?? null) !== (date_end ?? null));
     const priceChanged = existing.price != null && existing.price !== price;
     const mpChanged = JSON.stringify(existing.meeting_points ?? []) !== JSON.stringify(meeting_points);
 
@@ -348,7 +356,9 @@ export async function updateTrip(
 
         const changeLines: string[] = [];
         if (dateChanged) {
-          changeLines.push(`<li><strong>Date:</strong> ${fmt(existing.date_start)} → ${fmt(date_start)}</li>`);
+          const oldRange = existing.date_end ? `${fmt(existing.date_start)} – ${fmt(existing.date_end)}` : fmt(existing.date_start);
+          const newRange = date_end ? `${fmt(date_start)} – ${fmt(date_end)}` : fmt(date_start);
+          changeLines.push(`<li><strong>Date:</strong> ${oldRange} → ${newRange}</li>`);
         }
         if (priceChanged) {
           changeLines.push(`<li><strong>Price:</strong> ₱${Number(existing.price).toLocaleString()} → ₱${price.toLocaleString()}</li>`);

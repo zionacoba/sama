@@ -33,6 +33,7 @@ type Trip = {
   activity_type: string | null;
   duration: string | null;
   date_start: string;
+  date_end: string | null;
   remaining_slots: number;
   photos: string[] | null;
   is_template: boolean | null;
@@ -71,6 +72,11 @@ function formatDate(date: string) {
     month: "short",
     day: "numeric",
   }).format(new Date(date));
+}
+
+function formatDateRange(start: string, end: string | null | undefined) {
+  if (!end) return formatDate(start);
+  return `${formatDate(start)} – ${formatDate(end)}`;
 }
 
 function DifficultyBadge({ level }: { level: string }) {
@@ -142,7 +148,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from("trips")
-    .select("id, slug, title, activity_type, difficulty, price, date_start, remaining_slots, total_slots, photos, destination, duration, is_template, template_id", { count: "exact" })
+    .select("id, slug, title, activity_type, difficulty, price, date_start, date_end, remaining_slots, total_slots, photos, destination, duration, is_template, template_id", { count: "exact" })
     .eq("status", "active")
     .gt("date_start", new Date().toISOString())
     .gt("remaining_slots", 0)
@@ -419,7 +425,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                         </div>
                       ) : (
                         <p className="text-xs text-stone-400">
-                          {formatDate(trip.date_start)}{trip.duration && ` · ${trip.duration}`}
+                          {formatDateRange(trip.date_start, trip.date_end)}{trip.duration && ` · ${trip.duration}`}
                         </p>
                       )}
                       <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-3">

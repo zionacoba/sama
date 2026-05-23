@@ -19,6 +19,7 @@ type BookingModalProps = {
   tripSlug: string;
   tripTitle: string;
   tripDateStart: string;
+  tripDateEnd?: string | null;
   unitPrice: number;
   remainingSlots: number;
   paymentType: string;
@@ -40,11 +41,17 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+function formatDateRange(start: string, end?: string | null) {
+  const fmt = (d: string) => new Intl.DateTimeFormat("en-PH", { weekday: "short", month: "short", day: "numeric", year: "numeric" }).format(new Date(d));
+  return end ? `${fmt(start)} – ${fmt(end)}` : fmt(start);
+}
+
 export function BookingModal({
   tripId,
   tripSlug,
   tripTitle,
   tripDateStart,
+  tripDateEnd,
   unitPrice,
   remainingSlots,
   paymentType,
@@ -309,7 +316,10 @@ export function BookingModal({
                     : "Book this trip"}
                 </h2>
                 {!success && (
-                  <p className="mt-0.5 text-sm text-stone-600">{tripTitle}</p>
+                  <>
+                    <p className="mt-0.5 text-sm text-stone-600">{tripTitle}</p>
+                    <p className="text-xs text-stone-400">📅 {formatDateRange(tripDateStart, tripDateEnd)}</p>
+                  </>
                 )}
               </div>
               <button

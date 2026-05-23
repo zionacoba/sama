@@ -19,6 +19,7 @@ type TripDetail = {
   price: string | number;
   description: string;
   date_start: string;
+  date_end: string | null;
   meeting_point: string;
   total_slots: number;
   remaining_slots: number;
@@ -120,6 +121,11 @@ function formatDateShort(dateStart: string) {
     day: "numeric",
     year: "numeric",
   }).format(new Date(dateStart));
+}
+
+function formatDateRange(dateStart: string, dateEnd: string | null | undefined) {
+  if (!dateEnd) return formatDateShort(dateStart);
+  return `${formatDateShort(dateStart)} – ${formatDateShort(dateEnd)}`;
 }
 
 function formatReviewDate(date: string) {
@@ -276,7 +282,7 @@ export default async function TripDetailPage({ params }: PageProps) {
     tripData.template_id
       ? supabase
           .from("trips")
-          .select("slug, date_start, price, remaining_slots, duration")
+          .select("slug, date_start, date_end, price, remaining_slots, duration")
           .eq("template_id", tripData.template_id)
           .eq("status", "active")
           .neq("slug", slug)
@@ -342,7 +348,7 @@ export default async function TripDetailPage({ params }: PageProps) {
             </h1>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-stone-600">
               <span>📍 {tripData.destination}</span>
-              <span>📅 {formatDateShort(tripData.date_start)}</span>
+              <span>📅 {formatDateRange(tripData.date_start, tripData.date_end)}</span>
               {tripData.duration && <span>⏱ {tripData.duration}</span>}
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -425,7 +431,7 @@ export default async function TripDetailPage({ params }: PageProps) {
                       href={`/trips/${run.slug}`}
                       className="rounded-xl border border-trailhead/30 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-trailhead"
                     >
-                      <span className="font-semibold text-stone-900">{formatDateShort(run.date_start)}</span>
+                      <span className="font-semibold text-stone-900">{formatDateRange(run.date_start, run.date_end)}</span>
                       {run.duration && <span className="ml-1.5 text-stone-400">· {run.duration}</span>}
                       <span className="ml-2 font-bold text-trailhead">{formatPrice(run.price)}</span>
                       {run.remaining_slots === 0 && <span className="ml-1.5 text-xs text-stone-400">· Full</span>}
@@ -584,6 +590,7 @@ export default async function TripDetailPage({ params }: PageProps) {
                   tripSlug={slug}
                   tripTitle={tripData.title}
                   tripDateStart={tripData.date_start}
+                  tripDateEnd={tripData.date_end ?? null}
                   unitPrice={getUnitPrice(tripData.price)}
                   remainingSlots={tripData.remaining_slots}
                   paymentType={tripData.payment_type ?? "full"}
@@ -634,6 +641,7 @@ export default async function TripDetailPage({ params }: PageProps) {
                     tripSlug={slug}
                     tripTitle={tripData.title}
                     tripDateStart={tripData.date_start}
+                  tripDateEnd={tripData.date_end ?? null}
                     unitPrice={getUnitPrice(tripData.price)}
                     remainingSlots={tripData.remaining_slots}
                     paymentType={tripData.payment_type ?? "full"}

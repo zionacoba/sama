@@ -50,6 +50,8 @@ export function TripForm({
   type MeetingPoint = { location: string; time: string };
   const [isTemplate, setIsTemplate] = useState(false);
   const [meetingPoints, setMeetingPoints] = useState<MeetingPoint[]>([{ location: "", time: "" }]);
+  const [duration, setDuration] = useState<string>(defaultValues?.duration ?? "");
+  const [dateStart, setDateStart] = useState<string>("");
   const [paymentType, setPaymentType] = useState<"full" | "downpayment">(
     defaultValues?.payment_type === "downpayment" ? "downpayment" : "full",
   );
@@ -203,7 +205,7 @@ export function TripForm({
         <label htmlFor="duration" className={labelClass}>
           Duration
         </label>
-        <select id="duration" name="duration" required defaultValue={defaultValues?.duration ?? ""} className={inputClass}>
+        <select id="duration" name="duration" required value={duration} onChange={(e) => setDuration(e.target.value)} className={inputClass}>
           <option value="">Select duration…</option>
           <option value="Day tour">Day tour</option>
           <option value="2D1N">2D1N</option>
@@ -239,10 +241,10 @@ export function TripForm({
       {/* Date + Price + Slots (hidden for templates) */}
       {!isTemplate && (
         <>
-          <div className="grid gap-5 sm:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label htmlFor="date_start" className={labelClass}>
-                Date
+                Start date
               </label>
               <input
                 id="date_start"
@@ -250,9 +252,28 @@ export function TripForm({
                 type="date"
                 required
                 min={new Date().toISOString().split("T")[0]}
+                value={dateStart}
+                onChange={(e) => setDateStart(e.target.value)}
                 className={inputClass}
               />
             </div>
+            <div>
+              <label htmlFor="date_end" className={labelClass}>
+                End date{duration === "" || duration === "Day tour" ? (
+                  <span className="font-normal text-stone-400"> (optional — for overnight/multi-day trips)</span>
+                ) : null}
+              </label>
+              <input
+                id="date_end"
+                name="date_end"
+                type="date"
+                required={duration !== "" && duration !== "Day tour"}
+                min={dateStart || new Date().toISOString().split("T")[0]}
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label htmlFor="price" className={labelClass}>
                 Price per person (PHP)
