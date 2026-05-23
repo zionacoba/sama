@@ -233,37 +233,41 @@ export function BookingModal({
     setError(null);
     setLoading(true);
 
-    const result = await createBooking({
-      tripSlug,
-      fullName,
-      email,
-      phone,
-      slots,
-      totalAmount,
-      notes: notes.trim() || null,
-      paymentOption,
-      amountDue,
-      participants: slots > 1 ? participants : null,
-      emergencyContactName,
-      emergencyContactPhone,
-      waiverAgreed: waiverAccepted,
-      platformWaiverAgreed: platformWaiverAccepted,
-      medicalNotes: notes.trim() || null,
-      meetingPoint: selectedMeetingPoint || null,
-    });
+    try {
+      const result = await createBooking({
+        tripSlug,
+        fullName,
+        email,
+        phone,
+        slots,
+        totalAmount,
+        notes: notes.trim() || null,
+        paymentOption,
+        amountDue,
+        participants: slots > 1 ? participants : null,
+        emergencyContactName,
+        emergencyContactPhone,
+        waiverAgreed: waiverAccepted,
+        platformWaiverAgreed: platformWaiverAccepted,
+        medicalNotes: notes.trim() || null,
+        meetingPoint: selectedMeetingPoint || null,
+      });
 
-    setLoading(false);
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
 
-    if (!result.success) {
-      setError(result.error);
-      return;
+      setBookingStatus((result.status ?? "pending") as "confirmed" | "pending");
+      if (result.participantTokens) {
+        setParticipantTokens(result.participantTokens);
+      }
+      setSuccess(true);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    setBookingStatus((result.status ?? "pending") as "confirmed" | "pending");
-    if (result.participantTokens) {
-      setParticipantTokens(result.participantTokens);
-    }
-    setSuccess(true);
   }
 
   return (
