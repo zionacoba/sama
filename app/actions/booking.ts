@@ -313,7 +313,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, trip_id, slots, status, email, full_name")
+    .select("id, trip_id, slots, status, email, full_name, amount_due, payment_option")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -373,6 +373,8 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
         `,
       });
     } else if (status === "rejected") {
+      const bookingRef = booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
+      const fmtPHP = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
       await resend.emails.send({
         from: "Sama <onboarding@resend.dev>",
         to: booking.email,
@@ -381,7 +383,10 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
         html: `
           <p>Hi ${escapeHtml(booking.full_name)},</p>
           <p>Unfortunately your booking request for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} was not approved by the organizer.</p>
-          <p>If you have questions, please contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
+          ${booking.amount_due ? `
+          <p>Your payment of <strong>${fmtPHP(booking.amount_due)}</strong> will be refunded to your original payment method within 3–5 business days. You do not need to do anything.</p>
+          <p>If you don't receive your refund after 5 business days, please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> with your booking reference: <strong>${bookingRef}</strong></p>
+          ` : `<p>If you have questions, please contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>`}
           <p>— The Sama Team</p>
         `,
       });
