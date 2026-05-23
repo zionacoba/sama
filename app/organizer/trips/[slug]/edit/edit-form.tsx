@@ -504,7 +504,7 @@ export function EditTripForm({
               onChange={(e) => setCancellationPolicy(e.target.value as typeof cancellationPolicy)}
               className={inputClass}
             >
-              <option value="flexible">Flexible — full refund 3+ days before, 50% within 3 days</option>
+              <option value="flexible">Flexible — full refund 7+ days before, 50% of amount paid within 3–7 days</option>
               <option value="moderate">Moderate — 50% refund 5+ days before, no refund within 5 days</option>
               <option value="strict">Strict — no refund within 7 days of trip</option>
               <option value="custom">Custom — write your own policy</option>

@@ -137,7 +137,7 @@ function formatReviewDate(date: string) {
 }
 
 const CANCELLATION_POLICIES: Record<string, { label: string; color: string; text: string }> = {
-  flexible: { label: "Flexible", color: "bg-emerald-100 text-emerald-800", text: "Full refund if cancelled 7 or more days before the trip. 50% refund if cancelled 3–7 days before. No refund within 3 days." },
+  flexible: { label: "Flexible", color: "bg-emerald-100 text-emerald-800", text: "Full refund if cancelled 7 or more days before the trip. 50% refund of amount paid if cancelled 3–7 days before. No refund within 3 days." },
   moderate: { label: "Moderate", color: "bg-amber-100 text-amber-900",    text: "Full refund if cancelled 14 or more days before the trip. 50% refund if cancelled 7–14 days before. No refund within 7 days." },
   strict:   { label: "Strict",   color: "bg-red-100 text-red-800",        text: "Full refund if cancelled 30 or more days before the trip. No refund within 30 days." },
   custom:   { label: "Custom",   color: "bg-stone-100 text-stone-700",    text: "" },
