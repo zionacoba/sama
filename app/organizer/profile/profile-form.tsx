@@ -97,6 +97,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
     } else {
       setPhotoUrl(result.publicUrl);
       if (photoUrlInputRef.current) photoUrlInputRef.current.value = result.publicUrl;
+      console.log("Photo URL after upload:", photoUrlInputRef.current?.value);
     }
     setPhotoUploading(false);
   }

@@ -107,6 +107,7 @@ export async function updateOrganizerProfile(
   const bio = (formData.get("bio") as string)?.trim();
   const photo_url = (formData.get("photo_url") as string)?.trim() || null;
   const cover_image_url = (formData.get("cover_image_url") as string)?.trim() || null;
+  console.log("Received photo_url:", photo_url);
   const social_links = {
     facebook: (formData.get("social_facebook") as string)?.trim() || null,
     instagram: (formData.get("social_instagram") as string)?.trim() || null,
