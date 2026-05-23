@@ -108,6 +108,9 @@ export async function createTrip(
         if (min_downpayment < 0) return { error: "Minimum downpayment cannot be negative." };
         if (price > 0 && min_downpayment >= price) return { error: "Minimum downpayment must be less than the full price." };
       }
+      if (payment_type === "downpayment" && downpayment_cutoff_days !== null && downpayment_cutoff_days < 7) {
+        return { error: "Downpayment cutoff must be at least 7 days before the trip to ensure timely remittance." };
+      }
       const today = new Date().toISOString().split("T")[0];
       if (date_start < today) return { error: "Trip date cannot be in the past." };
       if (date_end && date_end < date_start) return { error: "End date cannot be before start date." };
@@ -272,6 +275,9 @@ export async function updateTrip(
     if (payment_type === "downpayment" && min_downpayment !== null) {
       if (min_downpayment < 0) return { error: "Minimum downpayment cannot be negative." };
       if (price > 0 && min_downpayment >= price) return { error: "Minimum downpayment must be less than the full price." };
+    }
+    if (payment_type === "downpayment" && downpayment_cutoff_days !== null && downpayment_cutoff_days < 7) {
+      return { error: "Downpayment cutoff must be at least 7 days before the trip to ensure timely remittance." };
     }
     const today = new Date().toISOString().split("T")[0];
     if (date_start < today) return { error: "Trip date cannot be in the past." };

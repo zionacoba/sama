@@ -439,14 +439,14 @@ export function TripForm({
                 id="downpayment_cutoff_days"
                 name="downpayment_cutoff_days"
                 type="number"
-                min="0"
+                min="7"
                 step="1"
                 defaultValue={defaultValues?.downpayment_cutoff_days ?? 10}
                 className={inputClass}
                 placeholder="e.g. 10"
               />
               <p className="mt-1.5 text-xs text-stone-500">
-                After this many days before the trip, participants must pay in full. Recommended: 10 days.
+                Minimum 7 days recommended. After this point, participants must pay in full.
               </p>
             </div>
           )}
