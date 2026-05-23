@@ -568,7 +568,15 @@ export default async function TripDetailPage({ params }: PageProps) {
                   : `${tripData.remaining_slots} of ${tripData.total_slots} slots left`}
               </div>
               {isOwnTrip ? (
-                <p className="text-sm text-stone-500">You are the organizer of this trip.</p>
+                <div className="space-y-2">
+                  <p className="text-sm text-stone-500">You are the organizer of this trip.</p>
+                  <Link
+                    href={`/organizer/trips/${slug}/edit`}
+                    className="flex w-full items-center justify-center rounded-xl border border-trailhead px-4 py-2.5 text-sm font-semibold text-trailhead transition hover:bg-trailhead hover:text-white"
+                  >
+                    Edit trip
+                  </Link>
+                </div>
               ) : tripData.remaining_slots === 0 ? (
                 tripData.waitlist_enabled !== false ? (
                   <WaitlistModal
