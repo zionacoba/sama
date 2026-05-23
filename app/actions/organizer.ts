@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
@@ -137,7 +138,10 @@ export async function updateOrganizerProfile(
     return { error: "Social links must start with https://" };
   }
 
-  const { data, error } = await supabase
+  console.log("Updating organizer id:", organizer.id);
+
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
     .from("organizers")
     .update({
       display_name, full_name, phone, bio, photo_url, cover_image_url, social_links,
