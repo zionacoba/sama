@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 const MAX_PHOTOS = 5;
 const MAX_DIMENSION = 1920;
@@ -22,9 +23,7 @@ async function compressImage(file: File): Promise<File> {
       canvas.toBlob(
         (blob) => {
           if (!blob) { resolve(file); return; }
-          const compressed = new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" });
-          console.log(`[photo] ${file.name}: ${(file.size / 1024).toFixed(0)} KB → ${(compressed.size / 1024).toFixed(0)} KB`);
-          resolve(compressed);
+          resolve(new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }));
         },
         "image/jpeg",
         JPEG_QUALITY,
@@ -37,7 +36,8 @@ async function compressImage(file: File): Promise<File> {
 
 export type PhotoItem =
   | { kind: "url"; url: string }
-  | { kind: "file"; file: File; previewUrl: string };
+  | { kind: "uploading"; previewUrl: string; id: string }
+  | { kind: "error"; previewUrl: string; file: File; id: string; error: string };
 
 function previewSrc(item: PhotoItem) {
   return item.kind === "url" ? item.url : item.previewUrl;
@@ -56,34 +56,81 @@ export function PhotoUploader({
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const dragSrc = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
-  // Notify parent of initial state so submit works without any interaction
+  // Sync all state changes (including async upload completions) to parent
   useEffect(() => {
-    onChange(items);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    onChangeRef.current(items);
+  }, [items]);
 
-  function update(next: PhotoItem[]) {
-    setItems(next);
-    onChange(next);
+  async function startUpload(id: string, file: File) {
+    const compressed = await compressImage(file);
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+
+    const { data, error } = await supabaseBrowser.storage
+      .from("trip-photos")
+      .upload(path, compressed, { upsert: false });
+
+    if (error || !data) {
+      setItems((prev) => {
+        const idx = prev.findIndex((i) => i.kind === "uploading" && i.id === id);
+        if (idx === -1) return prev;
+        const old = prev[idx] as { kind: "uploading"; previewUrl: string; id: string };
+        const next = [...prev];
+        next[idx] = { kind: "error", previewUrl: old.previewUrl, file, id, error: error?.message ?? "Upload failed. Please try again." };
+        return next;
+      });
+      return;
+    }
+
+    const { data: { publicUrl } } = supabaseBrowser.storage.from("trip-photos").getPublicUrl(data.path);
+
+    setItems((prev) => {
+      const idx = prev.findIndex((i) => i.kind === "uploading" && i.id === id);
+      if (idx === -1) return prev; // removed while uploading
+      const next = [...prev];
+      next[idx] = { kind: "url", url: publicUrl };
+      return next;
+    });
   }
 
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS - items.length);
     e.target.value = "";
-    const newItems: PhotoItem[] = await Promise.all(
-      files.map(async (file) => {
-        const compressed = await compressImage(file);
-        return { kind: "file" as const, file: compressed, previewUrl: URL.createObjectURL(compressed) };
-      }),
-    );
-    update([...items, ...newItems]);
+    if (files.length === 0) return;
+
+    const pending = files.map((file) => ({
+      id: `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`,
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+
+    setItems((prev) => [
+      ...prev,
+      ...pending.map(({ id, previewUrl }) => ({ kind: "uploading" as const, previewUrl, id })),
+    ]);
+
+    await Promise.all(pending.map(({ id, file }) => startUpload(id, file)));
+  }
+
+  async function retryUpload(id: string, file: File, previewUrl: string) {
+    setItems((prev) => {
+      const idx = prev.findIndex((i) => i.kind === "error" && i.id === id);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next[idx] = { kind: "uploading", previewUrl, id };
+      return next;
+    });
+    await startUpload(id, file);
   }
 
   function remove(index: number) {
     const item = items[index];
-    if (item.kind === "file") URL.revokeObjectURL(item.previewUrl);
-    update(items.filter((_, i) => i !== index));
+    if (item && (item.kind === "uploading" || item.kind === "error")) {
+      URL.revokeObjectURL(item.previewUrl);
+    }
+    setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
   function handleDragStart(e: React.DragEvent, i: number) {
@@ -99,16 +146,16 @@ export function PhotoUploader({
 
   function handleDrop(e: React.DragEvent, i: number) {
     e.preventDefault();
-    if (dragSrc.current === null || dragSrc.current === i) {
-      setDragOverIdx(null);
-      return;
-    }
-    const next = [...items];
-    const [dragged] = next.splice(dragSrc.current, 1);
-    next.splice(i, 0, dragged);
+    const src = dragSrc.current;
+    if (src === null || src === i) { setDragOverIdx(null); return; }
     dragSrc.current = null;
+    setItems((prev) => {
+      const next = [...prev];
+      const [dragged] = next.splice(src, 1);
+      next.splice(i, 0, dragged);
+      return next;
+    });
     setDragOverIdx(null);
-    update(next);
   }
 
   function handleDragEnd() {
@@ -129,9 +176,7 @@ export function PhotoUploader({
               onDrop={(e) => handleDrop(e, i)}
               onDragEnd={handleDragEnd}
               className={`group relative cursor-grab overflow-hidden rounded-xl border-2 transition active:cursor-grabbing ${
-                dragOverIdx === i
-                  ? "border-trailhead shadow-md"
-                  : "border-stone-200"
+                dragOverIdx === i ? "border-trailhead shadow-md" : "border-stone-200"
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -141,22 +186,50 @@ export function PhotoUploader({
                 className="aspect-[4/3] w-full object-cover"
                 draggable={false}
               />
-              {i === 0 && (
+              {i === 0 && item.kind === "url" && (
                 <span className="pointer-events-none absolute left-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                   Cover
                 </span>
               )}
-              <span className="pointer-events-none absolute bottom-1.5 right-1.5 rounded bg-black/40 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition group-hover:opacity-100">
-                ⠿ drag to reorder
-              </span>
-              <button
-                type="button"
-                onClick={() => remove(i)}
-                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-sm text-white opacity-0 transition hover:bg-red-600 group-hover:opacity-100"
-                aria-label="Remove photo"
-              >
-                ✕
-              </button>
+
+              {item.kind === "uploading" && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                </div>
+              )}
+
+              {item.kind === "error" && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-red-900/70 p-2">
+                  <span className="text-center text-[11px] font-medium leading-snug text-white">
+                    Upload failed
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => retryUpload(item.id, item.file, item.previewUrl)}
+                    className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-white/40"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {item.kind !== "uploading" && (
+                <>
+                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 rounded bg-black/40 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition group-hover:opacity-100">
+                    ⠿ drag to reorder
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => remove(i)}
+                    className={`absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-sm text-white transition hover:bg-red-600 ${
+                      item.kind === "error" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    }`}
+                    aria-label="Remove photo"
+                  >
+                    ✕
+                  </button>
+                </>
+              )}
             </div>
           ))}
         </div>

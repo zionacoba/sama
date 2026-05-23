@@ -2,7 +2,6 @@
 
 import { useActionState, useRef, useState, useTransition } from "react";
 import { createTrip } from "@/app/actions/trip";
-import { supabaseBrowser } from "@/lib/supabase-browser";
 import { PhotoUploader, type PhotoItem } from "@/app/components/photo-uploader";
 
 const inputClass =
@@ -60,41 +59,21 @@ export function TripForm({
       ? defaultValues!.cancellation_policy
       : "flexible") as "flexible" | "moderate" | "strict" | "custom",
   );
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const isUploadingPhotos = photoItems.some((i) => i.kind === "uploading");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [editedAfterSubmit, setEditedAfterSubmit] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const submitIntentRef = useRef<"active" | "draft">("active");
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!formRef.current) return;
 
     setHasSubmitted(true);
     setEditedAfterSubmit(false);
-    setUploadError(null);
     const formData = new FormData(formRef.current);
 
-    const uploadedUrls: string[] = [];
-    for (const item of photoItems) {
-      if (item.kind === "url") {
-        uploadedUrls.push(item.url);
-      } else {
-        const ext = item.file.name.split(".").pop() ?? "jpg";
-        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { data, error } = await supabaseBrowser.storage
-          .from("trip-photos")
-          .upload(path, item.file, { upsert: false });
-        if (error || !data) {
-          setUploadError(error?.message ?? "Image upload failed. Please try again.");
-          return;
-        }
-        const { data: { publicUrl } } = supabaseBrowser.storage.from("trip-photos").getPublicUrl(data.path);
-        uploadedUrls.push(publicUrl);
-      }
-    }
-
-    formData.set("photos_json", JSON.stringify(uploadedUrls));
+    formData.set("photos_json", JSON.stringify(photoItems.filter((i) => i.kind === "url").map((i) => i.url)));
     formData.set("meeting_points", JSON.stringify(meetingPoints));
     formData.set("status", submitIntentRef.current);
 
@@ -103,9 +82,7 @@ export function TripForm({
     });
   }
 
-  const hasNewUploads = photoItems.some((i) => i.kind === "file");
-  const serverError = hasSubmitted && !editedAfterSubmit && !isPending ? state?.error : null;
-  const errorMessage = uploadError ?? serverError;
+  const errorMessage = hasSubmitted && !editedAfterSubmit && !isPending ? state?.error : null;
 
   return (
     <form
@@ -560,24 +537,22 @@ export function TripForm({
         </a>
         <button
           type="button"
-          disabled={isPending}
+          disabled={isPending || isUploadingPhotos}
           onClick={() => {
             submitIntentRef.current = "draft";
             formRef.current?.requestSubmit();
           }}
           className="rounded-xl border border-stone-200 px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isPending && submitIntentRef.current === "draft" ? "Saving…" : "Save as Draft"}
+          {isUploadingPhotos ? "Uploading…" : isPending && submitIntentRef.current === "draft" ? "Saving…" : "Save as Draft"}
         </button>
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || isUploadingPhotos}
           onClick={() => { submitIntentRef.current = "active"; }}
           className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isPending && submitIntentRef.current === "active"
-            ? hasNewUploads ? "Uploading…" : "Creating trip…"
-            : "Create trip"}
+          {isUploadingPhotos ? "Uploading photos…" : isPending && submitIntentRef.current === "active" ? "Creating trip…" : "Create trip"}
         </button>
       </div>
     </form>

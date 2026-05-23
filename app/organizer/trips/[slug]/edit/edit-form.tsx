@@ -2,7 +2,6 @@
 
 import { useActionState, useRef, useState, useTransition } from "react";
 import { updateTrip } from "@/app/actions/trip";
-import { supabaseBrowser } from "@/lib/supabase-browser";
 import { PhotoUploader, type PhotoItem } from "@/app/components/photo-uploader";
 
 const inputClass =
@@ -70,7 +69,7 @@ export function EditTripForm({
   const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict" | "custom">(
     (trip.cancellation_policy as "flexible" | "moderate" | "strict" | "custom") ?? "flexible",
   );
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const isUploadingPhotos = photoItems.some((i) => i.kind === "uploading");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [editedAfterSubmit, setEditedAfterSubmit] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -78,39 +77,16 @@ export function EditTripForm({
   const meetingPointsJsonRef = useRef<HTMLInputElement>(null);
   const submitIntentRef = useRef<"active" | "draft">(trip.status === "draft" ? "draft" : "active");
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!formRef.current) return;
 
     setHasSubmitted(true);
     setEditedAfterSubmit(false);
-    setUploadError(null);
 
-    // Step 1: upload any new files, collect all URLs
-    const uploadedUrls: string[] = [];
-    for (const item of photoItems) {
-      if (item.kind === "url") {
-        uploadedUrls.push(item.url);
-      } else {
-        const ext = item.file.name.split(".").pop() ?? "jpg";
-        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { data, error } = await supabaseBrowser.storage
-          .from("trip-photos")
-          .upload(path, item.file, { upsert: false });
-        if (error || !data) {
-          setUploadError(error?.message ?? "Image upload failed. Please try again.");
-          return;
-        }
-        const { data: { publicUrl } } = supabaseBrowser.storage.from("trip-photos").getPublicUrl(data.path);
-        uploadedUrls.push(publicUrl);
-      }
-    }
-
-    // Step 2: patch hidden inputs in the DOM before capturing FormData
-    if (photosJsonRef.current) photosJsonRef.current.value = JSON.stringify(uploadedUrls);
+    if (photosJsonRef.current) photosJsonRef.current.value = JSON.stringify(photoItems.filter((i) => i.kind === "url").map((i) => i.url));
     if (meetingPointsJsonRef.current) meetingPointsJsonRef.current.value = JSON.stringify(meetingPoints);
 
-    // Step 3: capture FormData once — after all async work and DOM patches
     const formData = new FormData(formRef.current);
     formData.set("status", submitIntentRef.current);
 
@@ -119,9 +95,7 @@ export function EditTripForm({
     });
   }
 
-  const hasNewUploads = photoItems.some((i) => i.kind === "file");
-  const serverError = hasSubmitted && !editedAfterSubmit && !isPending ? state?.error : null;
-  const errorMessage = uploadError ?? serverError;
+  const errorMessage = hasSubmitted && !editedAfterSubmit && !isPending ? state?.error : null;
 
   return (
     <form
@@ -610,41 +584,35 @@ export function EditTripForm({
           <>
             <button
               type="button"
-              disabled={isPending}
+              disabled={isPending || isUploadingPhotos}
               onClick={() => {
                 submitIntentRef.current = "draft";
                 formRef.current?.requestSubmit();
               }}
               className="rounded-xl border border-stone-200 px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isPending && submitIntentRef.current === "draft" ? "Saving…" : "Save as Draft"}
+              {isUploadingPhotos ? "Uploading…" : isPending && submitIntentRef.current === "draft" ? "Saving…" : "Save as Draft"}
             </button>
             <button
               type="button"
-              disabled={isPending}
+              disabled={isPending || isUploadingPhotos}
               onClick={() => {
                 submitIntentRef.current = "active";
                 formRef.current?.requestSubmit();
               }}
               className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isPending && submitIntentRef.current === "active"
-                ? hasNewUploads ? "Uploading…" : "Publishing…"
-                : "Publish Trip"}
+              {isUploadingPhotos ? "Uploading photos…" : isPending && submitIntentRef.current === "active" ? "Publishing…" : "Publish Trip"}
             </button>
           </>
         ) : (
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || isUploadingPhotos}
             onClick={() => { submitIntentRef.current = "active"; }}
             className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isPending
-              ? hasNewUploads
-                ? "Uploading…"
-                : "Saving…"
-              : "Save changes"}
+            {isUploadingPhotos ? "Uploading photos…" : isPending ? "Saving…" : "Save changes"}
           </button>
         )}
       </div>
