@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 import Image from "next/image";
 import { updateOrganizerProfile } from "@/app/actions/organizer";
 import { supabaseBrowser } from "@/lib/supabase-browser";
@@ -70,13 +70,11 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const photoUrlInputRef = useRef<HTMLInputElement>(null);
 
   const [coverUrl, setCoverUrl] = useState<string>(organizer.cover_image_url ?? "");
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverError, setCoverError] = useState<string | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
-  const coverUrlInputRef = useRef<HTMLInputElement>(null);
 
   const initials = organizer.full_name
     .split(" ")
@@ -96,8 +94,6 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
       setPhotoError(result.error);
     } else {
       setPhotoUrl(result.publicUrl);
-      if (photoUrlInputRef.current) photoUrlInputRef.current.value = result.publicUrl;
-      console.log("Photo URL after upload:", photoUrlInputRef.current?.value);
     }
     setPhotoUploading(false);
   }
@@ -114,18 +110,24 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
       setCoverError(result.error);
     } else {
       setCoverUrl(result.publicUrl);
-      if (coverUrlInputRef.current) coverUrlInputRef.current.value = result.publicUrl;
     }
     setCoverUploading(false);
   }
 
   function handleRemoveCover() {
     setCoverUrl("");
-    if (coverUrlInputRef.current) coverUrlInputRef.current.value = "";
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    formData.set("photo_url", photoUrl);
+    formData.set("cover_image_url", coverUrl);
+    startTransition(() => action(formData));
   }
 
   return (
-    <form action={action} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {state?.error && (
         <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {state.error}
@@ -169,7 +171,6 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
             )}
           </div>
         </div>
-        <input ref={photoUrlInputRef} type="hidden" name="photo_url" defaultValue={organizer.photo_url ?? ""} />
       </div>
 
       <div>
@@ -276,7 +277,6 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
             {coverError && <p className="text-xs text-red-600">{coverError}</p>}
           </div>
         </div>
-        <input ref={coverUrlInputRef} type="hidden" name="cover_image_url" defaultValue={organizer.cover_image_url ?? ""} />
       </div>
 
       <div>
