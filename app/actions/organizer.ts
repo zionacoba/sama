@@ -90,23 +90,16 @@ export async function updateOrganizerProfile(
   _prevState: { error: string } | null,
   formData: FormData,
 ) {
-  for (const [key, value] of formData.entries()) {
-    console.log(`FormData: ${key} = ${value}`);
-  }
   const supabase = await createSupabaseServerClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?redirectTo=/organizer/profile");
-
-  console.log("Filtering by user_id:", user.id);
 
   const { data: organizer } = await supabase
     .from("organizers")
     .select("id, status")
     .eq("user_id", user.id)
     .maybeSingle();
-
-  console.log("Organizer lookup result:", JSON.stringify(organizer));
 
   if (!organizer || organizer.status !== "approved") redirect("/organizer/apply");
 
@@ -138,20 +131,15 @@ export async function updateOrganizerProfile(
     return { error: "Social links must start with https://" };
   }
 
-  console.log("Updating organizer id:", organizer.id);
-
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin
+  const { error } = await admin
     .from("organizers")
     .update({
       display_name, full_name, phone, bio, photo_url, cover_image_url, social_links,
       payout_method, gcash_number, gcash_name,
       bank_name, bank_account_number, bank_account_name,
     })
-    .eq("id", organizer.id)
-    .select();
-
-  console.log("Update result:", JSON.stringify({ data, error }));
+    .eq("id", organizer.id);
 
   if (error) return { error: error.message };
 
