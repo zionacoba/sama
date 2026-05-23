@@ -29,7 +29,7 @@ export async function createTrip(
 
   const { data: organizer } = await supabase
     .from("organizers")
-    .select("id, status")
+    .select("id, status, payout_method, gcash_number, bank_account_number")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -112,6 +112,11 @@ export async function createTrip(
       if (date_start < today) return { error: "Trip date cannot be in the past." };
       if (date_end && date_end < date_start) return { error: "End date cannot be before start date." };
       if (duration && duration !== "Day tour" && !date_end) return { error: "Please enter an end date for overnight/multi-day trips." };
+      const hasGcash = organizer.payout_method === "gcash" && !!organizer.gcash_number;
+      const hasBank = organizer.payout_method === "bank_transfer" && !!organizer.bank_account_number;
+      if (!hasGcash && !hasBank) {
+        return { error: "Please add your payout details (GCash or bank account) in your organizer profile before publishing a trip. This is required to receive payments from bookings." };
+      }
     }
   }
 
@@ -174,7 +179,7 @@ export async function updateTrip(
 
   const { data: organizer } = await supabase
     .from("organizers")
-    .select("id, status")
+    .select("id, status, payout_method, gcash_number, bank_account_number")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -277,6 +282,11 @@ export async function updateTrip(
     if (date_start < today) return { error: "Trip date cannot be in the past." };
     if (date_end && date_end < date_start) return { error: "End date cannot be before start date." };
     if (duration && duration !== "Day tour" && !date_end) return { error: "Please enter an end date for overnight/multi-day trips." };
+    const hasGcash = organizer.payout_method === "gcash" && !!organizer.gcash_number;
+    const hasBank = organizer.payout_method === "bank_transfer" && !!organizer.bank_account_number;
+    if (!hasGcash && !hasBank) {
+      return { error: "Please add your payout details (GCash or bank account) in your organizer profile before publishing a trip. This is required to receive payments from bookings." };
+    }
   }
 
   if (!isDraft && !is_template && total_slots < existing.total_slots) {
