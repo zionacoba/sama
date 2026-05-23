@@ -89,6 +89,9 @@ export async function updateOrganizerProfile(
   _prevState: { error: string } | null,
   formData: FormData,
 ) {
+  for (const [key, value] of formData.entries()) {
+    console.log(`FormData: ${key} = ${value}`);
+  }
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?redirectTo=/organizer/profile");
