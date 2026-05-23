@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { updateOrganizerProfile } from "@/app/actions/organizer";
 import { supabaseBrowser } from "@/lib/supabase-browser";
@@ -64,7 +64,8 @@ type OrganizerData = {
 };
 
 export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
-  const [state, action, pending] = useActionState(updateOrganizerProfile, null);
+  const [state, setState] = useState<{ error: string } | null>(null);
+  const [pending, startSubmit] = useTransition();
   const [payoutMethod, setPayoutMethod] = useState<string>(organizer.payout_method ?? "");
   const [photoUrl, setPhotoUrl] = useState<string>(organizer.photo_url ?? "");
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -120,10 +121,14 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setState(null);
     const formData = new FormData(e.currentTarget);
     formData.set("photo_url", photoUrl);
     formData.set("cover_image_url", coverUrl);
-    startTransition(() => action(formData));
+    startSubmit(async () => {
+      const result = await updateOrganizerProfile(null, formData);
+      if (result) setState(result);
+    });
   }
 
   return (
