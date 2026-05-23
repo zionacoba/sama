@@ -132,14 +132,17 @@ export async function updateOrganizerProfile(
     return { error: "Social links must start with https://" };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("organizers")
     .update({
       display_name, full_name, phone, bio, photo_url, cover_image_url, social_links,
       payout_method, gcash_number, gcash_name,
       bank_name, bank_account_number, bank_account_name,
     })
-    .eq("id", organizer.id);
+    .eq("id", organizer.id)
+    .select();
+
+  console.log("Update result:", JSON.stringify({ data, error }));
 
   if (error) return { error: error.message };
 
