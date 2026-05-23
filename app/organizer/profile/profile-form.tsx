@@ -70,11 +70,13 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoUrlInputRef = useRef<HTMLInputElement>(null);
 
   const [coverUrl, setCoverUrl] = useState<string>(organizer.cover_image_url ?? "");
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverError, setCoverError] = useState<string | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const coverUrlInputRef = useRef<HTMLInputElement>(null);
 
   const initials = organizer.full_name
     .split(" ")
@@ -94,6 +96,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
       setPhotoError(result.error);
     } else {
       setPhotoUrl(result.publicUrl);
+      if (photoUrlInputRef.current) photoUrlInputRef.current.value = result.publicUrl;
     }
     setPhotoUploading(false);
   }
@@ -110,8 +113,14 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
       setCoverError(result.error);
     } else {
       setCoverUrl(result.publicUrl);
+      if (coverUrlInputRef.current) coverUrlInputRef.current.value = result.publicUrl;
     }
     setCoverUploading(false);
+  }
+
+  function handleRemoveCover() {
+    setCoverUrl("");
+    if (coverUrlInputRef.current) coverUrlInputRef.current.value = "";
   }
 
   return (
@@ -159,7 +168,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
             )}
           </div>
         </div>
-        <input type="hidden" name="photo_url" value={photoUrl} />
+        <input ref={photoUrlInputRef} type="hidden" name="photo_url" defaultValue={organizer.photo_url ?? ""} />
       </div>
 
       <div>
@@ -257,7 +266,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
             {coverUrl && !coverUploading && (
               <button
                 type="button"
-                onClick={() => setCoverUrl("")}
+                onClick={handleRemoveCover}
                 className="text-sm text-stone-400 transition hover:text-red-600"
               >
                 Remove
@@ -266,7 +275,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
             {coverError && <p className="text-xs text-red-600">{coverError}</p>}
           </div>
         </div>
-        <input type="hidden" name="cover_image_url" value={coverUrl} />
+        <input ref={coverUrlInputRef} type="hidden" name="cover_image_url" defaultValue={organizer.cover_image_url ?? ""} />
       </div>
 
       <div>
