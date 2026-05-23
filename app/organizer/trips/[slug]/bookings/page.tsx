@@ -344,11 +344,14 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                       ({formatCurrency(b.amount_due)} deposit)
                                     </span>
                                     {b.status === "confirmed" && (
-                                      <MarkBalanceButton
-                                        bookingId={b.id}
-                                        participantName={b.full_name}
-                                        balanceAmount={formatCurrency(balance)}
-                                      />
+                                      <>
+                                        <MarkBalanceButton
+                                          bookingId={b.id}
+                                          participantName={b.full_name}
+                                          balanceAmount={formatCurrency(balance)}
+                                        />
+                                        <span className="text-xs text-stone-400">Participant can pay balance online or directly to you. Mark as collected once received.</span>
+                                      </>
                                     )}
                                   </>
                                 )}
@@ -448,11 +451,14 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                       {formatCurrency(b.amount_due)} deposit · {formatCurrency(b.total_amount - b.amount_due)} due
                                     </span>
                                     {b.status === "confirmed" && (
-                                      <MarkBalanceButton
-                                        bookingId={b.id}
-                                        participantName={b.full_name}
-                                        balanceAmount={formatCurrency(b.total_amount - b.amount_due)}
-                                      />
+                                      <>
+                                        <MarkBalanceButton
+                                          bookingId={b.id}
+                                          participantName={b.full_name}
+                                          balanceAmount={formatCurrency(b.total_amount - b.amount_due)}
+                                        />
+                                        <span className="text-xs text-stone-400">Participant can pay balance online or directly to you. Mark as collected once received.</span>
+                                      </>
                                     )}
                                   </div>
                                 )

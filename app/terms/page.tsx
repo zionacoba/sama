@@ -73,7 +73,15 @@ export default function TermsPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">6. Cancellation and Refunds</h2>
               <p className="mt-2 leading-relaxed">
-                Cancellation policies are set by individual organizers and displayed on each trip listing. Sama is not responsible for issuing refunds — refund disputes are between the participant and the organizer. Sama may assist in mediation but makes no guarantee of refund outcomes.
+                Refunds apply only to payments collected through the Sama platform (downpayments). The refund policy is as follows:
+              </p>
+              <ul className="mt-2 space-y-1.5 leading-relaxed">
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>7 or more days before the trip: Full refund of amount paid through Sama</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>3–7 days before the trip: 50% refund of amount paid through Sama</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Under 3 days before the trip: No refund</span></li>
+              </ul>
+              <p className="mt-2 leading-relaxed">
+                Balance payments made directly to organizers are not covered by Sama&apos;s refund policy and are subject to the organizer&apos;s own terms.
               </p>
             </section>
 

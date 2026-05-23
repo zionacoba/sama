@@ -232,6 +232,9 @@ export async function createBooking(input: CreateBookingInput) {
       const amountLine = isDownpay
         ? `<li><strong>Amount due now:</strong> ${fmt(computedAmountDue)} downpayment</li><li><strong>Remaining balance:</strong> ${fmt(computedTotal - computedAmountDue)} due on trip day</li>`
         : `<li><strong>Total amount:</strong> ${fmt(computedTotal)}</li>`;
+      const balanceNote = isDownpay
+        ? `<p>Your remaining balance of <strong>${fmt(computedTotal - computedAmountDue)}</strong> is to be paid directly to your organizer via GCash or cash before or on the day of the trip. The organizer will share their payment details in the group chat.</p>`
+        : "";
       const meetingLine = input.meetingPoint
         ? `<li><strong>Meeting point:</strong> ${escapeHtml(input.meetingPoint)}</li>`
         : "";
@@ -255,6 +258,7 @@ export async function createBooking(input: CreateBookingInput) {
               ${amountLine}
               ${meetingLine}
             </ul>
+            ${balanceNote}
             ${trip.messenger_gc_link ? `
             <p>Join the group chat for trip updates and coordination:<br>
             <a href="${trip.messenger_gc_link}">${escapeHtml(trip.messenger_gc_link)}</a></p>
@@ -274,6 +278,7 @@ export async function createBooking(input: CreateBookingInput) {
               ${amountLine}
               ${meetingLine}
             </ul>
+            ${balanceNote}
             <p>The organizer will review your request and confirm your spot. This usually takes 24–48 hours. You can track your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
             <p>— The Sama Team</p>
           `,

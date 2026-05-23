@@ -628,6 +628,11 @@ export function BookingModal({
                           <span className="block text-xs opacity-75">{formatCurrency(amountDue)} deposit</span>
                         </button>
                       </div>
+                      {paymentOption === "downpayment" && (
+                        <p className="mt-2 text-xs text-stone-500">
+                          Balance of {formatCurrency(totalAmount - amountDue)} to be paid directly to the organizer via GCash or cash on trip day. You can also pay the balance online through Sama anytime before the trip.
+                        </p>
+                      )}
                     </div>
                   )}
 
