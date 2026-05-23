@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Navbar } from "@/app/components/navbar";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: { absolute: "Sama — Philippine outdoor adventures" },
@@ -74,7 +76,7 @@ function DifficultyBadge({ level }: { level: string }) {
 }
 
 export default async function Home() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data } = await supabase
     .from("trips")
     .select("id, slug, title, price, destination, difficulty, activity_type, duration, date_start, remaining_slots, photos, is_template, template_id")
