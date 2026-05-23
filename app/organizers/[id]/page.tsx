@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -73,17 +74,20 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
   const { id } = await params;
 
   const admin = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  // All queries use admin client to bypass RLS on this public page
-  const { data: organizer } = await admin
-    .from("organizers")
-    .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links, is_founding_partner")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (!organizer) notFound();
-
-  const [{ data: allTrips }, { data: reviewsData }] = await Promise.all([
+  const [
+    { data: organizer },
+    { data: allTrips },
+    { data: reviewsData },
+    { data: currentUserOrg },
+  ] = await Promise.all([
+    admin
+      .from("organizers")
+      .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links, is_founding_partner")
+      .eq("id", id)
+      .maybeSingle(),
     admin
       .from("trips")
       .select("id, slug, title, activity_type, difficulty, date_start, price, total_slots, remaining_slots, photos")
@@ -95,7 +99,14 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
       .select("id, full_name, rating, body, created_at, trips(title, slug, date_start)")
       .eq("organizer_id", id)
       .order("created_at", { ascending: false }),
+    user
+      ? admin.from("organizers").select("id").eq("user_id", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+
+  if (!organizer) notFound();
+
+  const isOwner = !!currentUserOrg && String(currentUserOrg.id) === String(id);
 
   const trips = (allTrips ?? []) as Trip[];
   const reviews = (reviewsData ?? []) as unknown as Review[];
@@ -170,7 +181,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                 )}
               </div>
               {/* Name + rating — sits to the right, bottom-aligned with avatar */}
-              <div className="min-w-0 pb-3">
+              <div className="min-w-0 flex-1 pb-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-xl font-bold tracking-tight text-stone-900 sm:text-2xl">
                     {publicName}
@@ -189,6 +200,16 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                   </div>
                 )}
               </div>
+              {isOwner && (
+                <div className="shrink-0 self-end pb-3">
+                  <Link
+                    href="/organizer/profile"
+                    className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 shadow-sm transition hover:border-trailhead hover:text-trailhead"
+                  >
+                    Edit profile
+                  </Link>
+                </div>
+              )}
             </div>
             {organizer.bio && (
               <p className="mt-4 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
