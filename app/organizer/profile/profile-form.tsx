@@ -5,21 +5,18 @@ import Image from "next/image";
 import { updateOrganizerProfile } from "@/app/actions/organizer";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 
-async function compressToSquare(file: File): Promise<File> {
+async function compressImage(file: File, maxW: number, maxH: number): Promise<File> {
   return new Promise((resolve) => {
     const img = new window.Image();
     const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
-      const size = Math.min(400, img.naturalWidth, img.naturalHeight);
+      const scale = Math.min(1, maxW / img.naturalWidth, maxH / img.naturalHeight);
       const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
+      canvas.width = Math.round(img.naturalWidth * scale);
+      canvas.height = Math.round(img.naturalHeight * scale);
       const ctx = canvas.getContext("2d")!;
-      const scale = size / Math.min(img.naturalWidth, img.naturalHeight);
-      const w = img.naturalWidth * scale;
-      const h = img.naturalHeight * scale;
-      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       canvas.toBlob(
         (blob) => {
           if (!blob) { resolve(file); return; }
@@ -32,6 +29,16 @@ async function compressToSquare(file: File): Promise<File> {
     img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
     img.src = objectUrl;
   });
+}
+
+async function uploadToStorage(file: File): Promise<{ publicUrl: string } | { error: string }> {
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+  const { data, error } = await supabaseBrowser.storage
+    .from("organizer-photos")
+    .upload(path, file, { upsert: false });
+  if (error || !data) return { error: error?.message ?? "Upload failed. Please try again." };
+  const { data: { publicUrl } } = supabaseBrowser.storage.from("organizer-photos").getPublicUrl(data.path);
+  return { publicUrl };
 }
 
 const inputClass =
@@ -62,7 +69,12 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
   const [photoUrl, setPhotoUrl] = useState<string>(organizer.photo_url ?? "");
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const [coverUrl, setCoverUrl] = useState<string>(organizer.cover_image_url ?? "");
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const initials = organizer.full_name
     .split(" ")
@@ -76,19 +88,30 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
     if (!file) return;
     setPhotoUploading(true);
     setPhotoError(null);
-    const compressed = await compressToSquare(file);
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
-    const { data, error } = await supabaseBrowser.storage
-      .from("organizer-photos")
-      .upload(path, compressed, { upsert: false });
-    if (error || !data) {
-      setPhotoError(error?.message ?? "Upload failed. Please try again.");
-      setPhotoUploading(false);
-      return;
+    const compressed = await compressImage(file, 400, 400);
+    const result = await uploadToStorage(compressed);
+    if ("error" in result) {
+      setPhotoError(result.error);
+    } else {
+      setPhotoUrl(result.publicUrl);
     }
-    const { data: { publicUrl } } = supabaseBrowser.storage.from("organizer-photos").getPublicUrl(data.path);
-    setPhotoUrl(publicUrl);
     setPhotoUploading(false);
+  }
+
+  async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setCoverUploading(true);
+    setCoverError(null);
+    const compressed = await compressImage(file, 1920, 400);
+    const result = await uploadToStorage(compressed);
+    if ("error" in result) {
+      setCoverError(result.error);
+    } else {
+      setCoverUrl(result.publicUrl);
+    }
+    setCoverUploading(false);
   }
 
   return (
@@ -117,7 +140,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
           </div>
           <div className="space-y-1">
             <input
-              ref={fileInputRef}
+              ref={photoInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={handlePhotoChange}
@@ -126,7 +149,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
             <button
               type="button"
               disabled={photoUploading}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => photoInputRef.current?.click()}
               className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 shadow-sm transition hover:border-trailhead hover:text-trailhead disabled:cursor-not-allowed disabled:opacity-50"
             >
               {photoUploading ? "Uploading…" : "Change photo"}
@@ -200,19 +223,50 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
         />
       </div>
 
+      {/* Cover image */}
       <div>
-        <label htmlFor="cover_image_url" className={labelClass}>
-          Cover image URL <span className="font-normal text-stone-400">(optional)</span>
-        </label>
-        <p className="mt-0.5 text-xs text-stone-500">Displayed as a banner at the top of your public profile.</p>
-        <input
-          id="cover_image_url"
-          name="cover_image_url"
-          type="url"
-          defaultValue={organizer.cover_image_url ?? ""}
-          className={inputClass}
-          placeholder="https://…"
-        />
+        <p className={labelClass}>Cover image <span className="font-normal text-stone-400">(optional)</span></p>
+        <p className="mt-0.5 text-xs text-stone-500">Banner displayed at the top of your public profile. Recommended: wide landscape photo.</p>
+        <div className="mt-2 space-y-2">
+          <div className="relative h-24 w-full overflow-hidden rounded-xl bg-trailhead">
+            {coverUrl && (
+              <Image src={coverUrl} alt="Cover image" fill className="object-cover" sizes="100vw" />
+            )}
+            {coverUploading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleCoverChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              disabled={coverUploading}
+              onClick={() => coverInputRef.current?.click()}
+              className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 shadow-sm transition hover:border-trailhead hover:text-trailhead disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {coverUploading ? "Uploading…" : coverUrl ? "Change cover" : "Upload cover"}
+            </button>
+            {coverUrl && !coverUploading && (
+              <button
+                type="button"
+                onClick={() => setCoverUrl("")}
+                className="text-sm text-stone-400 transition hover:text-red-600"
+              >
+                Remove
+              </button>
+            )}
+            {coverError && <p className="text-xs text-red-600">{coverError}</p>}
+          </div>
+        </div>
+        <input type="hidden" name="cover_image_url" value={coverUrl} />
       </div>
 
       <div>
@@ -346,10 +400,10 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
         </a>
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || photoUploading || coverUploading}
           className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending ? "Saving…" : "Save changes"}
+          {pending ? "Saving…" : photoUploading || coverUploading ? "Uploading…" : "Save changes"}
         </button>
       </div>
     </form>
