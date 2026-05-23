@@ -423,6 +423,9 @@ export function TripForm({
                   className={inputClass}
                   placeholder="500"
                 />
+                <p className="mt-1.5 text-xs text-stone-500">
+                  This is the amount participants pay to reserve their slot. They can choose to pay in full or this downpayment amount. You set this — participants cannot change it.
+                </p>
               </div>
             )}
           </div>
