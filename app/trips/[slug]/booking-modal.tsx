@@ -97,6 +97,7 @@ export function BookingModal({
   const amountDue = paymentOption === "downpayment" && canUseDownpayment
     ? Math.min(minDownpayment! * slots, totalAmount)
     : totalAmount;
+  console.log("downpayment debug:", { minDownpayment, slots, unitPrice, totalAmount, daysUntilTrip, downpaymentCutoffDays, canUseDownpayment, paymentOption, amountDue });
 
   // Keep a ref so the slots effect can read fullName without being a dependency
   const fullNameRef = useRef(fullName);
