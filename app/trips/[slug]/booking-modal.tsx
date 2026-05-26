@@ -69,6 +69,7 @@ export function BookingModal({
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [waiverExpanded, setWaiverExpanded] = useState(false);
   const sessionRef = useRef<Session | null>(null);
 
   const [fullName, setFullName] = useState("");
@@ -636,6 +637,19 @@ export function BookingModal({
                     />
                   </div>
 
+                  {/* Cancellation policy */}
+                  {cancellationPolicy && (() => {
+                    const meta = CANCELLATION_POLICIES[cancellationPolicy];
+                    const text = cancellationPolicy === "custom"
+                      ? (cancellationPolicyCustom ?? "")
+                      : (meta?.text ?? "");
+                    return text ? (
+                      <p className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-500">
+                        <span className="font-semibold text-stone-600">Cancellation: </span>{text}
+                      </p>
+                    ) : null;
+                  })()}
+
                   {/* Waivers */}
                   <div className="space-y-3">
                     <div>
@@ -671,8 +685,17 @@ export function BookingModal({
                         Organizer waiver
                       </p>
                       {waiverText && (
-                        <div className="mb-2 max-h-[200px] overflow-y-auto rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs leading-relaxed text-stone-700 whitespace-pre-wrap">
-                          {waiverText}
+                        <div className="mb-2">
+                          <div className={`rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs leading-relaxed text-stone-700 whitespace-pre-wrap${waiverExpanded ? "" : " line-clamp-3"}`}>
+                            {waiverText}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setWaiverExpanded(!waiverExpanded)}
+                            className="mt-1 text-xs text-trailhead underline-offset-2 hover:underline"
+                          >
+                            {waiverExpanded ? "See less" : "See more"}
+                          </button>
                         </div>
                       )}
                       <label className="flex cursor-pointer items-start gap-3">
@@ -708,17 +731,6 @@ export function BookingModal({
 
             {!success && (
               <div className="shrink-0 border-t border-stone-100 px-6 py-3">
-                {cancellationPolicy && (() => {
-                  const meta = CANCELLATION_POLICIES[cancellationPolicy];
-                  const text = cancellationPolicy === "custom"
-                    ? (cancellationPolicyCustom ?? "")
-                    : (meta?.text ?? "");
-                  return text ? (
-                    <p className="mb-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-500">
-                      <span className="font-semibold text-stone-600">Cancellation: </span>{text}
-                    </p>
-                  ) : null;
-                })()}
                 <p className="mb-2 text-center text-xs text-stone-400">
                   Need help?{" "}
                   <a href="mailto:sama.com.ph@gmail.com" className="underline hover:text-stone-600">
