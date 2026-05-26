@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend } from "@/lib/resend";
+import { resend, FROM_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
 type JoinWaitlistInput = {
@@ -78,7 +78,7 @@ export async function joinWaitlist(
         }).format(new Date(trip.date_start));
 
         await resend.emails.send({
-          from: "Sama <onboarding@resend.dev>",
+          from: FROM_ADDRESS,
           to: organizer.email,
           replyTo: "sama.com.ph@gmail.com",
           subject: `New waitlist entry for ${trip.title}`,
@@ -133,7 +133,7 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
 
   try {
     await resend.emails.send({
-      from: "Sama <onboarding@resend.dev>",
+      from: FROM_ADDRESS,
       to: entry.email,
       replyTo: "sama.com.ph@gmail.com",
       subject: `A slot opened up — ${trip.title}`,

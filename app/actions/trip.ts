@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend } from "@/lib/resend";
+import { resend, FROM_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
 function slugify(title: string): string {
@@ -382,7 +382,7 @@ export async function updateTrip(
         try {
           for (const booking of affectedBookings) {
             await resend.emails.send({
-              from: "Sama <onboarding@resend.dev>",
+              from: FROM_ADDRESS,
               to: booking.email,
               replyTo: "sama.com.ph@gmail.com",
               subject: `Important update to your booking: ${title}`,
@@ -416,7 +416,7 @@ export async function updateTrip(
       try {
         for (const entry of waitlistEntries) {
           await resend.emails.send({
-            from: "Sama <onboarding@resend.dev>",
+            from: FROM_ADDRESS,
             to: entry.email,
             replyTo: "sama.com.ph@gmail.com",
             subject: `Slots available — ${title}`,
@@ -500,14 +500,14 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
   try {
     for (const booking of bookings ?? []) {
       await resend.emails.send({
-        from: "Sama <onboarding@resend.dev>",
+        from: FROM_ADDRESS,
         to: booking.email,
         replyTo: "sama.com.ph@gmail.com",
         subject: `Trip cancelled — ${trip.title}`,
         html: `
           <p>Hi ${escapeHtml(booking.full_name)},</p>
           <p>We're sorry to inform you that <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled by the organizer.</p>
-          <p>If you paid a downpayment, please contact the organizer directly for a refund.</p>
+          <p>If you paid a downpayment, please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> and we will process your refund within 3–5 business days.</p>
           <p>We hope to see you on a future trip!</p>
           <p>— The Sama Team</p>
         `,
@@ -515,7 +515,7 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
     }
     for (const entry of waitlistEntries ?? []) {
       await resend.emails.send({
-        from: "Sama <onboarding@resend.dev>",
+        from: FROM_ADDRESS,
         to: entry.email,
         replyTo: "sama.com.ph@gmail.com",
         subject: `Trip cancelled: ${trip.title}`,

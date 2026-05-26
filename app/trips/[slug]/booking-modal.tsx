@@ -198,6 +198,7 @@ export function BookingModal({
     setSelectedMeetingPoint("");
     setWaiverAccepted(false);
     setWaiverError(false);
+    setWaiverExpanded(false);
     setPlatformWaiverAccepted(false);
     setPlatformWaiverError(false);
     setError(null);
@@ -305,7 +306,7 @@ export function BookingModal({
             type="button"
             className="absolute inset-0 bg-black/50"
             aria-label="Close booking form"
-            onClick={success ? undefined : handleClose}
+            onClick={loading || success ? undefined : handleClose}
           />
 
           <div className="relative z-10 flex w-full flex-col max-h-[85dvh] rounded-t-2xl border border-stone-200 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl">
@@ -314,9 +315,10 @@ export function BookingModal({
             </span>
             <button
               type="button"
-              onClick={handleClose}
-              className="absolute right-3 top-3 z-10 rounded-lg p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
+              onClick={loading ? undefined : handleClose}
+              className="absolute right-3 top-3 z-10 rounded-lg p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800 disabled:opacity-40"
               aria-label="Close"
+              disabled={loading}
             >
               ✕
             </button>
@@ -615,7 +617,7 @@ export function BookingModal({
                       </div>
                       {paymentOption === "downpayment" && (
                         <p className="mt-2 text-xs text-stone-500">
-                          Balance of {formatCurrency(totalAmount - downpaymentAmount)} to be paid directly to the organizer via GCash or cash before or on the day of the trip. You can also pay the balance online through Sama anytime before the trip.
+                          Balance of {formatCurrency(totalAmount - downpaymentAmount)} can be paid online through Sama or directly to your organizer on the day of the trip, whichever they prefer. Your organizer will let you know in the group chat.
                         </p>
                       )}
                     </div>

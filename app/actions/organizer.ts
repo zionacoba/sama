@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend } from "@/lib/resend";
+import { resend, FROM_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
@@ -68,7 +68,7 @@ export async function applyToBeOrganizer(
 
   try {
     await resend.emails.send({
-      from: "Sama <onboarding@resend.dev>",
+      from: FROM_ADDRESS,
       to: user.email!,
       replyTo: "sama.com.ph@gmail.com",
       subject: "We received your Sama organizer application!",

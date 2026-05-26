@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend } from "@/lib/resend";
+import { resend, FROM_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
 type CreateBookingInput = {
@@ -42,7 +42,7 @@ export async function createBooking(input: CreateBookingInput) {
 
   const { data: trip, error: tripFetchError } = await admin
     .from("trips")
-    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, messenger_gc_link")
+    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, downpayment_cutoff_days, messenger_gc_link")
     .eq("slug", input.tripSlug)
     .maybeSingle();
 
@@ -81,9 +81,13 @@ export async function createBooking(input: CreateBookingInput) {
 
   // Compute amounts server-side — never trust client-provided values.
   const computedTotal = trip.price * input.slots;
-  const canDownpay = trip.payment_type === "downpayment" && trip.min_downpayment != null && trip.min_downpayment < trip.price;
+  const daysUntil = Math.floor((new Date(trip.date_start).getTime() - Date.now()) / 86_400_000);
+  const canDownpay = trip.payment_type === "downpayment"
+    && trip.min_downpayment != null
+    && Number(trip.min_downpayment) < Number(trip.price)
+    && daysUntil > (trip.downpayment_cutoff_days ?? 0);
   const computedAmountDue = input.paymentOption === "downpayment" && canDownpay
-    ? Math.min((trip.min_downpayment as number) * input.slots, computedTotal)
+    ? Math.min(Number(trip.min_downpayment) * input.slots, computedTotal)
     : computedTotal;
   const platformCommission = parseFloat((computedTotal * 0.04).toFixed(2));
 
@@ -191,8 +195,13 @@ export async function createBooking(input: CreateBookingInput) {
           ? `<li><strong>Medical / allergies:</strong> ${escapeHtml(input.medicalNotes)}</li>`
           : "";
 
+        const fmtOrg = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+        const paymentRow = input.paymentOption === "downpayment" && computedAmountDue < computedTotal
+          ? `<li><strong>Payment:</strong> ${fmtOrg(computedAmountDue)} downpayment (balance: ${fmtOrg(computedTotal - computedAmountDue)})</li>`
+          : `<li><strong>Payment:</strong> ${fmtOrg(computedTotal)} (full payment)</li>`;
+
         await resend.emails.send({
-          from: "Sama <onboarding@resend.dev>",
+          from: FROM_ADDRESS,
           to: organizerEmail,
           replyTo: "sama.com.ph@gmail.com",
           subject: `New booking for ${trip.title}`,
@@ -204,6 +213,7 @@ export async function createBooking(input: CreateBookingInput) {
               <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
               <li><strong>Date:</strong> ${tripDate}</li>
               ${participantsRow}
+              ${paymentRow}
               <li><strong>Emergency contact:</strong> ${escapeHtml(input.emergencyContactName)} — ${escapeHtml(input.emergencyContactPhone)}</li>
               ${medicalRow}
               <li><strong>Waiver agreed:</strong> ${input.waiverAgreed ? "✓ Yes" : "✗ No"}</li>
@@ -240,7 +250,7 @@ export async function createBooking(input: CreateBookingInput) {
         : "";
 
       await resend.emails.send({
-        from: "Sama <onboarding@resend.dev>",
+        from: FROM_ADDRESS,
         to: input.email,
         replyTo: "sama.com.ph@gmail.com",
         subject: autoApprove
@@ -261,7 +271,7 @@ export async function createBooking(input: CreateBookingInput) {
             ${balanceNote}
             ${trip.messenger_gc_link ? `
             <p>Join the group chat for trip updates and coordination:<br>
-            <a href="${trip.messenger_gc_link}">${escapeHtml(trip.messenger_gc_link)}</a></p>
+            <a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>
             <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
             ` : ""}
             <p>You can view your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
@@ -356,7 +366,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
     if (status === "confirmed") {
       await resend.emails.send({
-        from: "Sama <onboarding@resend.dev>",
+        from: FROM_ADDRESS,
         to: booking.email,
         replyTo: "sama.com.ph@gmail.com",
         subject: `You're confirmed for ${trip.title}!`,
@@ -365,7 +375,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
           <p>Great news! Your booking request for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been approved by the organizer.</p>
           ${trip.messenger_gc_link ? `
           <p>Join the group chat for trip updates and coordination:<br>
-          <a href="${trip.messenger_gc_link}">${escapeHtml(trip.messenger_gc_link)}</a></p>
+          <a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>
           <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
           ` : ""}
           <p>They will be in touch with trip details closer to the date. You can view your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
@@ -376,7 +386,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
       const bookingRef = booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
       const fmtPHP = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
       await resend.emails.send({
-        from: "Sama <onboarding@resend.dev>",
+        from: FROM_ADDRESS,
         to: booking.email,
         replyTo: "sama.com.ph@gmail.com",
         subject: `Update on your booking request for ${trip.title}`,
@@ -502,7 +512,7 @@ export async function cancelBooking(bookingId: number) {
 
         if (organizer?.email) {
           await resend.emails.send({
-            from: "Sama <onboarding@resend.dev>",
+            from: FROM_ADDRESS,
             to: organizer.email,
             replyTo: "sama.com.ph@gmail.com",
             subject: `${booking.full_name} cancelled their booking for ${trip.title}`,
@@ -516,7 +526,7 @@ export async function cancelBooking(bookingId: number) {
       }
 
       await resend.emails.send({
-        from: "Sama <onboarding@resend.dev>",
+        from: FROM_ADDRESS,
         to: booking.email,
         replyTo: "sama.com.ph@gmail.com",
         subject: `Booking cancelled: ${trip.title}`,
