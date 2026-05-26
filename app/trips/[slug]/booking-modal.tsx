@@ -308,35 +308,20 @@ export function BookingModal({
             onClick={success ? undefined : handleClose}
           />
 
-          <div className="relative z-10 flex w-full flex-col max-h-[85dvh] rounded-t-2xl border border-stone-200 bg-white pt-8 shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl">
-            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stone-100 px-6 pb-4">
-              <div>
-                <h2
-                  id="booking-modal-title"
-                  className="text-lg font-bold text-stone-900"
-                >
-                  {success
-                    ? bookingStatus === "confirmed" ? "You're in! 🎉" : "Booking request sent!"
-                    : "Book this trip"}
-                </h2>
-                {!success && (
-                  <>
-                    <p className="mt-0.5 text-sm text-stone-600">{tripTitle}</p>
-                    <p className="text-xs text-stone-400">📅 {formatDateRange(tripDateStart, tripDateEnd)}</p>
-                  </>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="shrink-0 rounded-lg p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
+          <div className="relative z-10 flex w-full flex-col max-h-[85dvh] rounded-t-2xl border border-stone-200 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl">
+            <span id="booking-modal-title" className="sr-only">
+              {success ? (bookingStatus === "confirmed" ? "You're in!" : "Booking request sent") : "Book this trip"}
+            </span>
+            <button
+              type="button"
+              onClick={handleClose}
+              className="absolute right-3 top-3 z-10 rounded-lg p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
+              aria-label="Close"
+            >
+              ✕
+            </button>
 
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-6 pb-5">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-10 pb-5">
               {success ? (
                 <div className="space-y-4">
                   <p
