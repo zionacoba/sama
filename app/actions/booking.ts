@@ -233,7 +233,7 @@ export async function createBooking(input: CreateBookingInput) {
         ? `<li><strong>Amount due now:</strong> ${fmt(computedAmountDue)} downpayment</li><li><strong>Remaining balance:</strong> ${fmt(computedTotal - computedAmountDue)} due on trip day</li>`
         : `<li><strong>Total amount:</strong> ${fmt(computedTotal)}</li>`;
       const balanceNote = isDownpay
-        ? `<p>Your remaining balance of <strong>${fmt(computedTotal - computedAmountDue)}</strong> is to be paid directly to your organizer via GCash or cash before or on the day of the trip. The organizer will share their payment details in the group chat.</p>`
+        ? `<p>Your remaining balance of <strong>${fmt(computedTotal - computedAmountDue)}</strong> can be paid online through Sama or directly to your organizer on the day of the trip, whichever they prefer. Your organizer will let you know in the group chat.</p>`
         : "";
       const meetingLine = input.meetingPoint
         ? `<li><strong>Meeting point:</strong> ${escapeHtml(input.meetingPoint)}</li>`
