@@ -46,7 +46,22 @@ export async function createBooking(input: CreateBookingInput) {
     .eq("slug", input.tripSlug)
     .maybeSingle();
 
+  if (tripFetchError) {
+    console.error("[createBooking] trip fetch error:", tripFetchError.code, tripFetchError.message, tripFetchError.details);
+  }
   if (!trip) return { error: "Trip not found." };
+
+  console.log("[createBooking] trip fetched:", {
+    id: trip.id,
+    status: trip.status,
+    difficulty: trip.difficulty,
+    payment_type: trip.payment_type,
+    price: trip.price,
+    min_downpayment: trip.min_downpayment,
+    downpayment_cutoff_days: trip.downpayment_cutoff_days,
+    date_start: trip.date_start,
+    remaining_slots: trip.remaining_slots,
+  });
 
   if (trip.status !== "active" || new Date(trip.date_start) < new Date()) {
     return { error: "This trip is no longer available for booking." };
@@ -80,7 +95,7 @@ export async function createBooking(input: CreateBookingInput) {
   }
 
   // Compute amounts server-side — never trust client-provided values.
-  const computedTotal = trip.price * input.slots;
+  const computedTotal = Number(trip.price) * input.slots;
   const daysUntil = Math.floor((new Date(trip.date_start).getTime() - Date.now()) / 86_400_000);
   const canDownpay = trip.payment_type === "downpayment"
     && trip.min_downpayment != null
@@ -91,16 +106,27 @@ export async function createBooking(input: CreateBookingInput) {
     : computedTotal;
   const platformCommission = parseFloat((computedTotal * 0.04).toFixed(2));
 
+  console.log("[createBooking] amounts:", {
+    computedTotal,
+    daysUntil,
+    canDownpay,
+    paymentOption: input.paymentOption,
+    computedAmountDue,
+    slots: input.slots,
+  });
+
   // Atomically check availability and decrement remaining_slots.
+  console.log("[createBooking] calling book_slot:", { p_trip_id: trip.id, p_slots_requested: input.slots });
   const { error: slotError } = await supabase.rpc("book_slot", {
     p_trip_id: trip.id,
     p_slots_requested: input.slots,
   });
   if (slotError) {
+    console.error("[createBooking] book_slot error:", slotError.code, slotError.message, slotError.details, slotError.hint);
     if (slotError.message.includes("not_enough_slots")) {
       return { error: "This trip is fully booked." };
     }
-    throw slotError;
+    return { error: `Booking failed (slot error): ${slotError.message}` };
   }
 
   const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
@@ -134,6 +160,7 @@ export async function createBooking(input: CreateBookingInput) {
     .single();
 
   if (insertError || !newBooking) {
+    console.error("[createBooking] booking insert error:", insertError?.code, insertError?.message, insertError?.details);
     // book_slot already decremented remaining_slots — restore it so the
     // capacity isn't permanently lost.
     await supabase.rpc("restore_slot", {
@@ -142,6 +169,8 @@ export async function createBooking(input: CreateBookingInput) {
     });
     return { error: insertError?.message ?? "Failed to create booking." };
   }
+
+  console.log("[createBooking] booking created:", newBooking.id);
 
   // Insert one booking_participants row per slot.
   const now = new Date().toISOString();
