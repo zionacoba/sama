@@ -93,11 +93,9 @@ export function BookingModal({
   const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
   const totalAmount = unitPrice * slots;
   const daysUntilTrip = Math.floor((new Date(tripDateStart).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  const canUseDownpayment = hasDownpayment && minDownpayment! < unitPrice && daysUntilTrip > downpaymentCutoffDays;
-  const amountDue = paymentOption === "downpayment" && canUseDownpayment
-    ? Math.min(minDownpayment! * slots, totalAmount)
-    : totalAmount;
-  console.log("downpayment debug:", { minDownpayment, slots, unitPrice, totalAmount, daysUntilTrip, downpaymentCutoffDays, canUseDownpayment, paymentOption, amountDue });
+  const canUseDownpayment = hasDownpayment && Number(minDownpayment!) < unitPrice && daysUntilTrip > downpaymentCutoffDays;
+  const downpaymentAmount = canUseDownpayment ? Math.min(Number(minDownpayment!) * slots, totalAmount) : totalAmount;
+  const amountDue = paymentOption === "downpayment" && canUseDownpayment ? downpaymentAmount : totalAmount;
 
   // Keep a ref so the slots effect can read fullName without being a dependency
   const fullNameRef = useRef(fullName);
@@ -611,12 +609,12 @@ export function BookingModal({
                           }`}
                         >
                           <span className="block font-medium">Pay downpayment</span>
-                          <span className="block text-xs opacity-75">{formatCurrency(amountDue)} deposit</span>
+                          <span className="block text-xs opacity-75">{formatCurrency(downpaymentAmount)} deposit</span>
                         </button>
                       </div>
                       {paymentOption === "downpayment" && (
                         <p className="mt-2 text-xs text-stone-500">
-                          Balance of {formatCurrency(totalAmount - amountDue)} to be paid directly to the organizer via GCash or cash before or on the day of the trip. You can also pay the balance online through Sama anytime before the trip.
+                          Balance of {formatCurrency(totalAmount - downpaymentAmount)} to be paid directly to the organizer via GCash or cash before or on the day of the trip. You can also pay the balance online through Sama anytime before the trip.
                         </p>
                       )}
                     </div>
