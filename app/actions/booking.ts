@@ -96,6 +96,7 @@ export async function createBooking(input: CreateBookingInput) {
     if (slotError.message.includes("not_enough_slots")) {
       return { error: "This trip is fully booked." };
     }
+    console.log("book_slot error:", JSON.stringify(slotError));
     throw slotError;
   }
 
@@ -136,6 +137,7 @@ export async function createBooking(input: CreateBookingInput) {
       p_trip_id: trip.id,
       p_slots_requested: input.slots,
     });
+    console.log("createBooking error:", JSON.stringify(insertError));
     return { error: insertError?.message ?? "Failed to create booking." };
   }
 
