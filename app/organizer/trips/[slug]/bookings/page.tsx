@@ -65,6 +65,7 @@ function formatDate(date: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "Asia/Manila",
   }).format(new Date(date));
 }
 
@@ -75,6 +76,7 @@ function formatDateTime(date: string) {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "Asia/Manila",
   }).format(new Date(date));
 }
 
@@ -122,20 +124,22 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
 
   const admin = createSupabaseAdminClient();
 
-  const { data: bookingsData } = await admin
-    .from("bookings")
-    .select(
-      "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, balance_collected, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point"
-    )
-    .eq("trip_id", trip.id)
-    .order("created_at", { ascending: false });
+  const [{ data: bookingsData }, { data: waitlistData }] = await Promise.all([
+    admin
+      .from("bookings")
+      .select(
+        "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, balance_collected, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point"
+      )
+      .eq("trip_id", trip.id)
+      .order("created_at", { ascending: false }),
+    admin
+      .from("waitlist")
+      .select("id, full_name, email, phone, slots, created_at, notified")
+      .eq("trip_id", trip.id)
+      .order("created_at", { ascending: true }),
+  ]);
 
   const bookings = (bookingsData ?? []) as Booking[];
-  const { data: waitlistData } = await admin
-    .from("waitlist")
-    .select("id, full_name, email, phone, slots, created_at, notified")
-    .eq("trip_id", trip.id)
-    .order("created_at", { ascending: true });
   const waitlist = (waitlistData ?? []) as WaitlistEntry[];
 
   const multiSlotIds = bookings.filter((b) => b.slots > 1).map((b) => b.id);

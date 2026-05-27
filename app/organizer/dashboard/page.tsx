@@ -34,6 +34,7 @@ function formatDate(date: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "Asia/Manila",
   }).format(new Date(date));
 }
 

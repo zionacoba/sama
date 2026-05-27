@@ -71,6 +71,7 @@ function formatDate(date: string) {
     weekday: "short",
     month: "short",
     day: "numeric",
+    timeZone: "Asia/Manila",
   }).format(new Date(date));
 }
 

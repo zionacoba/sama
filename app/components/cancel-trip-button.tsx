@@ -12,15 +12,24 @@ type Props = {
 export function CancelTripButton({ tripSlug, tripTitle, totalBookings }: Props) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   function handleConfirm() {
+    setError(null);
     startTransition(async () => {
-      await cancelTrip(tripSlug);
+      const result = await cancelTrip(tripSlug);
+      if (result?.error) {
+        setError(result.error);
+        setShowConfirm(false);
+      }
     });
   }
 
   return (
     <>
+      {error && (
+        <p className="text-xs text-red-600">{error}</p>
+      )}
       <button
         type="button"
         onClick={() => setShowConfirm(true)}

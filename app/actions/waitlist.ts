@@ -6,6 +6,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
+
 type JoinWaitlistInput = {
   tripId: number;
   tripSlug: string;
@@ -75,6 +77,7 @@ export async function joinWaitlist(
           year: "numeric",
           month: "long",
           day: "numeric",
+          timeZone: "Asia/Manila",
         }).format(new Date(trip.date_start));
 
         await resend.emails.send({
@@ -140,7 +143,7 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
       html: `
         <p>Hi ${escapeHtml(entry.full_name)},</p>
         <p>Good news! A slot has opened up for <strong>${escapeHtml(trip.title)}</strong>. Book now before it fills up again:</p>
-        <p><a href="https://sama.ph/trips/${trip.slug}">sama.ph/trips/${trip.slug}</a></p>
+        <p><a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a></p>
         <p>— The Sama Team</p>
       `,
     });
@@ -151,4 +154,32 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
   await admin.from("waitlist").update({ notified: true }).eq("id", id);
 
   revalidatePath(`/organizer/trips/${trip.slug}/bookings`);
+}
+
+export async function removeWaitlistEntry(formData: FormData): Promise<void> {
+  const id = formData.get("id") as string;
+  if (!id) return;
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: entry } = await admin
+    .from("waitlist")
+    .select("id, user_id, trips(slug)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!entry || entry.user_id !== user.id) return;
+
+  await admin.from("waitlist").delete().eq("id", id);
+
+  type TripRef = { slug: string };
+  const trip = entry.trips as unknown as TripRef | null;
+  if (trip?.slug) revalidatePath(`/trips/${trip.slug}`);
+  revalidatePath("/profile");
 }

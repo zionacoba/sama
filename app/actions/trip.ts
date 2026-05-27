@@ -384,7 +384,7 @@ export async function updateTrip(
 
       if (affectedBookings && affectedBookings.length > 0) {
         const fmt = (d: string) => new Intl.DateTimeFormat("en-PH", {
-          weekday: "long", year: "numeric", month: "long", day: "numeric",
+          weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila",
         }).format(new Date(d));
 
         const changeLines: string[] = [];
@@ -394,7 +394,7 @@ export async function updateTrip(
           changeLines.push(`<li><strong>Date:</strong> ${oldRange} → ${newRange}</li>`);
         }
         if (priceChanged) {
-          changeLines.push(`<li><strong>Price:</strong> ₱${Number(existing.price).toLocaleString()} → ₱${price.toLocaleString()}</li>`);
+          changeLines.push(`<li><strong>Price:</strong> ₱${Number(existing.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} → ₱${price.toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</li>`);
         }
         if (mpChanged) {
           changeLines.push(`<li><strong>Meeting point:</strong> updated — check the trip page for details</li>`);
@@ -472,7 +472,7 @@ export async function updateTrip(
   redirect("/organizer/dashboard");
 }
 
-export async function cancelTrip(tripSlug: string): Promise<void> {
+export async function cancelTrip(tripSlug: string): Promise<{ error: string } | void> {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?redirectTo=/organizer/dashboard");
@@ -493,13 +493,14 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
     .eq("slug", tripSlug)
     .maybeSingle();
 
-  if (!trip) return;
-  if (String(trip.organizer_id) !== String(organizer.id)) return;
-  if (trip.status !== "active") return;
+  if (!trip) return { error: "Trip not found." };
+  if (String(trip.organizer_id) !== String(organizer.id)) return { error: "You don't have permission to cancel this trip." };
+  if (trip.status === "cancelled") return { error: "This trip is already cancelled." };
+  if (trip.status !== "active") return { error: "Only active trips can be cancelled." };
 
   const { data: bookings } = await admin
     .from("bookings")
-    .select("id, full_name, email")
+    .select("id, full_name, email, total_amount, amount_due, payment_option")
     .eq("trip_id", trip.id)
     .in("status", ["pending", "confirmed"]);
 
@@ -519,6 +520,7 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "Asia/Manila",
   }).format(new Date(trip.date_start));
 
   const { data: waitlistEntries } = await admin
@@ -528,7 +530,18 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
 
   await admin.from("waitlist").delete().eq("trip_id", trip.id);
 
+  const fmtCurrency = (n: number) =>
+    new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+
   for (const booking of bookings ?? []) {
+    const amountPaid =
+      booking.payment_option === "downpayment" && booking.amount_due != null
+        ? booking.amount_due
+        : (booking.total_amount ?? 0);
+    const refundLine =
+      amountPaid > 0
+        ? `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. Please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> to process your refund within 3–5 business days.</p>`
+        : `<p>If you have questions, please contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>`;
     try {
       await resend.emails.send({
         from: FROM_ADDRESS,
@@ -538,7 +551,7 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
         html: `
           <p>Hi ${escapeHtml(booking.full_name)},</p>
           <p>We're sorry to inform you that <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled by the organizer.</p>
-          <p>If you paid a downpayment, please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> and we will process your refund within 3–5 business days.</p>
+          ${refundLine}
           <p>We hope to see you on a future trip!</p>
           <p>— The Sama Team</p>
         `,

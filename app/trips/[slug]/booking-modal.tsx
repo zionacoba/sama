@@ -39,7 +39,7 @@ function formatCurrency(amount: number) {
 }
 
 function formatDateRange(start: string, end?: string | null) {
-  const fmt = (d: string) => new Intl.DateTimeFormat("en-PH", { weekday: "short", month: "short", day: "numeric", year: "numeric" }).format(new Date(d));
+  const fmt = (d: string) => new Intl.DateTimeFormat("en-PH", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(d));
   return end ? `${fmt(start)} – ${fmt(end)}` : fmt(start);
 }
 
@@ -240,7 +240,7 @@ export function BookingModal({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const phoneValid = phone.startsWith("09") || phone.startsWith("+63");
+    const phoneValid = /^(\+63|0)\d{9,10}$/.test(phone.replace(/\s/g, ""));
     if (!phoneValid) setPhoneError(true);
     const hasErrors = !platformWaiverAccepted || !waiverAccepted || !phoneValid;
     if (!platformWaiverAccepted) setPlatformWaiverError(true);

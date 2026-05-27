@@ -84,6 +84,7 @@ export default async function JoinPage({ params }: PageProps) {
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "Asia/Manila",
   }).format(new Date(trip.date_start));
 
   const meetingPoints = (trip.meeting_points ?? []) as MeetingPoint[];

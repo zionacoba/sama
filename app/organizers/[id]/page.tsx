@@ -53,6 +53,7 @@ function formatDate(date: string) {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "Asia/Manila",
   }).format(new Date(date));
 }
 

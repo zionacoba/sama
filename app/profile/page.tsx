@@ -11,6 +11,7 @@ import { ProfileForm } from "./profile-form";
 import { ParticipantShareLinks } from "./participant-share-links";
 import { WaiverModal } from "./waiver-modal";
 import { CancelBookingButton } from "./cancel-booking-button";
+import { removeWaitlistEntry } from "@/app/actions/waitlist";
 
 type PageProps = {
   searchParams: Promise<{ tab?: string }>;
@@ -57,6 +58,7 @@ function formatDate(date: string) {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "Asia/Manila",
   }).format(new Date(date));
 }
 
@@ -77,6 +79,13 @@ function DifficultyBadge({ level }: { level: string }) {
 }
 
 type IncompleteParticipant = { slotNumber: number; token: string };
+
+type WaitlistEntry = {
+  id: string;
+  slots: number;
+  created_at: string;
+  trips: { id: number; title: string; slug: string; date_start: string } | null;
+};
 
 function StatusBadge({ status }: { status: string }) {
   const styles =
@@ -213,7 +222,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
   if (!user) redirect("/login?redirectTo=/profile");
 
   const admin = createSupabaseAdminClient();
-  const [{ data: bookingsData }, { data: profileData }] = await Promise.all([
+  const [{ data: bookingsData }, { data: profileData }, { data: waitlistData }] = await Promise.all([
     supabase
       .from("bookings")
       .select(`
@@ -232,14 +241,20 @@ export default async function AccountPage({ searchParams }: PageProps) {
       `)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
-    admin
+    supabase
       .from("profiles")
       .select("birthdate, emergency_contact_name, emergency_contact_phone, phone")
       .eq("id", user.id)
       .maybeSingle(),
+    supabase
+      .from("waitlist")
+      .select("id, slots, created_at, trips(id, title, slug, date_start)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
   ]);
 
 const bookings = (bookingsData ?? []) as unknown as Booking[];
+  const waitlistEntries = (waitlistData ?? []) as unknown as WaitlistEntry[];
   const now = new Date().toISOString();
 
   const pastConfirmedBookingIds = bookings
@@ -262,7 +277,6 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
   const incompleteParticipantsMap = new Map<number, IncompleteParticipant[]>();
 
   if (multiSlotIds.length > 0) {
-    const admin = createSupabaseAdminClient();
     const { data: participantsData } = await admin
       .from("booking_participants")
       .select("booking_id, slot_number, token")
@@ -407,6 +421,46 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
                         incompleteParticipants={[]}
                         fullName={fullName}
                       />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {waitlistEntries.length > 0 && (
+              <section className="mt-8">
+                <h2 className="text-lg font-bold text-stone-900">
+                  Waitlist
+                  <span className="ml-2 text-base font-normal text-stone-400">({waitlistEntries.length})</span>
+                </h2>
+                <ul className="mt-4 space-y-3">
+                  {waitlistEntries.map((entry) => (
+                    <li key={entry.id} className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+                      <div>
+                        {entry.trips ? (
+                          <Link
+                            href={`/trips/${entry.trips.slug}`}
+                            className="text-sm font-semibold text-stone-900 underline-offset-4 hover:text-trailhead hover:underline"
+                          >
+                            {entry.trips.title}
+                          </Link>
+                        ) : (
+                          <span className="text-sm font-semibold text-stone-900">Trip removed</span>
+                        )}
+                        <p className="mt-0.5 text-xs text-stone-500">
+                          {entry.trips ? formatDate(entry.trips.date_start) : ""}
+                          {" · "}{entry.slots} slot{entry.slots !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <form action={removeWaitlistEntry}>
+                        <input type="hidden" name="id" value={entry.id} />
+                        <button
+                          type="submit"
+                          className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                        >
+                          Leave waitlist
+                        </button>
+                      </form>
                     </li>
                   ))}
                 </ul>

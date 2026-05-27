@@ -51,7 +51,7 @@ export function ExportCsvButton({
       escapeCsv(b.emergency_contact_name),
       escapeCsv(b.emergency_contact_phone),
       escapeCsv(b.status),
-      escapeCsv(new Date(b.created_at).toLocaleDateString("en-PH")),
+      escapeCsv(new Date(b.created_at).toLocaleDateString("en-PH", { timeZone: "Asia/Manila" })),
     ]);
 
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");

@@ -21,6 +21,7 @@ export function WaiverModal({
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "Asia/Manila",
   }).format(new Date(agreedAt));
 
   return (

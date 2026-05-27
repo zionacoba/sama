@@ -55,6 +55,7 @@ function formatCreatedAt(date: string) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "Asia/Manila",
   }).format(new Date(date));
 }
 
@@ -100,24 +101,27 @@ export default async function AdminPage({ searchParams }: PageProps) {
 
   const adminClient = createSupabaseAdminClient();
 
-  // Bookings — paginated
+  // Bookings and organizers loaded in parallel.
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
-  const { data: bookingData, error: bookingError, count: bookingCount } = await adminClient
-    .from("bookings")
-    .select("*, trips(title)", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range(from, to);
+  const [
+    { data: bookingData, error: bookingError, count: bookingCount },
+    { data: orgData, error: orgError },
+  ] = await Promise.all([
+    adminClient
+      .from("bookings")
+      .select("id, full_name, email, phone, trips(title), slots, total_amount, status, created_at", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to),
+    adminClient
+      .from("organizers")
+      .select("id, full_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_experience, emergency_certified, status, is_founding_partner, created_at")
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const bookings = (bookingData ?? []) as Booking[];
+  const bookings = (bookingData ?? []) as unknown as Booking[];
   const totalBookings = bookingCount ?? 0;
   const totalPages = Math.ceil(totalBookings / PAGE_SIZE);
-
-  // Organizers — all, sorted pending first
-  const { data: orgData, error: orgError } = await adminClient
-    .from("organizers")
-    .select("id, full_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_experience, emergency_certified, status, is_founding_partner, created_at")
-    .order("created_at", { ascending: false });
 
   const allApplications = (orgData ?? []) as OrganizerApplication[];
   const applications = [
@@ -330,7 +334,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                           </td>
                           <td className="w-20 px-3 py-3"><StatusBadge status={app.status} /></td>
                           <td className="w-24 whitespace-nowrap px-3 py-3 text-xs text-stone-500">
-                            {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric" }).format(new Date(app.created_at))}
+                            {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(app.created_at))}
                           </td>
                           <td className="w-32 px-3 py-3">
                             <div className="flex flex-col gap-2">

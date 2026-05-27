@@ -113,6 +113,7 @@ function formatDate(dateStart: string) {
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "Asia/Manila",
   }).format(new Date(dateStart));
 }
 
@@ -122,6 +123,7 @@ function formatDateShort(dateStart: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "Asia/Manila",
   }).format(new Date(dateStart));
 }
 
@@ -135,6 +137,7 @@ function formatReviewDate(date: string) {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "Asia/Manila",
   }).format(new Date(date));
 }
 
@@ -214,7 +217,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
   const supabase = await createSupabaseServerClient();
 
   const [{ data: trip }, { data: { user } }] = await Promise.all([
-    supabase.from("trips").select("*").eq("slug", slug).maybeSingle(),
+    supabase.from("trips").select("id, title, slug, destination, activity_type, difficulty, duration, price, description, date_start, date_end, meeting_point, total_slots, remaining_slots, photos, includes, what_to_bring, organizer_id, template_id, is_template, payment_type, min_downpayment, downpayment_cutoff_days, cancellation_policy, cancellation_policy_custom, waiver_text, meeting_points, waitlist_enabled").eq("slug", slug).maybeSingle(),
     supabase.auth.getUser(),
   ]);
 
@@ -271,7 +274,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
     tripData.organizer_id
       ? supabase
           .from("reviews")
-          .select("*", { count: "exact", head: true })
+          .select("id", { count: "exact", head: true })
           .eq("organizer_id", tripData.organizer_id)
       : Promise.resolve({ count: 0 }),
     tripData.organizer_id

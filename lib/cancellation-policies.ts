@@ -26,3 +26,26 @@ export const CANCELLATION_POLICIES = {
 } as const;
 
 export type CancellationPolicyKey = keyof typeof CANCELLATION_POLICIES;
+
+/**
+ * Returns the refund amount based on the policy and days until the trip.
+ * Returns null for "custom" policies (manual review required).
+ */
+export function calculateRefundAmount(
+  policy: string,
+  amountPaid: number,
+  daysUntilTrip: number,
+): number | null {
+  const days = Math.max(0, daysUntilTrip);
+  if (policy === "flexible" || policy === "moderate") {
+    if (days >= 7) return amountPaid;
+    if (days >= 3) return Math.round(amountPaid * 0.5 * 100) / 100;
+    return 0;
+  }
+  if (policy === "strict") {
+    if (days >= 14) return amountPaid;
+    if (days >= 7) return Math.round(amountPaid * 0.5 * 100) / 100;
+    return 0;
+  }
+  return null;
+}

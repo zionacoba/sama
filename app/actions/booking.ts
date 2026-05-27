@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
+import { calculateRefundAmount } from "@/lib/cancellation-policies";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
@@ -208,6 +209,7 @@ export async function createBooking(input: CreateBookingInput) {
           year: "numeric",
           month: "long",
           day: "numeric",
+          timeZone: "Asia/Manila",
         }).format(new Date(trip.date_start));
 
         const orgBookingRef = newBooking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
@@ -260,6 +262,7 @@ export async function createBooking(input: CreateBookingInput) {
         year: "numeric",
         month: "long",
         day: "numeric",
+        timeZone: "Asia/Manila",
       }).format(new Date(trip.date_start));
 
       const bookingRef = newBooking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
@@ -388,6 +391,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
       year: "numeric",
       month: "long",
       day: "numeric",
+      timeZone: "Asia/Manila",
     }).format(new Date(trip.date_start));
 
     if (status === "confirmed") {
@@ -403,7 +407,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
           <p>Join the group chat for trip updates and coordination:<br>
           <a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>
           <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
-          ` : ""}
+          ` : `<p>Your organizer will share group chat details with you soon.</p>`}
           <p>They will be in touch with trip details closer to the date. You can view your booking at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/profile">sama.com.ph/profile</a>.</p>
           <p>— The Sama Team</p>
         `,
@@ -514,7 +518,7 @@ export async function cancelBooking(bookingId: number) {
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, slots, status, email, full_name, user_id")
+    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -531,7 +535,7 @@ export async function cancelBooking(bookingId: number) {
 
   const { data: trip } = await admin
     .from("trips")
-    .select("id, title, date_start, organizer_id")
+    .select("id, title, date_start, organizer_id, cancellation_policy")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -541,12 +545,82 @@ export async function cancelBooking(bookingId: number) {
       p_slots_requested: booking.slots,
     });
 
+    // Auto-notify the first waitlisted person now that a slot has freed up.
+    try {
+      const { data: firstWaiting } = await admin
+        .from("waitlist")
+        .select("id, full_name, email, trips(title, slug)")
+        .eq("trip_id", trip.id)
+        .eq("notified", false)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (firstWaiting) {
+        type TripRef = { title: string; slug: string };
+        const waitlistTrip = firstWaiting.trips as unknown as TripRef | null;
+        if (waitlistTrip) {
+          await resend.emails.send({
+            from: FROM_ADDRESS,
+            to: firstWaiting.email,
+            replyTo: REPLY_TO_ADDRESS,
+            subject: `A slot opened up — ${waitlistTrip.title}`,
+            html: `
+              <p>Hi ${escapeHtml(firstWaiting.full_name)},</p>
+              <p>Good news! A slot has opened up for <strong>${escapeHtml(waitlistTrip.title)}</strong>. Book now before it fills up again:</p>
+              <p><a href="${SITE_URL}/trips/${waitlistTrip.slug}">${SITE_URL.replace("https://", "")}/trips/${waitlistTrip.slug}</a></p>
+              <p>— The Sama Team</p>
+            `,
+          });
+          await admin.from("waitlist").update({ notified: true }).eq("id", firstWaiting.id);
+        }
+      }
+    } catch (err) {
+      console.error("[email] failed to notify waitlist after cancellation", err);
+    }
+
+    // Calculate refund based on cancellation policy.
+    const daysUntilTrip = Math.floor(
+      (new Date(trip.date_start).getTime() - Date.now()) / 86_400_000,
+    );
+    const amountPaid =
+      booking.payment_option === "downpayment" && booking.amount_due != null
+        ? booking.amount_due
+        : (booking.total_amount ?? 0);
+    const refundAmount = calculateRefundAmount(
+      trip.cancellation_policy ?? "flexible",
+      amountPaid,
+      daysUntilTrip,
+    );
+
+    if (refundAmount !== null) {
+      await admin
+        .from("bookings")
+        .update({ refund_amount: refundAmount })
+        .eq("id", bookingId);
+    }
+
+    const fmtCurrency = (n: number) =>
+      new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+        maximumFractionDigits: 0,
+      }).format(n);
+
+    const refundLine =
+      refundAmount === null
+        ? `<p>If you are eligible for a refund, please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> with your booking details and we'll process it for you.</p>`
+        : refundAmount > 0
+          ? `<p>Based on our cancellation policy, your refund will be <strong>${fmtCurrency(refundAmount)}</strong>. Please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> to process it within 5–7 business days.</p>`
+          : `<p>Based on our cancellation policy, this cancellation is not eligible for a refund.</p>`;
+
     try {
       const tripDate = new Intl.DateTimeFormat("en-PH", {
         weekday: "long",
         year: "numeric",
         month: "long",
         day: "numeric",
+        timeZone: "Asia/Manila",
       }).format(new Date(trip.date_start));
 
       if (trip.organizer_id) {
@@ -578,7 +652,8 @@ export async function cancelBooking(bookingId: number) {
         subject: `Booking cancelled: ${trip.title}`,
         html: `
           <p>Hi ${escapeHtml(booking.full_name)},</p>
-          <p>Your booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled. If you are eligible for a refund, please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> with your booking details and we'll process it for you.</p>
+          <p>Your booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled.</p>
+          ${refundLine}
           <p>— The Sama Team</p>
         `,
       });
@@ -591,7 +666,8 @@ export async function cancelBooking(bookingId: number) {
           subject: `[Admin] Booking cancelled: ${escapeHtml(booking.full_name)} — ${trip.title}`,
           html: `
             <p><strong>${escapeHtml(booking.full_name)}</strong> cancelled their booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}.</p>
-            <p>If a refund is owed, process it and reply to the participant at <a href="mailto:${escapeHtml(booking.email)}">${escapeHtml(booking.email)}</a>.</p>
+            <p>Refund: ${refundAmount === null ? "Custom policy — manual review needed." : refundAmount > 0 ? fmtCurrency(refundAmount) : "Not eligible."}</p>
+            <p>Reply to the participant at <a href="mailto:${escapeHtml(booking.email)}">${escapeHtml(booking.email)}</a>.</p>
           `,
         });
       } catch (adminErr) {
