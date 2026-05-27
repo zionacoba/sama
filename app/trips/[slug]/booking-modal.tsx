@@ -91,10 +91,7 @@ export function BookingModal({
   const [waiverError, setWaiverError] = useState(false);
   const [platformWaiverAccepted, setPlatformWaiverAccepted] = useState(false);
   const [platformWaiverError, setPlatformWaiverError] = useState(false);
-  const [bookingStatus, setBookingStatus] = useState<"confirmed" | "pending" | null>(null);
   const [paymentOption, setPaymentOption] = useState<"full" | "downpayment">("full");
-  const [participantTokens, setParticipantTokens] = useState<{ slotIndex: number; token: string }[]>([]);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
   const totalAmount = unitPrice * slots;
@@ -218,10 +215,7 @@ export function BookingModal({
     setPlatformWaiverError(false);
     setError(null);
     setSuccess(false);
-    setBookingStatus(null);
     setPaymentOption("full");
-    setParticipantTokens([]);
-    setCopiedIndex(null);
   }
 
   function handleClose() {
@@ -274,11 +268,16 @@ export function BookingModal({
         return;
       }
 
-      setBookingStatus((result.status ?? "pending") as "confirmed" | "pending");
-      if (result.participantTokens) {
-        setParticipantTokens(result.participantTokens);
+      if (result.checkoutUrl) {
+        setSuccess(true);
+        setTimeout(() => {
+          window.location.href = result.checkoutUrl!;
+        }, 1500);
+      } else {
+        setError(
+          `Booking created but payment link failed. Please contact support at sama.com.ph@gmail.com with your booking reference: ${result.bookingRef}`
+        );
       }
-      setSuccess(true);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -326,95 +325,26 @@ export function BookingModal({
 
           <div className="relative z-10 flex w-full flex-col max-h-[85dvh] rounded-t-2xl border border-stone-200 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl">
             <span id="booking-modal-title" className="sr-only">
-              {success ? (bookingStatus === "confirmed" ? "You're in!" : "Booking request sent") : "Book this trip"}
+              {success ? "Redirecting to payment" : "Book this trip"}
             </span>
             <button
               type="button"
-              onClick={loading ? undefined : handleClose}
+              onClick={loading || success ? undefined : handleClose}
               className="absolute right-3 top-3 z-10 rounded-lg p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800 disabled:opacity-40"
               aria-label="Close"
-              disabled={loading}
+              disabled={loading || success}
             >
               ✕
             </button>
 
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-10 pb-5">
               {success ? (
-                <div className="space-y-4">
-                  <p
-                    role="status"
-                    className="rounded-lg border border-trailhead/30 bg-trailhead-muted px-4 py-3 text-sm text-trailhead"
-                  >
-                    {bookingStatus === "confirmed"
-                      ? <>Your booking for <strong>{tripTitle}</strong> is confirmed. The organizer will be in touch with trip details closer to the date.</>
-                      : <>Your request to join <strong>{tripTitle}</strong> has been sent to the organizer. You&apos;ll receive a confirmation email once they review your booking. This usually takes 24&ndash;48 hours.</>
-                    }
+                <div className="flex flex-col items-center gap-4 py-10 text-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-trailhead border-t-transparent" />
+                  <p className="text-sm font-semibold text-stone-800">Redirecting to payment…</p>
+                  <p className="text-xs text-stone-500">
+                    You&apos;ll be taken to a secure payment page.<br />Please don&apos;t close this window.
                   </p>
-
-                  {participantTokens.length > 0 && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                      <p className="text-base font-bold text-stone-900">Share with your group</p>
-                      <p className="mt-1 text-sm text-stone-600">
-                        Each participant must confirm their own details and sign their individual waiver. Send them their personal link.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const allUrls = participantTokens
-                            .map(({ slotIndex, token }) =>
-                              `Participant ${slotIndex + 1}: ${window.location.origin}/join/${token}`
-                            )
-                            .join("\n");
-                          navigator.clipboard.writeText(allUrls).then(() => {
-                            setCopiedIndex(-1);
-                            setTimeout(() => setCopiedIndex(null), 2000);
-                          });
-                        }}
-                        className="mt-3 w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-trailhead hover:text-trailhead"
-                      >
-                        {copiedIndex === -1 ? "✓ All links copied!" : "Copy all links"}
-                      </button>
-                      <div className="mt-3 space-y-3">
-                        {participantTokens.map(({ slotIndex, token }) => {
-                          const url = `${window.location.origin}/join/${token}`;
-                          return (
-                            <div key={slotIndex} className="rounded-lg border border-stone-200 bg-white p-3">
-                              <p className="text-sm font-semibold text-stone-900">
-                                Send this link to Participant {slotIndex + 1}
-                              </p>
-                              <div className="mt-2 flex items-center gap-2">
-                                <input
-                                  readOnly
-                                  value={url}
-                                  className="min-w-0 flex-1 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 outline-none"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(url).then(() => {
-                                      setCopiedIndex(slotIndex);
-                                      setTimeout(() => setCopiedIndex(null), 2000);
-                                    });
-                                  }}
-                                  className="shrink-0 rounded-xl bg-trailhead px-3 py-2 text-sm font-semibold text-white transition hover:bg-trailhead-dark"
-                                >
-                                  {copiedIndex === slotIndex ? "Copied!" : "Copy"}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="w-full rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
-                  >
-                    Close
-                  </button>
                 </div>
               ) : (
                 <form id="booking-form" onSubmit={handleSubmit} className="space-y-3">

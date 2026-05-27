@@ -127,9 +127,6 @@ export async function createBooking(input: CreateBookingInput) {
     return { error: "Booking failed. Please try again or contact support." };
   }
 
-  const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
-  const bookingStatus = autoApprove ? "confirmed" : "pending";
-
   const { data: newBooking, error: insertError } = await admin
     .from("bookings")
     .insert({
@@ -140,7 +137,7 @@ export async function createBooking(input: CreateBookingInput) {
       phone: input.phone,
       slots: input.slots,
       total_amount: computedTotal,
-      status: bookingStatus,
+      status: "payment_pending",
       notes: input.notes,
       payment_option: input.paymentOption,
       amount_due: computedAmountDue,
@@ -193,145 +190,49 @@ export async function createBooking(input: CreateBookingInput) {
       ? participantRows.slice(1).map((p) => ({ slotIndex: p.slot_number, token: p.token }))
       : [];
 
+  // Create PayMongo payment link.
+  const bookingRef = newBooking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
+  const tripDateShort = new Intl.DateTimeFormat("en-PH", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "Asia/Manila",
+  }).format(new Date(trip.date_start));
+  const description = `Booking for ${trip.title} - ${tripDateShort}`;
+
+  let checkoutUrl: string | null = null;
   try {
-    if (trip?.organizer_id) {
-      const { data: organizer } = await admin
-        .from("organizers")
-        .select("email")
-        .eq("id", trip.organizer_id)
-        .maybeSingle();
+    const linkRes = await fetch(`${SITE_URL}/api/payments/create-link`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        bookingId: newBooking.id,
+        amount: computedAmountDue,
+        description,
+      }),
+    });
 
-      const organizerEmail = organizer?.email;
-
-      if (organizerEmail) {
-        const tripDate = new Intl.DateTimeFormat("en-PH", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          timeZone: "Asia/Manila",
-        }).format(new Date(trip.date_start));
-
-        const orgBookingRef = newBooking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
-
-        const participantsRow =
-          input.participants && input.participants.length > 1
-            ? `<li><strong>Participants:</strong> ${input.participants.map((n) => escapeHtml(n || "(unnamed)")).join(", ")}</li>`
-            : "";
-
-        const medicalRow = input.medicalNotes
-          ? `<li><strong>Medical / allergies:</strong> ${escapeHtml(input.medicalNotes)}</li>`
-          : "";
-
-        const fmtOrg = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
-        const paymentRow = input.paymentOption === "downpayment" && computedAmountDue < computedTotal
-          ? `<li><strong>Payment:</strong> ${fmtOrg(computedAmountDue)} downpayment (balance: ${fmtOrg(computedTotal - computedAmountDue)})</li>`
-          : `<li><strong>Payment:</strong> ${fmtOrg(computedTotal)} (full payment)</li>`;
-
-        await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: organizerEmail,
-          replyTo: REPLY_TO_ADDRESS,
-          subject: `New booking for ${trip.title}`,
-          html: `
-            <p>Hi,</p>
-            <p><strong>${escapeHtml(input.fullName)}</strong> (${input.email}) just booked <strong>${input.slots} slot${input.slots !== 1 ? "s" : ""}</strong> on your trip:</p>
-            <ul>
-              <li><strong>Booking ref:</strong> ${orgBookingRef}</li>
-              <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
-              <li><strong>Date:</strong> ${tripDate}</li>
-              ${participantsRow}
-              ${paymentRow}
-              <li><strong>Emergency contact:</strong> ${escapeHtml(input.emergencyContactName)} — ${escapeHtml(input.emergencyContactPhone)}</li>
-              ${medicalRow}
-              <li><strong>Waiver agreed:</strong> ${input.waiverAgreed ? "✓ Yes" : "✗ No"}</li>
-            </ul>
-            ${autoApprove
-              ? `<p>This booking was <strong>automatically confirmed</strong> (${trip.difficulty} trip).</p>`
-              : `<p>Log in to your <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/organizer/dashboard">organizer dashboard</a> to confirm or reject this booking.</p>`
-            }
-            <p>— The Sama Team</p>
-          `,
-        });
+    if (linkRes.ok) {
+      const linkData = await linkRes.json();
+      checkoutUrl = linkData.checkoutUrl ?? null;
+      if (linkData.linkId) {
+        await admin
+          .from("bookings")
+          .update({ payment_id: linkData.linkId })
+          .eq("id", newBooking.id);
       }
-    }
-
-    if (trip) {
-      const tripDate = new Intl.DateTimeFormat("en-PH", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        timeZone: "Asia/Manila",
-      }).format(new Date(trip.date_start));
-
-      const bookingRef = newBooking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
-      const fmt = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
-      const isDownpay = input.paymentOption === "downpayment" && computedAmountDue < computedTotal;
-      const amountLine = isDownpay
-        ? `<li><strong>Amount due now:</strong> ${fmt(computedAmountDue)} downpayment</li><li><strong>Remaining balance:</strong> ${fmt(computedTotal - computedAmountDue)}</li>`
-        : `<li><strong>Total amount:</strong> ${fmt(computedTotal)}</li>`;
-      const balanceNote = isDownpay
-        ? `<p>Your remaining balance of <strong>${fmt(computedTotal - computedAmountDue)}</strong> can be paid online through Sama or directly to your organizer on the day of the trip, whichever they prefer. Your organizer will let you know in the group chat.</p>`
-        : "";
-      const meetingLine = input.meetingPoint
-        ? `<li><strong>Meeting point:</strong> ${escapeHtml(input.meetingPoint)}</li>`
-        : "";
-
-      await resend.emails.send({
-        from: FROM_ADDRESS,
-        to: input.email,
-        replyTo: REPLY_TO_ADDRESS,
-        subject: autoApprove
-          ? `You're confirmed for ${trip.title}!`
-          : `Booking request received for ${trip.title}`,
-        html: autoApprove
-          ? `
-            <p>Hi ${escapeHtml(input.fullName)},</p>
-            <p>You're in! Your booking for <strong>${escapeHtml(trip.title)}</strong> is confirmed. Here's a summary:</p>
-            <ul>
-              <li><strong>Booking ref:</strong> ${bookingRef}</li>
-              <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
-              <li><strong>Date:</strong> ${tripDate}</li>
-              <li><strong>Slots booked:</strong> ${input.slots}</li>
-              ${amountLine}
-              ${meetingLine}
-            </ul>
-            ${balanceNote}
-            ${trip.messenger_gc_link ? `
-            <p>Join the group chat for trip updates and coordination:<br>
-            <a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>
-            <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
-            ` : ""}
-            <p>You can view your booking at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/profile">sama.com.ph/profile</a>.</p>
-            <p>— The Sama Team</p>
-          `
-          : `
-            <p>Hi ${escapeHtml(input.fullName)},</p>
-            <p>We've received your request to join <strong>${escapeHtml(trip.title)}</strong>. Here's a summary:</p>
-            <ul>
-              <li><strong>Booking ref:</strong> ${bookingRef}</li>
-              <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
-              <li><strong>Date:</strong> ${tripDate}</li>
-              <li><strong>Slots requested:</strong> ${input.slots}</li>
-              ${amountLine}
-              ${meetingLine}
-            </ul>
-            ${balanceNote}
-            <p>The organizer will review your request and confirm your spot. This usually takes 24–48 hours. You can track your booking at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/profile">sama.com.ph/profile</a>.</p>
-            <p>— The Sama Team</p>
-          `,
-      });
+    } else {
+      console.error("[createBooking] payment link creation failed:", linkRes.status);
     }
   } catch (err) {
-    console.error("[email] failed to send booking confirmation", err);
+    console.error("[createBooking] payment link error:", err);
   }
 
   revalidatePath(`/trips/${input.tripSlug}`);
   return {
     success: true as const,
-    status: bookingStatus,
-    participantTokens: participantTokens.length > 0 ? participantTokens : undefined,
+    checkoutUrl,
+    bookingRef,
   };
 }
 
