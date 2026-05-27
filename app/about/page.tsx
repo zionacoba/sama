@@ -22,7 +22,10 @@ export default function AboutPage() {
 
       <main>
         {/* Hero */}
-        <section className="bg-trailhead px-4 py-24 text-center sm:py-32">
+        <section
+          className="bg-trailhead px-4 pb-24 pt-32 text-center sm:pb-32 sm:pt-40"
+          style={{ clipPath: "polygon(0 0, 100% 0, 100% 85%, 0 100%)" }}
+        >
           <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
             Adventure, together.
           </h1>
@@ -32,24 +35,6 @@ export default function AboutPage() {
             backbone of the outdoor industry.
           </p>
         </section>
-
-        {/* Stat strip */}
-        <div className="border-y border-stone-100 bg-white px-4 py-10">
-          <div className="mx-auto grid max-w-3xl grid-cols-1 gap-8 text-center sm:grid-cols-3 sm:gap-4">
-            <div>
-              <p className="text-2xl font-bold text-stone-900">15-20</p>
-              <p className="mt-1 text-sm font-semibold text-trailhead">Founding Partners</p>
-            </div>
-            <div className="sm:border-x sm:border-stone-100">
-              <p className="text-2xl font-bold text-stone-900">Trips across the Philippines</p>
-              <p className="mt-1 text-sm font-semibold text-trailhead">From Batanes to Tawi-Tawi</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-stone-900">Built for the community</p>
-              <p className="mt-1 text-sm font-semibold text-trailhead">By people who love it</p>
-            </div>
-          </div>
-        </div>
 
         {/* Our Name */}
         <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
