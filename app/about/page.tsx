@@ -22,19 +22,60 @@ export default function AboutPage() {
 
       <main>
         {/* Hero */}
-        <section
-          className="bg-trailhead px-4 pb-24 pt-32 text-center sm:pb-32 sm:pt-40"
-          style={{ clipPath: "polygon(0 0, 100% 0, 100% 85%, 0 100%)" }}
-        >
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-            Adventure, together.
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-white/80">
-            The first marketplace built exclusively for Philippine outdoor adventures. We connect
-            people to trusted organizers, protect the places they love, and build the professional
-            backbone of the outdoor industry.
-          </p>
+        <section className="relative bg-trailhead px-4 pb-24 pt-32 text-center sm:pb-32 sm:pt-40">
+          {/* Dot grid texture */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+            <svg className="h-full w-full opacity-10" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="hero-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <circle cx="2" cy="2" r="1.5" fill="white" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#hero-dots)" />
+            </svg>
+          </div>
+          {/* Content */}
+          <div className="relative">
+            <span className="text-6xl" aria-hidden>⛰</span>
+            <h1 className="mt-6 text-5xl font-bold tracking-tight text-white sm:text-7xl">
+              Adventure, together.
+            </h1>
+            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/80">
+              The first marketplace built exclusively for Philippine outdoor adventures. We connect
+              people to trusted organizers, protect the places they love, and build the professional
+              backbone of the outdoor industry.
+            </p>
+            <div className="mt-8">
+              <Link
+                href="/trips"
+                className="inline-flex items-center justify-center rounded-xl bg-white px-8 py-3 text-sm font-semibold text-trailhead shadow-sm transition hover:bg-stone-100"
+              >
+                Browse trips
+              </Link>
+            </div>
+          </div>
         </section>
+
+        {/* Highlight cards */}
+        <div className="border-b border-stone-100 bg-white px-4 py-10">
+          <div className="mx-auto grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-xl border border-trailhead/10 bg-trailhead/5 px-6 py-5">
+              <p className="text-xl font-bold text-stone-900">15-20</p>
+              <p className="mt-1 text-sm font-semibold text-trailhead">Founding Organizers</p>
+              <p className="mt-1 text-xs text-stone-400">Vetted, accountable partners</p>
+            </div>
+            <div className="rounded-xl border border-trailhead/10 bg-trailhead/5 px-6 py-5">
+              <p className="text-xl font-bold text-stone-900">Destinations</p>
+              <p className="mt-1 text-sm font-semibold text-trailhead">From Batanes to Tawi-Tawi</p>
+              <p className="mt-1 text-xs text-stone-400">Trips across the Philippines</p>
+            </div>
+            <div className="rounded-xl border border-trailhead/10 bg-trailhead/5 px-6 py-5">
+              <p className="text-xl font-bold text-stone-900">Built for</p>
+              <p className="mt-1 text-sm font-semibold text-trailhead">The outdoor community</p>
+              <p className="mt-1 text-xs text-stone-400">By people who love it</p>
+            </div>
+          </div>
+        </div>
 
         {/* Our Name */}
         <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
