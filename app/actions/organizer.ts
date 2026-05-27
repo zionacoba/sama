@@ -79,8 +79,8 @@ export async function applyToBeOrganizer(
         <p>— The Sama Team</p>
       `,
     });
-  } catch {
-    // Email failure is non-fatal
+  } catch (err) {
+    console.error("[email] failed to send organizer application confirmation", err);
   }
 
   try {
@@ -99,8 +99,8 @@ export async function applyToBeOrganizer(
         <p><a href="https://sama.ph/admin">Review it in the admin dashboard</a></p>
       `,
     });
-  } catch {
-    // Email failure is non-fatal
+  } catch (err) {
+    console.error("[email] failed to notify admin of new organizer application", err);
   }
 
   return { success: true };

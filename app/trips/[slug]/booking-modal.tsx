@@ -71,6 +71,8 @@ export function BookingModal({
   const [loading, setLoading] = useState(false);
   const [waiverExpanded, setWaiverExpanded] = useState(false);
   const sessionRef = useRef<Session | null>(null);
+  const openRef = useRef(false);
+  openRef.current = open;
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -139,7 +141,11 @@ export function BookingModal({
       if (session?.user) applyProfile(session.user.id);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT" && openRef.current) {
+        setError("Your session has expired. Please close this form and log in again.");
+        return;
+      }
       applySession(session);
       if (session?.user) applyProfile(session.user.id);
     });
@@ -242,7 +248,7 @@ export function BookingModal({
         phone,
         slots,
         totalAmount,
-        notes: notes.trim() || null,
+        notes: null,
         paymentOption,
         amountDue,
         participants: slots > 1 ? participants : null,
@@ -623,10 +629,10 @@ export function BookingModal({
                     </div>
                   )}
 
-                  {/* Combined notes */}
+                  {/* Medical / dietary notes */}
                   <div>
                     <label htmlFor="booking-notes" className="block text-sm font-medium text-stone-700">
-                      Notes for organizer <span className="text-stone-400">(optional)</span>
+                      Medical / dietary notes <span className="text-stone-400">(optional)</span>
                     </label>
                     <textarea
                       id="booking-notes"
@@ -634,7 +640,7 @@ export function BookingModal({
                       maxLength={500}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Medical conditions, allergies, special requests, or questions"
+                      placeholder="Allergies, medications, dietary restrictions, or other health info"
                       className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
                   </div>

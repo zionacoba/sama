@@ -151,6 +151,7 @@ function BookingCard({
           <span>{formatDate(trip.date_start)}{trip.duration && ` · ${trip.duration}`}</span>
           <span>{booking.slots} slot{booking.slots !== 1 ? "s" : ""}</span>
           <span>{formatCurrency(booking.total_amount)}</span>
+          <span className="font-mono text-stone-400">#{booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0")}</span>
           {booking.payment_option === "downpayment" && booking.amount_due != null && (
             booking.balance_collected ? (
               <span className="font-semibold text-emerald-600">Fully paid</span>

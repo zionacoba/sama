@@ -261,6 +261,7 @@ export default async function TripDetailPage({ params }: PageProps) {
     { data: siblingRunsData },
     { data: userOrgData },
     { data: existingWaitlistEntry },
+    { data: existingBooking },
   ] = await Promise.all([
     tripData.organizer_id
       ? supabase
@@ -295,12 +296,17 @@ export default async function TripDetailPage({ params }: PageProps) {
     user && tripData.remaining_slots === 0
       ? supabase.from("waitlist").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).maybeSingle()
       : Promise.resolve({ data: null }),
+    user
+      ? createSupabaseAdminClient().from("bookings").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).in("status", ["confirmed", "pending"]).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   const isOwnTrip =
     !!userOrgData?.id &&
     !!tripData.organizer_id &&
     String(userOrgData.id) === String(tripData.organizer_id);
+
+  const isPast = new Date(tripData.date_start) < new Date();
 
   const reviews = (reviewsData ?? []) as unknown as Review[];
   const totalReviewCount = reviewCountResult.count ?? reviews.length;
@@ -577,6 +583,15 @@ export default async function TripDetailPage({ params }: PageProps) {
                     Edit trip
                   </Link>
                 </div>
+              ) : existingBooking ? (
+                <div className="rounded-xl bg-emerald-50 px-3 py-3">
+                  <p className="text-sm font-semibold text-emerald-800">You&apos;re already booked!</p>
+                  <Link href="/profile" className="mt-1 block text-xs text-emerald-700 underline-offset-4 hover:underline">
+                    View booking →
+                  </Link>
+                </div>
+              ) : isPast ? (
+                <p className="text-sm text-stone-500">This trip has already taken place.</p>
               ) : tripData.remaining_slots === 0 ? (
                 tripData.waitlist_enabled !== false ? (
                   <WaitlistModal
@@ -626,7 +641,18 @@ export default async function TripDetailPage({ params }: PageProps) {
                 </p>
               </div>
               <div className="w-44 shrink-0">
-                {tripData.remaining_slots === 0 ? (
+                {existingBooking ? (
+                  <div className="rounded-xl bg-emerald-50 px-3 py-2.5 text-center">
+                    <p className="text-xs font-semibold text-emerald-800">You&apos;re booked!</p>
+                    <Link href="/profile" className="text-xs text-emerald-700 underline-offset-4 hover:underline">
+                      View booking →
+                    </Link>
+                  </div>
+                ) : isPast ? (
+                  <button disabled className="w-full cursor-not-allowed rounded-xl bg-stone-200 px-5 py-3 text-sm font-semibold text-stone-500">
+                    Trip ended
+                  </button>
+                ) : tripData.remaining_slots === 0 ? (
                   tripData.waitlist_enabled !== false ? (
                     <WaitlistModal
                       compact

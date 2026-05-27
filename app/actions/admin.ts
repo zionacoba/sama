@@ -44,8 +44,8 @@ export async function approveOrganizer(id: string): Promise<void> {
         <p>— The Sama Team</p>
       `,
     });
-  } catch {
-    // Email failure is non-fatal
+  } catch (err) {
+    console.error("[email] failed to send organizer approval email", err);
   }
 
   revalidatePath("/admin");
@@ -80,8 +80,8 @@ export async function rejectOrganizer(id: string): Promise<void> {
         <p>— The Sama Team</p>
       `,
     });
-  } catch {
-    // Email failure is non-fatal
+  } catch (err) {
+    console.error("[email] failed to send organizer rejection email", err);
   }
 
   revalidatePath("/admin");

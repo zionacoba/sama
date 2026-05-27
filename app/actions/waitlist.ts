@@ -90,8 +90,8 @@ export async function joinWaitlist(
         });
       }
     }
-  } catch {
-    // Email failure is non-fatal
+  } catch (err) {
+    console.error("[email] failed to notify organizer of waitlist entry", err);
   }
 
   revalidatePath(`/trips/${input.tripSlug}`);
@@ -144,8 +144,8 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
         <p>— The Sama Team</p>
       `,
     });
-  } catch {
-    // Email failure is non-fatal
+  } catch (err) {
+    console.error("[email] failed to notify waitlist entry of open slot", err);
   }
 
   await admin.from("waitlist").update({ notified: true }).eq("id", id);

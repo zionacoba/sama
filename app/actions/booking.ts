@@ -83,6 +83,18 @@ export async function createBooking(input: CreateBookingInput) {
     return { error: "You already have a booking for this trip." };
   }
 
+  // Prevent organizers from booking their own trips.
+  const { data: selfOrganizer } = await admin
+    .from("organizers")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("id", trip.organizer_id)
+    .maybeSingle();
+
+  if (selfOrganizer) {
+    return { error: "Organizers cannot book their own trips." };
+  }
+
   const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
   const { count: recentCount } = await admin
     .from("bookings")
@@ -323,8 +335,8 @@ export async function createBooking(input: CreateBookingInput) {
           `,
       });
     }
-  } catch {
-    // Email failure is non-fatal
+  } catch (err) {
+    console.error("[email] failed to send booking confirmation", err);
   }
 
   revalidatePath(`/trips/${input.tripSlug}`);
@@ -430,8 +442,8 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
         `,
       });
     }
-  } catch {
-    // Email failure is non-fatal
+  } catch (err) {
+    console.error("[email] failed to send booking status update", err);
   }
 
   revalidatePath("/organizer/dashboard");
@@ -564,8 +576,8 @@ export async function cancelBooking(bookingId: number) {
           <p>— The Sama Team</p>
         `,
       });
-    } catch {
-      // Email failure is non-fatal
+    } catch (err) {
+      console.error("[email] failed to send cancellation email", err);
     }
   }
 

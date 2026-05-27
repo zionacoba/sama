@@ -124,6 +124,9 @@ export async function createTrip(
   const safePrice = isNaN(price) ? 0 : price;
   const safeTotalSlots = isNaN(total_slots) ? 0 : total_slots;
   const safeDateStart = is_template ? "2099-12-31" : (date_start || "2099-12-31");
+  // Free trips cannot have a downpayment requirement.
+  const effectivePaymentType = safePrice === 0 ? "full" : payment_type;
+  const effectiveMinDownpayment = safePrice === 0 ? null : min_downpayment;
 
   const slug = `${slugify(title)}-${Date.now().toString(36)}`;
 
@@ -146,8 +149,8 @@ export async function createTrip(
     photos,
     status,
     organizer_id: organizer.id,
-    payment_type,
-    min_downpayment,
+    payment_type: effectivePaymentType,
+    min_downpayment: effectiveMinDownpayment,
     downpayment_cutoff_days,
     cancellation_policy,
     cancellation_policy_custom,
@@ -302,6 +305,19 @@ export async function updateTrip(
     }
   }
 
+  // Block moving a trip with active bookings back to draft.
+  if (status === "draft" && existing.status === "active") {
+    const adminForDraftCheck = createSupabaseAdminClient();
+    const { count: activeBookingCount } = await adminForDraftCheck
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("trip_id", tripId)
+      .in("status", ["confirmed", "pending"]);
+    if ((activeBookingCount ?? 0) > 0) {
+      return { error: "This trip has confirmed bookings and cannot be moved to draft. Cancel the trip instead." };
+    }
+  }
+
   const slotDiff = (isDraft || is_template) ? 0 : total_slots - existing.total_slots;
   const remaining_slots = (isDraft || is_template)
     ? existing.remaining_slots
@@ -311,6 +327,9 @@ export async function updateTrip(
   const safePrice = isDraft && isNaN(price) ? existing.price ?? 0 : price;
   const safeTotalSlots = isDraft && isNaN(total_slots) ? existing.total_slots ?? 0 : total_slots;
   const safeDateStart = is_template ? "2099-12-31" : (isDraft && !date_start ? existing.date_start ?? "2099-12-31" : date_start);
+  // Free trips cannot have a downpayment requirement.
+  const effectivePaymentType = safePrice === 0 ? "full" : payment_type;
+  const effectiveMinDownpayment = safePrice === 0 ? null : min_downpayment;
 
   const { error } = await supabase
     .from("trips")
@@ -331,8 +350,8 @@ export async function updateTrip(
       what_to_bring: what_to_bring || null,
       photos,
       status,
-      payment_type,
-      min_downpayment,
+      payment_type: effectivePaymentType,
+      min_downpayment: effectiveMinDownpayment,
       downpayment_cutoff_days,
       cancellation_policy,
       cancellation_policy_custom,
@@ -379,8 +398,8 @@ export async function updateTrip(
 
         const changeHtml = `<ul>${changeLines.join("")}</ul>`;
 
-        try {
-          for (const booking of affectedBookings) {
+        for (const booking of affectedBookings) {
+          try {
             await resend.emails.send({
               from: FROM_ADDRESS,
               to: booking.email,
@@ -395,9 +414,9 @@ export async function updateTrip(
                 <p>— The Sama Team</p>
               `,
             });
+          } catch (err) {
+            console.error("[email] failed to notify booking change", booking.id, err);
           }
-        } catch {
-          // Email failure is non-fatal
         }
       }
     }
@@ -413,8 +432,8 @@ export async function updateTrip(
       .eq("notified", false);
 
     if (waitlistEntries && waitlistEntries.length > 0) {
-      try {
-        for (const entry of waitlistEntries) {
+      for (const entry of waitlistEntries) {
+        try {
           await resend.emails.send({
             from: FROM_ADDRESS,
             to: entry.email,
@@ -427,10 +446,14 @@ export async function updateTrip(
               <p>— The Sama Team</p>
             `,
           });
-          await admin.from("waitlist").update({ notified: true }).eq("id", entry.id);
+        } catch (err) {
+          console.error("[email] failed to notify waitlist slot available", entry.id, err);
         }
-      } catch {
-        // Email failure is non-fatal
+        try {
+          await admin.from("waitlist").update({ notified: true }).eq("id", entry.id);
+        } catch (err) {
+          console.error("[db] failed to mark waitlist notified", entry.id, err);
+        }
       }
     }
   }
@@ -497,8 +520,8 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
 
   await admin.from("waitlist").delete().eq("trip_id", trip.id);
 
-  try {
-    for (const booking of bookings ?? []) {
+  for (const booking of bookings ?? []) {
+    try {
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: booking.email,
@@ -512,8 +535,12 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
           <p>— The Sama Team</p>
         `,
       });
+    } catch (err) {
+      console.error("[email] failed to notify booking cancellation", booking.id, err);
     }
-    for (const entry of waitlistEntries ?? []) {
+  }
+  for (const entry of waitlistEntries ?? []) {
+    try {
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: entry.email,
@@ -526,9 +553,9 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
           <p>— The Sama Team</p>
         `,
       });
+    } catch (err) {
+      console.error("[email] failed to notify waitlist cancellation", entry.id, err);
     }
-  } catch {
-    // Email failure is non-fatal
   }
 
   revalidatePath("/trips");
