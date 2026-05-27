@@ -33,6 +33,24 @@ export default function AboutPage() {
           </p>
         </section>
 
+        {/* Stat strip */}
+        <div className="border-y border-stone-100 bg-white px-4 py-10">
+          <div className="mx-auto grid max-w-3xl grid-cols-1 gap-8 text-center sm:grid-cols-3 sm:gap-4">
+            <div>
+              <p className="text-2xl font-bold text-stone-900">15-20</p>
+              <p className="mt-1 text-sm font-semibold text-trailhead">Founding Partners</p>
+            </div>
+            <div className="sm:border-x sm:border-stone-100">
+              <p className="text-2xl font-bold text-stone-900">Trips across the Philippines</p>
+              <p className="mt-1 text-sm font-semibold text-trailhead">From Batanes to Tawi-Tawi</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-stone-900">Built for the community</p>
+              <p className="mt-1 text-sm font-semibold text-trailhead">By people who love it</p>
+            </div>
+          </div>
+        </div>
+
         {/* Our Name */}
         <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
@@ -47,6 +65,9 @@ export default function AboutPage() {
             together. Every decision we make asks: does this bring people closer, or push them
             apart?
           </p>
+          <p className="mt-4 text-base leading-relaxed text-stone-500 sm:text-lg">
+            The name is not just a word. It is a standard we hold ourselves to.
+          </p>
         </section>
 
         {/* Mission */}
@@ -56,12 +77,18 @@ export default function AboutPage() {
               Mission
             </h2>
             <h3 className="mt-3 text-2xl font-bold text-stone-900 sm:text-3xl">
-              What we&apos;re building
+              What we are building
             </h3>
             <p className="mt-4 text-base leading-relaxed text-stone-500 sm:text-lg">
-              A Philippines where outdoor adventures are led by accountable, professional
-              organizers, where every trail is respected, every local guide is valued, and
-              every adventure leaves the destination better than it was found.
+              We are not just a booking platform. We are building the professional backbone of
+              the Philippine outdoor adventure industry.
+            </p>
+            <p className="mt-4 text-base leading-relaxed text-stone-500 sm:text-lg">
+              That means accountable organizers. Responsible trails. Local guides who are valued,
+              not invisible. And adventures that leave every destination better than they were found.
+            </p>
+            <p className="mt-4 text-base leading-relaxed text-stone-500 sm:text-lg">
+              A Philippines where the outdoors is for everyone who loves it.
             </p>
           </div>
         </section>
@@ -110,6 +137,44 @@ export default function AboutPage() {
           </div>
         </section>
 
+        {/* Who we are for */}
+        <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
+            Who we are for
+          </h2>
+          <div className="mt-8 space-y-8">
+            <p className="text-base leading-relaxed text-stone-500 sm:text-lg">
+              For first-time hikers who want to experience the outdoors without feeling lost or
+              intimidated. Sama makes it easy to find the right trip, the right organizer, and the
+              right experience for where you are right now.
+            </p>
+            <p className="text-base leading-relaxed text-stone-500 sm:text-lg">
+              For experienced adventurers who want to explore more of the Philippines with
+              organizers who know what they are doing. Every organizer on Sama is vetted, named,
+              and accountable.
+            </p>
+            <p className="text-base leading-relaxed text-stone-500 sm:text-lg">
+              For organizers who care about doing this right. Sama is not for everyone. It is for
+              the ones who take safety seriously, respect the environment, and want to build
+              something lasting.
+            </p>
+          </div>
+        </section>
+
+        {/* Mission quote */}
+        <section className="bg-trailhead px-4 py-20 text-center sm:py-24">
+          <blockquote className="mx-auto max-w-2xl">
+            <p className="text-2xl font-bold leading-snug text-white sm:text-3xl">
+              &ldquo;The outdoors of the Philippines is one of the most extraordinary in the
+              world. Sama exists to make sure it stays that way, and that every Filipino can
+              access it.&rdquo;
+            </p>
+            <footer className="mt-6 text-sm font-semibold uppercase tracking-widest text-white/60">
+              Sama. Adventure, together.
+            </footer>
+          </blockquote>
+        </section>
+
         {/* Contact */}
         <section className="bg-stone-50">
           <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
@@ -120,8 +185,8 @@ export default function AboutPage() {
               Get in touch
             </h3>
             <p className="mt-4 text-base leading-relaxed text-stone-500 sm:text-lg">
-              Have a question, a concern, or want to partner with us? We would love to hear
-              from you.
+              We are a small team building something meaningful. If you have a question, an idea,
+              or just want to say hello, we would love to hear from you.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
               <a
