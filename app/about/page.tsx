@@ -5,11 +5,11 @@ import { Navbar } from "@/app/components/navbar";
 export const metadata: Metadata = {
   title: "About Sama",
   description:
-    "Learn about Sama -- the Philippine outdoor adventure marketplace connecting people to trusted organizers.",
+    "Learn about Sama, the Philippine outdoor adventure marketplace connecting people to trusted organizers.",
   openGraph: {
     title: "About Sama",
     description:
-      "Learn about Sama -- the Philippine outdoor adventure marketplace connecting people to trusted organizers.",
+      "Learn about Sama, the Philippine outdoor adventure marketplace connecting people to trusted organizers.",
     url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/about`,
     type: "website",
   },
@@ -22,21 +22,16 @@ export default function AboutPage() {
 
       <main>
         {/* Hero */}
-        <section className="mx-auto max-w-3xl px-4 py-20 text-center sm:py-28">
-          <h1 className="text-4xl font-bold tracking-tight text-stone-900 sm:text-5xl">
+        <section className="bg-trailhead px-4 py-24 text-center sm:py-32">
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
             Adventure, together.
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-stone-500">
-            Sama is a Philippine outdoor adventure marketplace -- connecting people to trusted
+          <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-white/80">
+            Sama is a Philippine outdoor adventure marketplace, connecting people to trusted
             organizers, protecting the places they love, and building the professional backbone
             of the outdoor industry.
           </p>
         </section>
-
-        {/* Divider */}
-        <div className="mx-auto max-w-3xl px-4">
-          <hr className="border-stone-100" />
-        </div>
 
         {/* Our Name */}
         <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
@@ -65,50 +60,52 @@ export default function AboutPage() {
             </h3>
             <p className="mt-4 text-base leading-relaxed text-stone-500 sm:text-lg">
               A Philippines where outdoor adventures are led by accountable, professional
-              organizers -- where every trail is respected, every local guide is valued, and
+              organizers, where every trail is respected, every local guide is valued, and
               every adventure leaves the destination better than it was found.
             </p>
           </div>
         </section>
 
         {/* Values */}
-        <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
-            Values
-          </h2>
-          <div className="mt-8 space-y-10">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
-                Sama
-              </p>
-              <h3 className="mt-1.5 text-xl font-bold text-stone-900">Together</h3>
-              <p className="mt-3 text-base leading-relaxed text-stone-500">
-                We believe outdoor adventures are better when shared. Sama exists to strengthen
-                connections between joiners, organizers, and the places they visit.
-              </p>
-            </div>
+        <section className="bg-trailhead/5">
+          <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
+              Values
+            </h2>
+            <div className="mt-8 space-y-10">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
+                  Sama
+                </p>
+                <h3 className="mt-1.5 text-xl font-bold text-stone-900">Together</h3>
+                <p className="mt-3 text-base leading-relaxed text-stone-500">
+                  We believe outdoor adventures are better when shared. Sama exists to strengthen
+                  connections between joiners, organizers, and the places they visit.
+                </p>
+              </div>
 
-            <div className="border-t border-stone-100 pt-10">
-              <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
-                Responsibilidad
-              </p>
-              <h3 className="mt-1.5 text-xl font-bold text-stone-900">Responsibility</h3>
-              <p className="mt-3 text-base leading-relaxed text-stone-500">
-                The trails and mountains of the Philippines are not ours to use carelessly. We
-                promote responsible outdoor activity that respects nature and leaves every
-                destination better than we found it.
-              </p>
-            </div>
+              <div className="border-t border-stone-200 pt-10">
+                <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
+                  Responsibilidad
+                </p>
+                <h3 className="mt-1.5 text-xl font-bold text-stone-900">Responsibility</h3>
+                <p className="mt-3 text-base leading-relaxed text-stone-500">
+                  The trails and mountains of the Philippines are not ours to use carelessly. We
+                  promote responsible outdoor activity that respects nature and leaves every
+                  destination better than we found it.
+                </p>
+              </div>
 
-            <div className="border-t border-stone-100 pt-10">
-              <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
-                Malasakit
-              </p>
-              <h3 className="mt-1.5 text-xl font-bold text-stone-900">Care</h3>
-              <p className="mt-3 text-base leading-relaxed text-stone-500">
-                We care about everyone the adventure touches -- the joiners, the organizers, the
-                local guides, and the communities behind every trail.
-              </p>
+              <div className="border-t border-stone-200 pt-10">
+                <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
+                  Malasakit
+                </p>
+                <h3 className="mt-1.5 text-xl font-bold text-stone-900">Care</h3>
+                <p className="mt-3 text-base leading-relaxed text-stone-500">
+                  We care about everyone the adventure touches: joiners, organizers, local guides,
+                  and the communities behind every trail.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -145,7 +142,7 @@ export default function AboutPage() {
       </main>
 
       <footer className="border-t border-stone-200 bg-white px-4 py-8 text-center text-sm text-stone-400">
-        <p>Sama is built for the Philippine outdoor community -- by people who love it.</p>
+        <p>Sama is built for the Philippine outdoor community, by people who love it.</p>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
           <Link href="/" className="underline-offset-4 hover:text-trailhead hover:underline">
             Home
