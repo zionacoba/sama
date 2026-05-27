@@ -120,7 +120,9 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
 
   if (!trip) redirect("/organizer/dashboard");
 
-  const { data: bookingsData } = await supabase
+  const admin = createSupabaseAdminClient();
+
+  const { data: bookingsData } = await admin
     .from("bookings")
     .select(
       "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, balance_collected, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point"
@@ -129,8 +131,6 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
     .order("created_at", { ascending: false });
 
   const bookings = (bookingsData ?? []) as Booking[];
-
-  const admin = createSupabaseAdminClient();
   const { data: waitlistData } = await admin
     .from("waitlist")
     .select("id, full_name, email, phone, slots, created_at, notified")
@@ -142,7 +142,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
   const participantsMap = new Map<number, BookingParticipant[]>();
 
   if (multiSlotIds.length > 0) {
-    const { data: participantsData } = await supabase
+    const { data: participantsData } = await admin
       .from("booking_participants")
       .select("booking_id, slot_number, full_name, completed")
       .in("booking_id", multiSlotIds)

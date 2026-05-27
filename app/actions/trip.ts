@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend, FROM_ADDRESS } from "@/lib/resend";
+import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
 function slugify(title: string): string {
@@ -138,7 +138,7 @@ export async function createTrip(
     date_end: date_end || null,
     price: safePrice,
     total_slots: safeTotalSlots,
-    remaining_slots: 0,
+    remaining_slots: safeTotalSlots,
     meeting_points: is_template ? [] : meeting_points,
     description: description || null,
     includes: includes || null,
@@ -384,7 +384,7 @@ export async function updateTrip(
             await resend.emails.send({
               from: FROM_ADDRESS,
               to: booking.email,
-              replyTo: "sama.com.ph@gmail.com",
+              replyTo: REPLY_TO_ADDRESS,
               subject: `Important update to your booking: ${title}`,
               html: `
                 <p>Hi ${escapeHtml(booking.full_name)},</p>
@@ -418,7 +418,7 @@ export async function updateTrip(
           await resend.emails.send({
             from: FROM_ADDRESS,
             to: entry.email,
-            replyTo: "sama.com.ph@gmail.com",
+            replyTo: REPLY_TO_ADDRESS,
             subject: `Slots available — ${title}`,
             html: `
               <p>Hi ${escapeHtml(entry.full_name)},</p>
@@ -502,7 +502,7 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: booking.email,
-        replyTo: "sama.com.ph@gmail.com",
+        replyTo: REPLY_TO_ADDRESS,
         subject: `Trip cancelled — ${trip.title}`,
         html: `
           <p>Hi ${escapeHtml(booking.full_name)},</p>
@@ -517,7 +517,7 @@ export async function cancelTrip(tripSlug: string): Promise<void> {
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: entry.email,
-        replyTo: "sama.com.ph@gmail.com",
+        replyTo: REPLY_TO_ADDRESS,
         subject: `Trip cancelled: ${trip.title}`,
         html: `
           <p>Hi ${escapeHtml(entry.full_name)},</p>

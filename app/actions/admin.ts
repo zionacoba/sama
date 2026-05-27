@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend, FROM_ADDRESS } from "@/lib/resend";
+import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
@@ -33,7 +33,7 @@ export async function approveOrganizer(id: string): Promise<void> {
     await resend.emails.send({
       from: FROM_ADDRESS,
       to: organizer.email,
-      replyTo: "sama.com.ph@gmail.com",
+      replyTo: REPLY_TO_ADDRESS,
       subject: "Your Sama organizer application has been approved!",
       html: `
         <p>Hi ${escapeHtml(organizer.full_name)},</p>
@@ -70,7 +70,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
     await resend.emails.send({
       from: FROM_ADDRESS,
       to: organizer.email,
-      replyTo: "sama.com.ph@gmail.com",
+      replyTo: REPLY_TO_ADDRESS,
       subject: "Update on your Sama organizer application",
       html: `
         <p>Hi ${escapeHtml(organizer.full_name)},</p>

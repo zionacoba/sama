@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend, FROM_ADDRESS } from "@/lib/resend";
+import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
 type CreateBookingInput = {
@@ -95,14 +95,14 @@ export async function createBooking(input: CreateBookingInput) {
   }
 
   // Compute amounts server-side — never trust client-provided values.
-  const computedTotal = Number(trip.price) * input.slots;
+  const computedTotal = Math.round(Number(trip.price) * input.slots * 100) / 100;
   const daysUntil = Math.floor((new Date(trip.date_start).getTime() - Date.now()) / 86_400_000);
   const canDownpay = trip.payment_type === "downpayment"
     && trip.min_downpayment != null
     && Number(trip.min_downpayment) < Number(trip.price)
     && daysUntil > (trip.downpayment_cutoff_days ?? 0);
   const computedAmountDue = input.paymentOption === "downpayment" && canDownpay
-    ? Math.min(Number(trip.min_downpayment) * input.slots, computedTotal)
+    ? Math.round(Math.min(Number(trip.min_downpayment) * input.slots, computedTotal) * 100) / 100
     : computedTotal;
   const platformCommission = parseFloat((computedTotal * 0.04).toFixed(2));
 
@@ -232,7 +232,7 @@ export async function createBooking(input: CreateBookingInput) {
         await resend.emails.send({
           from: FROM_ADDRESS,
           to: organizerEmail,
-          replyTo: "sama.com.ph@gmail.com",
+          replyTo: REPLY_TO_ADDRESS,
           subject: `New booking for ${trip.title}`,
           html: `
             <p>Hi,</p>
@@ -281,7 +281,7 @@ export async function createBooking(input: CreateBookingInput) {
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: input.email,
-        replyTo: "sama.com.ph@gmail.com",
+        replyTo: REPLY_TO_ADDRESS,
         subject: autoApprove
           ? `You're confirmed for ${trip.title}!`
           : `Booking request received for ${trip.title}`,
@@ -350,7 +350,9 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   if (!organizer) return { error: "Not an approved organizer." };
 
-  const { data: booking } = await supabase
+  const admin = createSupabaseAdminClient();
+
+  const { data: booking } = await admin
     .from("bookings")
     .select("id, trip_id, slots, status, email, full_name, amount_due, payment_option")
     .eq("id", bookingId)
@@ -358,9 +360,9 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   if (!booking) return { error: "Booking not found." };
 
-  const { data: trip } = await supabase
+  const { data: trip } = await admin
     .from("trips")
-    .select("id, title, date_start, organizer_id, remaining_slots, total_slots, messenger_gc_link")
+    .select("id, slug, title, date_start, organizer_id, messenger_gc_link")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -368,21 +370,19 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     return { error: "You don't have permission to manage this booking." };
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from("bookings")
     .update({ status })
     .eq("id", bookingId);
 
   if (error) return { error: error.message };
 
-  // Restore slots when rejecting a booking that wasn't already rejected/cancelled.
+  // Atomically restore slots when rejecting a booking that wasn't already rejected/cancelled.
   if (status === "rejected" && booking.status !== "rejected" && booking.status !== "cancelled") {
-    await supabase
-      .from("trips")
-      .update({
-        remaining_slots: Math.min(trip.total_slots, trip.remaining_slots + booking.slots),
-      })
-      .eq("id", trip.id);
+    await admin.rpc("restore_slot", {
+      p_trip_id: trip.id,
+      p_slots_requested: booking.slots,
+    });
   }
 
   // Notify participant of the status change.
@@ -397,7 +397,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: booking.email,
-        replyTo: "sama.com.ph@gmail.com",
+        replyTo: REPLY_TO_ADDRESS,
         subject: `You're confirmed for ${trip.title}!`,
         html: `
           <p>Hi ${escapeHtml(booking.full_name)},</p>
@@ -417,7 +417,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: booking.email,
-        replyTo: "sama.com.ph@gmail.com",
+        replyTo: REPLY_TO_ADDRESS,
         subject: `Update on your booking request for ${trip.title}`,
         html: `
           <p>Hi ${escapeHtml(booking.full_name)},</p>
@@ -437,6 +437,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
   revalidatePath("/organizer/dashboard");
   revalidatePath("/organizer/trips/[slug]/bookings", "page");
   revalidatePath("/profile");
+  revalidatePath(`/trips/${trip.slug}`);
   return { success: true };
 }
 
@@ -501,7 +502,7 @@ export async function cancelBooking(bookingId: number) {
 
   if (!booking) return { error: "Booking not found." };
   if (booking.user_id !== user.id) return { error: "You don't have permission to cancel this booking." };
-  if (booking.status === "cancelled") return { error: "This booking is already cancelled." };
+  if (["cancelled", "rejected"].includes(booking.status)) return { error: "This booking is already cancelled or rejected." };
 
   const { error } = await admin
     .from("bookings")
@@ -512,17 +513,15 @@ export async function cancelBooking(bookingId: number) {
 
   const { data: trip } = await admin
     .from("trips")
-    .select("id, title, date_start, total_slots, remaining_slots, organizer_id")
+    .select("id, title, date_start, organizer_id")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
   if (trip) {
-    await admin
-      .from("trips")
-      .update({
-        remaining_slots: Math.min(trip.total_slots, trip.remaining_slots + booking.slots),
-      })
-      .eq("id", trip.id);
+    await admin.rpc("restore_slot", {
+      p_trip_id: trip.id,
+      p_slots_requested: booking.slots,
+    });
 
     try {
       const tripDate = new Intl.DateTimeFormat("en-PH", {
@@ -543,7 +542,7 @@ export async function cancelBooking(bookingId: number) {
           await resend.emails.send({
             from: FROM_ADDRESS,
             to: organizer.email,
-            replyTo: "sama.com.ph@gmail.com",
+            replyTo: REPLY_TO_ADDRESS,
             subject: `${booking.full_name} cancelled their booking for ${trip.title}`,
             html: `
               <p>Hi,</p>
@@ -557,7 +556,7 @@ export async function cancelBooking(bookingId: number) {
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: booking.email,
-        replyTo: "sama.com.ph@gmail.com",
+        replyTo: REPLY_TO_ADDRESS,
         subject: `Booking cancelled: ${trip.title}`,
         html: `
           <p>Hi ${escapeHtml(booking.full_name)},</p>

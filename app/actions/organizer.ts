@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend, FROM_ADDRESS } from "@/lib/resend";
+import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
@@ -70,13 +70,33 @@ export async function applyToBeOrganizer(
     await resend.emails.send({
       from: FROM_ADDRESS,
       to: user.email!,
-      replyTo: "sama.com.ph@gmail.com",
+      replyTo: REPLY_TO_ADDRESS,
       subject: "We received your Sama organizer application!",
       html: `
         <p>Hi ${escapeHtml(fullName)},</p>
         <p>Thanks for applying to be a Sama organizer. We'll review your application and get back to you within 24 hours.</p>
         <p>In the meantime, feel free to browse trips at <a href="https://sama.ph">sama.ph</a>.</p>
         <p>— The Sama Team</p>
+      `,
+    });
+  } catch {
+    // Email failure is non-fatal
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: ADMIN_EMAIL,
+      replyTo: REPLY_TO_ADDRESS,
+      subject: `New organizer application: ${escapeHtml(displayName)}`,
+      html: `
+        <p>A new organizer application has been submitted.</p>
+        <ul>
+          <li><strong>Name:</strong> ${escapeHtml(fullName)}</li>
+          <li><strong>Display name:</strong> ${escapeHtml(displayName)}</li>
+          <li><strong>Email:</strong> ${escapeHtml(user.email!)}</li>
+        </ul>
+        <p><a href="https://sama.ph/admin">Review it in the admin dashboard</a></p>
       `,
     });
   } catch {

@@ -32,27 +32,24 @@ export async function submitReview(
   if (bookingId) {
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, status, user_id, email")
+      .select("id, status, user_id")
       .eq("id", bookingId)
       .maybeSingle();
 
     if (!booking) return { error: "Booking not found." };
     if (booking.status !== "confirmed") return { error: "You can only review confirmed bookings." };
-    if (booking.user_id !== user.id && booking.email !== user.email) {
+    if (booking.user_id !== user.id) {
       return { error: "You don't have permission to review this booking." };
     }
   }
 
   // Check for duplicate review on this trip by this user
-  let dupQuery = supabase
+  const { data: existing } = await supabase
     .from("reviews")
     .select("id")
     .eq("user_id", user.id)
-    .eq("trip_id", tripId);
-
-  if (bookingId) dupQuery = dupQuery.eq("booking_id", bookingId);
-
-  const { data: existing } = await dupQuery.maybeSingle();
+    .eq("trip_id", tripId)
+    .maybeSingle();
   if (existing) return { error: "You've already reviewed this trip." };
 
   const fullName = (user.user_metadata?.full_name as string | undefined)?.trim() || null;
