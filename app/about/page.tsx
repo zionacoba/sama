@@ -27,9 +27,9 @@ export default function AboutPage() {
             Adventure, together.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-white/80">
-            Sama is a Philippine outdoor adventure marketplace, connecting people to trusted
-            organizers, protecting the places they love, and building the professional backbone
-            of the outdoor industry.
+            The first marketplace built exclusively for Philippine outdoor adventures. We connect
+            people to trusted organizers, protect the places they love, and build the professional
+            backbone of the outdoor industry.
           </p>
         </section>
 
