@@ -111,6 +111,13 @@ export async function createBooking(input: CreateBookingInput) {
     : computedTotal;
   const platformCommission = parseFloat((computedTotal * 0.04).toFixed(2));
 
+  const { data: tripOrganizer } = await admin
+    .from("organizers")
+    .select("display_name, full_name")
+    .eq("id", trip.organizer_id)
+    .maybeSingle();
+  const organizerName = tripOrganizer?.display_name ?? tripOrganizer?.full_name ?? "";
+
   const requestHeaders = await headers();
   const waiverIp = requestHeaders.get("x-forwarded-for")?.split(",")[0].trim() ?? null;
 
@@ -150,7 +157,7 @@ export async function createBooking(input: CreateBookingInput) {
       medical_notes: input.medicalNotes,
       meeting_point: input.meetingPoint,
       platform_commission: platformCommission,
-      waiver_text_snapshot: trip.waiver_text ?? null,
+      waiver_text_snapshot: trip.waiver_text?.replace(/\[Organizer Name\]/gi, organizerName) ?? null,
       waiver_ip: waiverIp,
     })
     .select("id")
