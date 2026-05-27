@@ -6,6 +6,7 @@ import { BookingActions } from "@/app/organizer/dashboard/booking-actions";
 import { notifyWaitlistEntry } from "@/app/actions/waitlist";
 import { ExportCsvButton } from "./export-csv-button";
 import { MarkBalanceButton } from "./mark-balance-button";
+import { BookingsListWithTabs } from "./bookings-list";
 
 type WaitlistEntry = {
   id: string;
@@ -163,7 +164,9 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
   const rejected = bookings.filter((b) => b.status === "rejected" || b.status === "cancelled");
 
   const needsManualApproval = trip.difficulty === "Advanced";
-  const slotsBooked = trip.total_slots - trip.remaining_slots;
+  const slotsBooked = bookings
+    .filter((b) => b.status === "confirmed" || b.status === "pending")
+    .reduce((sum, b) => sum + b.slots, 0);
 
   // Grouped view: confirmed + pending only, grouped by meeting_point
   const activeBookings = bookings.filter((b) => b.status === "confirmed" || b.status === "pending");
@@ -252,132 +255,69 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
           </div>
         </div>
 
-        {/* View toggle */}
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
-          {(
-            [
-              { key: "list", label: "All bookings", href: baseUrl },
-              { key: "grouped", label: "By pickup point", href: `${baseUrl}?view=grouped` },
-              { key: "waitlist", label: `Waitlist${waitlist.length > 0 ? ` (${waitlist.length})` : ""}`, href: `${baseUrl}?view=waitlist` },
-            ] as const
-          ).map(({ key, label, href }) => (
-            <Link
-              key={key}
-              href={href}
-              className={`rounded-lg px-3.5 py-2 text-sm font-medium transition ${
-                activeView === key
-                  ? "bg-trailhead text-white shadow-sm"
-                  : "border border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-stone-900"
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
-          <ExportCsvButton
+        {/* View toggle + status tabs */}
+        {activeView === "list" ? (
+          <BookingsListWithTabs
             bookings={bookings}
-            tripTitle={trip.title}
-            tripDate={trip.date_start}
-          />
-        </div>
-
-        {/* Flat table */}
-        {activeView === "list" && (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-            {bookings.length === 0 ? (
-              <p className="px-6 py-12 text-center text-sm text-stone-400">No bookings yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-sm">
-                  <thead>
-                    <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
-                      <th className="px-5 py-3">Name</th>
-                      <th className="px-5 py-3">Email</th>
-                      <th className="px-5 py-3">Emergency contact</th>
-                      <th className="px-5 py-3 text-center">Slots</th>
-                      <th className="px-5 py-3 text-right">Amount</th>
-                      <th className="px-5 py-3">Status</th>
-                      <th className="px-5 py-3">Booked on</th>
-                      {needsManualApproval && <th className="px-5 py-3" />}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-100">
-                    {bookings.map((b) => (
-                      <tr key={b.id} className="hover:bg-stone-50">
-                        <td className="px-5 py-3.5 font-medium text-stone-900">{b.full_name}</td>
-                        <td className="px-5 py-3.5 text-stone-500">{b.email}</td>
-                        <td className="px-5 py-3.5 text-stone-700">
-                          {b.emergency_contact_name
-                            ? <><span className="font-medium">{b.emergency_contact_name}</span>{b.emergency_contact_phone && <><br /><span className="text-stone-400">{b.emergency_contact_phone}</span></>}</>
-                            : <span className="text-stone-300">—</span>}
-                        </td>
-                        <td className="px-5 py-3.5 text-center text-stone-700">
-                          {b.slots}
-                          {b.slots > 1 && participantsMap.has(b.id) && (() => {
-                            const ps = participantsMap.get(b.id)!;
-                            const done = ps.filter((p) => p.completed).length;
-                            return (
-                              <details className="mt-1 text-left">
-                                <summary className="cursor-pointer list-none text-xs font-medium text-stone-400 hover:text-stone-600">
-                                  {done}/{b.slots} confirmed
-                                </summary>
-                                <ul className="mt-1 space-y-0.5 pl-0.5">
-                                  {ps.map((p) => (
-                                    <li key={p.slot_number} className="flex items-center gap-1 text-xs">
-                                      <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
-                                      <span className={p.completed ? "text-stone-700" : "text-stone-400"}>
-                                        {p.full_name ?? `Participant ${p.slot_number + 1}`}
-                                      </span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </details>
-                            );
-                          })()}
-                        </td>
-                        <td className="px-5 py-3.5 text-right font-semibold text-trailhead">
-                          {formatCurrency(b.total_amount)}
-                          {b.payment_option === "downpayment" && b.amount_due != null && (() => {
-                            const balance = b.total_amount - b.amount_due;
-                            return (
-                              <div className="mt-0.5 flex flex-col items-end gap-1">
-                                {b.balance_collected ? (
-                                  <span className="text-xs font-semibold text-emerald-600">Fully paid</span>
-                                ) : (
-                                  <>
-                                    <span className="text-xs font-normal text-stone-400">
-                                      ({formatCurrency(b.amount_due)} deposit)
-                                    </span>
-                                    {b.status === "confirmed" && (
-                                      <>
-                                        <MarkBalanceButton
-                                          bookingId={b.id}
-                                          participantName={b.full_name}
-                                          balanceAmount={formatCurrency(balance)}
-                                        />
-                                        <span className="text-xs text-stone-400">Participant can pay balance online or directly to you. Mark as collected once received.</span>
-                                      </>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <StatusBadge status={b.status} />
-                        </td>
-                        <td className="px-5 py-3.5 text-stone-500">{formatDateTime(b.created_at)}</td>
-                        {needsManualApproval && (
-                          <td className="px-5 py-3.5 text-right">
-                            {b.status === "pending" && <BookingActions bookingId={b.id} />}
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            participantsRecord={Object.fromEntries(
+              Array.from(participantsMap.entries()).map(([k, v]) => [String(k), v])
             )}
+            needsManualApproval={needsManualApproval}
+            navLinks={
+              <>
+                <Link
+                  href={`${baseUrl}?view=grouped`}
+                  className="rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-sm font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
+                >
+                  By pickup point
+                </Link>
+                <Link
+                  href={`${baseUrl}?view=waitlist`}
+                  className="rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-sm font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
+                >
+                  {`Waitlist${waitlist.length > 0 ? ` (${waitlist.length})` : ""}`}
+                </Link>
+                <ExportCsvButton
+                  bookings={bookings}
+                  tripTitle={trip.title}
+                  tripDate={trip.date_start}
+                />
+              </>
+            }
+          />
+        ) : (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-1.5">
+              <Link
+                href={baseUrl}
+                className="rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-sm font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
+              >
+                Bookings
+              </Link>
+              {(
+                [
+                  { key: "grouped", label: "By pickup point", href: `${baseUrl}?view=grouped` },
+                  { key: "waitlist", label: `Waitlist${waitlist.length > 0 ? ` (${waitlist.length})` : ""}`, href: `${baseUrl}?view=waitlist` },
+                ] as const
+              ).map(({ key, label, href }) => (
+                <Link
+                  key={key}
+                  href={href}
+                  className={`rounded-lg px-3.5 py-2 text-sm font-medium transition ${
+                    activeView === key
+                      ? "bg-trailhead text-white shadow-sm"
+                      : "border border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-stone-900"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+            <ExportCsvButton
+              bookings={bookings}
+              tripTitle={trip.title}
+              tripDate={trip.date_start}
+            />
           </div>
         )}
 
