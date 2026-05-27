@@ -34,7 +34,7 @@ type BookingParticipant = {
   completed: boolean;
 };
 
-type Tab = "active" | "all" | "cancelled";
+type Tab = "confirmed" | "pending" | "all" | "cancelled";
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -87,62 +87,68 @@ export function BookingsListWithTabs({
   needsManualApproval: boolean;
   navLinks: ReactNode;
 }) {
-  const [tab, setTab] = useState<Tab>("active");
+  const [tab, setTab] = useState<Tab>("confirmed");
 
-  const activeBookings = bookings.filter(
-    (b) => b.status === "confirmed" || b.status === "pending",
-  );
+  const confirmedBookings = bookings.filter((b) => b.status === "confirmed");
+  const pendingBookings = bookings.filter((b) => b.status === "pending");
   const cancelledBookings = bookings.filter(
     (b) => b.status === "cancelled" || b.status === "rejected",
   );
 
   const displayed =
-    tab === "active"
-      ? activeBookings
-      : tab === "cancelled"
-        ? cancelledBookings
-        : bookings;
+    tab === "confirmed"
+      ? confirmedBookings
+      : tab === "pending"
+        ? pendingBookings
+        : tab === "cancelled"
+          ? cancelledBookings
+          : bookings;
 
-  const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: "active", label: "Active", count: activeBookings.length },
+  const tabs: { key: Tab; label: string; count: number; badge?: string }[] = [
+    { key: "confirmed", label: "Confirmed", count: confirmedBookings.length },
+    { key: "pending", label: "Pending", count: pendingBookings.length, badge: "amber" },
     { key: "all", label: "All", count: bookings.length },
     { key: "cancelled", label: "Cancelled / Rejected", count: cancelledBookings.length },
   ];
 
   const emptyMessage =
-    tab === "active"
-      ? "No confirmed or pending bookings yet."
-      : tab === "cancelled"
-        ? "No cancelled or rejected bookings."
-        : "No bookings yet.";
+    tab === "confirmed"
+      ? "No confirmed bookings yet."
+      : tab === "pending"
+        ? "No pending bookings."
+        : tab === "cancelled"
+          ? "No cancelled or rejected bookings."
+          : "No bookings yet.";
 
   return (
     <>
       <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1.5">
-          {tabs.map(({ key, label, count }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setTab(key)}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition ${
-                tab === key
-                  ? "bg-trailhead text-white shadow-sm"
-                  : "border border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-stone-900"
-              }`}
-            >
-              {label}
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-xs font-semibold leading-none ${
-                  tab === key
-                    ? "bg-white/20 text-white"
-                    : "bg-stone-100 text-stone-500"
+          {tabs.map(({ key, label, count, badge }) => {
+            const isActive = tab === key;
+            const badgeClass = isActive
+              ? "bg-white/20 text-white"
+              : badge === "amber" && count > 0
+                ? "bg-amber-100 text-amber-800"
+                : "bg-stone-100 text-stone-500";
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? "bg-trailhead text-white shadow-sm"
+                    : "border border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-stone-900"
                 }`}
               >
-                {count}
-              </span>
-            </button>
-          ))}
+                {label}
+                <span className={`rounded-full px-1.5 py-0.5 text-xs font-semibold leading-none ${badgeClass}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
         <div className="flex flex-wrap gap-2">{navLinks}</div>
       </div>
