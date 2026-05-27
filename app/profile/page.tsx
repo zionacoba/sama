@@ -93,10 +93,15 @@ function StatusBadge({ status }: { status: string }) {
       ? "bg-emerald-100 text-emerald-800"
       : status === "pending"
         ? "bg-amber-100 text-amber-900"
-        : status === "cancelled" || status === "rejected"
-          ? "bg-red-100 text-red-700"
-          : "bg-stone-100 text-stone-600";
-  const label = status.charAt(0).toUpperCase() + status.slice(1);
+        : status === "payment_pending"
+          ? "bg-sky-100 text-sky-700"
+          : status === "cancelled" || status === "rejected"
+            ? "bg-red-100 text-red-700"
+            : "bg-stone-100 text-stone-600";
+  const label =
+    status === "payment_pending"
+      ? "Awaiting payment"
+      : status.charAt(0).toUpperCase() + status.slice(1);
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${styles}`}>
       {label}
@@ -223,7 +228,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
 
   const admin = createSupabaseAdminClient();
   const [{ data: bookingsData }, { data: profileData }, { data: waitlistData }] = await Promise.all([
-    supabase
+    admin
       .from("bookings")
       .select(`
         id,
@@ -237,7 +242,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
         waiver_agreed,
         waiver_agreed_at,
         created_at,
-        trip:trips(id, title, slug, date_start, destination, photos, difficulty, activity_type, duration, meeting_point, waiver_text)
+        trip:trips!bookings_trip_id_fkey(id, title, slug, date_start, destination, photos, difficulty, activity_type, duration, meeting_point, waiver_text)
       `)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),

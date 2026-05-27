@@ -204,7 +204,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
                     ) : (
                       bookings.map((booking) => (
                         <tr key={booking.id} className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30">
-                          <td className="px-4 py-3 font-mono text-xs text-stone-600">{booking.id}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-stone-600">
+                            {Number(booking.id).toString(16).toUpperCase().slice(-8).padStart(8, "0")}
+                          </td>
                           <td className="px-4 py-3 font-medium text-stone-900">{booking.full_name}</td>
                           <td className="px-4 py-3 text-stone-600">{booking.email}</td>
                           <td className="px-4 py-3 text-stone-600">{booking.phone}</td>
