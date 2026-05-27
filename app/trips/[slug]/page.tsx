@@ -9,6 +9,7 @@ import { WaitlistModal } from "@/app/trips/[slug]/waitlist-modal";
 import { ShareButton } from "@/app/components/share-button";
 import { PhotoGallery } from "@/app/components/photo-gallery";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
+import { PublishedBanner } from "@/app/trips/[slug]/published-banner";
 
 type TripDetail = {
   id: number;
@@ -167,6 +168,7 @@ function parseList(text: string | null): string[] {
 
 type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ book?: string; published?: string }>;
 };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -206,8 +208,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function TripDetailPage({ params }: PageProps) {
-  const { slug } = await params;
+export default async function TripDetailPage({ params, searchParams }: PageProps) {
+  const [{ slug }, { book, published }] = await Promise.all([params, searchParams]);
 
   const supabase = await createSupabaseServerClient();
 
@@ -306,6 +308,7 @@ export default async function TripDetailPage({ params }: PageProps) {
   const reviews = (reviewsData ?? []) as unknown as Review[];
   const totalReviewCount = reviewCountResult.count ?? reviews.length;
   const organizer = organizerData as OrganizerInfo | null;
+  const organizerName = organizer?.display_name ?? organizer?.full_name ?? null;
 
   const avgRating =
     reviews.length > 0
@@ -317,6 +320,7 @@ export default async function TripDetailPage({ params }: PageProps) {
 
   return (
     <div className="min-h-full bg-stone-50 text-stone-900 font-sans">
+      {published === "1" && <PublishedBanner tripSlug={slug} />}
       <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
           <Link href="/" className="text-lg font-bold tracking-tight text-trailhead">
@@ -619,6 +623,8 @@ export default async function TripDetailPage({ params }: PageProps) {
                   cancellationPolicy={tripData.cancellation_policy ?? null}
                   cancellationPolicyCustom={tripData.cancellation_policy_custom ?? null}
                   waiverText={tripData.waiver_text ?? null}
+                  organizerName={organizerName}
+                  autoOpen={book === "1"}
                 />
               )}
             </div>
@@ -670,7 +676,7 @@ export default async function TripDetailPage({ params }: PageProps) {
                     tripSlug={slug}
                     tripTitle={tripData.title}
                     tripDateStart={tripData.date_start}
-                  tripDateEnd={tripData.date_end ?? null}
+                    tripDateEnd={tripData.date_end ?? null}
                     unitPrice={getUnitPrice(tripData.price)}
                     remainingSlots={tripData.remaining_slots}
                     paymentType={tripData.payment_type ?? "full"}
@@ -681,6 +687,8 @@ export default async function TripDetailPage({ params }: PageProps) {
                     cancellationPolicy={tripData.cancellation_policy ?? null}
                     cancellationPolicyCustom={tripData.cancellation_policy_custom ?? null}
                     waiverText={tripData.waiver_text ?? null}
+                    organizerName={organizerName}
+                    autoOpen={book === "1"}
                   />
                 )}
               </div>

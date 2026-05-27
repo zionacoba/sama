@@ -166,6 +166,10 @@ export async function createTrip(
 
   revalidatePath("/trips");
   revalidatePath("/organizer/dashboard");
+
+  if (status === "active" && !is_template) {
+    redirect(`/trips/${slug}?published=1`);
+  }
   redirect("/organizer/dashboard");
 }
 
@@ -409,7 +413,7 @@ export async function updateTrip(
                 <p>Hi ${escapeHtml(booking.full_name)},</p>
                 <p>The organizer has made changes to <strong>${escapeHtml(title)}</strong> that may affect your booking:</p>
                 ${changeHtml}
-                <p>Please review the updated trip details here: <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? "https://sama.ph"}/trips/${existing.slug}">sama.ph/trips/${existing.slug}</a></p>
+                <p>Please review the updated trip details here: <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/trips/${existing.slug}">${(process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph").replace("https://", "")}/trips/${existing.slug}</a></p>
                 <p>If you have questions, contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
                 <p>— The Sama Team</p>
               `,
@@ -442,7 +446,7 @@ export async function updateTrip(
             html: `
               <p>Hi ${escapeHtml(entry.full_name)},</p>
               <p>Good news! New slots have opened up for <strong>${escapeHtml(title)}</strong>. Book now before it fills up again:</p>
-              <p><a href="https://sama.ph/trips/${existing.slug}">sama.ph/trips/${existing.slug}</a></p>
+              <p><a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/trips/${existing.slug}">${(process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph").replace("https://", "")}/trips/${existing.slug}</a></p>
               <p>— The Sama Team</p>
             `,
           });
@@ -461,6 +465,10 @@ export async function updateTrip(
   revalidatePath("/trips");
   revalidatePath(`/trips/${existing.slug}`);
   revalidatePath("/organizer/dashboard");
+
+  if (status === "active" && !is_template) {
+    redirect(`/trips/${existing.slug}?published=1`);
+  }
   redirect("/organizer/dashboard");
 }
 

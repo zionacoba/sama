@@ -25,6 +25,8 @@ type BookingModalProps = {
   cancellationPolicy: string | null;
   cancellationPolicyCustom: string | null;
   waiverText?: string | null;
+  organizerName?: string | null;
+  autoOpen?: boolean;
   compact?: boolean;
 };
 
@@ -57,10 +59,16 @@ export function BookingModal({
   cancellationPolicy,
   cancellationPolicyCustom,
   waiverText,
+  organizerName,
+  autoOpen = false,
   compact = false,
 }: BookingModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  const resolvedWaiverText = waiverText
+    ? waiverText.replace(/\[Organizer Name\]/gi, organizerName || "the organizer")
+    : null;
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -149,6 +157,12 @@ export function BookingModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (autoOpen && sessionRef.current) setOpen(true);
+  // Only fire on mount — sessionRef will be populated by the auth effect above
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpen]);
+
   // Push a history entry when the modal opens so the Android back button
   // closes the modal instead of navigating away from the page.
   useEffect(() => {
@@ -218,7 +232,7 @@ export function BookingModal({
 
   function handleBookClick() {
     if (!sessionRef.current) {
-      router.push(`/login?redirectTo=${encodeURIComponent(`/trips/${tripSlug}`)}`);
+      router.push(`/login?redirectTo=${encodeURIComponent(`/trips/${tripSlug}?book=1`)}`);
       return;
     }
     setOpen(true);
@@ -687,10 +701,10 @@ export function BookingModal({
                       <p className="mb-1.5 text-sm font-medium text-stone-700">
                         Organizer waiver
                       </p>
-                      {waiverText && (
+                      {resolvedWaiverText && (
                         <div className="mb-2">
                           <div className={`rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs leading-relaxed text-stone-700 whitespace-pre-wrap${waiverExpanded ? "" : " line-clamp-3"}`}>
-                            {waiverText}
+                            {resolvedWaiverText}
                           </div>
                           <button
                             type="button"
@@ -712,7 +726,7 @@ export function BookingModal({
                           className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
                         />
                         <span className="text-xs leading-relaxed text-stone-600">
-                          {waiverText
+                          {resolvedWaiverText
                             ? "I have read and agree to the waiver above."
                             : slots === 1
                               ? "I understand the risks of this outdoor activity and agree to participate at my own risk. I have read and agree to the cancellation policy for this trip."

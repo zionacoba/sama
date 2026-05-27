@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     title: "Sama — Philippine outdoor adventures",
     description:
       "Discover hikes, camps, dives, and island hops across the Philippines. Book trusted trips from local organizers.",
-    url: "https://sama.ph",
+    url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}`,
     type: "website",
   },
 };
@@ -252,6 +252,10 @@ export default async function Home() {
         <Link href="/privacy" className="underline-offset-4 hover:text-trailhead hover:underline">
           Privacy Policy
         </Link>
+        {" · "}
+        <a href="mailto:hello@sama.com.ph" className="underline-offset-4 hover:text-trailhead hover:underline">
+          Contact
+        </a>
       </footer>
     </div>
   );

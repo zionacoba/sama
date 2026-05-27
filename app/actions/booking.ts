@@ -8,6 +8,9 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
+
 type CreateBookingInput = {
   tripSlug: string;
   fullName: string;
@@ -120,7 +123,7 @@ export async function createBooking(input: CreateBookingInput) {
     if (slotError.message.includes("not_enough_slots")) {
       return { error: "This trip is fully booked." };
     }
-    return { error: `Booking failed (slot error): ${slotError.message}` };
+    return { error: "Booking failed. Please try again or contact support." };
   }
 
   const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
@@ -243,7 +246,7 @@ export async function createBooking(input: CreateBookingInput) {
             </ul>
             ${autoApprove
               ? `<p>This booking was <strong>automatically confirmed</strong> (${trip.difficulty} trip).</p>`
-              : `<p>Log in to your <a href="https://sama.ph/organizer/dashboard">organizer dashboard</a> to confirm or reject this booking.</p>`
+              : `<p>Log in to your <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/organizer/dashboard">organizer dashboard</a> to confirm or reject this booking.</p>`
             }
             <p>— The Sama Team</p>
           `,
@@ -297,7 +300,7 @@ export async function createBooking(input: CreateBookingInput) {
             <a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>
             <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
             ` : ""}
-            <p>You can view your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
+            <p>You can view your booking at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/profile">sama.com.ph/profile</a>.</p>
             <p>— The Sama Team</p>
           `
           : `
@@ -312,7 +315,7 @@ export async function createBooking(input: CreateBookingInput) {
               ${meetingLine}
             </ul>
             ${balanceNote}
-            <p>The organizer will review your request and confirm your spot. This usually takes 24–48 hours. You can track your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
+            <p>The organizer will review your request and confirm your spot. This usually takes 24–48 hours. You can track your booking at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/profile">sama.com.ph/profile</a>.</p>
             <p>— The Sama Team</p>
           `,
       });
@@ -401,7 +404,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
           <a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>
           <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
           ` : ""}
-          <p>They will be in touch with trip details closer to the date. You can view your booking at <a href="https://sama.ph/profile">sama.ph/profile</a>.</p>
+          <p>They will be in touch with trip details closer to the date. You can view your booking at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/profile">sama.com.ph/profile</a>.</p>
           <p>— The Sama Team</p>
         `,
       });
@@ -453,7 +456,7 @@ export async function markBalanceCollected(bookingId: number) {
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id")
+    .select("id, trip_id, full_name, email, total_amount, amount_due, payment_option")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -461,7 +464,7 @@ export async function markBalanceCollected(bookingId: number) {
 
   const { data: trip } = await admin
     .from("trips")
-    .select("id, organizer_id")
+    .select("id, title, organizer_id")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -475,6 +478,27 @@ export async function markBalanceCollected(bookingId: number) {
     .eq("id", bookingId);
 
   if (error) return { error: error.message };
+
+  try {
+    const fmt = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+    const balance = booking.total_amount != null && booking.amount_due != null
+      ? booking.total_amount - booking.amount_due
+      : null;
+    await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: booking.email,
+      replyTo: REPLY_TO_ADDRESS,
+      subject: `Balance payment recorded for ${trip.title}`,
+      html: `
+        <p>Hi ${escapeHtml(booking.full_name)},</p>
+        <p>Your balance payment${balance != null ? ` of <strong>${fmt(balance)}</strong>` : ""} for <strong>${escapeHtml(trip.title)}</strong> has been recorded by your organizer. You are now fully paid up.</p>
+        <p>You can view your booking at <a href="${SITE_URL}/profile">your profile</a>.</p>
+        <p>— The Sama Team</p>
+      `,
+    });
+  } catch (err) {
+    console.error("[email] failed to send balance collected confirmation", err);
+  }
 
   revalidatePath("/organizer/trips/[slug]/bookings", "page");
   revalidatePath("/profile");
@@ -558,6 +582,21 @@ export async function cancelBooking(bookingId: number) {
           <p>— The Sama Team</p>
         `,
       });
+
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: ADMIN_EMAIL,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `[Admin] Booking cancelled: ${escapeHtml(booking.full_name)} — ${trip.title}`,
+          html: `
+            <p><strong>${escapeHtml(booking.full_name)}</strong> cancelled their booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}.</p>
+            <p>If a refund is owed, process it and reply to the participant at <a href="mailto:${escapeHtml(booking.email)}">${escapeHtml(booking.email)}</a>.</p>
+          `,
+        });
+      } catch (adminErr) {
+        console.error("[email] failed to send admin cancellation notification", adminErr);
+      }
     } catch (err) {
       console.error("[email] failed to send cancellation email", err);
     }

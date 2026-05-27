@@ -1,28 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
-export default function SignupPage() {
+function getSafeRedirect(path: string | null) {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) return "/";
+  return path;
+}
+
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = getSafeRedirect(searchParams.get("redirectTo"));
+
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.replace("/");
+      if (session) router.replace(redirectTo);
     });
-  }, [router]);
+  }, [router, redirectTo]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setAlreadyRegistered(false);
     setSuccess(null);
     setLoading(true);
 
@@ -30,21 +40,25 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        data: {
-          full_name: fullName,
-        },
+        data: { full_name: fullName },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
       },
     });
 
     setLoading(false);
 
     if (authError) {
-      setError(authError.message);
+      const msg = authError.message.toLowerCase();
+      if (msg.includes("already registered") || msg.includes("already been registered") || msg.includes("user already exists")) {
+        setAlreadyRegistered(true);
+      } else {
+        setError(authError.message);
+      }
       return;
     }
 
     if (data.session) {
-      router.push("/");
+      router.push(redirectTo);
       router.refresh();
       return;
     }
@@ -56,10 +70,7 @@ export default function SignupPage() {
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
-          <Link
-            href="/"
-            className="text-lg font-bold tracking-tight text-trailhead"
-          >
+          <Link href="/" className="text-lg font-bold tracking-tight text-trailhead">
             ⛰ Sama
           </Link>
         </div>
@@ -76,29 +87,32 @@ export default function SignupPage() {
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              {alreadyRegistered && (
+                <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  This email is already in use.{" "}
+                  <Link
+                    href={`/login${redirectTo !== "/" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
+                    className="font-semibold underline underline-offset-2"
+                  >
+                    Log in instead →
+                  </Link>
+                </p>
+              )}
+
               {error && (
-                <p
-                  role="alert"
-                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
-                >
+                <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                   {error}
                 </p>
               )}
 
               {success && (
-                <p
-                  role="status"
-                  className="rounded-lg border border-trailhead/30 bg-trailhead-muted px-4 py-3 text-sm text-trailhead"
-                >
+                <p role="status" className="rounded-lg border border-trailhead/30 bg-trailhead-muted px-4 py-3 text-sm text-trailhead">
                   {success}
                 </p>
               )}
 
               <div>
-                <label
-                  htmlFor="fullName"
-                  className="block text-sm font-medium text-stone-700"
-                >
+                <label htmlFor="fullName" className="block text-sm font-medium text-stone-700">
                   Full name
                 </label>
                 <input
@@ -115,10 +129,7 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-stone-700"
-                >
+                <label htmlFor="email" className="block text-sm font-medium text-stone-700">
                   Email
                 </label>
                 <input
@@ -135,10 +146,7 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-stone-700"
-                >
+                <label htmlFor="password" className="block text-sm font-medium text-stone-700">
                   Password
                 </label>
                 <input
@@ -181,7 +189,7 @@ export default function SignupPage() {
             <p className="mt-6 text-center text-sm text-stone-600">
               Already have an account?{" "}
               <Link
-                href="/login"
+                href={`/login${redirectTo !== "/" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
                 className="font-semibold text-trailhead underline-offset-4 hover:underline"
               >
                 Sign in
@@ -191,5 +199,13 @@ export default function SignupPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
   );
 }

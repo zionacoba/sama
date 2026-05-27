@@ -63,7 +63,7 @@ export async function applyToBeOrganizer(
     if (error.code === "23505") {
       return { error: "You have already submitted an application." };
     }
-    return { error: error.message };
+    return { error: "Something went wrong. Please try again." };
   }
 
   try {
@@ -75,7 +75,7 @@ export async function applyToBeOrganizer(
       html: `
         <p>Hi ${escapeHtml(fullName)},</p>
         <p>Thanks for applying to be a Sama organizer. We'll review your application and get back to you within 24 hours.</p>
-        <p>In the meantime, feel free to browse trips at <a href="https://sama.ph">sama.ph</a>.</p>
+        <p>In the meantime, feel free to browse trips at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}">${process.env.NEXT_PUBLIC_SITE_URL?.replace("https://", "") || "sama.com.ph"}</a>.</p>
         <p>— The Sama Team</p>
       `,
     });

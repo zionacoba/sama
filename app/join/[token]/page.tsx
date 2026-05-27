@@ -48,11 +48,19 @@ export default async function JoinPage({ params }: PageProps) {
 
   const { data: trip } = await admin
     .from("trips")
-    .select("title, date_start, meeting_points, waiver_text")
+    .select("title, date_start, meeting_points, waiver_text, organizer_id")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
   if (!trip) notFound();
+
+  const { data: organizer } = trip.organizer_id
+    ? await admin
+        .from("organizers")
+        .select("display_name, full_name")
+        .eq("id", trip.organizer_id)
+        .maybeSingle()
+    : { data: null };
 
   if (new Date(trip.date_start) < new Date()) {
     return (
@@ -83,7 +91,9 @@ export default async function JoinPage({ params }: PageProps) {
   const DEFAULT_WAIVER_TEXT =
     "I understand that outdoor activities involve inherent risks including but not limited to physical injury, accidents, and unpredictable weather conditions. I voluntarily participate in this trip organized by [Organizer Name] and assume all risks associated with it. I confirm that I am physically fit to participate and have disclosed any relevant medical conditions. I release the organizer from liability for any injury, loss, or damage arising from my participation, except in cases of gross negligence. I have read and understood the cancellation policy for this trip.";
 
-  const waiverText = (trip.waiver_text as string | null) ?? DEFAULT_WAIVER_TEXT;
+  const organizerName = organizer?.display_name ?? organizer?.full_name ?? null;
+  const waiverText = ((trip.waiver_text as string | null) ?? DEFAULT_WAIVER_TEXT)
+    .replace(/\[Organizer Name\]/gi, organizerName || "the organizer");
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans text-stone-900">

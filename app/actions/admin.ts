@@ -39,7 +39,7 @@ export async function approveOrganizer(id: string): Promise<void> {
         <p>Hi ${escapeHtml(organizer.full_name)},</p>
         <p>Great news — your application to become a Sama organizer has been <strong>approved</strong>!</p>
         <p>You can now log in to your organizer dashboard to create and publish trips:</p>
-        <p><a href="https://sama.ph/organizer/dashboard">sama.ph/organizer/dashboard</a></p>
+        <p><a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/organizer/dashboard">${(process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph").replace("https://", "")}/organizer/dashboard</a></p>
         <p>Welcome to the Sama community. We're excited to have you on board.</p>
         <p>— The Sama Team</p>
       `,

@@ -27,6 +27,9 @@ function LoginForm() {
     });
   }, [router]);
 
+  const rawRedirectTo = searchParams.get("redirectTo");
+  const redirectTo = getSafeRedirect(rawRedirectTo);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -44,8 +47,6 @@ function LoginForm() {
       return;
     }
 
-    const params = new URLSearchParams(window.location.search);
-    const redirectTo = getSafeRedirect(params.get("redirectTo"));
     router.push(redirectTo);
     router.refresh();
   }
@@ -149,7 +150,7 @@ function LoginForm() {
             <p className="mt-6 text-center text-sm text-stone-600">
               Don&apos;t have an account?{" "}
               <Link
-                href="/signup"
+                href={`/signup${redirectTo !== "/" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
                 className="font-semibold text-trailhead underline-offset-4 hover:underline"
               >
                 Sign up

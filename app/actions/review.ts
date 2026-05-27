@@ -1,6 +1,9 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { escapeHtml } from "@/lib/escape-html";
 import { redirect } from "next/navigation";
 
 type ReviewState = { success: true } | { error: string } | null;
@@ -27,6 +30,18 @@ export async function submitReview(
     return { error: "Please fill in all fields and select a rating." };
   }
 
+  // Gate reviews to trips whose date has passed.
+  const admin = createSupabaseAdminClient();
+  const { data: tripForDate } = await admin
+    .from("trips")
+    .select("date_start, title, slug, organizer_id")
+    .eq("id", tripId)
+    .maybeSingle();
+
+  if (!tripForDate) return { error: "Trip not found." };
+  if (new Date(tripForDate.date_start) > new Date()) {
+    return { error: "You can only leave a review after the trip has taken place." };
+  }
 
   // If a booking_id is provided, verify it's confirmed and belongs to this user
   if (bookingId) {
@@ -64,6 +79,38 @@ export async function submitReview(
   });
 
   if (error) return { error: error.message };
+
+  // Notify the organizer of the new review.
+  try {
+    if (tripForDate.organizer_id) {
+      const { data: organizer } = await admin
+        .from("organizers")
+        .select("email, display_name, full_name")
+        .eq("id", tripForDate.organizer_id)
+        .maybeSingle();
+
+      if (organizer?.email) {
+        const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+        const excerpt = body.length > 200 ? body.slice(0, 197) + "…" : body;
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: organizer.email,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `New ${rating}-star review for ${tripForDate.title}`,
+          html: `
+            <p>Hi ${escapeHtml(organizer.display_name ?? organizer.full_name)},</p>
+            <p>${escapeHtml(fullName ?? "A participant")} left a <strong>${rating}-star review</strong> ${stars} for <strong>${escapeHtml(tripForDate.title)}</strong>:</p>
+            <blockquote style="border-left:3px solid #ccc;margin:0;padding:0 1em;color:#555;">${escapeHtml(excerpt)}</blockquote>
+            <p><a href="${siteUrl}/trips/${escapeHtml(tripForDate.slug)}">View the full review on the trip page →</a></p>
+            <p>— The Sama Team</p>
+          `,
+        });
+      }
+    }
+  } catch (emailErr) {
+    console.error("[email] failed to notify organizer of new review", emailErr);
+  }
 
   // Only redirect when submitted from the trip page (no booking_id)
   if (!bookingId) redirect(`/trips/${tripSlug}`);
