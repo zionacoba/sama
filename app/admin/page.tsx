@@ -110,7 +110,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
   ] = await Promise.all([
     adminClient
       .from("bookings")
-      .select("id, full_name, email, phone, trips(title), slots, total_amount, status, created_at", { count: "exact" })
+      .select("id, full_name, email, phone, trips!bookings_trip_id_fkey(title), slots, total_amount, status, created_at", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(from, to),
     adminClient
