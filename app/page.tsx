@@ -246,6 +246,10 @@ export default async function Home() {
           Become an Organizer
         </Link>
         {" · "}
+        <Link href="/about" className="underline-offset-4 hover:text-trailhead hover:underline">
+          About
+        </Link>
+        {" · "}
         <Link href="/terms" className="underline-offset-4 hover:text-trailhead hover:underline">
           Terms of Service
         </Link>
