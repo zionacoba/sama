@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     title: "Browse trips | Sama",
     description:
       "Browse hikes, camps, dives, and island hops across the Philippines. Filter by activity and difficulty to find your next adventure.",
-    url: "https://sama.ph/trips",
+    url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/trips`,
     type: "website",
   },
 };
@@ -347,13 +347,15 @@ export default async function TripsPage({ searchParams }: PageProps) {
 
         <section className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
           {groups.length === 0 ? (
-            <div className="py-20 text-center">
-              <p className="text-stone-500">No trips match your filters.</p>
+            <div className="py-24 text-center">
+              <p className="text-4xl" aria-hidden>🏔️</p>
+              <p className="mt-4 text-lg font-semibold text-stone-800">No trips found</p>
+              <p className="mt-1 text-sm text-stone-500">Try adjusting your filters or check back soon for new adventures.</p>
               <Link
                 href="/trips"
-                className="mt-4 inline-block text-sm font-semibold text-trailhead underline-offset-4 hover:underline"
+                className="mt-6 inline-flex items-center rounded-xl bg-trailhead px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-trailhead/90"
               >
-                Clear filters
+                Clear all filters
               </Link>
             </div>
           ) : (

@@ -8,6 +8,7 @@ import { BookingModal } from "@/app/trips/[slug]/booking-modal";
 import { WaitlistModal } from "@/app/trips/[slug]/waitlist-modal";
 import { ShareButton } from "@/app/components/share-button";
 import { PhotoGallery } from "@/app/components/photo-gallery";
+import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 
 type TripDetail = {
   id: number;
@@ -136,16 +137,10 @@ function formatReviewDate(date: string) {
   }).format(new Date(date));
 }
 
-const CANCELLATION_POLICIES: Record<string, { label: string; color: string; text: string }> = {
-  flexible: { label: "Flexible", color: "bg-emerald-100 text-emerald-800", text: "Full refund if cancelled 7 or more days before the trip. 50% refund of amount paid if cancelled 3–7 days before. No refund within 3 days." },
-  moderate: { label: "Moderate", color: "bg-amber-100 text-amber-900",    text: "Full refund if cancelled 14 or more days before the trip. 50% refund if cancelled 7–14 days before. No refund within 7 days." },
-  strict:   { label: "Strict",   color: "bg-red-100 text-red-800",        text: "Full refund if cancelled 30 or more days before the trip. No refund within 30 days." },
-  custom:   { label: "Custom",   color: "bg-stone-100 text-stone-700",    text: "" },
-};
 
 function CancellationPolicyCard({ policy, custom }: { policy: string | null; custom: string | null }) {
   if (!policy) return null;
-  const meta = CANCELLATION_POLICIES[policy] ?? CANCELLATION_POLICIES.flexible;
+  const meta = CANCELLATION_POLICIES[policy as keyof typeof CANCELLATION_POLICIES] ?? CANCELLATION_POLICIES.flexible;
   const text = policy === "custom" ? (custom ?? "") : meta.text;
   if (!text) return null;
   return (

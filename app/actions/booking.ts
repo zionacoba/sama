@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -42,7 +43,7 @@ export async function createBooking(input: CreateBookingInput) {
 
   const { data: trip, error: tripFetchError } = await admin
     .from("trips")
-    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, downpayment_cutoff_days, messenger_gc_link")
+    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, downpayment_cutoff_days, messenger_gc_link, waiver_text")
     .eq("slug", input.tripSlug)
     .maybeSingle();
 
@@ -50,18 +51,6 @@ export async function createBooking(input: CreateBookingInput) {
     console.error("[createBooking] trip fetch error:", tripFetchError.code, tripFetchError.message, tripFetchError.details);
   }
   if (!trip) return { error: "Trip not found." };
-
-  console.log("[createBooking] trip fetched:", {
-    id: trip.id,
-    status: trip.status,
-    difficulty: trip.difficulty,
-    payment_type: trip.payment_type,
-    price: trip.price,
-    min_downpayment: trip.min_downpayment,
-    downpayment_cutoff_days: trip.downpayment_cutoff_days,
-    date_start: trip.date_start,
-    remaining_slots: trip.remaining_slots,
-  });
 
   if (trip.status !== "active" || new Date(trip.date_start) < new Date()) {
     return { error: "This trip is no longer available for booking." };
@@ -118,17 +107,10 @@ export async function createBooking(input: CreateBookingInput) {
     : computedTotal;
   const platformCommission = parseFloat((computedTotal * 0.04).toFixed(2));
 
-  console.log("[createBooking] amounts:", {
-    computedTotal,
-    daysUntil,
-    canDownpay,
-    paymentOption: input.paymentOption,
-    computedAmountDue,
-    slots: input.slots,
-  });
+  const requestHeaders = await headers();
+  const waiverIp = requestHeaders.get("x-forwarded-for")?.split(",")[0].trim() ?? null;
 
   // Atomically check availability and decrement remaining_slots.
-  console.log("[createBooking] calling book_slot:", { p_trip_id: trip.id, p_slots_requested: input.slots });
   const { error: slotError } = await supabase.rpc("book_slot", {
     p_trip_id: trip.id,
     p_slots_requested: input.slots,
@@ -167,6 +149,8 @@ export async function createBooking(input: CreateBookingInput) {
       medical_notes: input.medicalNotes,
       meeting_point: input.meetingPoint,
       platform_commission: platformCommission,
+      waiver_text_snapshot: trip.waiver_text ?? null,
+      waiver_ip: waiverIp,
     })
     .select("id")
     .single();
@@ -181,8 +165,6 @@ export async function createBooking(input: CreateBookingInput) {
     });
     return { error: insertError?.message ?? "Failed to create booking." };
   }
-
-  console.log("[createBooking] booking created:", newBooking.id);
 
   // Insert one booking_participants row per slot.
   const now = new Date().toISOString();

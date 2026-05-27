@@ -12,9 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "https://sama.ph";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -31,6 +29,11 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+  },
+  themeColor: "#1a5c38",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
   },
 };
 

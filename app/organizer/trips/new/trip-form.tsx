@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState, useTransition } from "react";
 import { createTrip } from "@/app/actions/trip";
+import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { PhotoUploader, type PhotoItem } from "@/app/components/photo-uploader";
 
 const inputClass =
@@ -283,6 +284,112 @@ export function TripForm({
             </div>
           </div>
 
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label htmlFor="payment_type" className={labelClass}>
+                Payment type
+              </label>
+              <select
+                id="payment_type"
+                name="payment_type"
+                value={paymentType}
+                onChange={(e) => setPaymentType(e.target.value as "full" | "downpayment")}
+                className={inputClass}
+              >
+                <option value="full">Full payment only</option>
+                <option value="downpayment">Downpayment available</option>
+              </select>
+            </div>
+            {paymentType === "downpayment" && (
+              <div>
+                <label htmlFor="min_downpayment" className={labelClass}>
+                  Downpayment amount (PHP)
+                </label>
+                <input
+                  id="min_downpayment"
+                  name="min_downpayment"
+                  type="number"
+                  min="0"
+                  step="1"
+                  required
+                  defaultValue={defaultValues?.min_downpayment ?? ""}
+                  className={inputClass}
+                  placeholder="500"
+                />
+                <p className="mt-1.5 text-xs text-stone-500">
+                  This is the amount participants pay to reserve their slot. They can choose to pay in full or this downpayment amount. You set this — participants cannot change it.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {paymentType === "downpayment" && (
+            <div>
+              <label htmlFor="downpayment_cutoff_days" className={labelClass}>
+                Accept downpayments until
+              </label>
+              <input
+                id="downpayment_cutoff_days"
+                name="downpayment_cutoff_days"
+                type="number"
+                min="0"
+                step="1"
+                defaultValue={defaultValues?.downpayment_cutoff_days ?? 10}
+                className={inputClass}
+                placeholder="e.g. 10"
+              />
+              <p className="mt-1.5 text-xs text-stone-500">
+                Number of days before the trip after which participants must pay in full. Set to 0 to allow downpayments until the day before the trip.
+              </p>
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="cancellation_policy" className={labelClass}>
+              Cancellation policy
+            </label>
+            <select
+              id="cancellation_policy"
+              name="cancellation_policy"
+              value={cancellationPolicy}
+              onChange={(e) => setCancellationPolicy(e.target.value as typeof cancellationPolicy)}
+              className={inputClass}
+            >
+              <option value="flexible">{CANCELLATION_POLICIES.flexible.label} — {CANCELLATION_POLICIES.flexible.short}</option>
+              <option value="moderate">{CANCELLATION_POLICIES.moderate.label} — {CANCELLATION_POLICIES.moderate.short}</option>
+              <option value="strict">{CANCELLATION_POLICIES.strict.label} — {CANCELLATION_POLICIES.strict.short}</option>
+              <option value="custom">{CANCELLATION_POLICIES.custom.label} — {CANCELLATION_POLICIES.custom.short}</option>
+            </select>
+            {cancellationPolicy === "custom" && (
+              <textarea
+                name="cancellation_policy_custom"
+                required
+                rows={3}
+                defaultValue={defaultValues?.cancellation_policy_custom ?? ""}
+                className={`${inputClass} mt-3 resize-none`}
+                placeholder="Describe your cancellation and refund terms…"
+              />
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="messenger_gc_link" className={labelClass}>
+              Messenger Group Chat Link{" "}
+              <span className="font-normal text-stone-400">(optional)</span>
+            </label>
+            <input
+              id="messenger_gc_link"
+              name="messenger_gc_link"
+              type="url"
+              defaultValue={defaultValues?.messenger_gc_link ?? ""}
+              className={inputClass}
+              placeholder="https://m.me/j/..."
+            />
+            <p className="mt-1.5 text-xs text-stone-500">
+              Participants will receive this link after their booking is confirmed. You can add or update this anytime.
+            </p>
+          </div>
+
           {/* Meeting points */}
           <div>
             <label className={labelClass}>Meeting points</label>
@@ -387,120 +494,6 @@ export function TripForm({
           placeholder={"Sleeping bag\nRain jacket\nHeadlamp\nExtra clothes"}
         />
       </div>
-
-      {/* Payment options + Cancellation policy (hidden for templates) */}
-      {!isTemplate && (
-        <>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <label htmlFor="payment_type" className={labelClass}>
-                Payment type
-              </label>
-              <select
-                id="payment_type"
-                name="payment_type"
-                value={paymentType}
-                onChange={(e) => setPaymentType(e.target.value as "full" | "downpayment")}
-                className={inputClass}
-              >
-                <option value="full">Full payment only</option>
-                <option value="downpayment">Downpayment available</option>
-              </select>
-            </div>
-            {paymentType === "downpayment" && (
-              <div>
-                <label htmlFor="min_downpayment" className={labelClass}>
-                  Downpayment amount (PHP)
-                </label>
-                <input
-                  id="min_downpayment"
-                  name="min_downpayment"
-                  type="number"
-                  min="0"
-                  step="1"
-                  required
-                  defaultValue={defaultValues?.min_downpayment ?? ""}
-                  className={inputClass}
-                  placeholder="500"
-                />
-                <p className="mt-1.5 text-xs text-stone-500">
-                  This is the amount participants pay to reserve their slot. They can choose to pay in full or this downpayment amount. You set this — participants cannot change it.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {paymentType === "downpayment" && (
-            <div>
-              <label htmlFor="downpayment_cutoff_days" className={labelClass}>
-                Accept downpayments until
-              </label>
-              <input
-                id="downpayment_cutoff_days"
-                name="downpayment_cutoff_days"
-                type="number"
-                min="0"
-                step="1"
-                defaultValue={defaultValues?.downpayment_cutoff_days ?? 10}
-                className={inputClass}
-                placeholder="e.g. 10"
-              />
-              <p className="mt-1.5 text-xs text-stone-500">
-                Number of days before the trip after which participants must pay in full. Set to 0 to allow downpayments until the day before the trip.
-              </p>
-            </div>
-          )}
-
-          <div>
-            <label htmlFor="cancellation_policy" className={labelClass}>
-              Cancellation policy
-            </label>
-            <select
-              id="cancellation_policy"
-              name="cancellation_policy"
-              value={cancellationPolicy}
-              onChange={(e) => setCancellationPolicy(e.target.value as typeof cancellationPolicy)}
-              className={inputClass}
-            >
-              <option value="flexible">Flexible — full refund 7+ days before, 50% of amount paid within 3–7 days</option>
-              <option value="moderate">Moderate — 50% refund 5+ days before, no refund within 5 days</option>
-              <option value="strict">Strict — no refund within 7 days of trip</option>
-              <option value="custom">Custom — write your own policy</option>
-            </select>
-            {cancellationPolicy === "custom" && (
-              <textarea
-                name="cancellation_policy_custom"
-                required
-                rows={3}
-                defaultValue={defaultValues?.cancellation_policy_custom ?? ""}
-                className={`${inputClass} mt-3 resize-none`}
-                placeholder="Describe your cancellation and refund terms…"
-              />
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Messenger GC link (only for dated trips, not templates) */}
-      {!isTemplate && (
-        <div>
-          <label htmlFor="messenger_gc_link" className={labelClass}>
-            Messenger Group Chat Link{" "}
-            <span className="font-normal text-stone-400">(optional)</span>
-          </label>
-          <input
-            id="messenger_gc_link"
-            name="messenger_gc_link"
-            type="url"
-            defaultValue={defaultValues?.messenger_gc_link ?? ""}
-            className={inputClass}
-            placeholder="https://m.me/j/..."
-          />
-          <p className="mt-1.5 text-xs text-stone-500">
-            Participants will receive this link after their booking is confirmed. You can add or update this anytime.
-          </p>
-        </div>
-      )}
 
       {/* Photo upload */}
       <div>

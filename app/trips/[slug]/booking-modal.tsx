@@ -5,14 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { createBooking } from "@/app/actions/booking";
+import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 
 type MeetingPoint = { location: string; time: string };
-
-const CANCELLATION_POLICIES: Record<string, { label: string; text: string }> = {
-  flexible: { label: "Flexible", text: "Full refund if cancelled 7 or more days before the trip. 50% refund of amount paid if cancelled 3–7 days before. No refund within 3 days." },
-  moderate: { label: "Moderate", text: "Full refund if cancelled 14 or more days before the trip. 50% refund if cancelled 7–14 days before. No refund within 7 days." },
-  strict:   { label: "Strict",   text: "Full refund if cancelled 30 or more days before the trip. No refund within 30 days." },
-};
 
 type BookingModalProps = {
   tripId: number;
@@ -647,7 +642,7 @@ export function BookingModal({
 
                   {/* Cancellation policy */}
                   {cancellationPolicy && (() => {
-                    const meta = CANCELLATION_POLICIES[cancellationPolicy];
+                    const meta = CANCELLATION_POLICIES[cancellationPolicy as keyof typeof CANCELLATION_POLICIES];
                     const text = cancellationPolicy === "custom"
                       ? (cancellationPolicyCustom ?? "")
                       : (meta?.text ?? "");
