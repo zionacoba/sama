@@ -269,7 +269,7 @@ export async function createBooking(input: CreateBookingInput) {
       const fmt = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
       const isDownpay = input.paymentOption === "downpayment" && computedAmountDue < computedTotal;
       const amountLine = isDownpay
-        ? `<li><strong>Amount due now:</strong> ${fmt(computedAmountDue)} downpayment</li><li><strong>Remaining balance:</strong> ${fmt(computedTotal - computedAmountDue)} due on trip day</li>`
+        ? `<li><strong>Amount due now:</strong> ${fmt(computedAmountDue)} downpayment</li><li><strong>Remaining balance:</strong> ${fmt(computedTotal - computedAmountDue)}</li>`
         : `<li><strong>Total amount:</strong> ${fmt(computedTotal)}</li>`;
       const balanceNote = isDownpay
         ? `<p>Your remaining balance of <strong>${fmt(computedTotal - computedAmountDue)}</strong> can be paid online through Sama or directly to your organizer on the day of the trip, whichever they prefer. Your organizer will let you know in the group chat.</p>`
