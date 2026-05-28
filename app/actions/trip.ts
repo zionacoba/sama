@@ -17,7 +17,7 @@ function slugify(title: string): string {
 }
 
 export async function createTrip(
-  _prevState: { error: string } | null,
+  _prevState: { error: string } | { success: true; warning?: string } | null,
   formData: FormData,
 ) {
   const supabase = await createSupabaseServerClient();
@@ -175,7 +175,7 @@ export async function createTrip(
 }
 
 export async function updateTrip(
-  _prevState: { error: string } | null,
+  _prevState: { error: string } | { success: true; warning?: string } | null,
   formData: FormData,
 ) {
   const supabase = await createSupabaseServerClient();
@@ -198,7 +198,7 @@ export async function updateTrip(
 
   const { data: existing, error: fetchError } = await supabase
     .from("trips")
-    .select("id, slug, status, title, organizer_id, total_slots, remaining_slots, date_start, date_end, price, meeting_points")
+    .select("id, slug, status, title, organizer_id, total_slots, remaining_slots, date_start, date_end, price, meeting_points, difficulty, payment_type")
     .eq("id", tripId)
     .maybeSingle();
 
@@ -298,43 +298,62 @@ export async function updateTrip(
     }
   }
 
-  if (!isDraft && !is_template && total_slots < existing.total_slots) {
-    const admin = createSupabaseAdminClient();
-    const { count } = await admin
+  // Single booking query covers all five edge-case checks below.
+  let bookedSlots = 0;
+  let activeBookingCount = 0;
+  let pendingBalanceCount = 0;
+  if (!isDraft || status === "draft") {
+    const adminForChecks = createSupabaseAdminClient();
+    const { data: activeBookings } = await adminForChecks
       .from("bookings")
-      .select("id", { count: "exact", head: true })
+      .select("slots, amount_due, total_amount")
       .eq("trip_id", tripId)
       .in("status", ["confirmed", "pending"]);
-    const confirmed = count ?? 0;
-    if (total_slots < confirmed) {
-      return { error: `Cannot reduce slots below current confirmed bookings (${confirmed} confirmed).` };
+    bookedSlots = (activeBookings ?? []).reduce((sum, b) => sum + (b.slots ?? 0), 0);
+    activeBookingCount = activeBookings?.length ?? 0;
+    pendingBalanceCount = (activeBookings ?? []).filter(
+      (b) => b.amount_due != null && b.total_amount != null && Number(b.amount_due) < Number(b.total_amount)
+    ).length;
+  }
+
+  // 1. Block reducing total_slots below confirmed + pending slot sum.
+  if (!isDraft && !is_template && total_slots < existing.total_slots) {
+    if (total_slots < bookedSlots) {
+      return { error: `Cannot reduce total slots below your current confirmed bookings (${bookedSlots} slots booked). Cancel bookings first if you need to reduce capacity.` };
     }
+  }
+
+  // 2. Block difficulty change to Advanced while bookings exist.
+  if (!isDraft && !is_template && difficulty === "Advanced" && existing.difficulty !== "Advanced" && activeBookingCount > 0) {
+    return { error: "Cannot change difficulty to Advanced while confirmed bookings exist. Advanced trips require organizer approval for new bookings, which would create an inconsistent experience for existing participants." };
   }
 
   // Block moving a trip with active bookings back to draft.
   if (status === "draft" && existing.status === "active") {
-    const adminForDraftCheck = createSupabaseAdminClient();
-    const { count: activeBookingCount } = await adminForDraftCheck
-      .from("bookings")
-      .select("id", { count: "exact", head: true })
-      .eq("trip_id", tripId)
-      .in("status", ["confirmed", "pending"]);
-    if ((activeBookingCount ?? 0) > 0) {
+    if (activeBookingCount > 0) {
       return { error: "This trip has confirmed bookings and cannot be moved to draft. Cancel the trip instead." };
     }
   }
 
+  // 3+4. Collect warnings for price change and downpayment-to-full switch.
+  let saveWarning: string | undefined;
+  if (!isDraft && !is_template) {
+    const priceChanged = !isNaN(price) && existing.price != null && existing.price !== price;
+    if (priceChanged && activeBookingCount > 0) {
+      saveWarning = `Price updated. This only affects new bookings. ${activeBookingCount} existing booking${activeBookingCount !== 1 ? "s" : ""} will keep their original price.`;
+    }
+    const downpaymentDisabled = existing.payment_type === "downpayment" && payment_type === "full";
+    if (downpaymentDisabled && pendingBalanceCount > 0) {
+      const balanceMsg = `Payment type updated. ${pendingBalanceCount} participant${pendingBalanceCount !== 1 ? "s" : ""} have already paid a downpayment and still owe a balance. They will need to settle directly with you.`;
+      saveWarning = saveWarning ? `${saveWarning} ${balanceMsg}` : balanceMsg;
+    }
+  }
+
+  // 5. Recalculate remaining_slots from actual bookings when total_slots changes.
   let remaining_slots: number;
   if (isDraft || is_template) {
     remaining_slots = existing.remaining_slots ?? 0;
   } else if (total_slots !== existing.total_slots) {
-    const adminForSlots = createSupabaseAdminClient();
-    const { data: bookedRows } = await adminForSlots
-      .from("bookings")
-      .select("slots")
-      .eq("trip_id", tripId)
-      .in("status", ["confirmed", "pending"]);
-    const bookedSlots = (bookedRows ?? []).reduce((sum, b) => sum + (b.slots ?? 0), 0);
     remaining_slots = Math.max(0, total_slots - bookedSlots);
   } else {
     remaining_slots = existing.remaining_slots ?? 0;
@@ -478,6 +497,10 @@ export async function updateTrip(
   revalidatePath("/trips");
   revalidatePath(`/trips/${existing.slug}`);
   revalidatePath("/organizer/dashboard");
+
+  if (saveWarning) {
+    return { success: true as const, warning: saveWarning };
+  }
 
   if (status === "active" && !is_template) {
     redirect(`/trips/${existing.slug}?published=1`);
