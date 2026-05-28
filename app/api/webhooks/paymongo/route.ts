@@ -248,6 +248,14 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
                 ? `<p>This booking was <strong>automatically confirmed</strong> (${trip.difficulty} trip).</p>`
                 : `<p>Log in to your <a href="${SITE_URL}/organizer/dashboard">organizer dashboard</a> to confirm or reject this booking.</p>`
             }
+            <p style="font-size:13px;color:#78716c;border-top:1px solid #e7e5e4;margin-top:16px;padding-top:12px;">
+              <strong>When will you receive this payment?</strong><br/>
+              ${isDownpay
+                ? `This downpayment will be remitted to you the following Monday after the booking date. The participant's balance will be remitted 24-48 hours after the trip date (if paid online through Sama), or you can collect it directly on the day.`
+                : `This full payment will be remitted to you the following Monday after the booking date.`
+              }
+              If this booking was made less than 7 days before the trip, remittance happens the Monday after the trip date instead.
+            </p>
             <p>— The Sama Team</p>
           `,
         });

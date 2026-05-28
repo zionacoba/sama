@@ -313,7 +313,14 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
 
       <div className="border-t border-stone-100 pt-5">
         <p className={`${labelClass} mb-1`}>Payout details <span className="font-normal text-stone-400">(optional)</span></p>
-        <p className="mb-3 text-xs text-stone-500">Used to process your earnings after each trip.</p>
+        <p className="mb-3 text-xs text-stone-500">
+          Used to remit your earnings on the following schedule:
+        </p>
+        <ul className="mb-4 space-y-1 text-xs text-stone-500">
+          <li><span className="font-semibold text-stone-700">Downpayments and full payments</span> — remitted every Monday following the booking date.</li>
+          <li><span className="font-semibold text-stone-700">Balance payments</span> (paid online through Sama) — remitted 24-48 hours after the trip date.</li>
+          <li><span className="font-semibold text-stone-700">Late bookings</span> (booked less than 7 days before the trip) — remitted the Monday after the trip date, regardless of payment type.</li>
+        </ul>
         <div className="space-y-4">
           <div>
             <label htmlFor="payout_method" className={labelClass}>
