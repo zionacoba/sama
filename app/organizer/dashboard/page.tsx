@@ -153,11 +153,14 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     );
   }
 
-  const { data: allTripsData } = await supabase
-    .from("trips")
-    .select("id, slug, title, activity_type, difficulty, date_start, price, total_slots, remaining_slots, status, is_template, template_id")
-    .eq("organizer_id", organizer.id)
-    .order("date_start", { ascending: true });
+  const [{ data: allTripsData }, resolvedParams] = await Promise.all([
+    supabase
+      .from("trips")
+      .select("id, slug, title, activity_type, difficulty, date_start, price, total_slots, remaining_slots, status, is_template, template_id")
+      .eq("organizer_id", organizer.id)
+      .order("date_start", { ascending: true }),
+    searchParams,
+  ]);
 
   const allTrips = (allTripsData ?? []) as OrganizerTrip[];
   const regularTrips = allTrips.filter((t) => !isTemplateLike(t));
@@ -184,7 +187,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     date_from = "",
     date_to = "",
     page: pageParam,
-  } = await searchParams;
+  } = resolvedParams;
 
   const activeView = tab === "templates" ? "templates" : "trips";
   const page = Math.max(1, parseInt(pageParam ?? "1", 10));

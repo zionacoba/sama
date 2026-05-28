@@ -185,6 +185,9 @@ export function PhotoUploader({
                 alt={`Photo ${i + 1}`}
                 className="aspect-[4/3] w-full object-cover"
                 draggable={false}
+                width={320}
+                height={240}
+                loading="lazy"
               />
               {i === 0 && item.kind === "url" && (
                 <span className="pointer-events-none absolute left-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">
