@@ -6,6 +6,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { createBooking } from "@/app/actions/booking";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
+import { formatDateRange } from "@/lib/format";
 
 type MeetingPoint = { location: string; time: string };
 
@@ -38,10 +39,6 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-function formatDateRange(start: string, end?: string | null) {
-  const fmt = (d: string) => new Intl.DateTimeFormat("en-PH", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(d));
-  return end ? `${fmt(start)} – ${fmt(end)}` : fmt(start);
-}
 
 export function BookingModal({
   tripId,

@@ -9,6 +9,7 @@ import { WaitlistModal } from "@/app/trips/[slug]/waitlist-modal";
 import { ShareButton } from "@/app/components/share-button";
 import { PhotoGallery } from "@/app/components/photo-gallery";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
+import { formatDate, formatDateShort, formatDateRange, formatReviewDate } from "@/lib/format";
 import { PublishedBanner } from "@/app/trips/[slug]/published-banner";
 
 type TripDetail = {
@@ -108,39 +109,6 @@ function getUnitPrice(price: string | number): number {
   return parseFloat(digits) || 0;
 }
 
-function formatDate(dateStart: string) {
-  return new Intl.DateTimeFormat("en-PH", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "Asia/Manila",
-  }).format(new Date(dateStart));
-}
-
-function formatDateShort(dateStart: string) {
-  return new Intl.DateTimeFormat("en-PH", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "Asia/Manila",
-  }).format(new Date(dateStart));
-}
-
-function formatDateRange(dateStart: string, dateEnd: string | null | undefined) {
-  if (!dateEnd) return formatDateShort(dateStart);
-  return `${formatDateShort(dateStart)} – ${formatDateShort(dateEnd)}`;
-}
-
-function formatReviewDate(date: string) {
-  return new Intl.DateTimeFormat("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone: "Asia/Manila",
-  }).format(new Date(date));
-}
 
 
 function CancellationPolicyCard({ policy, custom }: { policy: string | null; custom: string | null }) {

@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           </h1>
           <div className="mt-2 space-y-0.5 text-sm text-stone-500">
             <p>Operated by: Paul Zion Acoba</p>
-            <p>Contact: <a href="mailto:acobapaulzion@gmail.com" className="text-trailhead hover:underline">acobapaulzion@gmail.com</a></p>
+            <p>Contact: <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a></p>
           </div>
 
           <div className="mt-8 space-y-8 text-stone-600">
@@ -118,7 +118,7 @@ export default function PrivacyPage() {
               </ul>
               <p className="mt-3 leading-relaxed">
                 To exercise any of these rights, contact us at{" "}
-                <a href="mailto:acobapaulzion@gmail.com" className="text-trailhead hover:underline">acobapaulzion@gmail.com</a>.
+                <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a>.
                 {" "}We will respond within 15 business days.
               </p>
             </section>
@@ -162,7 +162,7 @@ export default function PrivacyPage() {
               <h2 className="text-lg font-bold text-stone-900">11. Contact and Complaints</h2>
               <p className="mt-2 leading-relaxed">For privacy concerns or to exercise your rights:</p>
               <ul className="mt-2 space-y-1.5 leading-relaxed">
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Email: <a href="mailto:acobapaulzion@gmail.com" className="text-trailhead hover:underline">acobapaulzion@gmail.com</a></span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Email: <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a></span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>You may also file a complaint with the National Privacy Commission at <a href="https://www.privacy.gov.ph" target="_blank" rel="noopener noreferrer" className="text-trailhead hover:underline">www.privacy.gov.ph</a></span></li>
               </ul>
             </section>

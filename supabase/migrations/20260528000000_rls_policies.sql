@@ -162,21 +162,28 @@ USING (status = 'active');
 -- ========================
 -- BOOKING_PARTICIPANTS POLICIES
 -- ========================
--- RLS is enabled on this table but no policies are defined.
 -- All access is handled via the service role (supabaseAdmin) in server actions.
--- This is intentional — booking_participants contains sensitive personal data
--- (names, emergency contacts) and should never be directly accessible by
--- authenticated users via the anon key.
--- If direct access is ever needed, add explicit policies here.
+-- booking_participants contains sensitive personal data (names, emergency contacts)
+-- and must never be directly accessible by authenticated users via the anon key.
+-- Explicit DENY policies enforce this even if a client-side bug uses the wrong client.
 
 ALTER TABLE public.booking_participants ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "No direct access to booking_participants"
+ON public.booking_participants FOR ALL
+TO authenticated
+USING (false);
 
 -- ========================
 -- WAITLIST POLICIES
 -- ========================
--- RLS is enabled on this table but no policies are defined.
 -- All access is handled via the service role (supabaseAdmin) in server actions.
 -- If direct participant access is needed in future (e.g. "leave waitlist" self-serve),
--- add a policy here: USING (auth.uid() = user_id)
+-- replace this policy with: USING (auth.uid() = user_id)
 
 ALTER TABLE public.waitlist ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "No direct access to waitlist"
+ON public.waitlist FOR ALL
+TO authenticated
+USING (false);

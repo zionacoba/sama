@@ -349,12 +349,13 @@ export async function updateTrip(
 
   // 3+4. Collect warnings for price change and downpayment-to-full switch.
   let saveWarning: string | undefined;
+  let downpaymentDisabled = false;
   if (!isDraft && !is_template) {
     const priceChanged = !isNaN(price) && existing.price != null && existing.price !== price;
     if (priceChanged && activeBookingCount > 0) {
       saveWarning = `Price updated. This only affects new bookings. ${activeBookingCount} existing booking${activeBookingCount !== 1 ? "s" : ""} will keep their original price.`;
     }
-    const downpaymentDisabled = existing.payment_type === "downpayment" && payment_type === "full";
+    downpaymentDisabled = existing.payment_type === "downpayment" && payment_type === "full";
     if (downpaymentDisabled && pendingBalanceCount > 0) {
       const balanceMsg = `Payment type updated. ${pendingBalanceCount} participant${pendingBalanceCount !== 1 ? "s" : ""} have already paid a downpayment and still owe a balance. They will need to settle directly with you.`;
       saveWarning = saveWarning ? `${saveWarning} ${balanceMsg}` : balanceMsg;
@@ -503,6 +504,45 @@ export async function updateTrip(
         } catch (err) {
           console.error("[db] failed to mark waitlist notified", entry.id, err);
         }
+      }
+    }
+  }
+
+  // Notify participants with outstanding balances when payment type switches to full.
+  if (downpaymentDisabled && pendingBalanceCount > 0) {
+    const admin = createSupabaseAdminClient();
+    const { data: balanceBookings } = await admin
+      .from("bookings")
+      .select("id, full_name, email, total_amount, amount_due")
+      .eq("trip_id", tripId)
+      .in("status", ["confirmed", "pending"]);
+
+    const fmt = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
+
+    for (const booking of balanceBookings ?? []) {
+      if (booking.amount_due == null || booking.total_amount == null) continue;
+      const balance = Number(booking.total_amount) - Number(booking.amount_due);
+      if (balance <= 0) continue;
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: booking.email,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `Action required: remaining balance for ${title}`,
+          html: `
+            <p>Hi ${escapeHtml(booking.full_name)},</p>
+            <p>The organizer of <strong>${escapeHtml(title)}</strong> has switched to full payment. Your booking requires the remaining balance to be settled.</p>
+            <p>Amount paid: <strong>${fmt(Number(booking.amount_due))}</strong><br>
+            Remaining balance: <strong>${fmt(balance)}</strong></p>
+            <p>Please contact your organizer directly to arrange payment of the outstanding balance.</p>
+            <p>You can view your booking at <a href="${siteUrl}/profile">${siteUrl.replace("https://", "")}/profile</a>.</p>
+            <p>If you have questions, email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
+            <p>— The Sama Team</p>
+          `,
+        });
+      } catch (err) {
+        console.error("[email] failed to notify balance due after payment type change", booking.id, err);
       }
     }
   }

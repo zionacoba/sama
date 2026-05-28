@@ -20,7 +20,7 @@ export default function TermsPage() {
           </h1>
           <div className="mt-2 space-y-0.5 text-sm text-stone-500">
             <p>Operated by: Paul Zion Acoba</p>
-            <p>Contact: <a href="mailto:acobapaulzion@gmail.com" className="text-trailhead hover:underline">acobapaulzion@gmail.com</a></p>
+            <p>Contact: <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a></p>
           </div>
 
           <div className="mt-8 space-y-8 text-stone-600">
@@ -149,7 +149,7 @@ export default function TermsPage() {
               <h2 className="text-lg font-bold text-stone-900">14. Contact</h2>
               <p className="mt-2 leading-relaxed">
                 For questions about these Terms, contact:{" "}
-                <a href="mailto:acobapaulzion@gmail.com" className="text-trailhead hover:underline">acobapaulzion@gmail.com</a>
+                <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a>
               </p>
             </section>
 

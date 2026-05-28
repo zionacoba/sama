@@ -9,7 +9,7 @@ import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 import { calculateRefundAmount } from "@/lib/cancellation-policies";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? (() => { throw new Error("ADMIN_EMAIL environment variable is not set"); })();
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
 type CreateBookingInput = {
@@ -157,6 +157,7 @@ export async function createBooking(input: CreateBookingInput) {
       medical_notes: input.medicalNotes,
       meeting_point: input.meetingPoint,
       platform_commission: platformCommission,
+      commission_rate_used: commissionRate,
       waiver_text_snapshot: trip.waiver_text?.replace(/\[Organizer Name\]/gi, organizerName) ?? null,
       waiver_ip: waiverIp,
     })

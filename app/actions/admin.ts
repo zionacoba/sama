@@ -7,7 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? (() => { throw new Error("ADMIN_EMAIL environment variable is not set"); })();
 
 async function requireAdmin() {
   const supabase = await createSupabaseServerClient();
