@@ -278,7 +278,7 @@ export function EditTripForm({
       {/* Region */}
       <div>
         <label htmlFor="region" className={labelClass}>
-          Region
+          Region <span className="text-red-500" aria-hidden="true">*</span>
         </label>
         <select
           id="region"

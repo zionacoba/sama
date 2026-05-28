@@ -91,6 +91,9 @@ export async function createTrip(
     if (!activity_type || !destination || !difficulty || !description) {
       return { error: "Please fill in all required fields." };
     }
+    if (!region) {
+      return { error: "Please select a region (Luzon, Visayas, or Mindanao)." };
+    }
     if (!is_template && (!date_start || isNaN(price) || isNaN(total_slots))) {
       return { error: "Please fill in all required fields." };
     }
@@ -266,6 +269,10 @@ export async function updateTrip(
 
   if (!isDraft && !activity_type || !isDraft && !destination || !isDraft && !difficulty || !isDraft && !description) {
     return { error: "Please fill in all required fields." };
+  }
+
+  if (!isDraft && !region) {
+    return { error: "Please select a region (Luzon, Visayas, or Mindanao)." };
   }
 
   if (!isDraft && !is_template && (!date_start || isNaN(price) || isNaN(total_slots))) {

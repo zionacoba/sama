@@ -96,7 +96,7 @@ export async function applyToBeOrganizer(
           <li><strong>Display name:</strong> ${escapeHtml(displayName)}</li>
           <li><strong>Email:</strong> ${escapeHtml(user.email!)}</li>
         </ul>
-        <p><a href="https://sama.ph/admin">Review it in the admin dashboard</a></p>
+        <p><a href="https://sama.com.ph/admin">Review it in the admin dashboard</a></p>
       `,
     });
   } catch (err) {
