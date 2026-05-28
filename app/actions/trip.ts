@@ -106,6 +106,7 @@ export async function createTrip(
       if (total_slots < 1) return { error: "Total slots must be at least 1." };
       if (payment_type === "downpayment" && min_downpayment !== null) {
         if (min_downpayment < 0) return { error: "Minimum downpayment cannot be negative." };
+        if (min_downpayment < 200) return { error: "Minimum downpayment must be at least ₱200." };
         if (price > 0 && min_downpayment >= price) return { error: "Minimum downpayment must be less than the full price." };
       }
       const today = new Date().toISOString().split("T")[0];
@@ -283,6 +284,7 @@ export async function updateTrip(
     if (total_slots < 1) return { error: "Total slots must be at least 1." };
     if (payment_type === "downpayment" && min_downpayment !== null) {
       if (min_downpayment < 0) return { error: "Minimum downpayment cannot be negative." };
+      if (min_downpayment < 200) return { error: "Minimum downpayment must be at least ₱200." };
       if (price > 0 && min_downpayment >= price) return { error: "Minimum downpayment must be less than the full price." };
     }
     const today = new Date().toISOString().split("T")[0];

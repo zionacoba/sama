@@ -309,14 +309,15 @@ export function TripForm({
                   id="min_downpayment"
                   name="min_downpayment"
                   type="number"
-                  min="0"
+                  min="200"
                   step="1"
                   required
                   defaultValue={defaultValues?.min_downpayment ?? ""}
                   className={inputClass}
                   placeholder="500"
                 />
-                <p className="mt-1.5 text-xs text-stone-500">
+                <p className="mt-1 text-xs font-medium text-trailhead">Minimum ₱200</p>
+                <p className="mt-1 text-xs text-stone-500">
                   This is the amount participants pay to reserve their slot. They can choose to pay in full or this downpayment amount. You set this — participants cannot change it.
                 </p>
               </div>
