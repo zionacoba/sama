@@ -324,10 +324,21 @@ export async function updateTrip(
     }
   }
 
-  const slotDiff = (isDraft || is_template) ? 0 : total_slots - existing.total_slots;
-  const remaining_slots = (isDraft || is_template)
-    ? existing.remaining_slots
-    : Math.max(0, existing.remaining_slots + slotDiff);
+  let remaining_slots: number;
+  if (isDraft || is_template) {
+    remaining_slots = existing.remaining_slots ?? 0;
+  } else if (total_slots !== existing.total_slots) {
+    const adminForSlots = createSupabaseAdminClient();
+    const { data: bookedRows } = await adminForSlots
+      .from("bookings")
+      .select("slots")
+      .eq("trip_id", tripId)
+      .in("status", ["confirmed", "pending"]);
+    const bookedSlots = (bookedRows ?? []).reduce((sum, b) => sum + (b.slots ?? 0), 0);
+    remaining_slots = Math.max(0, total_slots - bookedSlots);
+  } else {
+    remaining_slots = existing.remaining_slots ?? 0;
+  }
 
   // Normalise numerics for drafts.
   const safePrice = isDraft && isNaN(price) ? existing.price ?? 0 : price;
