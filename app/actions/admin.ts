@@ -93,10 +93,11 @@ export async function updateCommissionRate(formData: FormData): Promise<void> {
   const organizerId = formData.get("organizerId") as string;
   const ratePercent = parseFloat(formData.get("ratePercent") as string);
 
-  if (!organizerId) return;
-  if (isNaN(ratePercent) || ratePercent < 1 || ratePercent > 20) return;
+  if (!organizerId || isNaN(ratePercent) || ratePercent < 1 || ratePercent > 20) {
+    redirect("/admin?tab=organizers&commissionError=1");
+  }
 
-  const rate = Math.round(ratePercent * 100) / 10000;
+  const rate = Number((ratePercent / 100).toFixed(4));
   const admin = createSupabaseAdminClient();
   await admin.from("organizers").update({ commission_rate: rate }).eq("id", organizerId);
 

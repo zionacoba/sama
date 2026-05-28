@@ -386,7 +386,7 @@ export async function updateTrip(
       activity_type: activity_type || null,
       destination: destination || null,
       difficulty: difficulty || null,
-    region,
+      region,
       duration: duration || null,
       date_start: safeDateStart,
       date_end: date_end || null,

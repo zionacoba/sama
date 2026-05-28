@@ -9,7 +9,7 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 const PAGE_SIZE = 20;
 
 type PageProps = {
-  searchParams: Promise<{ tab?: string; page?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string; commissionError?: string }>;
 };
 
 type OrganizerApplication = {
@@ -76,7 +76,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default async function AdminPage({ searchParams }: PageProps) {
-  const { tab = "bookings", page: pageParam } = await searchParams;
+  const { tab = "bookings", page: pageParam, commissionError } = await searchParams;
   const activeTab = tab === "organizers" ? "organizers" : "bookings";
   const page = Math.max(1, Number(pageParam) || 1);
 
@@ -268,6 +268,11 @@ export default async function AdminPage({ searchParams }: PageProps) {
         {/* ── Organizers tab ── */}
         {activeTab === "organizers" && (
           <section className="mt-8">
+            {commissionError && (
+              <p role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                Invalid commission rate. Must be between 1% and 20%.
+              </p>
+            )}
             {orgError && (
               <p role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                 Failed to load applications: {orgError.message}
