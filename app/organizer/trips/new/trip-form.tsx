@@ -19,6 +19,7 @@ type TripDefaults = {
   activity_type?: string | null;
   difficulty?: string | null;
   destination?: string | null;
+  region?: string | null;
   duration?: string | null;
   description?: string | null;
   includes?: string | null;
@@ -214,6 +215,28 @@ export function TripForm({
             ))}
           </datalist>
         )}
+      </div>
+
+      {/* Region */}
+      <div>
+        <label htmlFor="region" className={labelClass}>
+          Region
+        </label>
+        <select
+          id="region"
+          name="region"
+          required
+          defaultValue={defaultValues?.region ?? ""}
+          className={inputClass}
+        >
+          <option value="">Select region…</option>
+          <option value="Luzon">Luzon</option>
+          <option value="Visayas">Visayas</option>
+          <option value="Mindanao">Mindanao</option>
+        </select>
+        <p className="mt-1.5 text-xs text-stone-500">
+          Select the island group where this trip takes place.
+        </p>
       </div>
 
       {/* Date + Price + Slots (hidden for templates) */}

@@ -15,6 +15,7 @@ type TripDetail = {
   id: number;
   title: string;
   destination: string;
+  region: string | null;
   activity_type: string | null;
   difficulty: string;
   duration: string | null;
@@ -217,7 +218,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
   const supabase = await createSupabaseServerClient();
 
   const [{ data: trip }, { data: { user } }] = await Promise.all([
-    supabase.from("trips").select("id, title, slug, destination, activity_type, difficulty, duration, price, description, date_start, date_end, meeting_point, total_slots, remaining_slots, photos, includes, what_to_bring, organizer_id, template_id, is_template, payment_type, min_downpayment, downpayment_cutoff_days, cancellation_policy, cancellation_policy_custom, waiver_text, meeting_points, waitlist_enabled").eq("slug", slug).maybeSingle(),
+    supabase.from("trips").select("id, title, slug, destination, region, activity_type, difficulty, duration, price, description, date_start, date_end, meeting_point, total_slots, remaining_slots, photos, includes, what_to_bring, organizer_id, template_id, is_template, payment_type, min_downpayment, downpayment_cutoff_days, cancellation_policy, cancellation_policy_custom, waiver_text, meeting_points, waitlist_enabled").eq("slug", slug).maybeSingle(),
     supabase.auth.getUser(),
   ]);
 
@@ -355,7 +356,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               {tripData.title}
             </h1>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-stone-600">
-              <span>📍 {tripData.destination}</span>
+              <span>📍 {tripData.destination}{tripData.region ? ` · ${tripData.region}` : ""}</span>
               <span>📅 {formatDateRange(tripData.date_start, tripData.date_end)}</span>
               {tripData.duration && <span>⏱ {tripData.duration}</span>}
             </div>

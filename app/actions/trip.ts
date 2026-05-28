@@ -42,6 +42,8 @@ export async function createTrip(
   const title = (formData.get("title") as string)?.trim();
   const activity_type = formData.get("activity_type") as string;
   const destination = (formData.get("destination") as string)?.trim();
+  const region_raw = (formData.get("region") as string) || null;
+  const region = (region_raw === "Luzon" || region_raw === "Visayas" || region_raw === "Mindanao") ? region_raw : null;
   const difficulty = formData.get("difficulty") as string;
   const duration = (formData.get("duration") as string) || null;
   const date_start = is_template ? "2099-12-31" : (formData.get("date_start") as string);
@@ -136,6 +138,7 @@ export async function createTrip(
     slug,
     activity_type: activity_type || null,
     destination: destination || null,
+    region,
     difficulty: difficulty || null,
     duration: duration || null,
     date_start: safeDateStart,
@@ -217,6 +220,8 @@ export async function updateTrip(
   const destination = (formData.get("destination") as string)?.trim();
   const difficulty = formData.get("difficulty") as string;
   const duration = (formData.get("duration") as string) || null;
+  const region_raw = (formData.get("region") as string) || null;
+  const region = (region_raw === "Luzon" || region_raw === "Visayas" || region_raw === "Mindanao") ? region_raw : null;
   const date_start = is_template ? "2099-12-31" : (formData.get("date_start") as string);
   const date_end = is_template ? null : ((formData.get("date_end") as string) || null);
   const price = is_template ? 0 : parseFloat(formData.get("price") as string);
@@ -374,6 +379,7 @@ export async function updateTrip(
       activity_type: activity_type || null,
       destination: destination || null,
       difficulty: difficulty || null,
+    region,
       duration: duration || null,
       date_start: safeDateStart,
       date_end: date_end || null,

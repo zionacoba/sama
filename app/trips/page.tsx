@@ -22,6 +22,7 @@ export const metadata: Metadata = {
 const ACTIVITIES = ["All", "Hiking", "Freediving", "Beach & Island"] as const;
 const DURATIONS  = ["All", "Day tour", "2D1N", "3D2N", "4D3N+"] as const;
 const DIFFICULTIES = ["All", "Beginner", "Intermediate", "Advanced"] as const;
+const REGIONS = ["All", "Luzon", "Visayas", "Mindanao"] as const;
 
 type Trip = {
   id: string | number;
@@ -29,6 +30,7 @@ type Trip = {
   title: string;
   price: string | number;
   destination: string;
+  region: string | null;
   difficulty: string;
   activity_type: string | null;
   duration: string | null;
@@ -46,6 +48,7 @@ type FilterParams = {
   activity?: string;
   duration?: string;
   difficulty?: string;
+  region?: string;
   search?: string;
   date_from?: string;
   date_to?: string;
@@ -124,7 +127,7 @@ function groupByTemplate(trips: Trip[]): TripGroup[] {
 
 function filterUrl(
   base: FilterParams,
-  key: "activity" | "duration" | "difficulty",
+  key: "activity" | "duration" | "difficulty" | "region",
   value: string,
 ) {
   const next: FilterParams = { ...base, [key]: value === "All" ? undefined : value };
@@ -133,6 +136,7 @@ function filterUrl(
   if (next.activity) sp.set("activity", next.activity);
   if (next.duration) sp.set("duration", next.duration);
   if (next.difficulty) sp.set("difficulty", next.difficulty);
+  if (next.region) sp.set("region", next.region);
   if (next.date_from) sp.set("date_from", next.date_from);
   if (next.date_to) sp.set("date_to", next.date_to);
   if (next.sort && next.sort !== "soonest") sp.set("sort", next.sort);
@@ -141,7 +145,7 @@ function filterUrl(
 }
 
 export default async function TripsPage({ searchParams }: PageProps) {
-  const { activity, duration, difficulty, search, date_from, date_to, sort = "soonest", page: pageParam } = await searchParams;
+  const { activity, duration, difficulty, region, search, date_from, date_to, sort = "soonest", page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -149,7 +153,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from("trips")
-    .select("id, slug, title, activity_type, difficulty, price, date_start, date_end, remaining_slots, total_slots, photos, destination, duration, is_template, template_id", { count: "exact" })
+    .select("id, slug, title, activity_type, difficulty, price, date_start, date_end, remaining_slots, total_slots, photos, destination, region, duration, is_template, template_id", { count: "exact" })
     .eq("status", "active")
     .gt("date_start", new Date().toISOString())
     .gt("remaining_slots", 0)
@@ -172,6 +176,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
   if (activity) query = query.eq("activity_type", activity);
   if (duration) query = query.eq("duration", duration);
   if (difficulty) query = query.eq("difficulty", difficulty);
+  if (region) query = query.eq("region", region);
   if (date_from) query = query.gte("date_start", `${date_from}T00:00:00`);
   if (date_to) query = query.lte("date_start", `${date_to}T23:59:59`);
 
@@ -190,7 +195,8 @@ export default async function TripsPage({ searchParams }: PageProps) {
   const currentActivity = activity ?? "All";
   const currentDuration = duration ?? "All";
   const currentDifficulty = difficulty ?? "All";
-  const current = { activity, duration, difficulty, search, date_from, date_to, sort };
+  const currentRegion = region ?? "All";
+  const current = { activity, duration, difficulty, region, search, date_from, date_to, sort };
   const groups = groupByTemplate(trips);
 
   function pageUrl(p: number) {
@@ -199,6 +205,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
     if (activity) sp.set("activity", activity);
     if (duration) sp.set("duration", duration);
     if (difficulty) sp.set("difficulty", difficulty);
+    if (region) sp.set("region", region);
     if (date_from) sp.set("date_from", date_from);
     if (date_to) sp.set("date_to", date_to);
     if (sort && sort !== "soonest") sp.set("sort", sort);
@@ -224,6 +231,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 {activity && <input type="hidden" name="activity" value={activity} />}
                 {duration && <input type="hidden" name="duration" value={duration} />}
                 {difficulty && <input type="hidden" name="difficulty" value={difficulty} />}
+                {region && <input type="hidden" name="region" value={region} />}
                 {sort && sort !== "soonest" && <input type="hidden" name="sort" value={sort} />}
                 {date_from && <input type="hidden" name="date_from" value={date_from} />}
                 {date_to && <input type="hidden" name="date_to" value={date_to} />}
@@ -315,6 +323,27 @@ export default async function TripsPage({ searchParams }: PageProps) {
                   );
                 })}
               </div>
+              {/* Region */}
+              <div className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
+                <span className="mx-1 hidden shrink-0 text-stone-300 md:inline" aria-hidden>|</span>
+                <span className="shrink-0 text-xs font-semibold text-stone-400">Region</span>
+                {REGIONS.map((r) => {
+                  const active = r === currentRegion;
+                  return (
+                    <Link
+                      key={r}
+                      href={filterUrl(current, "region", r)}
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                        active
+                          ? "bg-trailhead text-white shadow-sm"
+                          : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
+                      }`}
+                    >
+                      {r}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
 
             <p className="mt-2 text-xs text-stone-500">
@@ -327,6 +356,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                     if (activity) sp.set("activity", activity);
                     if (duration) sp.set("duration", duration);
                     if (difficulty) sp.set("difficulty", difficulty);
+                    if (region) sp.set("region", region);
                     if (date_from) sp.set("date_from", date_from);
                     if (date_to) sp.set("date_to", date_to);
                     if (sort && sort !== "soonest") sp.set("sort", sort);

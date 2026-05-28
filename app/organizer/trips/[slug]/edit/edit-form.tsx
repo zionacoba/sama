@@ -23,6 +23,7 @@ type TripForEdit = {
   difficulty: string;
   duration: string | null;
   destination: string;
+  region: string | null;
   date_start: string;
   date_end: string | null;
   price: number;
@@ -272,6 +273,28 @@ export function EditTripForm({
             ))}
           </datalist>
         )}
+      </div>
+
+      {/* Region */}
+      <div>
+        <label htmlFor="region" className={labelClass}>
+          Region
+        </label>
+        <select
+          id="region"
+          name="region"
+          required
+          defaultValue={trip.region ?? ""}
+          className={inputClass}
+        >
+          <option value="">Select region…</option>
+          <option value="Luzon">Luzon</option>
+          <option value="Visayas">Visayas</option>
+          <option value="Mindanao">Mindanao</option>
+        </select>
+        <p className="mt-1.5 text-xs text-stone-500">
+          Select the island group where this trip takes place.
+        </p>
       </div>
 
       {/* Date + Price + Slots (hidden for templates) */}
