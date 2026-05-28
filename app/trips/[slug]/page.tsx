@@ -11,6 +11,7 @@ import { PhotoGallery } from "@/app/components/photo-gallery";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { formatDate, formatDateShort, formatDateRange, formatReviewDate } from "@/lib/format";
 import { PublishedBanner } from "@/app/trips/[slug]/published-banner";
+import Script from "next/script";
 
 type TripDetail = {
   id: number;
@@ -290,7 +291,38 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
   const includesList = parseList(tripData.includes);
   const whatToBringList = parseList(tripData.what_to_bring);
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
+  const jsonLdDescription = tripData.description
+    ? tripData.description.slice(0, 160).trimEnd() + (tripData.description.length > 160 ? "…" : "")
+    : "";
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: tripData.title,
+    description: jsonLdDescription,
+    startDate: tripData.date_start,
+    endDate: tripData.date_end ?? tripData.date_start,
+    location: { "@type": "Place", name: tripData.destination },
+    offers: {
+      "@type": "Offer",
+      price: Number(tripData.price),
+      priceCurrency: "PHP",
+      availability: tripData.remaining_slots > 0
+        ? "https://schema.org/InStock"
+        : "https://schema.org/SoldOut",
+    },
+    organizer: { "@type": "Organization", name: organizerName ?? "Sama" },
+    url: `${siteUrl}/trips/${slug}`,
+  };
+
   return (
+    <>
+    <Script
+      id="trip-jsonld"
+      type="application/ld+json"
+      strategy="beforeInteractive"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
     <div className="min-h-full bg-stone-50 text-stone-900 font-sans">
       {published === "1" && <PublishedBanner tripSlug={slug} />}
       <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
@@ -685,5 +717,6 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
         </Link>
       </footer>
     </div>
+    </>
   );
 }

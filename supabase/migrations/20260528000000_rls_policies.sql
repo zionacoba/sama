@@ -18,7 +18,7 @@ ALTER TABLE public.trips ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admin can view all bookings"
 ON public.bookings FOR SELECT
 TO authenticated
-USING ((auth.jwt() ->> 'email') = 'acobapaulzion@gmail.com');
+USING ((auth.jwt() ->> 'email') = (SELECT value FROM public.app_config WHERE key = 'admin_email'));
 
 CREATE POLICY "Authenticated users can insert bookings"
 ON public.bookings FOR INSERT
@@ -64,7 +64,7 @@ WITH CHECK (
 CREATE POLICY "Admin can update status"
 ON public.organizers FOR UPDATE
 TO public
-USING ((auth.jwt() ->> 'email') = 'acobapaulzion@gmail.com');
+USING ((auth.jwt() ->> 'email') = (SELECT value FROM public.app_config WHERE key = 'admin_email'));
 
 CREATE POLICY "Users can apply"
 ON public.organizers FOR INSERT
@@ -81,7 +81,7 @@ ON public.organizers FOR SELECT
 TO public
 USING (
   (auth.uid() = user_id)
-  OR ((auth.jwt() ->> 'email') = 'acobapaulzion@gmail.com')
+  OR ((auth.jwt() ->> 'email') = (SELECT value FROM public.app_config WHERE key = 'admin_email'))
 );
 
 -- ========================
