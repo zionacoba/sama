@@ -87,3 +87,19 @@ export async function rejectOrganizer(id: string): Promise<void> {
   revalidatePath("/admin");
   redirect("/admin?tab=organizers");
 }
+
+export async function updateCommissionRate(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const organizerId = formData.get("organizerId") as string;
+  const ratePercent = parseFloat(formData.get("ratePercent") as string);
+
+  if (!organizerId) return;
+  if (isNaN(ratePercent) || ratePercent < 1 || ratePercent > 20) return;
+
+  const rate = Math.round(ratePercent * 100) / 10000;
+  const admin = createSupabaseAdminClient();
+  await admin.from("organizers").update({ commission_rate: rate }).eq("id", organizerId);
+
+  revalidatePath("/admin");
+  redirect("/admin?tab=organizers&_r=" + Date.now());
+}

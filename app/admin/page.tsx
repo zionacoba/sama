@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { toggleFoundingPartner } from "@/app/actions/organizer";
-import { approveOrganizer, rejectOrganizer } from "@/app/actions/admin";
+import { approveOrganizer, rejectOrganizer, updateCommissionRate } from "@/app/actions/admin";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
@@ -25,6 +25,7 @@ type OrganizerApplication = {
   emergency_certified: boolean;
   status: string;
   is_founding_partner: boolean;
+  commission_rate: number | null;
   created_at: string;
 };
 
@@ -115,7 +116,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
       .range(from, to),
     adminClient
       .from("organizers")
-      .select("id, full_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_experience, emergency_certified, status, is_founding_partner, created_at")
+      .select("id, full_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_experience, emergency_certified, status, is_founding_partner, commission_rate, created_at")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -288,13 +289,14 @@ export default async function AdminPage({ searchParams }: PageProps) {
                       <th className="w-10 px-3 py-3 font-semibold">FA</th>
                       <th className="w-20 px-3 py-3 font-semibold">Status</th>
                       <th className="w-24 px-3 py-3 font-semibold">Applied</th>
+                      <th className="w-28 px-3 py-3 font-semibold">Commission</th>
                       <th className="w-32 px-3 py-3 font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {applications.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="px-4 py-12 text-center text-stone-500">
+                        <td colSpan={12} className="px-4 py-12 text-center text-stone-500">
                           No applications yet.
                         </td>
                       </tr>
@@ -337,6 +339,27 @@ export default async function AdminPage({ searchParams }: PageProps) {
                           <td className="w-20 px-3 py-3"><StatusBadge status={app.status} /></td>
                           <td className="w-24 whitespace-nowrap px-3 py-3 text-xs text-stone-500">
                             {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(app.created_at))}
+                          </td>
+                          <td className="w-28 px-3 py-3">
+                            <form action={updateCommissionRate} className="flex items-center gap-1">
+                              <input type="hidden" name="organizerId" value={app.id} />
+                              <input
+                                type="number"
+                                name="ratePercent"
+                                defaultValue={Math.round((app.commission_rate ?? 0.05) * 100)}
+                                min={1}
+                                max={20}
+                                step={1}
+                                className="w-14 rounded border border-stone-200 px-1.5 py-1 text-xs text-stone-900 focus:border-trailhead focus:outline-none"
+                              />
+                              <span className="text-xs text-stone-400">%</span>
+                              <button
+                                type="submit"
+                                className="rounded bg-trailhead/10 px-2 py-1 text-xs font-semibold text-trailhead hover:bg-trailhead/20"
+                              >
+                                Save
+                              </button>
+                            </form>
                           </td>
                           <td className="w-32 px-3 py-3">
                             <div className="flex flex-col gap-2">

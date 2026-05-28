@@ -109,14 +109,14 @@ export async function createBooking(input: CreateBookingInput) {
   const computedAmountDue = input.paymentOption === "downpayment" && canDownpay
     ? Math.round(Math.min(Number(trip.min_downpayment) * input.slots, computedTotal) * 100) / 100
     : computedTotal;
-  const platformCommission = parseFloat((computedTotal * 0.04).toFixed(2));
-
   const { data: tripOrganizer } = await admin
     .from("organizers")
-    .select("display_name, full_name")
+    .select("display_name, full_name, commission_rate")
     .eq("id", trip.organizer_id)
     .maybeSingle();
   const organizerName = tripOrganizer?.display_name ?? tripOrganizer?.full_name ?? "";
+  const commissionRate = tripOrganizer?.commission_rate != null ? Number(tripOrganizer.commission_rate) : 0.05;
+  const platformCommission = Math.round(computedTotal * commissionRate * 100) / 100;
 
   const requestHeaders = await headers();
   const waiverIp = requestHeaders.get("x-forwarded-for")?.split(",")[0].trim() ?? null;
