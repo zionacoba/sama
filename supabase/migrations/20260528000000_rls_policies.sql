@@ -158,3 +158,25 @@ CREATE POLICY "Public can view active trips"
 ON public.trips FOR SELECT
 TO anon, authenticated
 USING (status = 'active');
+
+-- ========================
+-- BOOKING_PARTICIPANTS POLICIES
+-- ========================
+-- RLS is enabled on this table but no policies are defined.
+-- All access is handled via the service role (supabaseAdmin) in server actions.
+-- This is intentional — booking_participants contains sensitive personal data
+-- (names, emergency contacts) and should never be directly accessible by
+-- authenticated users via the anon key.
+-- If direct access is ever needed, add explicit policies here.
+
+ALTER TABLE public.booking_participants ENABLE ROW LEVEL SECURITY;
+
+-- ========================
+-- WAITLIST POLICIES
+-- ========================
+-- RLS is enabled on this table but no policies are defined.
+-- All access is handled via the service role (supabaseAdmin) in server actions.
+-- If direct participant access is needed in future (e.g. "leave waitlist" self-serve),
+-- add a policy here: USING (auth.uid() = user_id)
+
+ALTER TABLE public.waitlist ENABLE ROW LEVEL SECURITY;
