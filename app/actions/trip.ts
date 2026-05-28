@@ -198,7 +198,7 @@ export async function updateTrip(
 
   const { data: existing, error: fetchError } = await supabase
     .from("trips")
-    .select("id, slug, status, title, organizer_id, total_slots, remaining_slots, date_start, date_end, price, meeting_points, difficulty, payment_type")
+    .select("id, slug, status, title, organizer_id, total_slots, remaining_slots, date_start, date_end, price, meeting_points, difficulty, payment_type, min_downpayment")
     .eq("id", tripId)
     .maybeSingle();
 
@@ -235,8 +235,8 @@ export async function updateTrip(
   try { photos = photosJson ? JSON.parse(photosJson) : []; } catch { return { error: "Invalid photo data." }; }
   const payment_type = (formData.get("payment_type") as string) || "full";
   const min_downpayment_raw = formData.get("min_downpayment") as string;
-  const min_downpayment = payment_type === "downpayment" && min_downpayment_raw
-    ? parseFloat(min_downpayment_raw)
+  const min_downpayment = payment_type === "downpayment"
+    ? (min_downpayment_raw ? parseFloat(min_downpayment_raw) : (existing.min_downpayment ?? null))
     : null;
   const downpayment_cutoff_days_raw = formData.get("downpayment_cutoff_days") as string;
   const _cutoffParsed2 = payment_type === "downpayment" && downpayment_cutoff_days_raw
@@ -302,7 +302,7 @@ export async function updateTrip(
   let bookedSlots = 0;
   let activeBookingCount = 0;
   let pendingBalanceCount = 0;
-  if (!isDraft || status === "draft") {
+  if (!isDraft && !is_template) {
     const adminForChecks = createSupabaseAdminClient();
     const { data: activeBookings } = await adminForChecks
       .from("bookings")

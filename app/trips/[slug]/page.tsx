@@ -197,7 +197,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title: `${trip.title} | Sama`,
       description,
-      // Relative — resolves against metadataBase (VERCEL_URL or sama.ph)
+      // Relative — resolves against metadataBase (VERCEL_URL or sama.com.ph)
       url: `/trips/${slug}`,
       type: "website",
       // og:image is handled exclusively by opengraph-image.tsx (file convention)
