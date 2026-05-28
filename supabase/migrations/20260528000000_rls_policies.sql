@@ -2,6 +2,7 @@
 -- These policies were originally configured in the Supabase dashboard and are documented here for version control.
 -- Do NOT run this migration on the live database — policies already exist there.
 -- This file exists solely for documentation and reproducibility purposes.
+-- Last updated: 2026-05-28 — tightened booking access, removed duplicate review policies.
 
 -- Enable RLS on all tables
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
@@ -16,13 +17,13 @@ ALTER TABLE public.trips ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admin can view all bookings"
 ON public.bookings FOR SELECT
-TO public
-USING (true);
+TO authenticated
+USING ((auth.jwt() ->> 'email') = 'acobapaulzion@gmail.com');
 
-CREATE POLICY "Anyone can insert bookings"
+CREATE POLICY "Authenticated users can insert bookings"
 ON public.bookings FOR INSERT
-TO public
-WITH CHECK (true);
+TO authenticated
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Organizers can read bookings on their trips"
 ON public.bookings FOR SELECT
@@ -114,16 +115,6 @@ USING (true);
 CREATE POLICY "Authenticated users can insert their own reviews"
 ON public.reviews FOR INSERT
 TO public
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Reviews are publicly readable"
-ON public.reviews FOR SELECT
-TO public
-USING (true);
-
-CREATE POLICY "Users can write reviews"
-ON public.reviews FOR INSERT
-TO authenticated
 WITH CHECK (auth.uid() = user_id);
 
 -- ========================
