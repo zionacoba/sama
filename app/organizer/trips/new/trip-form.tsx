@@ -85,6 +85,7 @@ export function TripForm({
   }
 
   const errorMessage = hasSubmitted && !editedAfterSubmit && !isPending ? state?.error : null;
+  const warningMessage = hasSubmitted && !editedAfterSubmit && !isPending && state && "success" in state ? state.warning : null;
 
   return (
     <form
@@ -100,6 +101,22 @@ export function TripForm({
         >
           {errorMessage}
         </p>
+      )}
+
+      {warningMessage && (
+        <div
+          role="alert"
+          className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+        >
+          <p className="font-semibold">Trip published</p>
+          <p className="mt-1">{warningMessage}</p>
+          <a
+            href="/organizer/dashboard"
+            className="mt-2 inline-block text-xs font-semibold underline underline-offset-2 hover:text-amber-900"
+          >
+            Go to dashboard
+          </a>
+        </div>
       )}
 
       {/* Template toggle */}

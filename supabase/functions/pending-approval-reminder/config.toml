@@ -1,0 +1,2 @@
+[functions.pending-approval-reminder]
+schedule = "0 9 * * *"

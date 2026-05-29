@@ -212,6 +212,13 @@ function BookingCard({
             tripDate={formatDate(trip.date_start)}
           />
         )}
+
+        <Link
+          href={`/profile/bookings/${booking.id}`}
+          className="self-start text-xs font-medium text-stone-400 underline-offset-2 hover:text-trailhead hover:underline"
+        >
+          View booking details →
+        </Link>
       </div>
     </article>
   );
