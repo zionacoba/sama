@@ -4,6 +4,55 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
+export async function deleteAccount(): Promise<{ success: true } | { error: string }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const admin = createSupabaseAdminClient();
+
+  // Block deletion if the user has upcoming confirmed bookings.
+  const { data: confirmedBookings } = await admin
+    .from("bookings")
+    .select("id, trip:trips!bookings_trip_id_fkey(date_start)")
+    .eq("user_id", user.id)
+    .eq("status", "confirmed");
+
+  const now = new Date().toISOString();
+  const upcoming = (confirmedBookings ?? []).filter((b) => {
+    const t = b.trip as unknown as { date_start: string } | null;
+    return t && t.date_start > now;
+  });
+
+  if (upcoming.length > 0) {
+    return { error: "You have upcoming confirmed bookings. Please cancel them before deleting your account." };
+  }
+
+  // Anonymize all booking records — retained for legal/financial purposes.
+  await admin
+    .from("bookings")
+    .update({
+      full_name: "Deleted User",
+      email: "deleted@sama.com.ph",
+      phone: null,
+      emergency_contact_name: null,
+      emergency_contact_phone: null,
+      medical_notes: null,
+    })
+    .eq("user_id", user.id);
+
+  // Remove the profile row.
+  await admin.from("profiles").delete().eq("id", user.id);
+
+  // Sign the user out before removing the auth record so the cookie is cleared.
+  await supabase.auth.signOut();
+
+  // Hard-delete the auth user (service-role required).
+  await admin.auth.admin.deleteUser(user.id);
+
+  return { success: true };
+}
+
 type ProfileState = { success: true } | { error: string } | null;
 
 export async function saveProfile(

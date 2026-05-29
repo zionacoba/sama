@@ -111,13 +111,15 @@ export default function PrivacyPage() {
               <ul className="mt-2 space-y-1.5 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Access</strong> — request a copy of your personal data we hold</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Correction</strong> — request correction of inaccurate data</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Erasure</strong> — request deletion of your account and personal data</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Erasure</strong> — delete your account directly from your <Link href="/profile?tab=profile" className="text-trailhead hover:underline">profile settings</Link>, or contact us to request deletion of specific data</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Object</strong> — object to the processing of your personal data</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Portability</strong> — request your data in a portable format</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">File a complaint</strong> — with the National Privacy Commission (NPC)</span></li>
               </ul>
               <p className="mt-3 leading-relaxed">
-                To exercise any of these rights, contact us at{" "}
+                You can delete your account at any time from your{" "}
+                <Link href="/profile?tab=profile" className="text-trailhead hover:underline">profile settings</Link>.
+                {" "}To exercise any other rights, contact us at{" "}
                 <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a>.
                 {" "}We will respond within 15 business days.
               </p>

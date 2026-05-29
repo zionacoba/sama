@@ -8,6 +8,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { BookingReviewForm } from "@/app/dashboard/bookings/booking-review-form";
 import { ProfileForm as SafetyForm } from "@/app/dashboard/profile/profile-form";
 import { ProfileForm } from "./profile-form";
+import { DeleteAccountButton } from "@/app/components/delete-account-button";
 import { ParticipantShareLinks } from "./participant-share-links";
 import { WaiverModal } from "./waiver-modal";
 import { CancelBookingButton } from "./cancel-booking-button";
@@ -505,6 +506,16 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
                   emergencyContactName={profileData?.emergency_contact_name ?? null}
                   emergencyContactPhone={profileData?.emergency_contact_phone ?? null}
                 />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-red-100 bg-white p-6 shadow-sm sm:p-8">
+              <h2 className="text-lg font-semibold text-red-700">Delete account</h2>
+              <p className="mt-2 text-sm text-stone-500">
+                Deleting your account is permanent and cannot be undone. Your booking history will be anonymized and retained for legal and financial record-keeping purposes.
+              </p>
+              <div className="mt-5">
+                <DeleteAccountButton />
               </div>
             </div>
           </div>
