@@ -66,6 +66,62 @@ export async function rejectOrganizer(id: string): Promise<void> {
 
   await admin.from("organizers").update({ status: "rejected" }).eq("id", id);
 
+  // Unpublish all active trips for this organizer.
+  const { data: activeTrips } = await admin
+    .from("trips")
+    .select("id, title, slug")
+    .eq("organizer_id", id)
+    .eq("status", "active");
+
+  const tripIds = (activeTrips ?? []).map((t) => t.id);
+
+  if (tripIds.length > 0) {
+    await admin
+      .from("trips")
+      .update({ status: "draft" })
+      .in("id", tripIds);
+
+    // Notify participants of affected bookings.
+    const { data: affectedBookings } = await admin
+      .from("bookings")
+      .select("id, email, full_name, trip_id")
+      .in("trip_id", tripIds)
+      .in("status", ["confirmed", "pending"]);
+
+    const tripMap = new Map(
+      (activeTrips ?? []).map((t) => [t.id, t]),
+    );
+
+    for (const booking of affectedBookings ?? []) {
+      const trip = tripMap.get(booking.trip_id);
+      if (!trip) continue;
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: booking.email,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `Important update about your booking: ${trip.title}`,
+          html: `
+            <p>Hi ${escapeHtml(booking.full_name)},</p>
+            <p>We're sorry to inform you that <strong>${escapeHtml(trip.title)}</strong> is no longer available on Sama.</p>
+            <p>Your booking has been cancelled and you will receive a <strong>full refund</strong> to your original payment method within 3–5 business days.</p>
+            <p>If you have any questions, please contact us at <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
+            <p>We apologise for the inconvenience.</p>
+            <p>— The Sama Team</p>
+          `,
+        });
+      } catch (err) {
+        console.error("[email] failed to send trip cancellation notice to participant", err);
+      }
+    }
+  }
+
+  // Notify the organizer their account has been rejected and trips unpublished.
+  const tripsUnpublishedNote =
+    tripIds.length > 0
+      ? `<p>As a result, the following trip${tripIds.length > 1 ? "s have" : " has"} been unpublished: <strong>${(activeTrips ?? []).map((t) => escapeHtml(t.title)).join(", ")}</strong>. Participants with confirmed or pending bookings will be notified and issued full refunds.</p>`
+      : "";
+
   try {
     await resend.emails.send({
       from: FROM_ADDRESS,
@@ -76,6 +132,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
         <p>Hi ${escapeHtml(organizer.full_name)},</p>
         <p>Thank you for your interest in becoming a Sama organizer.</p>
         <p>After reviewing your application, we're unable to approve it at this time.</p>
+        ${tripsUnpublishedNote}
         <p>If you have questions or would like to reapply in the future, feel free to reach out to us.</p>
         <p>— The Sama Team</p>
       `,
