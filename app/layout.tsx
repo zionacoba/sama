@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,6 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
+
+export const viewport: Viewport = {
+  themeColor: "#1a5c38",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -30,7 +34,6 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
   },
-  themeColor: "#1a5c38",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
