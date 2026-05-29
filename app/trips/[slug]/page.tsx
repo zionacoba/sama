@@ -186,12 +186,10 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
   const supabase = await createSupabaseServerClient();
 
-  const [tripResult, { data: { user } }] = await Promise.all([
+  const [{ data: trip }, { data: { user } }] = await Promise.all([
     supabase.from("trips").select("id, title, slug, destination, region, date_start, date_end, total_slots, remaining_slots, price, payment_type, min_downpayment, downpayment_cutoff_days, difficulty, activity_type, duration, meeting_points, meeting_point, description, photos, waiver_text, cancellation_policy, cancellation_policy_custom, messenger_gc_link, organizer_id, status, is_template, template_id, includes, what_to_bring, waitlist_enabled").eq("slug", slug).maybeSingle(),
     supabase.auth.getUser(),
   ]);
-  console.error("[TripDetailPage] trip fetch result:", JSON.stringify({ data: tripResult.data, error: tripResult.error }));
-  const trip = tripResult.data;
 
   if (!trip) {
     return (
