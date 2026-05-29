@@ -463,10 +463,13 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
 
   if (error) return { error: error.message };
 
-  await admin.rpc("restore_slot", {
+  const { error: slotErr } = await admin.rpc("restore_slot", {
     p_trip_id: trip.id,
     p_slots_requested: booking.slots,
   });
+  if (slotErr) {
+    console.error(`[markAsTransferred] restore_slot failed for booking ${bookingId}:`, slotErr.message);
+  }
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {
     year: "numeric",

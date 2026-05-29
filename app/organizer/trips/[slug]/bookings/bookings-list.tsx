@@ -111,7 +111,7 @@ export function BookingsListWithTabs({
     { key: "confirmed", label: "Confirmed", count: confirmedBookings.length },
     { key: "pending", label: "Pending", count: pendingBookings.length, badge: "amber" },
     { key: "all", label: "All", count: bookings.length },
-    { key: "cancelled", label: "Cancelled / Rejected", count: cancelledBookings.length },
+    { key: "cancelled", label: "Cancelled / Rejected / Transferred", count: cancelledBookings.length },
   ];
 
   const emptyMessage =
@@ -120,7 +120,7 @@ export function BookingsListWithTabs({
       : tab === "pending"
         ? "No pending bookings."
         : tab === "cancelled"
-          ? "No cancelled or rejected bookings."
+          ? "No cancelled, rejected, or transferred bookings."
           : "No bookings yet.";
 
   return (

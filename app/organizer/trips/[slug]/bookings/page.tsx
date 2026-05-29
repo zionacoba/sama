@@ -161,7 +161,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
 
   const pending = bookings.filter((b) => b.status === "pending");
   const confirmed = bookings.filter((b) => b.status === "confirmed");
-  const rejected = bookings.filter((b) => b.status === "rejected" || b.status === "cancelled");
+  const rejected = bookings.filter((b) => b.status === "rejected" || b.status === "cancelled" || b.status === "transferred");
 
   const needsManualApproval = trip.difficulty === "Advanced";
   const slotsBooked = bookings
@@ -244,7 +244,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
             </span>
             {rejected.length > 0 && (
               <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-semibold text-stone-500">
-                {rejected.length} rejected
+                {rejected.length} cancelled / rejected
               </span>
             )}
             {waitlist.length > 0 && (

@@ -367,7 +367,7 @@ export async function updateTrip(
       const balanceMsg = `Payment type updated. ${pendingBalanceCount} participant${pendingBalanceCount !== 1 ? "s" : ""} have already paid a downpayment and still owe a balance. They will need to settle directly with you.`;
       saveWarning = saveWarning ? `${saveWarning} ${balanceMsg}` : balanceMsg;
     }
-    if (!messenger_gc_link) {
+    if (!messenger_gc_link && status === "active" && existing.status === "draft") {
       const gcMsg = "You haven't added a Messenger Group Chat link. Participants won't receive a group chat link in their confirmation email. You can add it anytime by editing the trip.";
       saveWarning = saveWarning ? `${saveWarning} ${gcMsg}` : gcMsg;
     }

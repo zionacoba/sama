@@ -574,7 +574,7 @@ export function TripForm({
         </a>
         <button
           type="button"
-          disabled={isPending || isUploadingPhotos}
+          disabled={isPending || isUploadingPhotos || !!(state && "success" in state)}
           onClick={() => {
             submitIntentRef.current = "draft";
             formRef.current?.requestSubmit();
@@ -585,7 +585,7 @@ export function TripForm({
         </button>
         <button
           type="submit"
-          disabled={isPending || isUploadingPhotos}
+          disabled={isPending || isUploadingPhotos || !!(state && "success" in state)}
           onClick={() => { submitIntentRef.current = "active"; }}
           className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
         >

@@ -303,7 +303,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
     }
   }
 
-  const isCancelledOrRejected = (b: Booking) => b.status === "cancelled" || b.status === "rejected";
+  const isCancelledOrRejected = (b: Booking) => b.status === "cancelled" || b.status === "rejected" || b.status === "transferred";
   const upcoming = bookings.filter((b) => b.trip.date_start > now && !isCancelledOrRejected(b));
   const past = bookings.filter((b) => b.trip.date_start <= now && !isCancelledOrRejected(b));
   const cancelled = bookings.filter(isCancelledOrRejected);
@@ -421,7 +421,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
             {cancelled.length > 0 && (
               <section className="mt-8">
                 <h2 className="text-lg font-bold text-stone-900">
-                  Cancelled / rejected
+                  Cancelled / Rejected / Transferred
                   <span className="ml-2 text-base font-normal text-stone-400">({cancelled.length})</span>
                 </h2>
                 <ul className="mt-4 space-y-4">

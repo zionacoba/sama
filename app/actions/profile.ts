@@ -28,6 +28,25 @@ export async function deleteAccount(): Promise<{ success: true } | { error: stri
     return { error: "You have upcoming confirmed bookings. Please cancel them before deleting your account." };
   }
 
+  // Block deletion if the user is an organizer with active trips.
+  const { data: organizerRow } = await admin
+    .from("organizers")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (organizerRow) {
+    const { count: activeTripsCount } = await admin
+      .from("trips")
+      .select("id", { count: "exact", head: true })
+      .eq("organizer_id", organizerRow.id)
+      .eq("status", "active");
+
+    if ((activeTripsCount ?? 0) > 0) {
+      return { error: "Please unpublish all your trips before deleting your account." };
+    }
+  }
+
   // Anonymize all booking records — retained for legal/financial purposes.
   await admin
     .from("bookings")
@@ -40,6 +59,11 @@ export async function deleteAccount(): Promise<{ success: true } | { error: stri
       medical_notes: null,
     })
     .eq("user_id", user.id);
+
+  // Remove organizer row if present.
+  if (organizerRow) {
+    await admin.from("organizers").delete().eq("id", organizerRow.id);
+  }
 
   // Remove the profile row.
   await admin.from("profiles").delete().eq("id", user.id);

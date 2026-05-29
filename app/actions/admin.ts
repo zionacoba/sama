@@ -81,17 +81,37 @@ export async function rejectOrganizer(id: string): Promise<void> {
       .update({ status: "draft" })
       .in("id", tripIds);
 
-    // Notify participants of affected bookings.
+    // Fetch and cancel all confirmed/pending bookings for affected trips.
     const { data: affectedBookings } = await admin
       .from("bookings")
-      .select("id, email, full_name, trip_id")
+      .select("id, email, full_name, trip_id, slots")
       .in("trip_id", tripIds)
       .in("status", ["confirmed", "pending"]);
+
+    if ((affectedBookings ?? []).length > 0) {
+      await admin
+        .from("bookings")
+        .update({ status: "cancelled" })
+        .in("trip_id", tripIds)
+        .in("status", ["confirmed", "pending"]);
+
+      // Restore slots for each cancelled booking.
+      for (const booking of affectedBookings ?? []) {
+        const { error: slotErr } = await admin.rpc("restore_slot", {
+          p_trip_id: booking.trip_id,
+          p_slots_requested: booking.slots,
+        });
+        if (slotErr) {
+          console.error(`[rejectOrganizer] restore_slot failed for booking ${booking.id}:`, slotErr.message);
+        }
+      }
+    }
 
     const tripMap = new Map(
       (activeTrips ?? []).map((t) => [t.id, t]),
     );
 
+    // Notify participants.
     for (const booking of affectedBookings ?? []) {
       const trip = tripMap.get(booking.trip_id);
       if (!trip) continue;

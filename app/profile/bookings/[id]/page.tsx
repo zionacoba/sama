@@ -150,7 +150,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
 
   const bookingRef = booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
   const isActive = booking.status === "confirmed" || booking.status === "pending";
-  const isFuture = new Date(trip.date_start) > new Date();
+  const isFuture = trip.date_start > new Date().toISOString();
 
   const policyKey = (trip.cancellation_policy ?? "flexible") as keyof typeof CANCELLATION_POLICIES;
   const policy = CANCELLATION_POLICIES[policyKey] ?? CANCELLATION_POLICIES.flexible;
