@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { BookingActions } from "@/app/organizer/dashboard/booking-actions";
 import { MarkBalanceButton } from "./mark-balance-button";
+import { MarkTransferButton } from "./mark-transfer-button";
 
 type Booking = {
   id: number;
@@ -62,11 +63,13 @@ function StatusBadge({ status }: { status: string }) {
     cancelled: "bg-red-100 text-red-700",
     rejected: "bg-red-100 text-red-700",
     payment_pending: "bg-sky-100 text-sky-700",
+    transferred: "bg-stone-100 text-stone-600",
   };
-  const label =
-    status === "payment_pending"
-      ? "Awaiting payment"
-      : status.charAt(0).toUpperCase() + status.slice(1);
+  const labels: Record<string, string> = {
+    payment_pending: "Awaiting payment",
+    transferred: "Transferred",
+  };
+  const label = labels[status] ?? (status.charAt(0).toUpperCase() + status.slice(1));
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[status] ?? "bg-stone-100 text-stone-600"}`}
@@ -92,7 +95,7 @@ export function BookingsListWithTabs({
   const confirmedBookings = bookings.filter((b) => b.status === "confirmed");
   const pendingBookings = bookings.filter((b) => b.status === "pending");
   const cancelledBookings = bookings.filter(
-    (b) => b.status === "cancelled" || b.status === "rejected",
+    (b) => b.status === "cancelled" || b.status === "rejected" || b.status === "transferred",
   );
 
   const displayed =
@@ -168,7 +171,7 @@ export function BookingsListWithTabs({
                   <th className="px-5 py-3 text-right">Amount</th>
                   <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3">Booked on</th>
-                  {needsManualApproval && <th className="px-5 py-3" />}
+                  <th className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -251,11 +254,14 @@ export function BookingsListWithTabs({
                         <StatusBadge status={b.status} />
                       </td>
                       <td className="px-5 py-3.5 text-stone-500">{formatDateTime(b.created_at)}</td>
-                      {needsManualApproval && (
-                        <td className="px-5 py-3.5 text-right">
-                          {b.status === "pending" && <BookingActions bookingId={b.id} />}
-                        </td>
-                      )}
+                      <td className="px-5 py-3.5 text-right">
+                        {b.status === "pending" && needsManualApproval && (
+                          <BookingActions bookingId={b.id} />
+                        )}
+                        {b.status === "confirmed" && (
+                          <MarkTransferButton bookingId={b.id} participantName={b.full_name} />
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

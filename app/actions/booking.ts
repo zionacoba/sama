@@ -418,6 +418,114 @@ export async function markBalanceCollected(bookingId: number) {
   return { success: true };
 }
 
+export async function markAsTransferred(bookingId: number, transferredToEmail: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { data: organizer } = await supabase
+    .from("organizers")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("status", "approved")
+    .maybeSingle();
+
+  if (!organizer) return { error: "Not an approved organizer." };
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: booking } = await admin
+    .from("bookings")
+    .select("id, trip_id, slots, status, email, full_name")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking) return { error: "Booking not found." };
+  if (booking.status !== "confirmed") return { error: "Only confirmed bookings can be marked as transferred." };
+
+  const { data: trip } = await admin
+    .from("trips")
+    .select("id, slug, title, date_start, organizer_id")
+    .eq("id", booking.trip_id)
+    .maybeSingle();
+
+  if (!trip || trip.organizer_id?.toString() !== organizer.id?.toString()) {
+    return { error: "You don't have permission to manage this booking." };
+  }
+
+  const { error } = await admin
+    .from("bookings")
+    .update({
+      status: "transferred",
+      transferred_to_email: transferredToEmail.trim() || null,
+    })
+    .eq("id", bookingId);
+
+  if (error) return { error: error.message };
+
+  await admin.rpc("restore_slot", {
+    p_trip_id: trip.id,
+    p_slots_requested: booking.slots,
+  });
+
+  const tripDate = new Intl.DateTimeFormat("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "Asia/Manila",
+  }).format(new Date(trip.date_start));
+
+  try {
+    await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: booking.email,
+      replyTo: REPLY_TO_ADDRESS,
+      subject: `Your booking for ${trip.title} has been marked as transferred`,
+      html: `
+        <p>Hi ${escapeHtml(booking.full_name)},</p>
+        <p>Your booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been marked as <strong>transferred</strong> by your organizer.</p>
+        <p>No refund will be processed through Sama for this booking. Please settle any payment arrangements directly with the person taking your slot.</p>
+        <p>If you have any questions, please contact your organizer directly.</p>
+        <p>— The Sama Team</p>
+      `,
+    });
+  } catch (err) {
+    console.error("[email] failed to send transfer notice to participant", err);
+  }
+
+  try {
+    const { data: org } = await admin
+      .from("organizers")
+      .select("email, full_name")
+      .eq("id", organizer.id)
+      .maybeSingle();
+
+    if (org?.email) {
+      const toNote = transferredToEmail.trim()
+        ? ` to <strong>${escapeHtml(transferredToEmail.trim())}</strong>`
+        : "";
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: org.email,
+        replyTo: REPLY_TO_ADDRESS,
+        subject: `Booking transferred: ${booking.full_name} — ${trip.title}`,
+        html: `
+          <p>Hi ${escapeHtml(org.full_name)},</p>
+          <p>The booking for <strong>${escapeHtml(booking.full_name)}</strong> on <strong>${escapeHtml(trip.title)}</strong> (${tripDate}) has been marked as transferred${toNote}.</p>
+          <p>The slot has been restored to the available pool.</p>
+          <p>— The Sama Team</p>
+        `,
+      });
+    }
+  } catch (err) {
+    console.error("[email] failed to send transfer confirmation to organizer", err);
+  }
+
+  revalidatePath("/organizer/trips/[slug]/bookings", "page");
+  revalidatePath(`/trips/${trip.slug}`);
+  return { success: true };
+}
+
 export async function cancelBooking(bookingId: number) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
