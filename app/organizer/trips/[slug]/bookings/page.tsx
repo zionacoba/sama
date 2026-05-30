@@ -34,6 +34,7 @@ type Booking = {
   amount_due: number | null;
   payment_option: string;
   balance_collected: boolean;
+  balance_payment_gateway_status: string | null;
   status: string;
   created_at: string;
   participants: string[] | null;
@@ -129,7 +130,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
     admin
       .from("bookings")
       .select(
-        "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, balance_collected, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point"
+        "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, balance_collected, balance_payment_gateway_status, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point"
       )
       .eq("trip_id", trip.id)
       .order("created_at", { ascending: false }),

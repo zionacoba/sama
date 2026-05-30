@@ -17,6 +17,7 @@ type Booking = {
   amount_due: number | null;
   payment_option: string;
   balance_collected: boolean;
+  balance_payment_gateway_status: string | null;
   status: string;
   created_at: string;
   participants: string[] | null;
@@ -234,12 +235,17 @@ export function BookingsListWithTabs({
                           return (
                             <div className="mt-0.5 flex flex-col items-end gap-1">
                               {b.balance_collected ? (
-                                <span className="text-xs font-semibold text-emerald-600">Fully paid</span>
+                                b.balance_payment_gateway_status === "paid" ? (
+                                  <span className="text-xs font-semibold text-emerald-600">Paid online ✓</span>
+                                ) : (
+                                  <span className="text-xs font-semibold text-emerald-600">Collected ✓</span>
+                                )
                               ) : (
                                 <>
                                   <span className="text-xs font-normal text-stone-400">
                                     ({formatCurrency(b.amount_due)} deposit)
                                   </span>
+                                  <span className="text-xs font-semibold text-amber-700">Balance pending</span>
                                   {b.status === "confirmed" && (
                                     <>
                                       <MarkBalanceButton
@@ -248,7 +254,7 @@ export function BookingsListWithTabs({
                                         balanceAmount={formatCurrency(balance)}
                                       />
                                       <span className="text-xs text-stone-400">
-                                        Participant can pay balance online or directly to you. Mark as collected once received. Balance payments made online are remitted 24-48 hours after the trip date.
+                                        Participant can pay balance online through Sama or directly to you. Mark as collected once received. Balance payments made online are remitted 24-48 hours after the trip date.
                                       </span>
                                     </>
                                   )}

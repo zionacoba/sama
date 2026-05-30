@@ -456,6 +456,77 @@ export async function markBalanceCollected(bookingId: number) {
   return { success: true };
 }
 
+export async function createBalancePaymentLink(bookingId: number): Promise<{ success: true; checkoutUrl: string } | { error: string }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: booking } = await admin
+    .from("bookings")
+    .select("id, user_id, trip_id, full_name, total_amount, amount_due, payment_option, balance_collected, status")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking) return { error: "Booking not found." };
+  if (booking.user_id !== user.id) return { error: "You don't have permission to access this booking." };
+  if (booking.status !== "confirmed") return { error: "Only confirmed bookings can pay the remaining balance." };
+  if (booking.payment_option !== "downpayment") return { error: "This booking was paid in full." };
+  if (booking.balance_collected) return { error: "Balance has already been paid." };
+
+  const { data: trip } = await admin
+    .from("trips")
+    .select("id, title, date_start")
+    .eq("id", booking.trip_id)
+    .maybeSingle();
+
+  if (!trip) return { error: "Trip not found." };
+  if (trip.date_start < new Date().toISOString().split("T")[0]) {
+    return { error: "This trip has already taken place." };
+  }
+
+  const balance = Math.round(((booking.total_amount ?? 0) - (booking.amount_due ?? 0)) * 100) / 100;
+  if (balance <= 0) return { error: "No balance remaining." };
+
+  const tripDateShort = new Intl.DateTimeFormat("en-PH", {
+    month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila",
+  }).format(new Date(trip.date_start));
+  const description = `Balance payment for ${trip.title} - ${tripDateShort}`;
+
+  try {
+    const linkRes = await fetch(`${SITE_URL}/api/payments/create-link`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId, amount: balance, description }),
+    });
+
+    if (!linkRes.ok) {
+      console.error("[createBalancePaymentLink] payment link creation failed:", linkRes.status);
+      return { error: "Failed to create payment link. Please try again." };
+    }
+
+    const linkData = await linkRes.json();
+    const checkoutUrl: string | null = linkData.checkoutUrl ?? null;
+
+    if (linkData.linkId) {
+      await admin
+        .from("bookings")
+        .update({ balance_payment_id: linkData.linkId })
+        .eq("id", bookingId);
+    }
+
+    if (!checkoutUrl) {
+      return { error: "Failed to create payment link. Please try again." };
+    }
+
+    return { success: true, checkoutUrl };
+  } catch (err) {
+    console.error("[createBalancePaymentLink] error:", err);
+    return { error: "Failed to create payment link. Please try again." };
+  }
+}
+
 export async function markAsTransferred(bookingId: number, transferredToEmail: string) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

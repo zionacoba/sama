@@ -104,7 +104,8 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
     .maybeSingle();
 
   if (!booking) {
-    console.error("[webhook] no booking found for link:", linkId);
+    // Not an initial payment — check if it's a balance payment.
+    await handleBalancePayment(linkId, admin);
     return;
   }
 
@@ -276,6 +277,98 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
   }
 
   revalidatePath(`/trips/${trip.slug}`);
+  revalidatePath("/profile");
+  revalidatePath("/organizer/dashboard");
+  revalidatePath(`/organizer/trips/${trip.slug}/bookings`);
+}
+
+async function handleBalancePayment(
+  linkId: string,
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+) {
+  const { data: booking } = await admin
+    .from("bookings")
+    .select("id, trip_id, full_name, email, total_amount, amount_due, balance_payment_gateway_status")
+    .eq("balance_payment_id", linkId)
+    .maybeSingle();
+
+  if (!booking) {
+    console.error("[webhook] no booking found for balance payment link:", linkId);
+    return;
+  }
+
+  // Idempotency.
+  if (booking.balance_payment_gateway_status === "paid") {
+    return;
+  }
+
+  const { data: trip } = await admin
+    .from("trips")
+    .select("id, slug, title, date_start, organizer_id")
+    .eq("id", booking.trip_id)
+    .maybeSingle();
+
+  if (!trip) {
+    console.error("[webhook] trip not found for balance booking:", booking.id);
+    return;
+  }
+
+  await admin
+    .from("bookings")
+    .update({ balance_collected: true, balance_payment_gateway_status: "paid" })
+    .eq("id", booking.id);
+
+  const balance = Math.round(((booking.total_amount ?? 0) - (booking.amount_due ?? 0)) * 100) / 100;
+  const fmt = (n: number) =>
+    new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+  const tripDate = new Intl.DateTimeFormat("en-PH", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila",
+  }).format(new Date(trip.date_start));
+
+  try {
+    await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: booking.email,
+      replyTo: REPLY_TO_ADDRESS,
+      subject: `Balance payment received for ${trip.title}`,
+      html: `
+        <p>Hi ${escapeHtml(booking.full_name)},</p>
+        <p>Your remaining balance of <strong>${fmt(balance)}</strong> for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been received. You are all set for your trip. See you there!</p>
+        <p>You can view your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
+        <p>— The Sama Team</p>
+      `,
+    });
+  } catch (err) {
+    console.error("[webhook] failed to send balance payment confirmation to participant", err);
+  }
+
+  if (trip.organizer_id) {
+    try {
+      const { data: organizer } = await admin
+        .from("organizers")
+        .select("email")
+        .eq("id", trip.organizer_id)
+        .maybeSingle();
+
+      if (organizer?.email) {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: organizer.email,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `Balance payment received: ${booking.full_name} — ${trip.title}`,
+          html: `
+            <p>Hi,</p>
+            <p><strong>${escapeHtml(booking.full_name)}</strong> has paid their remaining balance of <strong>${fmt(balance)}</strong> for <strong>${escapeHtml(trip.title)}</strong> online through Sama.</p>
+            <p>This will be remitted to you 24–48 hours after the trip date.</p>
+            <p>— The Sama Team</p>
+          `,
+        });
+      }
+    } catch (err) {
+      console.error("[webhook] failed to send balance payment notification to organizer", err);
+    }
+  }
+
   revalidatePath("/profile");
   revalidatePath("/organizer/dashboard");
   revalidatePath(`/organizer/trips/${trip.slug}/bookings`);

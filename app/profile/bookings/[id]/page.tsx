@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { CancelBookingButton } from "@/app/profile/cancel-booking-button";
+import { PayBalanceButton } from "./pay-balance-button";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -21,6 +22,7 @@ type BookingDetail = {
   amount_due: number | null;
   payment_option: string;
   balance_collected: boolean;
+  balance_payment_gateway_status: string | null;
   status: string;
   created_at: string;
   waiver_agreed: boolean;
@@ -131,7 +133,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
     .from("bookings")
     .select(`
       id, user_id, full_name, email, phone, slots, total_amount, amount_due,
-      payment_option, balance_collected, status, created_at, waiver_agreed,
+      payment_option, balance_collected, balance_payment_gateway_status, status, created_at, waiver_agreed,
       waiver_agreed_at, notes, medical_notes, meeting_point,
       emergency_contact_name, emergency_contact_phone,
       trip:trips!bookings_trip_id_fkey(
@@ -245,7 +247,9 @@ export default async function BookingDetailPage({ params }: PageProps) {
                 <DetailRow label="Amount paid">{formatCurrency(booking.amount_due)}</DetailRow>
                 <DetailRow label="Balance">
                   {booking.balance_collected ? (
-                    <span className="font-semibold text-emerald-600">Fully paid ✓</span>
+                    <span className="font-semibold text-emerald-600">
+                      Fully paid ✓{booking.balance_payment_gateway_status === "paid" ? " (paid online)" : " (collected)"}
+                    </span>
                   ) : (
                     <span className="font-semibold text-amber-700">{formatCurrency(balance ?? 0)} outstanding</span>
                   )}
@@ -316,6 +320,14 @@ export default async function BookingDetailPage({ params }: PageProps) {
           >
             View trip page
           </Link>
+          {booking.status === "confirmed" &&
+            booking.payment_option === "downpayment" &&
+            !booking.balance_collected &&
+            isFuture &&
+            balance != null &&
+            balance > 0 && (
+              <PayBalanceButton bookingId={booking.id} balanceAmount={formatCurrency(balance)} />
+            )}
           {isActive && isFuture && (
             <CancelBookingButton
               bookingId={booking.id}
