@@ -645,7 +645,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     .from("bookings")
     .select("id, full_name, email, total_amount, amount_due, payment_option")
     .eq("trip_id", trip.id)
-    .in("status", ["pending", "confirmed"]);
+    .in("status", ["pending", "confirmed", "payment_pending"]);
 
   await admin
     .from("trips")
@@ -656,7 +656,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     .from("bookings")
     .update({ status: "cancelled" })
     .eq("trip_id", trip.id)
-    .in("status", ["pending", "confirmed"]);
+    .in("status", ["pending", "confirmed", "payment_pending"]);
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {
     weekday: "long",

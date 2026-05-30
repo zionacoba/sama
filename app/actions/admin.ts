@@ -81,19 +81,19 @@ export async function rejectOrganizer(id: string): Promise<void> {
       .update({ status: "draft" })
       .in("id", tripIds);
 
-    // Fetch and cancel all confirmed/pending bookings for affected trips.
+    // Fetch and cancel all confirmed/pending/payment_pending bookings for affected trips.
     const { data: affectedBookings } = await admin
       .from("bookings")
       .select("id, email, full_name, trip_id, slots")
       .in("trip_id", tripIds)
-      .in("status", ["confirmed", "pending"]);
+      .in("status", ["confirmed", "pending", "payment_pending"]);
 
     if ((affectedBookings ?? []).length > 0) {
       await admin
         .from("bookings")
         .update({ status: "cancelled" })
         .in("trip_id", tripIds)
-        .in("status", ["confirmed", "pending"]);
+        .in("status", ["confirmed", "pending", "payment_pending"]);
 
       // Restore slots for each cancelled booking.
       for (const booking of affectedBookings ?? []) {

@@ -163,7 +163,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
     : policy.text;
 
   const balance = booking.total_amount != null && booking.amount_due != null
-    ? booking.total_amount - booking.amount_due
+    ? Math.max(0, booking.total_amount - booking.amount_due)
     : null;
 
   return (

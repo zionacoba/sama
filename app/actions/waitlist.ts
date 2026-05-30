@@ -123,27 +123,30 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
 
   const { data: entry } = await admin
     .from("waitlist")
-    .select("id, full_name, email, notified, trips(title, slug, organizer_id)")
+    .select("id, full_name, email, notified, trips(title, slug, organizer_id, date_start)")
     .eq("id", id)
     .maybeSingle();
 
   if (!entry) return;
   if (entry.notified) return;
 
-  type TripRef = { title: string; slug: string; organizer_id: string };
+  type TripRef = { title: string; slug: string; organizer_id: string; date_start: string };
   const trip = entry.trips as unknown as TripRef | null;
   if (!trip || String(trip.organizer_id) !== String(organizer.id)) return;
+
+  const tripDate = new Intl.DateTimeFormat("en-PH", {
+    month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Manila",
+  }).format(new Date(trip.date_start));
 
   try {
     await resend.emails.send({
       from: FROM_ADDRESS,
       to: entry.email,
       replyTo: REPLY_TO_ADDRESS,
-      subject: `A slot opened up — ${trip.title}`,
+      subject: `A slot just opened for ${trip.title}`,
       html: `
         <p>Hi ${escapeHtml(entry.full_name)},</p>
-        <p>Good news! A slot has opened up for <strong>${escapeHtml(trip.title)}</strong>. Book now before it fills up again:</p>
-        <p><a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a></p>
+        <p>Good news! A slot just opened for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}. Book now at <a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a> — it's first come, first served. Only one slot is available so act quickly.</p>
         <p>— The Sama Team</p>
       `,
     });
