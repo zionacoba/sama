@@ -35,7 +35,7 @@ type BookingParticipant = {
   completed: boolean;
 };
 
-type Tab = "confirmed" | "pending" | "all" | "cancelled";
+type Tab = "confirmed" | "pending" | "awaiting_payment" | "all" | "cancelled";
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -94,6 +94,7 @@ export function BookingsListWithTabs({
 
   const confirmedBookings = bookings.filter((b) => b.status === "confirmed");
   const pendingBookings = bookings.filter((b) => b.status === "pending");
+  const awaitingPaymentBookings = bookings.filter((b) => b.status === "payment_pending");
   const cancelledBookings = bookings.filter(
     (b) => b.status === "cancelled" || b.status === "rejected" || b.status === "transferred",
   );
@@ -103,13 +104,16 @@ export function BookingsListWithTabs({
       ? confirmedBookings
       : tab === "pending"
         ? pendingBookings
-        : tab === "cancelled"
-          ? cancelledBookings
-          : bookings;
+        : tab === "awaiting_payment"
+          ? awaitingPaymentBookings
+          : tab === "cancelled"
+            ? cancelledBookings
+            : bookings;
 
   const tabs: { key: Tab; label: string; count: number; badge?: string }[] = [
     { key: "confirmed", label: "Confirmed", count: confirmedBookings.length },
     { key: "pending", label: "Pending", count: pendingBookings.length, badge: "amber" },
+    { key: "awaiting_payment", label: "Awaiting Payment", count: awaitingPaymentBookings.length, badge: "sky" },
     { key: "all", label: "All", count: bookings.length },
     { key: "cancelled", label: "Cancelled / Rejected / Transferred", count: cancelledBookings.length },
   ];
@@ -119,9 +123,11 @@ export function BookingsListWithTabs({
       ? "No confirmed bookings yet."
       : tab === "pending"
         ? "No pending bookings."
-        : tab === "cancelled"
-          ? "No cancelled, rejected, or transferred bookings."
-          : "No bookings yet.";
+        : tab === "awaiting_payment"
+          ? "No bookings awaiting payment."
+          : tab === "cancelled"
+            ? "No cancelled, rejected, or transferred bookings."
+            : "No bookings yet.";
 
   return (
     <>
@@ -133,7 +139,9 @@ export function BookingsListWithTabs({
               ? "bg-white/20 text-white"
               : badge === "amber" && count > 0
                 ? "bg-amber-100 text-amber-800"
-                : "bg-stone-100 text-stone-500";
+                : badge === "sky" && count > 0
+                  ? "bg-sky-100 text-sky-700"
+                  : "bg-stone-100 text-stone-500";
             return (
               <button
                 key={key}

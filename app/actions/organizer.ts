@@ -152,6 +152,31 @@ export async function updateOrganizerProfile(
   }
 
   const admin = createSupabaseAdminClient();
+
+  // Prevent removing payout details while confirmed bookings on upcoming trips exist.
+  if (!payout_method) {
+    const now = new Date().toISOString();
+    const { data: upcomingTrips } = await admin
+      .from("trips")
+      .select("id")
+      .eq("organizer_id", organizer.id)
+      .eq("status", "active")
+      .gt("date_start", now);
+
+    const tripIds = (upcomingTrips ?? []).map((t) => t.id);
+    if (tripIds.length > 0) {
+      const { count } = await admin
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .in("trip_id", tripIds)
+        .eq("status", "confirmed");
+
+      if ((count ?? 0) > 0) {
+        return { error: "You cannot remove your payout details while you have active confirmed bookings." };
+      }
+    }
+  }
+
   const { error } = await admin
     .from("organizers")
     .update({

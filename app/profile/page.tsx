@@ -538,8 +538,8 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
         </Link>
         <p className="mt-2 text-xs text-stone-400">
           Need help?{" "}
-          <a href="mailto:sama.com.ph@gmail.com" className="underline-offset-4 hover:text-trailhead hover:underline">
-            sama.com.ph@gmail.com
+          <a href="mailto:hello@sama.com.ph" className="underline-offset-4 hover:text-trailhead hover:underline">
+            hello@sama.com.ph
           </a>
         </p>
       </footer>

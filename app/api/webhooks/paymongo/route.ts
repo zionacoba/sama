@@ -99,7 +99,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, full_name, email, slots, total_amount, amount_due, payment_option, meeting_point, payment_gateway_status")
+    .select("id, trip_id, full_name, email, slots, total_amount, amount_due, payment_option, meeting_point, payment_gateway_status, status")
     .eq("payment_id", linkId)
     .maybeSingle();
 
@@ -110,6 +110,16 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
 
   // Idempotency: skip if already processed.
   if (booking.payment_gateway_status === "paid") {
+    return;
+  }
+
+  // Do not resurrect bookings that are no longer active.
+  if (
+    booking.status === "cancelled" ||
+    booking.status === "rejected" ||
+    booking.status === "transferred"
+  ) {
+    console.warn(`[webhook] booking ${booking.id} has status '${booking.status}' — skipping paid event`);
     return;
   }
 

@@ -164,8 +164,9 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
   const rejected = bookings.filter((b) => b.status === "rejected" || b.status === "cancelled" || b.status === "transferred");
 
   const needsManualApproval = trip.difficulty === "Advanced";
+  const awaitingPayment = bookings.filter((b) => b.status === "payment_pending");
   const slotsBooked = bookings
-    .filter((b) => b.status === "confirmed" || b.status === "pending")
+    .filter((b) => b.status === "confirmed" || b.status === "pending" || b.status === "payment_pending")
     .reduce((sum, b) => sum + b.slots, 0);
 
   // Grouped view: confirmed + pending only, grouped by meeting_point
@@ -242,6 +243,11 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
             <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
               {confirmed.length} confirmed
             </span>
+            {awaitingPayment.length > 0 && (
+              <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
+                {awaitingPayment.length} awaiting payment
+              </span>
+            )}
             {rejected.length > 0 && (
               <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-semibold text-stone-500">
                 {rejected.length} cancelled / rejected

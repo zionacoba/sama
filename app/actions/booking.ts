@@ -198,8 +198,20 @@ export async function createBooking(input: CreateBookingInput) {
       ? participantRows.slice(1).map((p) => ({ slotIndex: p.slot_number, token: p.token }))
       : [];
 
-  // Create PayMongo payment link.
   const bookingRef = newBooking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
+
+  // Free trips: skip PayMongo and confirm immediately.
+  if (computedAmountDue === 0) {
+    const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
+    await admin
+      .from("bookings")
+      .update({ status: autoApprove ? "confirmed" : "pending" })
+      .eq("id", newBooking.id);
+    revalidatePath(`/trips/${input.tripSlug}`);
+    return { success: true as const, checkoutUrl: null, bookingRef };
+  }
+
+  // Create PayMongo payment link.
   const tripDateShort = new Intl.DateTimeFormat("en-PH", {
     month: "short",
     day: "numeric",
@@ -269,6 +281,16 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   if (!booking) return { error: "Booking not found." };
 
+  // Block acting on payment_pending bookings (no payment confirmed yet).
+  if (booking.status === "payment_pending") {
+    return { error: "This booking is awaiting payment and cannot be manually approved or rejected." };
+  }
+
+  // Only pending bookings can be confirmed or rejected by the organizer.
+  if (booking.status !== "pending") {
+    return { error: "This booking cannot be updated in its current state." };
+  }
+
   const { data: trip } = await admin
     .from("trips")
     .select("id, slug, title, date_start, organizer_id, messenger_gc_link")
@@ -279,15 +301,22 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     return { error: "You don't have permission to manage this booking." };
   }
 
-  const { error } = await admin
+  // Concurrency-safe update: only succeeds if the booking is still pending.
+  const { data: updatedBooking, error } = await admin
     .from("bookings")
     .update({ status })
-    .eq("id", bookingId);
+    .eq("id", bookingId)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
 
   if (error) return { error: error.message };
+  if (!updatedBooking) {
+    return { error: "This booking has already been updated by another action." };
+  }
 
-  // Atomically restore slots when rejecting a booking that wasn't already rejected/cancelled.
-  if (status === "rejected" && booking.status !== "rejected" && booking.status !== "cancelled") {
+  // Restore slots when rejecting.
+  if (status === "rejected") {
     await admin.rpc("restore_slot", {
       p_trip_id: trip.id,
       p_slots_requested: booking.slots,
@@ -544,7 +573,7 @@ export async function cancelBooking(bookingId: number) {
 
   if (!booking) return { error: "Booking not found." };
   if (booking.user_id !== user.id) return { error: "You don't have permission to cancel this booking." };
-  if (["cancelled", "rejected"].includes(booking.status)) return { error: "This booking is already cancelled or rejected." };
+  if (["cancelled", "rejected", "transferred"].includes(booking.status)) return { error: "This booking is already cancelled or rejected." };
 
   const { error } = await admin
     .from("bookings")

@@ -152,6 +152,8 @@ export default async function BookingDetailPage({ params }: PageProps) {
   const isActive = booking.status === "confirmed" || booking.status === "pending";
   const isFuture = trip.date_start > new Date().toISOString();
 
+  const safeGcLink = trip.messenger_gc_link?.startsWith("http") ? trip.messenger_gc_link : null;
+
   const policyKey = (trip.cancellation_policy ?? "flexible") as keyof typeof CANCELLATION_POLICIES;
   const policy = CANCELLATION_POLICIES[policyKey] ?? CANCELLATION_POLICIES.flexible;
   const policyText = policyKey === "custom"
@@ -215,10 +217,10 @@ export default async function BookingDetailPage({ params }: PageProps) {
             {trip.activity_type && (
               <DetailRow label="Activity">{trip.activity_type}</DetailRow>
             )}
-            {trip.messenger_gc_link && (
+            {safeGcLink && (
               <DetailRow label="Group chat">
                 <a
-                  href={trip.messenger_gc_link}
+                  href={safeGcLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-trailhead/30 bg-trailhead-muted px-3 py-1.5 text-sm font-semibold text-trailhead transition hover:bg-trailhead hover:text-white"

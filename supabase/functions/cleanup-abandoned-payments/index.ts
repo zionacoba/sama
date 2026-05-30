@@ -12,6 +12,7 @@ Deno.serve(async (_req) => {
     .from("bookings")
     .select("id, trip_id, slots")
     .eq("status", "payment_pending")
+    .is("payment_gateway_status", null)
     .lt("created_at", cutoff);
 
   if (error) {

@@ -272,7 +272,7 @@ export function BookingModal({
         }, 1500);
       } else {
         setError(
-          `Booking created but payment link failed. Please contact support at sama.com.ph@gmail.com with your booking reference: ${result.bookingRef}`
+          `Booking created but payment link failed. Please contact support at hello@sama.com.ph with your booking reference: ${result.bookingRef}`
         );
       }
     } catch {
@@ -677,8 +677,8 @@ export function BookingModal({
               <div className="shrink-0 border-t border-stone-100 px-6 py-3">
                 <p className="mb-2 text-center text-xs text-stone-400">
                   Need help?{" "}
-                  <a href="mailto:sama.com.ph@gmail.com" className="underline hover:text-stone-600">
-                    sama.com.ph@gmail.com
+                  <a href="mailto:hello@sama.com.ph" className="underline hover:text-stone-600">
+                    hello@sama.com.ph
                   </a>
                 </p>
                 <div className="flex gap-2">

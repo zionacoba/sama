@@ -30,6 +30,10 @@ export async function submitReview(
     return { error: "Please fill in all fields and select a rating." };
   }
 
+  if (!bookingId || isNaN(bookingId)) {
+    return { error: "You must have a confirmed booking to leave a review." };
+  }
+
   // Gate reviews to trips whose date has passed.
   const admin = createSupabaseAdminClient();
   const { data: tripForDate } = await admin

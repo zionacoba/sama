@@ -79,7 +79,8 @@ export async function createTrip(
     ? ((formData.get("cancellation_policy_custom") as string)?.trim() || null)
     : null;
   const waiver_text = (formData.get("waiver_text") as string)?.trim() || null;
-  const messenger_gc_link = (formData.get("messenger_gc_link") as string)?.trim() || null;
+  const messengerRaw = (formData.get("messenger_gc_link") as string)?.trim() || null;
+  const messenger_gc_link = messengerRaw?.startsWith("http") ? messengerRaw : null;
   const status = (formData.get("status") as string) === "draft" ? "draft" : "active";
   const isDraft = status === "draft";
 
@@ -265,7 +266,8 @@ export async function updateTrip(
     ? ((formData.get("cancellation_policy_custom") as string)?.trim() || null)
     : null;
   const waiver_text = (formData.get("waiver_text") as string)?.trim() || null;
-  const messenger_gc_link = (formData.get("messenger_gc_link") as string)?.trim() || null;
+  const messengerRaw = (formData.get("messenger_gc_link") as string)?.trim() || null;
+  const messenger_gc_link = messengerRaw?.startsWith("http") ? messengerRaw : null;
   const statusInput = formData.get("status") as string | null;
   const status = statusInput === "active" ? "active" : statusInput === "draft" ? "draft" : (existing.status ?? "active");
   const isDraft = status === "draft";

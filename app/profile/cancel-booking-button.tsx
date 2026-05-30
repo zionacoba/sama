@@ -53,10 +53,10 @@ export function CancelBookingButton({
               If you are eligible for a refund based on our cancellation policy,
               email{" "}
               <a
-                href="mailto:sama.com.ph@gmail.com"
+                href="mailto:hello@sama.com.ph"
                 className="font-medium text-trailhead underline-offset-2 hover:underline"
               >
-                sama.com.ph@gmail.com
+                hello@sama.com.ph
               </a>{" "}
               after cancelling and we&apos;ll process it for you.
             </p>
