@@ -26,6 +26,7 @@ type Booking = {
   amount_due: number | null;
   payment_option: string;
   balance_collected: boolean;
+  balance_payment_gateway_status: string | null;
   status: string;
   waiver_agreed: boolean;
   waiver_agreed_at: string | null;
@@ -214,6 +215,20 @@ function BookingCard({
           />
         )}
 
+        {booking.status === "confirmed" &&
+          booking.payment_option === "downpayment" &&
+          !booking.balance_collected &&
+          booking.trip.date_start >= new Date().toISOString().split("T")[0] &&
+          booking.amount_due != null &&
+          booking.total_amount - booking.amount_due > 0 && (
+            <Link
+              href={`/profile/bookings/${booking.id}`}
+              className="self-start text-xs font-semibold text-amber-700 underline-offset-2 hover:text-amber-900 hover:underline"
+            >
+              Pay remaining balance ({formatCurrency(booking.total_amount - booking.amount_due)}) →
+            </Link>
+          )}
+
         <Link
           href={`/profile/bookings/${booking.id}`}
           className="self-start text-xs font-medium text-stone-400 underline-offset-2 hover:text-trailhead hover:underline"
@@ -246,6 +261,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
         amount_due,
         payment_option,
         balance_collected,
+        balance_payment_gateway_status,
         status,
         waiver_agreed,
         waiver_agreed_at,
