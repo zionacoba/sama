@@ -69,7 +69,7 @@ export async function createBooking(input: CreateBookingInput) {
     .select("id")
     .eq("trip_id", trip.id)
     .eq("user_id", user.id)
-    .in("status", ["confirmed", "pending"])
+    .in("status", ["confirmed", "pending", "payment_pending"])
     .maybeSingle();
 
   if (existingBooking) {
@@ -334,8 +334,8 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
           <p>Unfortunately your booking request for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} was not approved by the organizer.</p>
           ${booking.amount_due ? `
           <p>Your payment of <strong>${fmtPHP(booking.amount_due)}</strong> will be refunded to your original payment method within 3–5 business days. You do not need to do anything.</p>
-          <p>If you don't receive your refund after 5 business days, please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> with your booking reference: <strong>${bookingRef}</strong></p>
-          ` : `<p>If you have questions, please contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>`}
+          <p>If you don't receive your refund after 5 business days, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${bookingRef}</strong></p>
+          ` : `<p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`}
           <p>— The Sama Team</p>
         `,
       });
@@ -629,9 +629,9 @@ export async function cancelBooking(bookingId: number) {
 
     const refundLine =
       refundAmount === null
-        ? `<p>If you are eligible for a refund, please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> with your booking details and we'll process it for you.</p>`
+        ? `<p>If you are eligible for a refund, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking details and we'll process it for you.</p>`
         : refundAmount > 0
-          ? `<p>Based on our cancellation policy, your refund will be <strong>${fmtCurrency(refundAmount)}</strong>. Please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> to process it within 5–7 business days.</p>`
+          ? `<p>Based on our cancellation policy, your refund will be <strong>${fmtCurrency(refundAmount)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process it within 5–7 business days.</p>`
           : `<p>Based on our cancellation policy, this cancellation is not eligible for a refund.</p>`;
 
     try {

@@ -1,6 +1,14 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SITE_URL = Deno.env.get("NEXT_PUBLIC_SITE_URL") ?? "https://sama.com.ph";
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 const FROM_ADDRESS = Deno.env.get("RESEND_FROM_EMAIL") ?? "Sama <hello@sama.com.ph>";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 
@@ -79,8 +87,8 @@ Deno.serve(async (_req) => {
         organizer.email,
         `Action needed: Pending booking approval for ${trip.title}`,
         `
-          <p>Hi ${organizer.full_name},</p>
-          <p><strong>${booking.full_name}</strong> booked <strong>${trip.title}</strong> on ${tripDate} and is waiting for your approval.</p>
+          <p>Hi ${escapeHtml(organizer.full_name)},</p>
+          <p><strong>${escapeHtml(booking.full_name)}</strong> booked <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} and is waiting for your approval.</p>
           <p>Please log in to your dashboard to approve or reject their booking:</p>
           <p><a href="${bookingsUrl}">${bookingsUrl}</a></p>
           <p>— The Sama Team</p>

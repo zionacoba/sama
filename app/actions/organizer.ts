@@ -96,7 +96,7 @@ export async function applyToBeOrganizer(
           <li><strong>Display name:</strong> ${escapeHtml(displayName)}</li>
           <li><strong>Email:</strong> ${escapeHtml(user.email!)}</li>
         </ul>
-        <p><a href="https://sama.com.ph/admin">Review it in the admin dashboard</a></p>
+        <p><a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/admin">Review it in the admin dashboard</a></p>
       `,
     });
   } catch (err) {
@@ -166,24 +166,6 @@ export async function updateOrganizerProfile(
   revalidatePath("/trips");
   revalidatePath(`/organizers/${organizer.id}`);
   redirect("/organizer/dashboard");
-}
-
-export async function updateOrganizerStatus(formData: FormData) {
-  const id = formData.get("id") as string;
-  const status = formData.get("status") as string;
-
-  if (!id || !["approved", "rejected"].includes(status)) return;
-
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user?.email !== ADMIN_EMAIL) return;
-
-  await supabase.from("organizers").update({ status }).eq("id", id);
-
-  redirect("/admin");
 }
 
 export async function toggleFoundingPartner(formData: FormData) {

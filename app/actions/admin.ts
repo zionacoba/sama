@@ -125,7 +125,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
             <p>Hi ${escapeHtml(booking.full_name)},</p>
             <p>We're sorry to inform you that <strong>${escapeHtml(trip.title)}</strong> is no longer available on Sama.</p>
             <p>Your booking has been cancelled and you will receive a <strong>full refund</strong> to your original payment method within 3–5 business days.</p>
-            <p>If you have any questions, please contact us at <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
+            <p>If you have any questions, please contact us at <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
             <p>We apologise for the inconvenience.</p>
             <p>— The Sama Team</p>
           `,

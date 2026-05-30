@@ -267,4 +267,6 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
 
   revalidatePath(`/trips/${trip.slug}`);
   revalidatePath("/profile");
+  revalidatePath("/organizer/dashboard");
+  revalidatePath(`/organizer/trips/${trip.slug}/bookings`);
 }

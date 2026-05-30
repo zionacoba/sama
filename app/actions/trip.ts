@@ -471,7 +471,7 @@ export async function updateTrip(
                 <p>The organizer has made changes to <strong>${escapeHtml(title)}</strong> that may affect your booking:</p>
                 ${changeHtml}
                 <p>Please review the updated trip details here: <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/trips/${existing.slug}">${(process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph").replace("https://", "")}/trips/${existing.slug}</a></p>
-                <p>If you have questions, contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
+                <p>If you have questions, contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
                 <p>— The Sama Team</p>
               `,
             });
@@ -640,8 +640,8 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
         : (booking.total_amount ?? 0);
     const refundLine =
       amountPaid > 0
-        ? `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. Please email <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a> to process your refund within 3–5 business days.</p>`
-        : `<p>If you have questions, please contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>`;
+        ? `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process your refund within 3–5 business days.</p>`
+        : `<p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`;
     try {
       await resend.emails.send({
         from: FROM_ADDRESS,
@@ -670,7 +670,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
         html: `
           <p>Hi ${escapeHtml(entry.full_name)},</p>
           <p><strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled by the organizer.</p>
-          <p>If you have questions, please contact <a href="mailto:sama.com.ph@gmail.com">sama.com.ph@gmail.com</a>.</p>
+          <p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
           <p>— The Sama Team</p>
         `,
       });

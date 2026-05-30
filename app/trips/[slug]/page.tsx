@@ -321,7 +321,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
       id="trip-jsonld"
       type="application/ld+json"
       strategy="beforeInteractive"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026") }}
     />
     <div className="min-h-full bg-stone-50 text-stone-900 font-sans">
       {published === "1" && <PublishedBanner tripSlug={slug} />}

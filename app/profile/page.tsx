@@ -206,7 +206,7 @@ function BookingCard({
           />
         )}
 
-        {!past && (booking.status === "confirmed" || booking.status === "pending") && (
+        {!past && (booking.status === "confirmed" || booking.status === "pending" || booking.status === "payment_pending") && (
           <CancelBookingButton
             bookingId={booking.id}
             tripTitle={trip.title}
