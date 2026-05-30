@@ -169,11 +169,11 @@ function BookingCard({
           {booking.payment_option === "downpayment" && booking.amount_due != null && (
             booking.balance_collected ? (
               <span className="font-semibold text-emerald-600">Fully paid</span>
-            ) : (
+            ) : Math.max(0, booking.total_amount - booking.amount_due) > 0 ? (
               <span className="font-semibold text-amber-600">
-                {formatCurrency(booking.total_amount - booking.amount_due)} balance pending
+                {formatCurrency(Math.max(0, booking.total_amount - booking.amount_due))} balance pending
               </span>
-            )
+            ) : null
           )}
           {!past && trip.meeting_point && (
             <span className="w-full text-stone-400">Meet: {trip.meeting_point}</span>
@@ -201,12 +201,12 @@ function BookingCard({
           !booking.balance_collected &&
           booking.trip.date_start >= new Date().toISOString().split("T")[0] &&
           booking.amount_due != null &&
-          booking.total_amount - booking.amount_due > 0 && (
+          Math.max(0, booking.total_amount - booking.amount_due) > 0 && (
             <Link
               href={`/profile/bookings/${booking.id}`}
               className="self-start text-xs font-semibold text-amber-700 underline-offset-2 hover:text-amber-900 hover:underline"
             >
-              Pay remaining balance ({formatCurrency(booking.total_amount - booking.amount_due)}) →
+              Pay remaining balance ({formatCurrency(Math.max(0, booking.total_amount - booking.amount_due))}) →
             </Link>
           )}
 

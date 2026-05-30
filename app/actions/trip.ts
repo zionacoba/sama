@@ -10,10 +10,13 @@ import { escapeHtml } from "@/lib/escape-html";
 function slugify(title: string): string {
   return title
     .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
-    .trim();
+    .slice(0, 80);
 }
 
 export async function createTrip(
@@ -79,7 +82,7 @@ export async function createTrip(
     ? parseInt(downpayment_cutoff_days_raw, 10)
     : null;
   const downpayment_cutoff_days = _cutoffParsed !== null
-    ? (isNaN(_cutoffParsed) || _cutoffParsed < 0 ? 10 : _cutoffParsed)
+    ? (isNaN(_cutoffParsed) || _cutoffParsed < 1 ? 1 : _cutoffParsed)
     : null;
   const cancellation_policy = (formData.get("cancellation_policy") as string) || "flexible";
   const cancellation_policy_custom = cancellation_policy === "custom"
@@ -130,6 +133,11 @@ export async function createTrip(
       }
       const today = new Date().toISOString().split("T")[0];
       if (date_start < today) return { error: "Trip date cannot be in the past." };
+      const maxDate = new Date();
+      maxDate.setFullYear(maxDate.getFullYear() + 2);
+      if (date_start > maxDate.toISOString().split("T")[0]) {
+        return { error: "Trip date cannot be more than 2 years in the future." };
+      }
       if (date_end && date_end < date_start) return { error: "End date cannot be before start date." };
       if (duration && duration !== "Day tour" && !date_end) return { error: "Please enter an end date for overnight/multi-day trips." };
       const hasGcash = organizer.payout_method === "gcash" && !!organizer.gcash_number;
@@ -279,7 +287,7 @@ export async function updateTrip(
     ? parseInt(downpayment_cutoff_days_raw, 10)
     : null;
   const downpayment_cutoff_days = _cutoffParsed2 !== null
-    ? (isNaN(_cutoffParsed2) || _cutoffParsed2 < 0 ? 10 : _cutoffParsed2)
+    ? (isNaN(_cutoffParsed2) || _cutoffParsed2 < 1 ? 1 : _cutoffParsed2)
     : null;
   const cancellation_policy = (formData.get("cancellation_policy") as string) || "flexible";
   const cancellation_policy_custom = cancellation_policy === "custom"
@@ -336,6 +344,11 @@ export async function updateTrip(
     }
     const today = new Date().toISOString().split("T")[0];
     if (date_start < today) return { error: "Trip date cannot be in the past." };
+    const maxDate = new Date();
+    maxDate.setFullYear(maxDate.getFullYear() + 2);
+    if (date_start > maxDate.toISOString().split("T")[0]) {
+      return { error: "Trip date cannot be more than 2 years in the future." };
+    }
     if (date_end && date_end < date_start) return { error: "End date cannot be before start date." };
     if (duration && duration !== "Day tour" && !date_end) return { error: "Please enter an end date for overnight/multi-day trips." };
     const hasGcash = organizer.payout_method === "gcash" && !!organizer.gcash_number;

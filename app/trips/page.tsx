@@ -160,7 +160,8 @@ export default async function TripsPage({ searchParams }: PageProps) {
     .or("is_template.is.null,is_template.eq.false");
 
   if (search) {
-    const term = `%${search}%`;
+    const escapedSearch = search.replace(/%/g, "\\%").replace(/_/g, "\\_");
+    const term = `%${escapedSearch}%`;
     const { data: matchingOrgs } = await supabase
       .from("organizers")
       .select("id")

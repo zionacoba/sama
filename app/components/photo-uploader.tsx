@@ -53,6 +53,7 @@ export function PhotoUploader({
   const [items, setItems] = useState<PhotoItem[]>(() =>
     initial.map((url) => ({ kind: "url" as const, url })),
   );
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const dragSrc = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,6 +66,18 @@ export function PhotoUploader({
   }, [items]);
 
   async function startUpload(id: string, file: File) {
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError("Only JPEG, PNG, and WebP images are allowed.");
+      setItems((prev) => prev.filter((i) => !(i.kind === "uploading" && i.id === id)));
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError("File size must be under 10MB.");
+      setItems((prev) => prev.filter((i) => !(i.kind === "uploading" && i.id === id)));
+      return;
+    }
+    setUploadError(null);
     const compressed = await compressImage(file);
     const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
 
@@ -259,6 +272,9 @@ export function PhotoUploader({
             </span>
           </button>
         </>
+      )}
+      {uploadError && (
+        <p role="alert" className="mt-2 text-xs text-red-600">{uploadError}</p>
       )}
     </div>
   );

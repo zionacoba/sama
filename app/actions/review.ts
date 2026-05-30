@@ -43,9 +43,17 @@ export async function submitReview(
     .maybeSingle();
 
   if (!tripForDate) return { error: "Trip not found." };
-  if (new Date(tripForDate.date_start) > new Date()) {
+  if (tripForDate.date_start > new Date().toISOString().split("T")[0]) {
     return { error: "You can only leave a review after the trip has taken place." };
   }
+
+  const { data: organizer } = await admin
+    .from("organizers")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("id", tripForDate.organizer_id)
+    .maybeSingle();
+  if (organizer) return { error: "Organizers cannot review their own trips." };
 
   // If a booking_id is provided, verify it's confirmed and belongs to this user
   if (bookingId) {

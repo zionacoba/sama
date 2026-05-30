@@ -48,6 +48,11 @@ export async function deleteAccount(): Promise<{ success: true } | { error: stri
   }
 
   // Anonymize all booking records — retained for legal/financial purposes.
+  const { data: userBookings } = await admin
+    .from("bookings")
+    .select("id")
+    .eq("user_id", user.id);
+
   await admin
     .from("bookings")
     .update({
@@ -58,6 +63,26 @@ export async function deleteAccount(): Promise<{ success: true } | { error: stri
       emergency_contact_phone: null,
       medical_notes: null,
     })
+    .eq("user_id", user.id);
+
+  if (userBookings && userBookings.length > 0) {
+    const bookingIds = userBookings.map((b) => b.id);
+    await admin
+      .from("booking_participants")
+      .update({
+        full_name: "Deleted User",
+        emergency_contact_name: null,
+        emergency_contact_phone: null,
+        medical_notes: null,
+      })
+      .in("booking_id", bookingIds);
+  }
+
+  await admin.from("waitlist").delete().eq("user_id", user.id);
+
+  await admin
+    .from("reviews")
+    .update({ full_name: "Deleted User" })
     .eq("user_id", user.id);
 
   // Remove organizer row if present.

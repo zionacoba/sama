@@ -45,6 +45,12 @@ export async function createBooking(input: CreateBookingInput) {
     return { error: "Please select at least 1 slot." };
   }
 
+  if (!input.emergencyContactName?.trim()) return { error: "Emergency contact name is required." };
+  if (!input.emergencyContactPhone?.trim()) return { error: "Emergency contact phone is required." };
+  if (input.phone.replace(/\s/g, "") === input.emergencyContactPhone.replace(/\s/g, "")) {
+    return { error: "Emergency contact phone must be different from your own phone number." };
+  }
+
   const { data: trip, error: tripFetchError } = await admin
     .from("trips")
     .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, downpayment_cutoff_days, messenger_gc_link, waiver_text")
@@ -160,6 +166,7 @@ export async function createBooking(input: CreateBookingInput) {
       commission_rate_used: commissionRate,
       waiver_text_snapshot: trip.waiver_text?.replace(/\[Organizer Name\]/gi, organizerName) ?? null,
       waiver_ip: waiverIp,
+      platform_waiver_snapshot: "By completing this booking, I agree that Sama is a technology marketplace that connects participants with independent trip organizers. Sama is not responsible for the conduct, acts, or omissions of organizers. I voluntarily assume all risks associated with outdoor activities.",
     })
     .select("id")
     .single();
@@ -465,7 +472,7 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, user_id, trip_id, full_name, total_amount, amount_due, payment_option, balance_collected, status")
+    .select("id, user_id, trip_id, full_name, total_amount, amount_due, payment_option, balance_collected, status, balance_payment_id, balance_payment_gateway_status")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -474,6 +481,10 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
   if (booking.status !== "confirmed") return { error: "Only confirmed bookings can pay the remaining balance." };
   if (booking.payment_option !== "downpayment") return { error: "This booking was paid in full." };
   if (booking.balance_collected) return { error: "Balance has already been paid." };
+  if (booking.balance_payment_gateway_status === "paid") return { error: "Balance has already been paid online." };
+  if (booking.balance_payment_id && booking.balance_payment_gateway_status !== "paid") {
+    return { error: "A payment link already exists for this balance. Please check your email or try again in a few minutes." };
+  }
 
   const { data: trip } = await admin
     .from("trips")

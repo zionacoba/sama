@@ -84,6 +84,7 @@ export function BookingModal({
   const [notes, setNotes] = useState("");
   const [selectedMeetingPoint, setSelectedMeetingPoint] = useState("");
   const [phoneError, setPhoneError] = useState(false);
+  const [samePhoneError, setSamePhoneError] = useState(false);
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [waiverError, setWaiverError] = useState(false);
   const [platformWaiverAccepted, setPlatformWaiverAccepted] = useState(false);
@@ -205,6 +206,8 @@ export function BookingModal({
     setEmergencyContactPhone("");
     setNotes("");
     setSelectedMeetingPoint("");
+    setPhoneError(false);
+    setSamePhoneError(false);
     setWaiverAccepted(false);
     setWaiverError(false);
     setWaiverExpanded(false);
@@ -233,7 +236,9 @@ export function BookingModal({
     e.preventDefault();
     const phoneValid = /^(\+63|0)\d{9,10}$/.test(phone.replace(/\s/g, ""));
     if (!phoneValid) setPhoneError(true);
-    const hasErrors = !platformWaiverAccepted || !waiverAccepted || !phoneValid;
+    const isSamePhone = phone.replace(/\s/g, "") === emergencyContactPhone.replace(/\s/g, "") && phone.trim() !== "";
+    if (isSamePhone) setSamePhoneError(true);
+    const hasErrors = !platformWaiverAccepted || !waiverAccepted || !phoneValid || isSamePhone;
     if (!platformWaiverAccepted) setPlatformWaiverError(true);
     if (!waiverAccepted) setWaiverError(true);
     if (hasErrors) return;
@@ -520,10 +525,15 @@ export function BookingModal({
                         maxLength={20}
                         pattern="[0-9+\-\s]+"
                         value={emergencyContactPhone}
-                        onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                        onChange={(e) => { setEmergencyContactPhone(e.target.value); setSamePhoneError(false); }}
                         placeholder="+63 9XX XXX XXXX"
-                        className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                        className={`mt-1.5 w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-trailhead/30 ${samePhoneError ? "border-red-400 focus:border-red-400" : "border-stone-200 focus:border-trailhead"}`}
                       />
+                      {samePhoneError && (
+                        <p role="alert" className="mt-1.5 text-xs text-red-600">
+                          Emergency contact phone must be different from your own phone number.
+                        </p>
+                      )}
                     </div>
                   </div>
 
