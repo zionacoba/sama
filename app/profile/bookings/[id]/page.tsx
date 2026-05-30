@@ -152,7 +152,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
 
   const bookingRef = booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
   const isActive = booking.status === "confirmed" || booking.status === "pending";
-  const isFuture = trip.date_start > new Date().toISOString();
+  const isFuture = trip.date_start >= new Date().toISOString().split("T")[0];
 
   const safeGcLink = trip.messenger_gc_link?.startsWith("http") ? trip.messenger_gc_link : null;
 
