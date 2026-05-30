@@ -10,8 +10,6 @@ import { ProfileForm as SafetyForm } from "@/app/dashboard/profile/profile-form"
 import { ProfileForm } from "./profile-form";
 import { DeleteAccountButton } from "@/app/components/delete-account-button";
 import { ParticipantShareLinks } from "./participant-share-links";
-import { WaiverModal } from "./waiver-modal";
-import { CancelBookingButton } from "./cancel-booking-button";
 import { removeWaitlistEntry } from "@/app/actions/waitlist";
 
 type PageProps = {
@@ -198,23 +196,6 @@ function BookingCard({
           <p className="text-xs text-stone-400">Review submitted ✓</p>
         )}
 
-        {booking.status === "confirmed" && booking.waiver_agreed && booking.trip.waiver_text && (
-          <WaiverModal
-            tripTitle={booking.trip.title}
-            fullName={booking.full_name || fullName}
-            agreedAt={booking.waiver_agreed_at ?? booking.created_at}
-            waiverText={booking.trip.waiver_text}
-          />
-        )}
-
-        {!past && (booking.status === "confirmed" || booking.status === "pending" || booking.status === "payment_pending") && (
-          <CancelBookingButton
-            bookingId={booking.id}
-            tripTitle={trip.title}
-            tripDate={formatDate(trip.date_start)}
-          />
-        )}
-
         {booking.status === "confirmed" &&
           booking.payment_option === "downpayment" &&
           !booking.balance_collected &&
@@ -231,9 +212,9 @@ function BookingCard({
 
         <Link
           href={`/profile/bookings/${booking.id}`}
-          className="self-start text-xs font-medium text-stone-400 underline-offset-2 hover:text-trailhead hover:underline"
+          className="block w-full text-center rounded-lg bg-trailhead py-2 text-sm font-medium text-white transition hover:bg-trailhead-dark"
         >
-          View booking details →
+          View booking details
         </Link>
       </div>
     </article>
