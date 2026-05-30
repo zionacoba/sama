@@ -103,7 +103,7 @@ export async function submitReview(
           replyTo: REPLY_TO_ADDRESS,
           subject: `New ${rating}-star review for ${tripForDate.title}`,
           html: `
-            <p>Hi ${escapeHtml(organizer.display_name ?? organizer.full_name)},</p>
+            <p>Hi ${escapeHtml(organizer.display_name ?? organizer.full_name ?? "Organizer")},</p>
             <p>${escapeHtml(fullName ?? "A participant")} left a <strong>${rating}-star review</strong> ${stars} for <strong>${escapeHtml(tripForDate.title)}</strong>:</p>
             <blockquote style="border-left:3px solid #ccc;margin:0;padding:0 1em;color:#555;">${escapeHtml(excerpt)}</blockquote>
             <p><a href="${siteUrl}/trips/${escapeHtml(tripForDate.slug)}">View the full review on the trip page →</a></p>

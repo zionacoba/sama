@@ -56,7 +56,7 @@ export async function createBooking(input: CreateBookingInput) {
   }
   if (!trip) return { error: "Trip not found." };
 
-  if (trip.status !== "active" || new Date(trip.date_start) < new Date()) {
+  if (trip.status !== "active" || trip.date_start < new Date().toISOString().split("T")[0]) {
     return { error: "This trip is no longer available for booking." };
   }
   if (!input.waiverAgreed || !input.platformWaiverAgreed) {
@@ -192,6 +192,9 @@ export async function createBooking(input: CreateBookingInput) {
   }));
 
   await admin.from("booking_participants").insert(participantRows);
+
+  // Remove any waitlist entry for this user+trip now that they have a booking.
+  await admin.from("waitlist").delete().eq("trip_id", trip.id).eq("user_id", user.id);
 
   const participantTokens =
     input.slots > 1
@@ -398,11 +401,17 @@ export async function markBalanceCollected(bookingId: number) {
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, full_name, email, total_amount, amount_due, payment_option")
+    .select("id, trip_id, full_name, email, total_amount, amount_due, payment_option, balance_collected")
     .eq("id", bookingId)
     .maybeSingle();
 
   if (!booking) return { error: "Booking not found." };
+  if (booking.payment_option !== "downpayment") {
+    return { error: "Balance collection is only applicable to downpayment bookings." };
+  }
+  if (booking.balance_collected) {
+    return { error: "Balance has already been marked as collected." };
+  }
 
   const { data: trip } = await admin
     .from("trips")

@@ -145,6 +145,9 @@ export async function updateOrganizerProfile(
   if (!display_name || !full_name || !phone || !bio) {
     return { error: "Please fill in all required fields." };
   }
+  if (bio.length > 1000) {
+    return { error: "Bio must be 1000 characters or fewer." };
+  }
 
   const urlFields = [social_links.facebook, social_links.instagram, social_links.tiktok];
   if (urlFields.some((u) => u && !u.startsWith("https://"))) {

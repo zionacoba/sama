@@ -33,7 +33,7 @@ export async function joinWaitlist(
     .select("id")
     .eq("trip_id", input.tripId)
     .eq("user_id", user.id)
-    .in("status", ["confirmed", "pending"])
+    .in("status", ["confirmed", "pending", "payment_pending"])
     .maybeSingle();
 
   if (existingBooking) {

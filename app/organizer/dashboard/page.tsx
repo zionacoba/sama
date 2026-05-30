@@ -158,7 +158,8 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
       .from("trips")
       .select("id, slug, title, activity_type, difficulty, date_start, price, total_slots, remaining_slots, status, is_template, template_id")
       .eq("organizer_id", organizer.id)
-      .order("date_start", { ascending: true }),
+      .order("date_start", { ascending: true })
+      .limit(500),
     searchParams,
   ]);
 

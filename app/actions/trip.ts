@@ -54,7 +54,13 @@ export async function createTrip(
   let meeting_points: MeetingPoint[] = [];
   if (!is_template) {
     const mpJson = formData.get("meeting_points") as string | null;
-    try { meeting_points = mpJson ? JSON.parse(mpJson) : []; } catch { return { error: "Invalid meeting points data." }; }
+    try {
+      const parsed = mpJson ? JSON.parse(mpJson) : [];
+      if (!Array.isArray(parsed) || !parsed.every((mp: unknown) => typeof (mp as MeetingPoint)?.location === "string" && typeof (mp as MeetingPoint)?.time === "string")) {
+        return { error: "Invalid pickup points format." };
+      }
+      meeting_points = parsed;
+    } catch { return { error: "Invalid meeting points data." }; }
   }
   const description = (formData.get("description") as string)?.trim();
   const includes = (formData.get("includes") as string)?.trim();
@@ -62,6 +68,7 @@ export async function createTrip(
   const photosJson = formData.get("photos_json") as string | null;
   let photos: string[] = [];
   try { photos = photosJson ? JSON.parse(photosJson) : []; } catch { return { error: "Invalid photo data." }; }
+  if (photos.length > 5) return { error: "Maximum 5 photos allowed." };
   const payment_type = (formData.get("payment_type") as string) || "full";
   const min_downpayment_raw = formData.get("min_downpayment") as string;
   const min_downpayment = payment_type === "downpayment" && min_downpayment_raw
@@ -88,10 +95,16 @@ export async function createTrip(
     return { error: "Please enter a trip title." };
   }
 
+  if (!isDraft && title && title.length > 100) {
+    return { error: "Trip title must be 100 characters or fewer." };
+  }
+
   if (!isDraft) {
     if (!activity_type || !destination || !difficulty || !description) {
       return { error: "Please fill in all required fields." };
     }
+    if (description && description.length > 5000) return { error: "Description must be 5000 characters or fewer." };
+    if (waiver_text && waiver_text.length > 10000) return { error: "Waiver text must be 10000 characters or fewer." };
     if (!region) {
       return { error: "Please select a region (Luzon, Visayas, or Mindanao)." };
     }
@@ -241,7 +254,13 @@ export async function updateTrip(
   let meeting_points: MeetingPoint[] = [];
   if (!is_template) {
     const mpJson = formData.get("meeting_points") as string | null;
-    try { meeting_points = mpJson ? JSON.parse(mpJson) : []; } catch { return { error: "Invalid meeting points data." }; }
+    try {
+      const parsed = mpJson ? JSON.parse(mpJson) : [];
+      if (!Array.isArray(parsed) || !parsed.every((mp: unknown) => typeof (mp as MeetingPoint)?.location === "string" && typeof (mp as MeetingPoint)?.time === "string")) {
+        return { error: "Invalid pickup points format." };
+      }
+      meeting_points = parsed;
+    } catch { return { error: "Invalid meeting points data." }; }
   }
   const description = (formData.get("description") as string)?.trim();
   const includes = (formData.get("includes") as string)?.trim();
@@ -249,6 +268,7 @@ export async function updateTrip(
   const photosJson = formData.get("photos_json") as string | null;
   let photos: string[] = [];
   try { photos = photosJson ? JSON.parse(photosJson) : []; } catch { return { error: "Invalid photo data." }; }
+  if (photos.length > 5) return { error: "Maximum 5 photos allowed." };
   const payment_type = (formData.get("payment_type") as string) || "full";
   const min_downpayment_raw = formData.get("min_downpayment") as string;
   const min_downpayment = payment_type === "downpayment"
@@ -275,10 +295,16 @@ export async function updateTrip(
   if (!title) {
     return { error: "Please enter a trip title." };
   }
+  if (!isDraft && title && title.length > 100) {
+    return { error: "Trip title must be 100 characters or fewer." };
+  }
 
   if (!isDraft && !activity_type || !isDraft && !destination || !isDraft && !difficulty || !isDraft && !description) {
     return { error: "Please fill in all required fields." };
   }
+
+  if (!isDraft && description && description.length > 5000) return { error: "Description must be 5000 characters or fewer." };
+  if (!isDraft && waiver_text && waiver_text.length > 10000) return { error: "Waiver text must be 10000 characters or fewer." };
 
   if (!isDraft && !region) {
     return { error: "Please select a region (Luzon, Visayas, or Mindanao)." };
@@ -329,7 +355,7 @@ export async function updateTrip(
       .from("bookings")
       .select("slots, amount_due, total_amount")
       .eq("trip_id", tripId)
-      .in("status", ["confirmed", "pending"]);
+      .in("status", ["confirmed", "pending", "payment_pending"]);
     bookedSlots = (activeBookings ?? []).reduce((sum, b) => sum + (b.slots ?? 0), 0);
     activeBookingCount = activeBookings?.length ?? 0;
     pendingBalanceCount = (activeBookings ?? []).filter(
@@ -581,7 +607,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
 
   const { data: organizer } = await supabase
     .from("organizers")
-    .select("id, status")
+    .select("id, status, full_name")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -599,6 +625,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   if (String(trip.organizer_id) !== String(organizer.id)) return { error: "You don't have permission to cancel this trip." };
   if (trip.status === "cancelled") return { error: "This trip is already cancelled." };
   if (trip.status !== "active") return { error: "Only active trips can be cancelled." };
+  if (new Date(trip.date_start) < new Date()) return { error: "This trip has already taken place and cannot be cancelled." };
 
   const { data: bookings } = await admin
     .from("bookings")
@@ -635,7 +662,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   const fmtCurrency = (n: number) =>
     new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
 
-  for (const booking of bookings ?? []) {
+  await Promise.allSettled((bookings ?? []).map(async (booking) => {
     const amountPaid =
       booking.payment_option === "downpayment" && booking.amount_due != null
         ? booking.amount_due
@@ -661,8 +688,9 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     } catch (err) {
       console.error("[email] failed to notify booking cancellation", booking.id, err);
     }
-  }
-  for (const entry of waitlistEntries ?? []) {
+  }));
+
+  await Promise.allSettled((waitlistEntries ?? []).map(async (entry) => {
     try {
       await resend.emails.send({
         from: FROM_ADDRESS,
@@ -678,6 +706,26 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
       });
     } catch (err) {
       console.error("[email] failed to notify waitlist cancellation", entry.id, err);
+    }
+  }));
+
+  // Notify admin.
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (adminEmail) {
+    try {
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: adminEmail,
+        replyTo: REPLY_TO_ADDRESS,
+        subject: `[Admin] Trip cancelled: ${escapeHtml(trip.title)}`,
+        html: `
+          <p>Organizer <strong>${escapeHtml(organizer.full_name ?? user.email ?? "Unknown")}</strong> cancelled <strong>${escapeHtml(trip.title)}</strong> scheduled for ${tripDate}.</p>
+          <p>${(bookings ?? []).length} participant${(bookings ?? []).length !== 1 ? "s were" : " was"} affected and notified.</p>
+          <p>— Sama System</p>
+        `,
+      });
+    } catch (err) {
+      console.error("[email] failed to send admin trip cancellation notification", err);
     }
   }
 
