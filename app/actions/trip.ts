@@ -524,7 +524,7 @@ export async function updateTrip(
     }
   }
 
-  // Notify waitlist when the organizer increases slots on a previously full trip
+  // Notify all waitlisted members when the organizer increases slots on a previously full trip
   if (existing.remaining_slots === 0 && remaining_slots > 0) {
     const admin = createSupabaseAdminClient();
     const { data: waitlistEntries } = await admin
@@ -534,29 +534,30 @@ export async function updateTrip(
       .eq("notified", false);
 
     if (waitlistEntries && waitlistEntries.length > 0) {
-      for (const entry of waitlistEntries) {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
+      const slotTripDate = new Intl.DateTimeFormat("en-PH", {
+        month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Manila",
+      }).format(new Date(safeDateStart));
+
+      await Promise.allSettled(waitlistEntries.map(async (entry) => {
         try {
           await resend.emails.send({
             from: FROM_ADDRESS,
             to: entry.email,
             replyTo: REPLY_TO_ADDRESS,
-            subject: `Slots available — ${title}`,
+            subject: `A slot just opened for ${title}`,
             html: `
               <p>Hi ${escapeHtml(entry.full_name)},</p>
-              <p>Good news! New slots have opened up for <strong>${escapeHtml(title)}</strong>. Book now before it fills up again:</p>
-              <p><a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/trips/${existing.slug}">${(process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph").replace("https://", "")}/trips/${existing.slug}</a></p>
+              <p>Good news! A slot just opened for <strong>${escapeHtml(title)}</strong> on ${slotTripDate}. Book now at <a href="${siteUrl}/trips/${existing.slug}">${siteUrl.replace("https://", "")}/trips/${existing.slug}</a> — it's first come, first served. Only one slot is available so act quickly.</p>
               <p>— The Sama Team</p>
             `,
           });
         } catch (err) {
           console.error("[email] failed to notify waitlist slot available", entry.id, err);
         }
-        try {
-          await admin.from("waitlist").update({ notified: true }).eq("id", entry.id);
-        } catch (err) {
-          console.error("[db] failed to mark waitlist notified", entry.id, err);
-        }
-      }
+      }));
+
+      await admin.from("waitlist").update({ notified: true }).in("id", waitlistEntries.map((e) => e.id));
     }
   }
 

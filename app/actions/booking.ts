@@ -675,7 +675,7 @@ export async function cancelBooking(bookingId: number) {
 
   const { data: trip } = await admin
     .from("trips")
-    .select("id, title, date_start, organizer_id, cancellation_policy")
+    .select("id, slug, title, date_start, organizer_id, cancellation_policy")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -685,38 +685,38 @@ export async function cancelBooking(bookingId: number) {
       p_slots_requested: booking.slots,
     });
 
-    // Auto-notify the first waitlisted person now that a slot has freed up.
-    try {
-      const { data: firstWaiting } = await admin
-        .from("waitlist")
-        .select("id, full_name, email, trips(title, slug)")
-        .eq("trip_id", trip.id)
-        .eq("notified", false)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
+    // Notify all waitlisted members that a slot has freed up.
+    const { data: waitingEntries } = await admin
+      .from("waitlist")
+      .select("id, full_name, email")
+      .eq("trip_id", trip.id)
+      .eq("notified", false)
+      .order("created_at", { ascending: true });
 
-      if (firstWaiting) {
-        type TripRef = { title: string; slug: string };
-        const waitlistTrip = firstWaiting.trips as unknown as TripRef | null;
-        if (waitlistTrip) {
+    if (waitingEntries && waitingEntries.length > 0) {
+      const slotTripDate = new Intl.DateTimeFormat("en-PH", {
+        month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Manila",
+      }).format(new Date(trip.date_start));
+
+      await Promise.allSettled(waitingEntries.map(async (entry) => {
+        try {
           await resend.emails.send({
             from: FROM_ADDRESS,
-            to: firstWaiting.email,
+            to: entry.email,
             replyTo: REPLY_TO_ADDRESS,
-            subject: `A slot opened up — ${waitlistTrip.title}`,
+            subject: `A slot just opened for ${trip.title}`,
             html: `
-              <p>Hi ${escapeHtml(firstWaiting.full_name)},</p>
-              <p>Good news! A slot has opened up for <strong>${escapeHtml(waitlistTrip.title)}</strong>. Book now before it fills up again:</p>
-              <p><a href="${SITE_URL}/trips/${waitlistTrip.slug}">${SITE_URL.replace("https://", "")}/trips/${waitlistTrip.slug}</a></p>
+              <p>Hi ${escapeHtml(entry.full_name)},</p>
+              <p>Good news! A slot just opened for <strong>${escapeHtml(trip.title)}</strong> on ${slotTripDate}. Book now at <a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a> — it's first come, first served. Only one slot is available so act quickly.</p>
               <p>— The Sama Team</p>
             `,
           });
-          await admin.from("waitlist").update({ notified: true }).eq("id", firstWaiting.id);
+        } catch (err) {
+          console.error("[email] failed to notify waitlist after cancellation", entry.id, err);
         }
-      }
-    } catch (err) {
-      console.error("[email] failed to notify waitlist after cancellation", err);
+      }));
+
+      await admin.from("waitlist").update({ notified: true }).in("id", waitingEntries.map((e) => e.id));
     }
 
     // Calculate refund based on cancellation policy.
