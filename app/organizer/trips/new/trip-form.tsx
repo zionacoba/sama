@@ -53,6 +53,7 @@ export function TripForm({
   const [meetingPoints, setMeetingPoints] = useState<MeetingPoint[]>([{ location: "", time: "" }]);
   const [duration, setDuration] = useState<string>(defaultValues?.duration ?? "");
   const [dateStart, setDateStart] = useState<string>("");
+  const [price, setPrice] = useState<number>(Number(defaultValues?.price) || 0);
   const [paymentType, setPaymentType] = useState<"full" | "downpayment">(
     defaultValues?.payment_type === "downpayment" ? "downpayment" : "full",
   );
@@ -305,6 +306,7 @@ export function TripForm({
                 required
                 className={inputClass}
                 placeholder="2500"
+                onChange={(e) => setPrice(Number(e.target.value) || 0)}
               />
             </div>
             <div>
@@ -349,14 +351,16 @@ export function TripForm({
                   id="min_downpayment"
                   name="min_downpayment"
                   type="number"
-                  min="200"
+                  min={Math.round(price * 0.10)}
                   step="1"
                   required
                   defaultValue={defaultValues?.min_downpayment ?? ""}
                   className={inputClass}
                   placeholder="500"
                 />
-                <p className="mt-1 text-xs font-medium text-trailhead">Minimum ₱200</p>
+                <p className="mt-1 text-xs font-medium text-trailhead">
+                  {price > 0 ? `Minimum ₱${Math.round(price * 0.10).toLocaleString()} (10% of trip price)` : 'Set trip price first'}
+                </p>
                 <p className="mt-1 text-xs text-stone-500">
                   This is the amount participants pay to reserve their slot. They can choose to pay in full or this downpayment amount. You set this — participants cannot change it.
                 </p>

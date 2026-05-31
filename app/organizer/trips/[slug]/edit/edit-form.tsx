@@ -65,6 +65,7 @@ export function EditTripForm({
   const [meetingPoints, setMeetingPoints] = useState<MeetingPoint[]>(
     trip.meeting_points?.length ? trip.meeting_points : [{ location: "", time: "" }],
   );
+  const [price, setPrice] = useState<number>(Number(trip.price) || 0);
   const [paymentType, setPaymentType] = useState<"full" | "downpayment">(
     trip.payment_type === "downpayment" ? "downpayment" : "full",
   );
@@ -347,6 +348,7 @@ export function EditTripForm({
                 required
                 defaultValue={trip.price}
                 className={inputClass}
+                onChange={(e) => setPrice(Number(e.target.value) || 0)}
               />
             </div>
             <div>
@@ -391,14 +393,16 @@ export function EditTripForm({
                   id="min_downpayment"
                   name="min_downpayment"
                   type="number"
-                  min="200"
+                  min={Math.round(price * 0.10)}
                   step="1"
                   required
                   defaultValue={trip.min_downpayment ?? ""}
                   className={inputClass}
                   placeholder="500"
                 />
-                <p className="mt-1 text-xs font-medium text-trailhead">Minimum ₱200</p>
+                <p className="mt-1 text-xs font-medium text-trailhead">
+                  {price > 0 ? `Minimum ₱${Math.round(price * 0.10).toLocaleString()} (10% of trip price)` : 'Set trip price first'}
+                </p>
                 <p className="mt-1 text-xs text-stone-500">
                   This is the amount participants pay to reserve their slot. They can choose to pay in full or this downpayment amount. You set this — participants cannot change it.
                 </p>
