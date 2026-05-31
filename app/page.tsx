@@ -224,25 +224,31 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="py-16 bg-gray-50">
+        <section className="py-16 bg-white border-t border-gray-100">
           <div className="max-w-4xl mx-auto px-4 text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">How to join a trip</h2>
-            <p className="text-gray-500 mb-10">Booking your next adventure takes less than 5 minutes.</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <p className="text-gray-500 mb-12">Booking your next adventure takes less than 5 minutes.</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
               <div className="flex flex-col items-center">
-                <span className="text-4xl mb-4">🔍</span>
-                <h3 className="font-semibold text-gray-900 mb-1">Find a trip</h3>
-                <p className="text-sm text-gray-500">Browse trips by activity, difficulty, or region and find one that fits your schedule.</p>
+                <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xl font-bold mb-4">
+                  1
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">Find a trip</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">Browse trips by activity, difficulty, or region and find one that fits your schedule.</p>
               </div>
               <div className="flex flex-col items-center">
-                <span className="text-4xl mb-4">📋</span>
-                <h3 className="font-semibold text-gray-900 mb-1">Fill in your details and pay</h3>
-                <p className="text-sm text-gray-500">Complete your booking online and pay securely via GCash or QR Ph.</p>
+                <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xl font-bold mb-4">
+                  2
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">Book and pay via GCash</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">Fill in your details and complete your payment securely online in a few taps.</p>
               </div>
               <div className="flex flex-col items-center">
-                <span className="text-4xl mb-4">✅</span>
-                <h3 className="font-semibold text-gray-900 mb-1">Get your confirmation</h3>
-                <p className="text-sm text-gray-500">You'll get a confirmation email right away. Show up ready — everything else is handled.</p>
+                <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xl font-bold mb-4">
+                  3
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">Get your confirmation</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">You'll receive a confirmation email right away. Show up ready, everything else is handled.</p>
               </div>
             </div>
           </div>
