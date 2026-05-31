@@ -224,6 +224,30 @@ export default async function Home() {
           </div>
         </section>
 
+        <section className="py-16 bg-gray-50">
+          <div className="max-w-4xl mx-auto px-4 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">How to join a trip</h2>
+            <p className="text-gray-500 mb-10">Booking your next adventure takes less than 5 minutes.</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="flex flex-col items-center">
+                <span className="text-4xl mb-4">🔍</span>
+                <h3 className="font-semibold text-gray-900 mb-1">Find a trip</h3>
+                <p className="text-sm text-gray-500">Browse trips by activity, difficulty, or region and find one that fits your schedule.</p>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-4xl mb-4">📋</span>
+                <h3 className="font-semibold text-gray-900 mb-1">Fill in your details and pay</h3>
+                <p className="text-sm text-gray-500">Complete your booking online and pay securely via GCash or QR Ph.</p>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-4xl mb-4">✅</span>
+                <h3 className="font-semibold text-gray-900 mb-1">Get your confirmation</h3>
+                <p className="text-sm text-gray-500">You'll get a confirmation email right away. Show up ready — everything else is handled.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <aside className="border-t border-trailhead-dark/20 bg-trailhead px-4 py-10 text-white sm:py-12">
           <div className="mx-auto flex max-w-6xl flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-lg font-semibold sm:text-xl">
