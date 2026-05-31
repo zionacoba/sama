@@ -142,6 +142,7 @@ export async function saveUserProfile(
 
   const full_name = (formData.get("full_name") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim() || null;
+  const facebook_url = (formData.get("facebook_url") as string)?.trim() || null;
 
   if (!full_name) return { error: "Full name is required." };
 
@@ -151,7 +152,7 @@ export async function saveUserProfile(
   const admin = createSupabaseAdminClient();
   const { error: profileError } = await admin
     .from("profiles")
-    .upsert({ id: user.id, phone, updated_at: new Date().toISOString() });
+    .upsert({ id: user.id, phone, facebook_url, updated_at: new Date().toISOString() });
 
   if (profileError) return { error: profileError.message };
 

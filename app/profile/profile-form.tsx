@@ -1,15 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { saveUserProfile } from "@/app/actions/profile";
 
 type Props = {
   fullName: string;
   email: string;
   phone: string | null;
+  facebookUrl: string | null;
 };
 
-export function ProfileForm({ fullName, email, phone }: Props) {
+export function ProfileForm({ fullName, email, phone, facebookUrl }: Props) {
+  const [fbValue, setFbValue] = useState(facebookUrl ?? "");
   const [state, action, pending] = useActionState(saveUserProfile, null);
 
   return (
@@ -64,6 +66,24 @@ export function ProfileForm({ fullName, email, phone }: Props) {
           placeholder="+63 9xx xxx xxxx"
           className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
+      </div>
+
+      <div>
+        <label htmlFor="facebook_url" className="block text-sm font-medium text-stone-700">
+          Facebook profile URL <span className="font-normal text-stone-400">(optional)</span>
+        </label>
+        <input
+          id="facebook_url"
+          name="facebook_url"
+          type="url"
+          value={fbValue}
+          onChange={(e) => setFbValue(e.target.value)}
+          placeholder="https://facebook.com/yourname"
+          className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+        />
+        {fbValue && !fbValue.startsWith("https://facebook.com/") && !fbValue.startsWith("https://www.facebook.com/") && (
+          <p className="mt-1 text-xs text-amber-600">Should start with https://facebook.com/ or https://www.facebook.com/</p>
+        )}
       </div>
 
       <button

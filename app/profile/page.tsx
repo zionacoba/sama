@@ -253,7 +253,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
       .order("created_at", { ascending: false }),
     supabase
       .from("profiles")
-      .select("birthdate, emergency_contact_name, emergency_contact_phone, phone")
+      .select("birthdate, emergency_contact_name, emergency_contact_phone, phone, facebook_url")
       .eq("id", user.id)
       .maybeSingle(),
     supabase
@@ -488,6 +488,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
                   fullName={fullName}
                   email={user.email ?? ""}
                   phone={profileData?.phone ?? null}
+                  facebookUrl={profileData?.facebook_url ?? null}
                 />
               </div>
             </div>

@@ -44,6 +44,7 @@ type Booking = {
   medical_notes: string | null;
   notes: string | null;
   meeting_point: string | null;
+  facebook_url?: string | null;
 };
 
 type BookingParticipant = {
@@ -141,8 +142,23 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
       .order("created_at", { ascending: true }),
   ]);
 
-  const bookings = (bookingsData ?? []) as Booking[];
+  const rawBookings = (bookingsData ?? []) as Booking[];
   const waitlist = (waitlistData ?? []) as WaitlistEntry[];
+
+  const userIds = rawBookings.map((b) => b.user_id).filter((id): id is string => id != null);
+  let facebookUrlMap = new Map<string, string | null>();
+  if (userIds.length > 0) {
+    const { data: profilesData } = await admin
+      .from("profiles")
+      .select("id, facebook_url")
+      .in("id", userIds);
+    facebookUrlMap = new Map((profilesData ?? []).map((p: { id: string; facebook_url: string | null }) => [p.id, p.facebook_url]));
+  }
+
+  const bookings: Booking[] = rawBookings.map((b) => ({
+    ...b,
+    facebook_url: b.user_id ? (facebookUrlMap.get(b.user_id) ?? null) : null,
+  }));
 
   const multiSlotIds = bookings.filter((b) => b.slots > 1).map((b) => b.id);
   const participantsMap = new Map<number, BookingParticipant[]>();
@@ -364,7 +380,19 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                       <tbody className="divide-y divide-stone-100">
                         {group.map((b) => (
                           <tr key={b.id} className="hover:bg-stone-50">
-                            <td className="px-5 py-3.5 font-medium text-stone-900">{b.full_name}</td>
+                            <td className="px-5 py-3.5 font-medium text-stone-900">
+                              {b.full_name}
+                              {b.facebook_url && (
+                                <a
+                                  href={b.facebook_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="ml-2 text-xs text-blue-600 hover:underline"
+                                >
+                                  FB Profile
+                                </a>
+                              )}
+                            </td>
                             <td className="px-5 py-3.5 text-center text-stone-700">
                               {b.slots}
                               {b.slots > 1 && participantsMap.has(b.id) && (() => {
