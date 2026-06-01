@@ -70,18 +70,51 @@ export default function TermsPage() {
               </ul>
             </section>
 
-            <section>
+            <section id="refund-policy">
               <h2 className="text-lg font-bold text-stone-900">6. Cancellation and Refunds</h2>
               <p className="mt-2 leading-relaxed">
-                Refunds apply only to payments collected through the Sama platform (downpayments). The refund policy is as follows:
+                Refunds are processed automatically based on the cancellation policy selected by the trip organizer. The policy that applies to your booking is shown on the trip page before you book and in your booking confirmation email.
               </p>
-              <ul className="mt-2 space-y-1.5 leading-relaxed">
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>7 or more days before the trip: Full refund of amount paid through Sama</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>3–7 days before the trip: 50% refund of amount paid through Sama</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Under 3 days before the trip: No refund</span></li>
+
+              <h3 className="mt-5 text-base font-semibold text-stone-800">Cancellation by participant</h3>
+
+              <p className="mt-3 font-medium text-stone-700">Flexible Policy</p>
+              <ul className="mt-1.5 space-y-1.5 leading-relaxed">
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>7 or more days before trip: Full refund</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>3 to 7 days before trip: 50% refund</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Less than 3 days before trip: No refund</span></li>
               </ul>
+
+              <p className="mt-3 font-medium text-stone-700">Moderate Policy</p>
+              <ul className="mt-1.5 space-y-1.5 leading-relaxed">
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>14 or more days before trip: Full refund</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>7 to 14 days before trip: 50% refund</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Less than 7 days before trip: No refund</span></li>
+              </ul>
+
+              <p className="mt-3 font-medium text-stone-700">Strict Policy</p>
+              <ul className="mt-1.5 space-y-1.5 leading-relaxed">
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>30 or more days before trip: Full refund</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>7 to 30 days before trip: 50% refund</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Less than 7 days before trip: No refund</span></li>
+              </ul>
+
+              <h3 className="mt-5 text-base font-semibold text-stone-800">Cancellation by organizer</h3>
               <p className="mt-2 leading-relaxed">
-                Balance payments made directly to organizers are not covered by Sama&apos;s refund policy and are subject to the organizer&apos;s own terms.
+                If the organizer cancels a trip, all participants receive a full refund regardless of timing or policy.
+              </p>
+
+              <h3 className="mt-5 text-base font-semibold text-stone-800">Refund processing</h3>
+              <p className="mt-2 leading-relaxed">
+                Refunds are returned to the original payment method. GCash refunds typically reflect within 24 hours. If your payment method does not support automatic refunds, our team will contact you at{" "}
+                <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a>{" "}
+                within 3 to 5 business days to arrange an alternative.
+              </p>
+
+              <h3 className="mt-5 text-base font-semibold text-stone-800">Contact</h3>
+              <p className="mt-2 leading-relaxed">
+                For refund questions, email{" "}
+                <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a>.
               </p>
             </section>
 

@@ -284,6 +284,10 @@ export default async function Home() {
           Terms of Service
         </Link>
         {" · "}
+        <Link href="/terms#refund-policy" className="underline-offset-4 hover:text-trailhead hover:underline">
+          Refund Policy
+        </Link>
+        {" · "}
         <Link href="/privacy" className="underline-offset-4 hover:text-trailhead hover:underline">
           Privacy Policy
         </Link>
