@@ -8,6 +8,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 import { calculateRefundAmount } from "@/lib/cancellation-policies";
+import { processPayMongoRefund, type RefundResult } from "@/lib/paymongo-refund";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? (() => { throw new Error("ADMIN_EMAIL environment variable is not set"); })();
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
@@ -658,7 +659,7 @@ export async function cancelBooking(bookingId: number) {
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option")
+    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -740,6 +741,35 @@ export async function cancelBooking(bookingId: number) {
         .eq("id", bookingId);
     }
 
+    // Process automatic refunds — a failed refund never blocks the cancellation.
+    let refundResult: RefundResult | null = null;
+    let balanceRefundResult: RefundResult | null = null;
+
+    if (refundAmount !== null && refundAmount > 0) {
+      refundResult = await processPayMongoRefund({
+        paymentId: booking.paymongo_payment_id,
+        paymentMethod: booking.payment_method,
+        amountPesos: refundAmount,
+        notes: 'Joiner cancelled booking',
+      });
+      if (!refundResult.success && !refundResult.requiresManualProcessing) {
+        console.error('[refund] cancelBooking initial refund failed', bookingId, refundResult.error);
+      }
+    }
+
+    if (booking.balance_payment_gateway_status === 'paid' && booking.balance_paymongo_payment_id) {
+      const balanceAmount = (booking.total_amount ?? 0) - (booking.amount_due ?? 0);
+      balanceRefundResult = await processPayMongoRefund({
+        paymentId: booking.balance_paymongo_payment_id,
+        paymentMethod: booking.payment_method,
+        amountPesos: balanceAmount,
+        notes: 'Joiner cancelled booking - balance refund',
+      });
+      if (!balanceRefundResult.success && !balanceRefundResult.requiresManualProcessing) {
+        console.error('[refund] cancelBooking balance refund failed', bookingId, balanceRefundResult.error);
+      }
+    }
+
     const fmtCurrency = (n: number) =>
       new Intl.NumberFormat("en-PH", {
         style: "currency",
@@ -751,7 +781,9 @@ export async function cancelBooking(bookingId: number) {
       refundAmount === null
         ? `<p>If you are eligible for a refund, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking details and we'll process it for you.</p>`
         : refundAmount > 0
-          ? `<p>Based on our cancellation policy, your refund will be <strong>${fmtCurrency(refundAmount)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process it within 5–7 business days.</p>`
+          ? (refundResult?.success
+              ? `<p>Based on our cancellation policy, your refund of <strong>${fmtCurrency(refundAmount)}</strong> has been processed and will reflect within 24 hours.</p>`
+              : `<p>Based on our cancellation policy, your refund will be <strong>${fmtCurrency(refundAmount)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process it within 5–7 business days.</p>`)
           : `<p>Based on our cancellation policy, this cancellation is not eligible for a refund.</p>`;
 
     try {
@@ -812,6 +844,34 @@ export async function cancelBooking(bookingId: number) {
         });
       } catch (adminErr) {
         console.error("[email] failed to send admin cancellation notification", adminErr);
+      }
+
+      const needsManualRefund =
+        (refundResult && !refundResult.success) ||
+        (balanceRefundResult && !balanceRefundResult.success);
+      if (needsManualRefund) {
+        try {
+          const isQrPh = refundResult?.requiresManualProcessing || balanceRefundResult?.requiresManualProcessing;
+          const refundNote = isQrPh
+            ? 'Payment method is QR Ph — must be refunded manually.'
+            : `Automatic refund failed: ${refundResult?.error ?? balanceRefundResult?.error ?? 'Unknown error'}`;
+          await resend.emails.send({
+            from: FROM_ADDRESS,
+            to: ADMIN_EMAIL,
+            replyTo: REPLY_TO_ADDRESS,
+            subject: `[Admin] Manual refund required: ${escapeHtml(booking.full_name)} — ${trip.title}`,
+            html: `
+              <p>A refund could not be automatically processed.</p>
+              <p><strong>Booking ID:</strong> ${bookingId}</p>
+              <p><strong>Participant:</strong> ${escapeHtml(booking.full_name)} (${escapeHtml(booking.email)})</p>
+              <p><strong>Refund amount:</strong> ${refundAmount !== null && refundAmount > 0 ? fmtCurrency(refundAmount) : 'See booking details'}</p>
+              <p><strong>Reason:</strong> ${refundNote}</p>
+              <p>Please process this refund manually.</p>
+            `,
+          });
+        } catch (alertErr) {
+          console.error('[email] failed to send manual refund alert', alertErr);
+        }
       }
     } catch (err) {
       console.error("[email] failed to send cancellation email", err);

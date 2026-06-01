@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
+import { processPayMongoRefund, type RefundResult } from "@/lib/paymongo-refund";
 
 function slugify(title: string): string {
   return title
@@ -645,7 +646,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
 
   const { data: bookings } = await admin
     .from("bookings")
-    .select("id, full_name, email, total_amount, amount_due, payment_option")
+    .select("id, full_name, email, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status")
     .eq("trip_id", trip.id)
     .in("status", ["pending", "confirmed", "payment_pending"]);
 
@@ -678,14 +679,68 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   const fmtCurrency = (n: number) =>
     new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
 
+  // Process refunds — a failed refund never blocks cancellation emails or flow.
+  const refundResultMap = new Map<number, { initial: RefundResult | null, balance: RefundResult | null }>();
+  const manualRefundList: Array<{ id: number, full_name: string, email: string, amount: number }> = [];
+
   await Promise.allSettled((bookings ?? []).map(async (booking) => {
     const amountPaid =
       booking.payment_option === "downpayment" && booking.amount_due != null
         ? booking.amount_due
         : (booking.total_amount ?? 0);
+
+    let initialResult: RefundResult | null = null;
+    let balanceResult: RefundResult | null = null;
+
+    if (booking.paymongo_payment_id) {
+      initialResult = await processPayMongoRefund({
+        paymentId: booking.paymongo_payment_id,
+        paymentMethod: booking.payment_method,
+        amountPesos: amountPaid,
+        notes: 'Organizer cancelled trip',
+      });
+      if (!initialResult.success) {
+        if (!initialResult.requiresManualProcessing) {
+          console.error('[refund] cancelTrip initial refund failed', booking.id, initialResult.error);
+        }
+        manualRefundList.push({ id: booking.id, full_name: booking.full_name, email: booking.email, amount: amountPaid });
+      }
+    }
+
+    if (booking.balance_paymongo_payment_id && booking.balance_payment_gateway_status === 'paid') {
+      const balanceAmount = (booking.total_amount ?? 0) - (booking.amount_due ?? 0);
+      if (balanceAmount > 0) {
+        balanceResult = await processPayMongoRefund({
+          paymentId: booking.balance_paymongo_payment_id,
+          paymentMethod: booking.payment_method,
+          amountPesos: balanceAmount,
+          notes: 'Organizer cancelled trip - balance refund',
+        });
+        if (!balanceResult.success) {
+          if (!balanceResult.requiresManualProcessing) {
+            console.error('[refund] cancelTrip balance refund failed', booking.id, balanceResult.error);
+          }
+          if (!manualRefundList.some((b) => b.id === booking.id)) {
+            manualRefundList.push({ id: booking.id, full_name: booking.full_name, email: booking.email, amount: balanceAmount });
+          }
+        }
+      }
+    }
+
+    refundResultMap.set(booking.id, { initial: initialResult, balance: balanceResult });
+  }));
+
+  await Promise.allSettled((bookings ?? []).map(async (booking) => {
+    const amountPaid =
+      booking.payment_option === "downpayment" && booking.amount_due != null
+        ? booking.amount_due
+        : (booking.total_amount ?? 0);
+    const refundSucceeded = refundResultMap.get(booking.id)?.initial?.success === true;
     const refundLine =
       amountPaid > 0
-        ? `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process your refund within 3–5 business days.</p>`
+        ? (refundSucceeded
+            ? `<p>A full refund of <strong>${fmtCurrency(amountPaid)}</strong> has been processed and will reflect within 24 hours.</p>`
+            : `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process your refund within 3–5 business days.</p>`)
         : `<p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`;
     try {
       await resend.emails.send({
@@ -724,6 +779,31 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
       console.error("[email] failed to notify waitlist cancellation", entry.id, err);
     }
   }));
+
+  // Send consolidated manual refund alert if any bookings couldn't be automatically refunded.
+  if (manualRefundList.length > 0) {
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (adminEmail) {
+      try {
+        const rows = manualRefundList
+          .map((b) => `<li>Booking ${b.id} — ${escapeHtml(b.full_name)} (${escapeHtml(b.email)}): ${fmtCurrency(b.amount)}</li>`)
+          .join('\n');
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: adminEmail,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `[Admin] Manual refunds required — ${escapeHtml(trip.title)}`,
+          html: `
+            <p>The following bookings for <strong>${escapeHtml(trip.title)}</strong> could not be automatically refunded (QR Ph payments or API errors). Please process these manually:</p>
+            <ul>${rows}</ul>
+            <p>— Sama System</p>
+          `,
+        });
+      } catch (err) {
+        console.error('[email] failed to send manual refund alert for trip cancellation', err);
+      }
+    }
+  }
 
   // Notify admin.
   const adminEmail = process.env.ADMIN_EMAIL;
