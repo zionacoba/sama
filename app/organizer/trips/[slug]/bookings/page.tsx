@@ -404,6 +404,11 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                   FB Profile
                                 </a>
                               )}
+                              {(b.medical_notes || b.notes) && (
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  🏥 {[b.medical_notes, b.notes].filter(Boolean).join(' · ')}
+                                </p>
+                              )}
                             </td>
                             <td className="px-5 py-3.5 text-center text-stone-700">
                               {b.slots}

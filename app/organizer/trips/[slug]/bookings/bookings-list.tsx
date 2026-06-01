@@ -217,6 +217,11 @@ export function BookingsListWithTabs({
                             FB Profile
                           </a>
                         )}
+                        {(b.medical_notes || b.notes) && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            🏥 {[b.medical_notes, b.notes].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
                       </td>
                       <td className="px-5 py-3.5 text-stone-500">{b.email}</td>
                       <td className="px-5 py-3.5 text-stone-700">
