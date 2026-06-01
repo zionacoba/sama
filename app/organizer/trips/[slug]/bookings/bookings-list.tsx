@@ -266,9 +266,6 @@ export function BookingsListWithTabs({
                                         participantName={b.full_name}
                                         balanceAmount={formatCurrency(balance)}
                                       />
-                                      <span className="text-xs text-stone-400">
-                                        Participant can pay balance online through Sama or directly to you. Mark as collected once received. Balance payments made online are remitted 24-48 hours after the trip date.
-                                      </span>
                                     </>
                                   )}
                                 </>
