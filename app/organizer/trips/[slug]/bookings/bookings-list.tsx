@@ -246,7 +246,7 @@ export function BookingsListWithTabs({
                         {b.payment_option === "downpayment" && b.amount_due != null && (() => {
                           const balance = b.total_amount - b.amount_due;
                           return (
-                            <div className="mt-0.5 flex flex-col items-end gap-1">
+                            <div className="mt-0.5 flex flex-col items-end gap-0.5">
                               {b.balance_collected ? (
                                 b.balance_payment_gateway_status === "paid" ? (
                                   <span className="text-xs font-semibold text-emerald-600">Paid online ✓</span>
@@ -255,18 +255,20 @@ export function BookingsListWithTabs({
                                 )
                               ) : (
                                 <>
-                                  <span className="text-xs font-normal text-stone-400">
-                                    ({formatCurrency(b.amount_due)} deposit)
-                                  </span>
-                                  <span className="text-xs font-semibold text-amber-700">Balance pending</span>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs font-normal text-stone-400">
+                                      {formatCurrency(b.amount_due)} deposit
+                                    </span>
+                                    <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
+                                      Balance pending
+                                    </span>
+                                  </div>
                                   {b.status === "confirmed" && (
-                                    <>
-                                      <MarkBalanceButton
-                                        bookingId={b.id}
-                                        participantName={b.full_name}
-                                        balanceAmount={formatCurrency(balance)}
-                                      />
-                                    </>
+                                    <MarkBalanceButton
+                                      bookingId={b.id}
+                                      participantName={b.full_name}
+                                      balanceAmount={formatCurrency(balance)}
+                                    />
                                   )}
                                 </>
                               )}
