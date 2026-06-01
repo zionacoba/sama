@@ -30,6 +30,7 @@ type TripDefaults = {
   downpayment_cutoff_days?: number | null;
   cancellation_policy?: string | null;
   cancellation_policy_custom?: string | null;
+  price?: number | string | null;
   waiver_text?: string | null;
   messenger_gc_link?: string | null;
 };
