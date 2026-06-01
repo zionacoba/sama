@@ -85,13 +85,15 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
     return;
   }
 
-  // Extract payment method from the payments array on the link.
+  // Extract payment method and transaction ID from the payments array on the link.
   let paymentMethod: string | null = null;
+  let paymentTransactionId: string | null = null;
   const payments = linkAttrs?.payments as unknown[] | undefined;
   if (payments && payments.length > 0) {
     const first = payments[0] as Record<string, unknown>;
     // PayMongo may wrap the payment resource under a `data` key or not.
     const resource = (first.data ?? first) as Record<string, unknown>;
+    paymentTransactionId = (resource.id as string) ?? null;
     const pAttrs = resource.attributes as Record<string, unknown> | undefined;
     const source = pAttrs?.source as Record<string, unknown> | undefined;
     paymentMethod = (source?.type as string) ?? null;
@@ -105,7 +107,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
 
   if (!booking) {
     // Not an initial payment — check if it's a balance payment.
-    await handleBalancePayment(linkId, admin);
+    await handleBalancePayment(linkId, paymentTransactionId, admin);
     return;
   }
 
@@ -144,6 +146,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
       status: newStatus,
       payment_gateway_status: "paid",
       ...(paymentMethod ? { payment_method: paymentMethod } : {}),
+      ...(paymentTransactionId ? { paymongo_payment_id: paymentTransactionId } : {}),
     })
     .eq("id", booking.id);
 
@@ -284,6 +287,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
 
 async function handleBalancePayment(
   linkId: string,
+  paymentTransactionId: string | null,
   admin: ReturnType<typeof createSupabaseAdminClient>,
 ) {
   const { data: booking } = await admin
@@ -315,7 +319,11 @@ async function handleBalancePayment(
 
   await admin
     .from("bookings")
-    .update({ balance_collected: true, balance_payment_gateway_status: "paid" })
+    .update({
+      balance_collected: true,
+      balance_payment_gateway_status: "paid",
+      ...(paymentTransactionId ? { balance_paymongo_payment_id: paymentTransactionId } : {}),
+    })
     .eq("id", booking.id);
 
   const balance = Math.round(((booking.total_amount ?? 0) - (booking.amount_due ?? 0)) * 100) / 100;
