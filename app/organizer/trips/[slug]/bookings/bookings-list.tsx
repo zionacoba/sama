@@ -86,11 +86,17 @@ export function BookingsListWithTabs({
   participantsRecord,
   needsManualApproval,
   navLinks,
+  price,
+  paymentType,
+  minDownpayment,
 }: {
   bookings: Booking[];
   participantsRecord: Record<string, BookingParticipant[]>;
   needsManualApproval: boolean;
   navLinks: ReactNode;
+  price: number;
+  paymentType: string | null;
+  minDownpayment: number | null;
 }) {
   const [tab, setTab] = useState<Tab>("confirmed");
 
@@ -165,6 +171,16 @@ export function BookingsListWithTabs({
         </div>
         <div className="flex flex-wrap gap-2">{navLinks}</div>
       </div>
+
+      {paymentType === "downpayment" && minDownpayment != null ? (
+        <div className="text-sm text-gray-500 mb-3">
+          Trip price: {formatCurrency(price)} · Downpayment: {formatCurrency(minDownpayment)} · Balance due: {formatCurrency(price - minDownpayment)}
+        </div>
+      ) : (
+        <div className="text-sm text-gray-500 mb-3">
+          Trip price: {formatCurrency(price)} · Full payment
+        </div>
+      )}
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
         {displayed.length === 0 ? (
@@ -255,14 +271,9 @@ export function BookingsListWithTabs({
                                 )
                               ) : (
                                 <>
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs font-normal text-stone-400">
-                                      {formatCurrency(b.amount_due)} deposit
-                                    </span>
-                                    <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
-                                      Balance pending
-                                    </span>
-                                  </div>
+                                  <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
+                                    Balance pending
+                                  </span>
                                   {b.status === "confirmed" && (
                                     <MarkBalanceButton
                                       bookingId={b.id}

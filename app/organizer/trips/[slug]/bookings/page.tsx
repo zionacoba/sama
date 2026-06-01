@@ -118,7 +118,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
 
   const { data: trip } = await supabase
     .from("trips")
-    .select("id, title, slug, difficulty, activity_type, date_start, total_slots, remaining_slots, price")
+    .select("id, title, slug, difficulty, activity_type, date_start, total_slots, remaining_slots, price, payment_type, min_downpayment")
     .eq("slug", slug)
     .eq("organizer_id", organizer.id)
     .maybeSingle();
@@ -286,6 +286,9 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
               Array.from(participantsMap.entries()).map(([k, v]) => [String(k), v])
             )}
             needsManualApproval={needsManualApproval}
+            price={trip.price}
+            paymentType={trip.payment_type}
+            minDownpayment={trip.min_downpayment}
             navLinks={
               <>
                 <Link
@@ -347,6 +350,15 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
         {/* Grouped view */}
         {activeView === "grouped" && (
           <div className="mt-4 space-y-4">
+            {trip.payment_type === "downpayment" && trip.min_downpayment != null ? (
+              <div className="text-sm text-gray-500 mb-3">
+                Trip price: {formatCurrency(trip.price)} · Downpayment: {formatCurrency(trip.min_downpayment)} · Balance due: {formatCurrency(trip.price - trip.min_downpayment)}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500 mb-3">
+                Trip price: {formatCurrency(trip.price)} · Full payment
+              </div>
+            )}
             {activeBookings.length === 0 && (
               <div className="rounded-2xl border border-stone-200 bg-white px-6 py-12 text-center text-sm text-stone-400">
                 No confirmed or pending bookings yet.
@@ -426,9 +438,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                   <span className="text-xs font-semibold text-emerald-600">Fully paid</span>
                                 ) : (
                                   <div className="flex flex-col gap-1">
-                                    <span className="text-xs text-stone-500">
-                                      {formatCurrency(b.amount_due)} deposit · {formatCurrency(b.total_amount - b.amount_due)} due
-                                    </span>
+                                    <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">Balance pending</span>
                                     {b.status === "confirmed" && (
                                       <>
                                         <MarkBalanceButton
