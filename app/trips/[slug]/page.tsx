@@ -49,6 +49,7 @@ type OrganizerInfo = {
   full_name: string;
   bio: string | null;
   photo_url: string | null;
+  social_links: { facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
 };
 
 type Review = {
@@ -248,7 +249,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
           .eq("organizer_id", tripData.organizer_id)
       : Promise.resolve({ count: 0 }),
     tripData.organizer_id
-      ? createSupabaseAdminClient().from("organizers").select("display_name, full_name, bio, photo_url").eq("id", tripData.organizer_id).maybeSingle()
+      ? createSupabaseAdminClient().from("organizers").select("display_name, full_name, bio, photo_url, social_links").eq("id", tripData.organizer_id).maybeSingle()
       : Promise.resolve({ data: null }),
     tripData.template_id
       ? supabase
@@ -554,6 +555,23 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                     See all {totalReviewCount} reviews →
                   </Link>
                 )}
+              </div>
+            )}
+
+            {organizer?.social_links?.facebook && (
+              <div className="mt-8 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <p className="text-sm font-medium text-gray-900 mb-1">Have questions about this trip?</p>
+                <p className="text-sm text-gray-500 mb-3">
+                  Reach out to {organizer.display_name ?? organizer.full_name} directly before booking.
+                </p>
+                <a
+                  href={organizer.social_links.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline"
+                >
+                  Message on Facebook
+                </a>
               </div>
             )}
           </div>
