@@ -447,6 +447,15 @@ export function EditTripForm({
               <option value="strict">{CANCELLATION_POLICIES.strict.label} — {CANCELLATION_POLICIES.strict.short}</option>
               <option value="custom">{CANCELLATION_POLICIES.custom.label} — {CANCELLATION_POLICIES.custom.short}</option>
             </select>
+            {cancellationPolicy !== "custom" && (
+              <p className="mt-1.5 text-xs text-gray-500">
+                {({
+                  flexible: "Full refund up to 7 days before the trip. 50% refund between 3 and 7 days. No refund within 3 days.",
+                  moderate: "Full refund up to 14 days before the trip. 50% refund between 7 and 14 days. No refund within 7 days.",
+                  strict: "Full refund up to 30 days before the trip. 50% refund between 7 and 30 days. No refund within 7 days.",
+                } as Record<string, string>)[cancellationPolicy]}
+              </p>
+            )}
             {cancellationPolicy === "custom" && (
               <textarea
                 name="cancellation_policy_custom"
