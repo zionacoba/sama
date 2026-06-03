@@ -107,16 +107,10 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params;
-  const admin = createSupabaseAdminClient();
-  const { data } = await admin
-    .from("bookings")
-    .select("trip:trips!bookings_trip_id_fkey(title)")
-    .eq("id", parseInt(id, 10))
-    .maybeSingle();
-  const tripTitle = (data?.trip as { title?: string } | null)?.title ?? "Booking";
-  return { title: `${tripTitle} — Booking Details` };
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: "Booking Details | Sama",
+  };
 }
 
 export default async function BookingDetailPage({ params }: PageProps) {

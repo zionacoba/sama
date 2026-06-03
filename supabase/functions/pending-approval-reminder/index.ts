@@ -82,6 +82,11 @@ Deno.serve(async (_req) => {
 
     const bookingsUrl = `${SITE_URL}/organizer/trips/${trip.slug}/bookings`;
 
+    await supabase
+      .from("bookings")
+      .update({ reminder_sent_at: new Date().toISOString() })
+      .eq("id", booking.id);
+
     try {
       await sendEmail(
         organizer.email,
@@ -94,12 +99,6 @@ Deno.serve(async (_req) => {
           <p>— The Sama Team</p>
         `,
       );
-
-      await supabase
-        .from("bookings")
-        .update({ reminder_sent_at: new Date().toISOString() })
-        .eq("id", booking.id);
-
       sent++;
     } catch (err) {
       console.error(`[pending-approval-reminder] failed for booking ${booking.id}:`, err);

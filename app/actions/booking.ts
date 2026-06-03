@@ -47,6 +47,10 @@ export async function createBooking(input: CreateBookingInput) {
     return { error: "Please select at least 1 slot." };
   }
 
+  if (input.slots > 10) {
+    return { error: "You cannot book more than 10 slots at a time." };
+  }
+
   if (!input.emergencyContactName?.trim()) return { error: "Emergency contact name is required." };
   if (!input.emergencyContactPhone?.trim()) return { error: "Emergency contact phone is required." };
   if (input.phone.replace(/\s/g, "") === input.emergencyContactPhone.replace(/\s/g, "")) {

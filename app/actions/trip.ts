@@ -139,7 +139,9 @@ export async function createTrip(
     }
     if (!is_template) {
       if (price < 0) return { error: "Price cannot be negative." };
+      if (price > 100000) return { error: "Trip price cannot exceed ₱100,000." };
       if (total_slots < 1) return { error: "Total slots must be at least 1." };
+      if (total_slots > 500) return { error: "Total slots cannot exceed 500." };
       if (payment_type === "downpayment" && min_downpayment !== null) {
         if (min_downpayment < 0) return { error: "Minimum downpayment cannot be negative." };
         const minAllowed = Math.round(price * 0.10);
@@ -364,7 +366,9 @@ export async function updateTrip(
 
   if (!isDraft && !is_template) {
     if (price < 0) return { error: "Price cannot be negative." };
+    if (price > 100000) return { error: "Trip price cannot exceed ₱100,000." };
     if (total_slots < 1) return { error: "Total slots must be at least 1." };
+    if (total_slots > 500) return { error: "Total slots cannot exceed 500." };
     if (payment_type === "downpayment" && min_downpayment !== null) {
       if (min_downpayment < 0) return { error: "Minimum downpayment cannot be negative." };
       const minAllowed = Math.round(price * 0.10);
