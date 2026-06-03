@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
+import { saveFacebookUrl } from "@/app/actions/profile";
 
 function getSafeRedirect(path: string | null) {
   if (!path || !path.startsWith("/") || path.startsWith("//")) return "/";
@@ -74,7 +75,7 @@ function SignupForm() {
 
     if (data.session) {
       if (facebookUrl && data.user) {
-        await supabase.from("profiles").upsert({ id: data.user.id, facebook_url: facebookUrl });
+        await saveFacebookUrl(data.user.id, facebookUrl);
       }
       router.push(redirectTo);
       router.refresh();

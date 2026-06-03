@@ -13,7 +13,7 @@ export default async function OrganizerLayout({ children }: { children: React.Re
     .from("organizers")
     .select("id, status")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!organizer || organizer.status !== "approved") {
     redirect("/");

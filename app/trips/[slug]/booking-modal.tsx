@@ -429,13 +429,14 @@ export function BookingModal({
                       type="number"
                       required
                       min={1}
-                      max={remainingSlots}
+                      max={Math.min(remainingSlots, 10)}
                       value={slots}
                       onChange={(e) =>
-                        setSlots(Math.min(remainingSlots, Math.max(1, Number(e.target.value) || 1)))
+                        setSlots(Math.min(Math.min(remainingSlots, 10), Math.max(1, Number(e.target.value) || 1)))
                       }
                       className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
+                    <p className="text-xs text-gray-400 mt-1">Maximum 10 slots per booking.</p>
                   </div>
 
                   {/* Pickup point */}

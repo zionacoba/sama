@@ -309,11 +309,6 @@ async function handleBalancePayment(
     return;
   }
 
-  // Idempotency.
-  if (booking.balance_payment_gateway_status === "paid") {
-    return;
-  }
-
   const { data: trip } = await admin
     .from("trips")
     .select("id, slug, title, date_start, organizer_id")
@@ -325,14 +320,22 @@ async function handleBalancePayment(
     return;
   }
 
-  await admin
+  const { data: updatedBooking, error: updateError } = await admin
     .from("bookings")
     .update({
       balance_collected: true,
       balance_payment_gateway_status: "paid",
       ...(paymentTransactionId ? { balance_paymongo_payment_id: paymentTransactionId } : {}),
     })
-    .eq("id", booking.id);
+    .eq("id", booking.id)
+    .is("balance_payment_gateway_status", null)
+    .select()
+    .single();
+
+  if (updateError || !updatedBooking) {
+    console.log(`[webhook] Duplicate balance payment delivery for booking ${booking.id} — skipping`);
+    return;
+  }
 
   const balance = Math.round(((booking.total_amount ?? 0) - (booking.amount_due ?? 0)) * 100) / 100;
   const fmt = (n: number) =>
