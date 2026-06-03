@@ -91,7 +91,20 @@ export async function createTrip(
     : null;
   const waiver_text = (formData.get("waiver_text") as string)?.trim() || null;
   const messengerRaw = (formData.get("messenger_gc_link") as string)?.trim() || null;
-  const messenger_gc_link = messengerRaw?.startsWith("http") ? messengerRaw : null;
+  let messenger_gc_link: string | null = null;
+  if (messengerRaw) {
+    const validPrefixes = [
+      "https://m.me/",
+      "https://www.messenger.com/",
+      "https://messenger.com/",
+      "https://www.facebook.com/groups/",
+      "https://facebook.com/groups/",
+    ];
+    if (!validPrefixes.some((prefix) => messengerRaw.startsWith(prefix))) {
+      return { error: "Please enter a valid Messenger or Facebook group link." };
+    }
+    messenger_gc_link = messengerRaw;
+  }
   const status = (formData.get("status") as string) === "draft" ? "draft" : "active";
   const isDraft = status === "draft";
 
@@ -297,7 +310,20 @@ export async function updateTrip(
     : null;
   const waiver_text = (formData.get("waiver_text") as string)?.trim() || null;
   const messengerRaw = (formData.get("messenger_gc_link") as string)?.trim() || null;
-  const messenger_gc_link = messengerRaw?.startsWith("http") ? messengerRaw : null;
+  let messenger_gc_link: string | null = null;
+  if (messengerRaw) {
+    const validPrefixes = [
+      "https://m.me/",
+      "https://www.messenger.com/",
+      "https://messenger.com/",
+      "https://www.facebook.com/groups/",
+      "https://facebook.com/groups/",
+    ];
+    if (!validPrefixes.some((prefix) => messengerRaw.startsWith(prefix))) {
+      return { error: "Please enter a valid Messenger or Facebook group link." };
+    }
+    messenger_gc_link = messengerRaw;
+  }
   const statusInput = formData.get("status") as string | null;
   const status = statusInput === "active" ? "active" : statusInput === "draft" ? "draft" : (existing.status ?? "active");
   const isDraft = status === "draft";
@@ -660,6 +686,14 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     .update({ status: "cancelled" })
     .eq("trip_id", trip.id)
     .in("status", ["pending", "confirmed", "payment_pending"]);
+
+  const cancelledBookingIds = (bookings ?? []).map((b) => b.id);
+  if (cancelledBookingIds.length > 0) {
+    await admin
+      .from("booking_participants")
+      .delete()
+      .in("booking_id", cancelledBookingIds);
+  }
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {
     weekday: "long",

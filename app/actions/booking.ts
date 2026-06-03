@@ -288,12 +288,16 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   const { data: trip } = await admin
     .from("trips")
-    .select("id, slug, title, date_start, organizer_id, messenger_gc_link")
+    .select("id, slug, title, date_start, organizer_id, messenger_gc_link, status")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
   if (!trip || trip.organizer_id?.toString().trim() !== organizer.id?.toString().trim()) {
     return { error: "You don't have permission to manage this booking." };
+  }
+
+  if (trip.status !== "active") {
+    return { error: "This trip is no longer active and bookings cannot be approved." };
   }
 
   // Concurrency-safe update: only succeeds if the booking is still pending.
@@ -649,6 +653,11 @@ export async function cancelBooking(bookingId: number) {
   if (cancelError || !cancelledBooking) {
     return { error: "Booking could not be cancelled. It may have already been cancelled." };
   }
+
+  await admin
+    .from("booking_participants")
+    .delete()
+    .eq("booking_id", bookingId);
 
   const { data: trip } = await admin
     .from("trips")
