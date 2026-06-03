@@ -128,60 +128,44 @@ export async function createBooking(input: CreateBookingInput) {
   const requestHeaders = await headers();
   const waiverIp = requestHeaders.get("x-forwarded-for")?.split(",")[0].trim() ?? null;
 
-  // Atomically check availability and decrement remaining_slots.
-  const { error: slotError } = await supabase.rpc("book_slot", {
+  // Decrement remaining_slots and insert the booking row in one transaction.
+  // If either operation fails the whole thing rolls back — no slot leak possible.
+  const { data: newBookingId, error: bookingError } = await admin.rpc("book_slot_and_create_booking", {
     p_trip_id: trip.id,
+    p_user_id: user.id,
     p_slots_requested: input.slots,
+    p_full_name: input.fullName,
+    p_email: input.email,
+    p_phone: input.phone,
+    p_total_amount: computedTotal,
+    p_status: "payment_pending",
+    p_notes: input.notes,
+    p_payment_option: input.paymentOption,
+    p_amount_due: computedAmountDue,
+    p_participants: input.participants,
+    p_emergency_contact_name: input.emergencyContactName,
+    p_emergency_contact_phone: input.emergencyContactPhone,
+    p_waiver_agreed: input.waiverAgreed,
+    p_waiver_agreed_at: input.waiverAgreed ? new Date().toISOString() : null,
+    p_platform_waiver_agreed: input.platformWaiverAgreed,
+    p_medical_notes: input.medicalNotes,
+    p_meeting_point: input.meetingPoint,
+    p_platform_commission: platformCommission,
+    p_commission_rate_used: commissionRate,
+    p_waiver_text_snapshot: trip.waiver_text?.replace(/\[Organizer Name\]/gi, organizerName) ?? null,
+    p_waiver_ip: waiverIp,
+    p_platform_waiver_snapshot: "By completing this booking, I agree that Sama is a technology marketplace that connects participants with independent trip organizers. Sama is not responsible for the conduct, acts, or omissions of organizers. I voluntarily assume all risks associated with outdoor activities.",
   });
-  if (slotError) {
-    console.error("[createBooking] book_slot error:", slotError.code, slotError.message, slotError.details, slotError.hint);
-    if (slotError.message.includes("not_enough_slots")) {
+
+  if (bookingError || newBookingId == null) {
+    console.error("[createBooking] book_slot_and_create_booking error:", bookingError?.code, bookingError?.message, bookingError?.details);
+    if (bookingError?.message?.includes("not_enough_slots")) {
       return { error: "This trip is fully booked." };
     }
     return { error: "Booking failed. Please try again or contact support." };
   }
 
-  const { data: newBooking, error: insertError } = await admin
-    .from("bookings")
-    .insert({
-      trip_id: trip.id,
-      user_id: user.id,
-      full_name: input.fullName,
-      email: input.email,
-      phone: input.phone,
-      slots: input.slots,
-      total_amount: computedTotal,
-      status: "payment_pending",
-      notes: input.notes,
-      payment_option: input.paymentOption,
-      amount_due: computedAmountDue,
-      participants: input.participants,
-      emergency_contact_name: input.emergencyContactName,
-      emergency_contact_phone: input.emergencyContactPhone,
-      waiver_agreed: input.waiverAgreed,
-      waiver_agreed_at: input.waiverAgreed ? new Date().toISOString() : null,
-      platform_waiver_agreed: input.platformWaiverAgreed,
-      medical_notes: input.medicalNotes,
-      meeting_point: input.meetingPoint,
-      platform_commission: platformCommission,
-      commission_rate_used: commissionRate,
-      waiver_text_snapshot: trip.waiver_text?.replace(/\[Organizer Name\]/gi, organizerName) ?? null,
-      waiver_ip: waiverIp,
-      platform_waiver_snapshot: "By completing this booking, I agree that Sama is a technology marketplace that connects participants with independent trip organizers. Sama is not responsible for the conduct, acts, or omissions of organizers. I voluntarily assume all risks associated with outdoor activities.",
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !newBooking) {
-    console.error("[createBooking] booking insert error:", insertError?.code, insertError?.message, insertError?.details);
-    // book_slot already decremented remaining_slots — restore it so the
-    // capacity isn't permanently lost.
-    await supabase.rpc("restore_slot", {
-      p_trip_id: trip.id,
-      p_slots_requested: input.slots,
-    });
-    return { error: insertError?.message ?? "Failed to create booking." };
-  }
+  const newBooking = { id: newBookingId as number };
 
   // Insert one booking_participants row per slot.
   const now = new Date().toISOString();
