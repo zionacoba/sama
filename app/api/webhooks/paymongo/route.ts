@@ -140,7 +140,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
   const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
   const newStatus = autoApprove ? "confirmed" : "pending";
 
-  await admin
+  const { data: updatedBooking, error: updateError } = await admin
     .from("bookings")
     .update({
       status: newStatus,
@@ -148,7 +148,15 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
       ...(paymentMethod ? { payment_method: paymentMethod } : {}),
       ...(paymentTransactionId ? { paymongo_payment_id: paymentTransactionId } : {}),
     })
-    .eq("id", booking.id);
+    .eq("id", booking.id)
+    .eq("payment_gateway_status", null)
+    .select()
+    .single();
+
+  if (updateError || !updatedBooking) {
+    console.log(`[webhook] Duplicate delivery for booking ${booking.id} — skipping`);
+    return;
+  }
 
   try {
     const tripDate = new Intl.DateTimeFormat("en-PH", {

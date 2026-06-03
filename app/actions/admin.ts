@@ -468,10 +468,17 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
   if (!payout) redirect("/admin?tab=payouts&payoutError=notfound");
 
   const now = new Date().toISOString();
-  await admin
+  const { data: updatedPayout, error: updateError } = await admin
     .from("payouts" as "trips")
     .update({ status: "remitted", remitted_at: now, remittance_reference: remittanceReference, notes, updated_at: now })
-    .eq("id", payoutId);
+    .eq("id", payoutId)
+    .eq("status", "pending")
+    .select("id")
+    .single() as unknown as { data: { id: string } | null; error: unknown };
+
+  if (updateError || !updatedPayout) {
+    redirect("/admin?tab=payouts&payoutError=already_remitted");
+  }
 
   await admin
     .from("bookings")

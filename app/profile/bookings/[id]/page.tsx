@@ -219,7 +219,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
             {trip.activity_type && (
               <DetailRow label="Activity">{trip.activity_type}</DetailRow>
             )}
-            {safeGcLink && (
+            {booking.status === "confirmed" && safeGcLink && (
               <DetailRow label="Group chat">
                 <a
                   href={safeGcLink}
