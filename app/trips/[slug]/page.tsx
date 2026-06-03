@@ -42,6 +42,7 @@ type TripDetail = {
   waiver_text: string | null;
   meeting_points: { location: string; time: string }[] | null;
   waitlist_enabled: boolean | null;
+  status: 'draft' | 'active' | 'cancelled';
 };
 
 type OrganizerInfo = {
