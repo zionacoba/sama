@@ -4,14 +4,12 @@ import { useActionState, useRef, useState, useTransition } from "react";
 import { updateTrip } from "@/app/actions/trip";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { PhotoUploader, type PhotoItem } from "@/app/components/photo-uploader";
+import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2";
 
 const labelClass = "block text-sm font-medium text-stone-700";
-
-const DEFAULT_WAIVER_TEXT =
-  "I understand that outdoor activities involve inherent risks including but not limited to physical injury, accidents, and unpredictable weather conditions. I voluntarily participate in this trip organized by [Organizer Name] and assume all risks associated with it. I confirm that I am physically fit to participate and have disclosed any relevant medical conditions. I release the organizer from liability for any injury, loss, or damage arising from my participation, except in cases of gross negligence. I have read and understood the cancellation policy for this trip.";
 
 type MeetingPoint = { location: string; time: string };
 

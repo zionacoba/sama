@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { ParticipantForm } from "./participant-form";
+import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
 
 type PageProps = {
   params: Promise<{ token: string }>;
@@ -89,8 +90,6 @@ export default async function JoinPage({ params }: PageProps) {
 
   const meetingPoints = (trip.meeting_points ?? []) as MeetingPoint[];
 
-  const DEFAULT_WAIVER_TEXT =
-    "I understand that outdoor activities involve inherent risks including but not limited to physical injury, accidents, and unpredictable weather conditions. I voluntarily participate in this trip organized by [Organizer Name] and assume all risks associated with it. I confirm that I am physically fit to participate and have disclosed any relevant medical conditions. I release the organizer from liability for any injury, loss, or damage arising from my participation, except in cases of gross negligence. I have read and understood the cancellation policy for this trip.";
 
   const organizerName = organizer?.display_name ?? organizer?.full_name ?? null;
   const waiverText = ((trip.waiver_text as string | null) ?? DEFAULT_WAIVER_TEXT)
