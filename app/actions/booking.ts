@@ -9,6 +9,7 @@ import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 import { calculateRefundAmount } from "@/lib/cancellation-policies";
 import { processPayMongoRefund, type RefundResult } from "@/lib/paymongo-refund";
+import { createPaymentLink } from "@/lib/create-payment-link";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? (() => { throw new Error("ADMIN_EMAIL environment variable is not set"); })();
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
@@ -217,27 +218,20 @@ export async function createBooking(input: CreateBookingInput) {
 
   let checkoutUrl: string | null = null;
   try {
-    const linkRes = await fetch(`${SITE_URL}/api/payments/create-link`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        bookingId: newBooking.id,
-        amount: computedAmountDue,
-        description,
-      }),
+    const linkResult = await createPaymentLink({
+      bookingId: newBooking.id,
+      amount: computedAmountDue,
+      description,
     });
 
-    if (linkRes.ok) {
-      const linkData = await linkRes.json();
-      checkoutUrl = linkData.checkoutUrl ?? null;
-      if (linkData.linkId) {
-        await admin
-          .from("bookings")
-          .update({ payment_id: linkData.linkId })
-          .eq("id", newBooking.id);
-      }
+    if ("error" in linkResult) {
+      console.error("[createBooking] payment link creation failed:", linkResult.error);
     } else {
-      console.error("[createBooking] payment link creation failed:", linkRes.status);
+      checkoutUrl = linkResult.checkoutUrl;
+      await admin
+        .from("bookings")
+        .update({ payment_id: linkResult.linkId })
+        .eq("id", newBooking.id);
     }
   } catch (err) {
     console.error("[createBooking] payment link error:", err);
@@ -491,32 +485,19 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
   const description = `Balance payment for ${trip.title} - ${tripDateShort}`;
 
   try {
-    const linkRes = await fetch(`${SITE_URL}/api/payments/create-link`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bookingId, amount: balance, description }),
-    });
+    const linkResult = await createPaymentLink({ bookingId, amount: balance, description });
 
-    if (!linkRes.ok) {
-      console.error("[createBalancePaymentLink] payment link creation failed:", linkRes.status);
+    if ("error" in linkResult) {
+      console.error("[createBalancePaymentLink] payment link creation failed:", linkResult.error);
       return { error: "Failed to create payment link. Please try again." };
     }
 
-    const linkData = await linkRes.json();
-    const checkoutUrl: string | null = linkData.checkoutUrl ?? null;
+    await admin
+      .from("bookings")
+      .update({ balance_payment_id: linkResult.linkId })
+      .eq("id", bookingId);
 
-    if (linkData.linkId) {
-      await admin
-        .from("bookings")
-        .update({ balance_payment_id: linkData.linkId })
-        .eq("id", bookingId);
-    }
-
-    if (!checkoutUrl) {
-      return { error: "Failed to create payment link. Please try again." };
-    }
-
-    return { success: true, checkoutUrl };
+    return { success: true, checkoutUrl: linkResult.checkoutUrl };
   } catch (err) {
     console.error("[createBalancePaymentLink] error:", err);
     return { error: "Failed to create payment link. Please try again." };
@@ -651,12 +632,17 @@ export async function cancelBooking(bookingId: number) {
   if (booking.user_id !== user.id) return { error: "You don't have permission to cancel this booking." };
   if (["cancelled", "rejected", "transferred"].includes(booking.status)) return { error: "This booking is already cancelled or rejected." };
 
-  const { error } = await admin
+  const { data: cancelledBooking, error: cancelError } = await admin
     .from("bookings")
     .update({ status: "cancelled" })
-    .eq("id", bookingId);
+    .eq("id", bookingId)
+    .in("status", ["confirmed", "pending", "payment_pending"])
+    .select()
+    .single();
 
-  if (error) return { error: error.message };
+  if (cancelError || !cancelledBooking) {
+    return { error: "Booking could not be cancelled. It may have already been cancelled." };
+  }
 
   const { data: trip } = await admin
     .from("trips")

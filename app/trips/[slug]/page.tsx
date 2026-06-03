@@ -613,6 +613,11 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                 </div>
               ) : isPast ? (
                 <p className="text-sm text-stone-500">This trip has already taken place.</p>
+              ) : tripData.status === "cancelled" ? (
+                <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-center">
+                  <p className="text-sm font-semibold text-red-700 mb-1">This trip has been cancelled</p>
+                  <p className="text-sm text-red-500">All participants have been notified and refunds are being processed.</p>
+                </div>
               ) : tripData.remaining_slots === 0 ? (
                 tripData.waitlist_enabled !== false ? (
                   <WaitlistModal
@@ -675,6 +680,11 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   <button disabled className="w-full cursor-not-allowed rounded-xl bg-stone-200 px-5 py-3 text-sm font-semibold text-stone-500">
                     Trip ended
                   </button>
+                ) : tripData.status === "cancelled" ? (
+                  <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-center">
+                    <p className="text-sm font-semibold text-red-700 mb-1">This trip has been cancelled</p>
+                    <p className="text-sm text-red-500">All participants have been notified and refunds are being processed.</p>
+                  </div>
                 ) : tripData.remaining_slots === 0 ? (
                   tripData.waitlist_enabled !== false ? (
                     <WaitlistModal
