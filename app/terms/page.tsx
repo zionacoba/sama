@@ -14,7 +14,7 @@ export default function TermsPage() {
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
-          <p className="text-sm text-stone-400">Last updated: July 2026</p>
+          <p className="text-sm text-stone-400">Last updated: June 2026</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900">
             Terms of Service
           </h1>
@@ -28,7 +28,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">1. Acceptance of Terms</h2>
               <p className="mt-2 leading-relaxed">
-                By accessing or using Sama (sama.com.ph), you agree to be bound by these Terms of Service. If you do not agree, do not use the platform.
+                By accessing or using Sama (sama.com.ph), you agree to be bound by these Terms of Service.
               </p>
             </section>
 
@@ -55,7 +55,7 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers must apply and be approved by Sama before listing trips.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers are independent operators and are solely responsible for their trips, participants, safety, permits, and compliance with applicable laws.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers must hold all required permits (DENR, LGU, etc.) for restricted trails and sites.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama reserves the right to suspend or remove any organizer at any time.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama reserves the right to suspend or remove any organizer who violates platform policies.</span></li>
               </ul>
             </section>
 
@@ -63,10 +63,10 @@ export default function TermsPage() {
               <h2 className="text-lg font-bold text-stone-900">5. Booking and Payments</h2>
               <ul className="mt-2 space-y-1.5 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Bookings are made directly through the platform.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Payments are processed via PayMongo (GCash and QR Ph at launch).</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Payments are processed via PayMongo (GCash and QR Ph).</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama charges a platform commission on each booking as agreed with the organizer.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>No hidden fees are charged to participants — the price shown is the price you pay.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama absorbs all payment processing fees for founding partner organizers.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama absorbs all payment processing fees on behalf of organizers.</span></li>
               </ul>
             </section>
 
@@ -106,9 +106,9 @@ export default function TermsPage() {
 
               <h3 className="mt-5 text-base font-semibold text-stone-800">Refund processing</h3>
               <p className="mt-2 leading-relaxed">
-                Refunds are returned to the original payment method. GCash refunds typically reflect within 24 hours. If your payment method does not support automatic refunds, our team will contact you at{" "}
+                Refunds are returned to the original payment method. GCash refunds typically reflect within 24 hours. QR Ph payments cannot be refunded automatically and will be processed manually. Our team will contact you at{" "}
                 <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a>{" "}
-                within 3 to 5 business days to arrange an alternative.
+                within 3 to 5 business days to arrange the refund.
               </p>
 
               <h3 className="mt-5 text-base font-semibold text-stone-800">Contact</h3>
@@ -121,8 +121,8 @@ export default function TermsPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">7. Waivers and Assumption of Risk</h2>
               <ul className="mt-2 space-y-1.5 leading-relaxed">
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>All participants must agree to a platform waiver and an organizer-specific waiver before booking is confirmed.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Outdoor activities involve inherent risks including physical injury, accidents, and unpredictable weather.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>All participants must agree to the organizer's trip waiver before booking is confirmed.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Participants acknowledge the inherent risks of outdoor activities including physical injury, accidents, and unpredictable weather.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>By booking a trip, you voluntarily assume all risks associated with participation.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama is not liable for any injury, loss, or damage arising from participation in any trip listed on the platform.</span></li>
               </ul>
@@ -147,6 +147,7 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Use the platform for any unlawful purpose.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Attempt to circumvent platform fees by taking transactions off-platform after initial contact.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Harass, threaten, or harm other users or organizers.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Attempt to book trips with false medical or fitness information.</span></li>
               </ul>
             </section>
 
@@ -160,7 +161,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">11. Limitation of Liability</h2>
               <p className="mt-2 leading-relaxed">
-                To the maximum extent permitted by Philippine law, Sama and Paul Zion Acoba shall not be liable for any indirect, incidental, or consequential damages arising from your use of the platform or participation in any trip listed on it.
+                To the maximum extent permitted by Philippine law, Sama and its operators shall not be liable for any indirect, incidental, or consequential damages arising from your use of the platform or participation in any trip listed on it.
               </p>
             </section>
 
@@ -174,7 +175,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">13. Governing Law</h2>
               <p className="mt-2 leading-relaxed">
-                These Terms are governed by the laws of the Republic of the Philippines. Any disputes shall be resolved in the appropriate courts of the Philippines.
+                These Terms are governed by the laws of the Republic of the Philippines. Any disputes shall be resolved exclusively in the courts of Mandaluyong City, Philippines.
               </p>
             </section>
 

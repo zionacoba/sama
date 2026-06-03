@@ -14,7 +14,7 @@ export default function PrivacyPage() {
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
-          <p className="text-sm text-stone-400">Last updated: July 2026</p>
+          <p className="text-sm text-stone-400">Last updated: June 2026</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900">
             Privacy Policy
           </h1>
@@ -39,6 +39,7 @@ export default function PrivacyPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Full name</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Email address</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Phone number</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Facebook profile URL (optional) — shared with organizers of trips you book to facilitate group chat invitations.</span></li>
               </ul>
               <p className="mt-3 font-medium text-stone-700">When you make a booking:</p>
               <ul className="mt-1.5 space-y-1 leading-relaxed">
@@ -58,7 +59,7 @@ export default function PrivacyPage() {
               <p className="mt-3 font-medium text-stone-700">When you apply as an organizer:</p>
               <ul className="mt-1.5 space-y-1 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Full name, display name, phone, bio</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Facebook profile URL</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Social media profile URLs (Facebook, Instagram, TikTok) — displayed publicly on your organizer profile.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Evidence of past trips</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Activity types and years of experience</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Emergency certification status</span></li>
@@ -101,7 +102,7 @@ export default function PrivacyPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">5. Data Retention</h2>
               <p className="mt-2 leading-relaxed">
-                We retain your personal data for as long as your account is active or as required by law. Booking records are retained for a minimum of 5 years for legal and dispute resolution purposes.
+                We retain your personal data for as long as your account is active or as required by law. Personal data associated with cancelled bookings is deleted automatically upon cancellation. Booking transaction records are retained for a minimum of 5 years for legal and dispute resolution purposes.
               </p>
             </section>
 
