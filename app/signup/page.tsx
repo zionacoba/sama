@@ -36,6 +36,19 @@ function SignupForm() {
     setError(null);
     setAlreadyRegistered(false);
     setSuccess(null);
+
+    if (facebookUrl.trim()) {
+      const trimmed = facebookUrl.trim();
+      if (
+        !trimmed.startsWith("https://facebook.com/") &&
+        !trimmed.startsWith("https://www.facebook.com/") &&
+        !trimmed.startsWith("https://m.facebook.com/")
+      ) {
+        setError("Please enter a valid Facebook profile URL starting with https://facebook.com/");
+        return;
+      }
+    }
+
     setLoading(true);
 
     const { data, error: authError } = await supabase.auth.signUp({

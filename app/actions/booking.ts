@@ -226,15 +226,21 @@ export async function createBooking(input: CreateBookingInput) {
 
     if ("error" in linkResult) {
       console.error("[createBooking] payment link creation failed:", linkResult.error);
-    } else {
-      checkoutUrl = linkResult.checkoutUrl;
-      await admin
-        .from("bookings")
-        .update({ payment_id: linkResult.linkId })
-        .eq("id", newBooking.id);
+      await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+      await admin.from("bookings").delete().eq("id", newBooking.id);
+      return { error: "We could not create your payment link. Please try again." };
     }
+
+    checkoutUrl = linkResult.checkoutUrl;
+    await admin
+      .from("bookings")
+      .update({ payment_id: linkResult.linkId })
+      .eq("id", newBooking.id);
   } catch (err) {
     console.error("[createBooking] payment link error:", err);
+    await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+    await admin.from("bookings").delete().eq("id", newBooking.id);
+    return { error: "We could not create your payment link. Please try again." };
   }
 
   revalidatePath(`/trips/${input.tripSlug}`);

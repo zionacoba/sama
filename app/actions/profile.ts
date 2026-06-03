@@ -146,6 +146,16 @@ export async function saveUserProfile(
 
   if (!full_name) return { error: "Full name is required." };
 
+  if (facebook_url) {
+    if (
+      !facebook_url.startsWith("https://facebook.com/") &&
+      !facebook_url.startsWith("https://www.facebook.com/") &&
+      !facebook_url.startsWith("https://m.facebook.com/")
+    ) {
+      return { error: "Please enter a valid Facebook profile URL starting with https://facebook.com/" };
+    }
+  }
+
   const { error: authError } = await supabase.auth.updateUser({ data: { full_name } });
   if (authError) return { error: authError.message };
 
