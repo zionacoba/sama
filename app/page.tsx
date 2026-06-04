@@ -304,7 +304,7 @@ export default async function Home() {
           <img
             src="/bir-seal.png"
             alt="BIR Registered Business"
-            className="h-8 w-auto"
+            className="h-5 w-auto inline-block"
           />
         </a>
       </footer>
