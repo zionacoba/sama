@@ -317,9 +317,9 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
           Used to remit your earnings on the following schedule:
         </p>
         <ul className="mb-4 space-y-1 text-xs text-stone-500">
-          <li><span className="font-semibold text-stone-700">Downpayments and full payments</span> — remitted every Monday following the booking date.</li>
+          <li><span className="font-semibold text-stone-700">Downpayments and full payments</span> — remitted every Tuesday following the booking date.</li>
           <li><span className="font-semibold text-stone-700">Balance payments</span> (paid online through Sama) — remitted 24-48 hours after the trip date.</li>
-          <li><span className="font-semibold text-stone-700">Late bookings</span> (booked less than 7 days before the trip) — remitted the Monday after the trip date, regardless of payment type.</li>
+          <li><span className="font-semibold text-stone-700">Late bookings</span> (booked less than 7 days before the trip) — remitted the Tuesday after the trip date, regardless of payment type.</li>
         </ul>
         <div className="space-y-4">
           <div>
