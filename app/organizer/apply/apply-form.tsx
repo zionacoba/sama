@@ -18,7 +18,7 @@ export function ApplyForm() {
         <p className="text-4xl">⏳</p>
         <h2 className="mt-4 text-xl font-bold text-stone-900">Application submitted!</h2>
         <p className="mt-2 text-sm text-stone-600">
-          We&apos;ll review it and get back to you within 24 hours.
+          We&apos;ll review it and get back to you within a few days.
         </p>
       </div>
     );

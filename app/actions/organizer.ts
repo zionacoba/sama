@@ -74,7 +74,7 @@ export async function applyToBeOrganizer(
       subject: "We received your Sama organizer application!",
       html: `
         <p>Hi ${escapeHtml(fullName)},</p>
-        <p>Thanks for applying to be a Sama organizer. We'll review your application and get back to you within 24 hours.</p>
+        <p>Thanks for applying to be a Sama organizer. We'll review your application and get back to you within a few days.</p>
         <p>In the meantime, feel free to browse trips at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}">${process.env.NEXT_PUBLIC_SITE_URL?.replace("https://", "") || "sama.com.ph"}</a>.</p>
         <p>— The Sama Team</p>
       `,
