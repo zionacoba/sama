@@ -130,7 +130,8 @@ function filterUrl(
   key: "activity" | "duration" | "difficulty" | "region",
   value: string,
 ) {
-  const next: FilterParams = { ...base, [key]: value === "All" ? undefined : value };
+  const deselect = value === "All" || base[key] === value;
+  const next: FilterParams = { ...base, [key]: deselect ? undefined : value };
   const sp = new URLSearchParams();
   if (next.search) sp.set("search", next.search);
   if (next.activity) sp.set("activity", next.activity);
