@@ -169,9 +169,9 @@ export default async function TripsPage({ searchParams }: PageProps) {
     const orgIds = (matchingOrgs ?? []).map((o: { id: string }) => o.id);
     if (orgIds.length > 0) {
       const orgFilters = orgIds.map((id: string) => `organizer_id.eq.${id}`).join(",");
-      query = query.or(`title.ilike.${term},destination.ilike.${term},activity_type.ilike.${term},${orgFilters}`);
+      query = query.or(`title.ilike.${term},destination.ilike.${term},description.ilike.${term},region.ilike.${term},activity_type.ilike.${term},${orgFilters}`);
     } else {
-      query = query.or(`title.ilike.${term},destination.ilike.${term},activity_type.ilike.${term}`);
+      query = query.or(`title.ilike.${term},destination.ilike.${term},description.ilike.${term},region.ilike.${term},activity_type.ilike.${term}`);
     }
   }
   if (activity) query = query.eq("activity_type", activity);
