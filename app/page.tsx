@@ -295,6 +295,17 @@ export default async function Home() {
         <a href="mailto:hello@sama.com.ph" className="underline-offset-4 hover:text-trailhead hover:underline">
           Contact
         </a>
+        {" · "}
+        <a
+          href="https://www.bir.gov.ph"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors border border-gray-200 rounded px-2 py-1"
+          aria-label="BIR Registered Business"
+        >
+          <span className="font-semibold text-gray-600">BIR</span>
+          <span>Registered Business</span>
+        </a>
       </footer>
     </div>
   );
