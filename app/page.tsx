@@ -105,11 +105,11 @@ export default async function Home() {
       <main>
         <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-12 sm:py-16">
           <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-balance text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl md:text-5xl">
+            <h1 className="text-balance text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" style={{ color: "#1A3D2B" }}>
               Your next adventure starts here
             </h1>
-<p className="mt-3 text-pretty text-stone-600 sm:text-lg">
-              Guided hikes, freediving weekends, and beach trips across the Philippines — for every level.
+            <p className="mt-3 text-pretty text-stone-600 sm:text-lg">
+              Guided hikes, freediving weekends, and beach trips across the Philippines, for every level.
             </p>
             <form
               action="/trips"
