@@ -108,6 +108,7 @@ export default async function Home() {
             <h1 className="text-balance text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl md:text-5xl">
               Your next adventure starts here
             </h1>
+            <p className="font-serif text-xl text-stone-600 mt-2">Adventure, together.</p>
             <p className="mt-3 text-pretty text-stone-600 sm:text-lg">
               Guided hikes, freediving weekends, and beach trips across the Philippines — for every level.
             </p>
