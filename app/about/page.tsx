@@ -36,14 +36,12 @@ export default function AboutPage() {
           </div>
           {/* Content */}
           <div className="relative">
-            <span className="text-6xl" aria-hidden>⛰</span>
+            <img src="/sama-mark.svg" alt="Sama" className="h-16 w-auto mx-auto mb-6 brightness-0 invert" />
             <h1 className="mt-6 text-5xl font-bold tracking-tight text-white sm:text-7xl">
               Adventure, together.
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/80">
-              The first marketplace built exclusively for Philippine outdoor adventures. We connect
-              people to trusted organizers, protect the places they love, and build the professional
-              backbone of the outdoor industry.
+              A booking platform built exclusively for Philippine outdoor adventures. We connect people to trusted organizers, protect the places they love, and build the professional backbone of the outdoor industry.
             </p>
             <div className="mt-8">
               <Link
@@ -60,7 +58,7 @@ export default function AboutPage() {
         <div className="border-b border-stone-100 bg-white px-4 py-10">
           <div className="mx-auto grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-xl border border-trailhead/10 bg-trailhead/5 px-6 py-5">
-              <p className="text-xl font-bold text-stone-900">15-20</p>
+              <p className="text-xl font-bold text-stone-900">20</p>
               <p className="mt-1 text-sm font-semibold text-trailhead">Founding Organizers</p>
               <p className="mt-1 text-xs text-stone-400">Vetted, accountable partners</p>
             </div>
@@ -195,7 +193,7 @@ export default function AboutPage() {
               world. Sama exists to make sure it stays that way, and that every Filipino can
               access it.&rdquo;
             </p>
-            <footer className="mt-6 text-sm font-semibold uppercase tracking-widest text-white/60">
+            <footer className="mt-6 text-sm font-semibold tracking-widest text-white/60">
               Sama. Adventure, together.
             </footer>
           </blockquote>
@@ -246,6 +244,10 @@ export default function AboutPage() {
           <Link href="/terms" className="underline-offset-4 hover:text-trailhead hover:underline">
             Terms
           </Link>
+          <span aria-hidden>·</span>
+          <a href="/terms#refund-policy" className="underline-offset-4 hover:text-trailhead hover:underline">
+            Refund Policy
+          </a>
           <span aria-hidden>·</span>
           <Link href="/privacy" className="underline-offset-4 hover:text-trailhead hover:underline">
             Privacy
