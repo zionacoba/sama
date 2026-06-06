@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { CookieConsent } from "./components/cookie-consent";
-import { Analytics } from '@vercel/analytics/react';
+import { Analytics } from '@vercel/analytics/next';
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
