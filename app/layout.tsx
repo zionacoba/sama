@@ -32,6 +32,10 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
   },
+  icons: {
+    icon: '/sama-badge.png',
+    apple: '/sama-badge.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
