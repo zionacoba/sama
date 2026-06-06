@@ -104,7 +104,7 @@ export async function Navbar() {
     <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
         <div className="flex items-center gap-1">
-          <Link href="/" className="flex items-center gap-2 text-lg font-medium tracking-tight text-trailhead">
+          <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight text-trailhead">
             <img src="/sama-mark.svg" alt="Sama" className="h-7 w-auto" />
             Sama
           </Link>
