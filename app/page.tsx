@@ -103,7 +103,7 @@ export default async function Home() {
       <Navbar />
 
       <main>
-        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-12 sm:py-16">
+        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-20 sm:py-24">
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-balance text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" style={{ color: "#1A3D2B" }}>
               Your next adventure starts here
