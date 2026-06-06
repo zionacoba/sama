@@ -64,7 +64,7 @@ export default function AboutPage() {
             </div>
             <div className="rounded-xl border border-trailhead/10 bg-trailhead/5 px-6 py-5">
               <p className="text-xl font-bold text-stone-900">Destinations</p>
-              <p className="mt-1 text-sm font-semibold text-trailhead">From Batanes to Tawi-Tawi</p>
+              <p className="mt-1 text-sm font-semibold text-trailhead">Across the Philippines</p>
               <p className="mt-1 text-xs text-stone-400">Trips across the Philippines</p>
             </div>
             <div className="rounded-xl border border-trailhead/10 bg-trailhead/5 px-6 py-5">
