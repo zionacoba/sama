@@ -1,17 +1,20 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { saveUserProfile } from "@/app/actions/profile";
 
 type Props = {
-  fullName: string;
+  firstName: string;
+  lastName: string;
+  nickname: string | null;
+  pronouns: string | null;
+  address: string | null;
   email: string;
   phone: string | null;
   facebookUrl: string | null;
 };
 
-export function ProfileForm({ fullName, email, phone, facebookUrl }: Props) {
-  const [fbValue, setFbValue] = useState(facebookUrl ?? "");
+export function ProfileForm({ firstName, lastName, nickname, pronouns, address, email, phone, facebookUrl }: Props) {
   const [state, action, pending] = useActionState(saveUserProfile, null);
 
   return (
@@ -27,18 +30,62 @@ export function ProfileForm({ fullName, email, phone, facebookUrl }: Props) {
         </p>
       )}
 
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="first_name" className="block text-sm font-medium text-stone-700">
+            First name
+          </label>
+          <input
+            id="first_name"
+            name="first_name"
+            type="text"
+            required
+            defaultValue={firstName}
+            className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+          />
+        </div>
+        <div>
+          <label htmlFor="last_name" className="block text-sm font-medium text-stone-700">
+            Last name
+          </label>
+          <input
+            id="last_name"
+            name="last_name"
+            type="text"
+            required
+            defaultValue={lastName}
+            className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+          />
+        </div>
+      </div>
+
       <div>
-        <label htmlFor="full_name" className="block text-sm font-medium text-stone-700">
-          Full name
+        <label htmlFor="nickname" className="block text-sm font-medium text-stone-700">
+          Nickname / preferred name <span className="font-normal text-stone-400">(optional)</span>
         </label>
         <input
-          id="full_name"
-          name="full_name"
+          id="nickname"
+          name="nickname"
           type="text"
-          required
-          defaultValue={fullName}
+          defaultValue={nickname ?? ""}
           className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
+        <p className="mt-1 text-xs text-stone-400">This is what organizers and the community will call you.</p>
+      </div>
+
+      <div>
+        <label htmlFor="pronouns" className="block text-sm font-medium text-stone-700">
+          Pronouns <span className="font-normal text-stone-400">(optional)</span>
+        </label>
+        <input
+          id="pronouns"
+          name="pronouns"
+          type="text"
+          defaultValue={pronouns ?? ""}
+          placeholder="e.g. she/her, he/him, they/them"
+          className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+        />
+        <p className="mt-1 text-xs text-stone-400">Optional. Only visible to organizers.</p>
       </div>
 
       <div>
@@ -69,6 +116,21 @@ export function ProfileForm({ fullName, email, phone, facebookUrl }: Props) {
       </div>
 
       <div>
+        <label htmlFor="address" className="block text-sm font-medium text-stone-700">
+          Address <span className="font-normal text-stone-400">(optional)</span>
+        </label>
+        <input
+          id="address"
+          name="address"
+          type="text"
+          defaultValue={address ?? ""}
+          placeholder="City, Province"
+          className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+        />
+        <p className="mt-1 text-xs text-stone-400">Optional. Used for trip coordination.</p>
+      </div>
+
+      <div>
         <label htmlFor="facebook_url" className="block text-sm font-medium text-stone-700">
           Facebook profile URL <span className="font-normal text-stone-400">(optional)</span>
         </label>
@@ -76,14 +138,10 @@ export function ProfileForm({ fullName, email, phone, facebookUrl }: Props) {
           id="facebook_url"
           name="facebook_url"
           type="url"
-          value={fbValue}
-          onChange={(e) => setFbValue(e.target.value)}
+          defaultValue={facebookUrl ?? ""}
           placeholder="https://facebook.com/yourname"
           className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
-        {fbValue && !fbValue.startsWith("https://facebook.com/") && !fbValue.startsWith("https://www.facebook.com/") && (
-          <p className="mt-1 text-xs text-amber-600">Should start with https://facebook.com/ or https://www.facebook.com/</p>
-        )}
       </div>
 
       <button

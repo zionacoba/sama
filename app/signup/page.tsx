@@ -15,7 +15,8 @@ function SignupForm() {
   const searchParams = useSearchParams();
   const redirectTo = getSafeRedirect(searchParams.get("redirectTo"));
 
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -47,11 +48,13 @@ function SignupForm() {
 
     setLoading(true);
 
+    const full_name = `${firstName.trim()} ${lastName.trim()}`;
+
     const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName, phone: strippedPhone },
+        data: { first_name: firstName.trim(), last_name: lastName.trim(), full_name, phone: strippedPhone },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
       },
     });
@@ -69,7 +72,12 @@ function SignupForm() {
     }
 
     if (data.session) {
-      await supabase.from("profiles").upsert({ id: data.session.user.id, phone: strippedPhone });
+      await supabase.from("profiles").upsert({
+        id: data.session.user.id,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        phone: strippedPhone,
+      });
       router.push(redirectTo);
       router.refresh();
       return;
@@ -139,21 +147,39 @@ function SignupForm() {
                     </p>
                   )}
 
-                  <div>
-                    <label htmlFor="fullName" className="block text-sm font-medium text-stone-700">
-                      Full name
-                    </label>
-                    <input
-                      id="fullName"
-                      type="text"
-                      name="fullName"
-                      autoComplete="name"
-                      required
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2"
-                      placeholder="Juan dela Cruz"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="firstName" className="block text-sm font-medium text-stone-700">
+                        First name
+                      </label>
+                      <input
+                        id="firstName"
+                        type="text"
+                        name="firstName"
+                        autoComplete="given-name"
+                        required
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2"
+                        placeholder="Juan"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="lastName" className="block text-sm font-medium text-stone-700">
+                        Last name
+                      </label>
+                      <input
+                        id="lastName"
+                        type="text"
+                        name="lastName"
+                        autoComplete="family-name"
+                        required
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2"
+                        placeholder="dela Cruz"
+                      />
+                    </div>
                   </div>
 
                   <div>

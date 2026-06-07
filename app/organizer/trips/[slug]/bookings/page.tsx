@@ -45,6 +45,7 @@ type Booking = {
   notes: string | null;
   meeting_point: string | null;
   facebook_url?: string | null;
+  nickname?: string | null;
 };
 
 type BookingParticipant = {
@@ -147,17 +148,20 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
 
   const userIds = rawBookings.map((b) => b.user_id).filter((id): id is string => id != null);
   let facebookUrlMap = new Map<string, string | null>();
+  let nicknameMap = new Map<string, string | null>();
   if (userIds.length > 0) {
     const { data: profilesData } = await admin
       .from("profiles")
-      .select("id, facebook_url")
+      .select("id, facebook_url, nickname")
       .in("id", userIds);
     facebookUrlMap = new Map((profilesData ?? []).map((p: { id: string; facebook_url: string | null }) => [p.id, p.facebook_url]));
+    nicknameMap = new Map((profilesData ?? []).map((p: { id: string; nickname: string | null }) => [p.id, p.nickname]));
   }
 
   const bookings: Booking[] = rawBookings.map((b) => ({
     ...b,
     facebook_url: b.user_id ? (facebookUrlMap.get(b.user_id) ?? null) : null,
+    nickname: b.user_id ? (nicknameMap.get(b.user_id) ?? null) : null,
   }));
 
   const multiSlotIds = bookings.filter((b) => b.slots > 1).map((b) => b.id);
@@ -393,13 +397,18 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                         {group.map((b) => (
                           <tr key={b.id} className="hover:bg-stone-50">
                             <td className="px-5 py-3.5 font-medium text-stone-900">
-                              {b.full_name}
+                              <div>
+                                {b.nickname && <span className="font-medium">{b.nickname}</span>}
+                                <span className={b.nickname ? "text-sm text-gray-500 block" : "font-medium"}>
+                                  {b.full_name}
+                                </span>
+                              </div>
                               {b.facebook_url && (
                                 <a
                                   href={b.facebook_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="ml-2 text-xs text-blue-600 hover:underline"
+                                  className="ml-0 text-xs text-blue-600 hover:underline"
                                 >
                                   FB Profile
                                 </a>

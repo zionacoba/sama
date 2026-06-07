@@ -15,9 +15,16 @@ export async function GET(request: NextRequest) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const phone = user.user_metadata?.phone as string | undefined;
+        const first_name = user.user_metadata?.first_name as string | undefined;
+        const last_name = user.user_metadata?.last_name as string | undefined;
         const admin = createSupabaseAdminClient();
         await admin.from("profiles").upsert(
-          { id: user.id, ...(phone ? { phone } : {}) },
+          {
+            id: user.id,
+            ...(phone ? { phone } : {}),
+            ...(first_name ? { first_name } : {}),
+            ...(last_name ? { last_name } : {}),
+          },
           { onConflict: "id" }
         );
       }

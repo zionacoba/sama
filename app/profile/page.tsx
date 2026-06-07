@@ -253,7 +253,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
       .order("created_at", { ascending: false }),
     supabase
       .from("profiles")
-      .select("birthdate, emergency_contact_name, emergency_contact_phone, phone, facebook_url")
+      .select("birthdate, emergency_contact_name, emergency_contact_phone, phone, facebook_url, first_name, last_name, nickname, pronouns, address")
       .eq("id", user.id)
       .maybeSingle(),
     supabase
@@ -305,7 +305,18 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
   const past = bookings.filter((b) => b.trip.date_start <= now && !isCancelledOrRejected(b));
   const cancelled = bookings.filter(isCancelledOrRejected);
 
-  const fullName = (user.user_metadata?.full_name as string | undefined) ?? "";
+  const metaFullName = (user.user_metadata?.full_name as string | undefined) ?? "";
+  const derivedFirstName = profileData?.first_name ?? (() => {
+    const spaceIdx = metaFullName.indexOf(" ");
+    return spaceIdx > 0 ? metaFullName.slice(0, spaceIdx) : metaFullName;
+  })();
+  const derivedLastName = profileData?.last_name ?? (() => {
+    const spaceIdx = metaFullName.indexOf(" ");
+    return spaceIdx > 0 ? metaFullName.slice(spaceIdx + 1) : "";
+  })();
+  const fullName = profileData?.first_name && profileData?.last_name
+    ? `${profileData.first_name} ${profileData.last_name}`
+    : metaFullName;
 
   const tabClass = (t: string) =>
     `shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition ${
@@ -485,7 +496,11 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
               <h2 className="text-lg font-semibold text-stone-900">Personal info</h2>
               <div className="mt-6">
                 <ProfileForm
-                  fullName={fullName}
+                  firstName={derivedFirstName}
+                  lastName={derivedLastName}
+                  nickname={profileData?.nickname ?? null}
+                  pronouns={profileData?.pronouns ?? null}
+                  address={profileData?.address ?? null}
                   email={user.email ?? ""}
                   phone={profileData?.phone ?? null}
                   facebookUrl={profileData?.facebook_url ?? null}

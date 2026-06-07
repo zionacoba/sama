@@ -124,13 +124,16 @@ export function BookingModal({
   async function applyProfile(userId: string) {
     const { data } = await supabase
       .from("profiles")
-      .select("phone, emergency_contact_name, emergency_contact_phone")
+      .select("phone, emergency_contact_name, emergency_contact_phone, first_name, last_name, nickname")
       .eq("id", userId)
       .maybeSingle();
     if (data) {
       setPhone((prev) => prev || data.phone || "");
       setEmergencyContactName((prev) => prev || data.emergency_contact_name || "");
       setEmergencyContactPhone((prev) => prev || data.emergency_contact_phone || "");
+      if (data.first_name && data.last_name) {
+        setFullName((prev) => prev || `${data.first_name} ${data.last_name}`);
+      }
     }
   }
 

@@ -160,11 +160,16 @@ export async function saveUserProfile(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const full_name = (formData.get("full_name") as string)?.trim();
+  const first_name = (formData.get("first_name") as string)?.trim();
+  const last_name = (formData.get("last_name") as string)?.trim();
+  const nickname = (formData.get("nickname") as string)?.trim() || null;
+  const pronouns = (formData.get("pronouns") as string)?.trim() || null;
+  const address = (formData.get("address") as string)?.trim() || null;
   const phone = (formData.get("phone") as string)?.trim() || null;
   const facebook_url = (formData.get("facebook_url") as string)?.trim() || null;
 
-  if (!full_name) return { error: "Full name is required." };
+  if (!first_name) return { error: "First name is required." };
+  if (!last_name) return { error: "Last name is required." };
 
   if (facebook_url) {
     if (
@@ -176,13 +181,24 @@ export async function saveUserProfile(
     }
   }
 
-  const { error: authError } = await supabase.auth.updateUser({ data: { full_name } });
+  const full_name = `${first_name} ${last_name}`;
+  const { error: authError } = await supabase.auth.updateUser({ data: { full_name, first_name, last_name } });
   if (authError) return { error: authError.message };
 
   const admin = createSupabaseAdminClient();
   const { error: profileError } = await admin
     .from("profiles")
-    .upsert({ id: user.id, phone, facebook_url, updated_at: new Date().toISOString() });
+    .upsert({
+      id: user.id,
+      first_name,
+      last_name,
+      nickname,
+      pronouns,
+      address,
+      phone,
+      facebook_url,
+      updated_at: new Date().toISOString(),
+    });
 
   if (profileError) return { error: profileError.message };
 

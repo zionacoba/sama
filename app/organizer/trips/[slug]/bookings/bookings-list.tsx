@@ -28,6 +28,7 @@ type Booking = {
   notes: string | null;
   meeting_point: string | null;
   facebook_url?: string | null;
+  nickname?: string | null;
 };
 
 type BookingParticipant = {
@@ -206,13 +207,18 @@ export function BookingsListWithTabs({
                   return (
                     <tr key={b.id} className="hover:bg-stone-50">
                       <td className="px-5 py-3.5 font-medium text-stone-900">
-                        {b.full_name}
+                        <div>
+                          {b.nickname && <span className="font-medium">{b.nickname}</span>}
+                          <span className={b.nickname ? "text-sm text-gray-500 block" : "font-medium"}>
+                            {b.full_name}
+                          </span>
+                        </div>
                         {b.facebook_url && (
                           <a
                             href={b.facebook_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="ml-2 text-xs text-blue-600 hover:underline"
+                            className="ml-0 text-xs text-blue-600 hover:underline"
                           >
                             FB Profile
                           </a>
