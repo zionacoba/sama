@@ -60,7 +60,7 @@ export async function applyToBeOrganizer(
       facebook_url: personalFacebookUrl,
       social_links: JSON.stringify({ facebook: organizerFacebookUrl || null, instagram: instagram || null }),
       activity_types: activityTypes,
-      years_of_experience: yearsOfExperience,
+      years_experience: yearsOfExperience,
       emergency_certified: emergencyCertified,
       trips_per_month: tripsPerMonth,
       operating_locations: operatingLocations,
@@ -68,7 +68,7 @@ export async function applyToBeOrganizer(
     insertError = error;
   } catch (err) {
     console.error("[organizer] insert failed", err);
-    return { error: err instanceof Error ? err.message : JSON.stringify(err) };
+    return { error: "Something went wrong. Please try again." };
   }
 
   if (insertError) {
@@ -76,7 +76,7 @@ export async function applyToBeOrganizer(
     if (insertError.code === "23505") {
       return { error: "You have already submitted an application." };
     }
-    return { error: `DB error [${insertError.code}]: ${insertError.message}` };
+    return { error: "Something went wrong. Please try again." };
   }
 
   try {
