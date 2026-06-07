@@ -90,6 +90,7 @@ export function BookingModal({
   const [platformWaiverAccepted, setPlatformWaiverAccepted] = useState(false);
   const [platformWaiverError, setPlatformWaiverError] = useState(false);
   const [paymentOption, setPaymentOption] = useState<"full" | "downpayment">("full");
+  const [profilePhoneMissing, setProfilePhoneMissing] = useState(false);
 
   const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
   const totalAmount = unitPrice * slots;
@@ -124,13 +125,15 @@ export function BookingModal({
   async function applyProfile(userId: string) {
     const { data } = await supabase
       .from("profiles")
-      .select("emergency_contact_name, emergency_contact_phone")
+      .select("phone, emergency_contact_name, emergency_contact_phone")
       .eq("id", userId)
       .maybeSingle();
     if (data) {
+      setPhone((prev) => prev || data.phone || "");
       setEmergencyContactName((prev) => prev || data.emergency_contact_name || "");
       setEmergencyContactPhone((prev) => prev || data.emergency_contact_phone || "");
     }
+    setProfilePhoneMissing(!data?.phone);
   }
 
   useEffect(() => {
@@ -347,6 +350,19 @@ export function BookingModal({
                   <p className="text-xs text-stone-500">
                     You&apos;ll be taken to a secure payment page.<br />Please don&apos;t close this window.
                   </p>
+                </div>
+              ) : profilePhoneMissing ? (
+                <div className="flex flex-col items-center gap-4 py-10 text-center">
+                  <p className="text-base font-semibold text-stone-800">Phone number required</p>
+                  <p className="text-sm text-stone-500">
+                    Please add your phone number to your profile before booking.
+                  </p>
+                  <a
+                    href="/profile?tab=profile"
+                    className="rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
+                  >
+                    Go to profile
+                  </a>
                 </div>
               ) : (
                 <form id="booking-form" onSubmit={handleSubmit} className="space-y-3">
@@ -686,12 +702,14 @@ export function BookingModal({
 
             {!success && (
               <div className="shrink-0 border-t border-stone-100 px-6 py-3">
-                <p className="mb-2 text-center text-xs text-stone-400">
-                  Need help?{" "}
-                  <a href="mailto:hello@sama.com.ph" className="underline hover:text-stone-600">
-                    hello@sama.com.ph
-                  </a>
-                </p>
+                {!profilePhoneMissing && (
+                  <p className="mb-2 text-center text-xs text-stone-400">
+                    Need help?{" "}
+                    <a href="mailto:hello@sama.com.ph" className="underline hover:text-stone-600">
+                      hello@sama.com.ph
+                    </a>
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -700,14 +718,16 @@ export function BookingModal({
                   >
                     Close
                   </button>
-                  <button
-                    type="submit"
-                    form="booking-form"
-                    disabled={loading}
-                    className="flex-1 rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {loading ? "Submitting…" : "Confirm booking"}
-                  </button>
+                  {!profilePhoneMissing && (
+                    <button
+                      type="submit"
+                      form="booking-form"
+                      disabled={loading}
+                      className="flex-1 rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {loading ? "Submitting…" : "Confirm booking"}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
