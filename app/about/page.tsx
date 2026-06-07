@@ -70,7 +70,7 @@ export default function AboutPage() {
             <div className="rounded-xl border border-trailhead/10 bg-trailhead/5 px-6 py-5">
               <p className="text-xl font-bold text-stone-900">Built for</p>
               <p className="mt-1 text-sm font-semibold text-trailhead">The outdoor community</p>
-              <p className="mt-1 text-xs text-stone-400">By people who love it</p>
+              <p className="mt-1 text-xs text-stone-400">By someone who loves it</p>
             </div>
           </div>
         </div>
@@ -209,8 +209,8 @@ export default function AboutPage() {
               Get in touch
             </h3>
             <p className="mt-4 text-base leading-relaxed text-stone-500 sm:text-lg">
-              We are a small team building something meaningful. If you have a question, an idea,
-              or just want to say hello, we would love to hear from you.
+              Sama is built and run personally by its founder. If you have a question, an idea,
+              or just want to say hello, I'd love to hear from you.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
               <a
