@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { saveFacebookUrl } from "@/app/actions/profile";
 
 function getSafeRedirect(path: string | null) {
   if (!path || !path.startsWith("/") || path.startsWith("//")) return "/";
@@ -19,7 +18,6 @@ function SignupForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [facebookUrl, setFacebookUrl] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [alreadyRegistered, setAlreadyRegistered] = useState(false);
@@ -37,18 +35,6 @@ function SignupForm() {
     setError(null);
     setAlreadyRegistered(false);
     setSuccess(null);
-
-    if (facebookUrl.trim()) {
-      const trimmed = facebookUrl.trim();
-      if (
-        !trimmed.startsWith("https://facebook.com/") &&
-        !trimmed.startsWith("https://www.facebook.com/") &&
-        !trimmed.startsWith("https://m.facebook.com/")
-      ) {
-        setError("Please enter a valid Facebook profile URL starting with https://facebook.com/");
-        return;
-      }
-    }
 
     setLoading(true);
 
@@ -74,9 +60,6 @@ function SignupForm() {
     }
 
     if (data.session) {
-      if (facebookUrl && data.user) {
-        await saveFacebookUrl(data.user.id, facebookUrl);
-      }
       router.push(redirectTo);
       router.refresh();
       return;
@@ -200,24 +183,6 @@ function SignupForm() {
                     )}
                   </button>
                 </div>
-              </div>
-
-              <div>
-                <label htmlFor="facebook_url" className="block text-sm font-medium text-stone-700">
-                  Facebook profile URL <span className="font-normal text-stone-400">(optional)</span>
-                </label>
-                <input
-                  id="facebook_url"
-                  type="url"
-                  placeholder="https://facebook.com/yourname"
-                  value={facebookUrl}
-                  onChange={(e) => setFacebookUrl(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2"
-                />
-                {facebookUrl && !facebookUrl.startsWith("https://facebook.com/") && !facebookUrl.startsWith("https://www.facebook.com/") && (
-                  <p className="mt-1 text-xs text-amber-600">Should start with https://facebook.com/ or https://www.facebook.com/</p>
-                )}
-                <p className="mt-1 text-xs text-stone-400">So organizers can add you to the trip group chat.</p>
               </div>
 
               <label className="flex cursor-pointer items-start gap-3">
