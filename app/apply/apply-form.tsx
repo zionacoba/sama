@@ -43,13 +43,14 @@ export function ApplyForm({
         </p>
       )}
 
-      <p className="text-sm text-gray-600 mb-6">
+      <p className="text-sm text-gray-600 mb-2">
         This takes about 5 minutes. I personally review every application and will be in touch within a few days.
       </p>
+      <p className="text-xs text-gray-500 mb-4">Fields marked with <span className="text-red-500">*</span> are required.</p>
 
       <div>
         <label htmlFor="full_name" className={labelClass}>
-          Full name
+          Full name <span className="text-red-500">*</span>
         </label>
         <input
           id="full_name"
@@ -65,7 +66,7 @@ export function ApplyForm({
 
       <div>
         <label htmlFor="phone" className={labelClass}>
-          Phone number
+          Phone number <span className="text-red-500">*</span>
         </label>
         <input
           id="phone"
@@ -81,7 +82,7 @@ export function ApplyForm({
 
       <div>
         <label htmlFor="display_name" className={labelClass}>
-          Your organizer name
+          Your organizer name <span className="text-red-500">*</span>
         </label>
         <p className="mt-0.5 text-xs text-stone-500">The name joiners will see on your trips and profile. Can be your own name, a club name, or a trail name.</p>
         <input
@@ -96,7 +97,7 @@ export function ApplyForm({
 
       <div>
         <label htmlFor="bio" className={labelClass}>
-          Bio
+          Bio <span className="text-red-500">*</span>
         </label>
         <p className="mt-0.5 text-xs text-stone-500">
           Tell us about your experience organizing outdoor trips.
@@ -112,7 +113,7 @@ export function ApplyForm({
       </div>
 
       <div>
-        <p className={labelClass}>Activity types you run</p>
+        <p className={labelClass}>Activity types you run <span className="text-red-500">*</span></p>
         <div className="mt-2 space-y-2">
           {ACTIVITY_TYPES.map((type) => (
             <label key={type} className="flex cursor-pointer items-center gap-3">
@@ -130,7 +131,7 @@ export function ApplyForm({
 
       <div>
         <label htmlFor="years_of_experience" className={labelClass}>
-          Years of experience
+          Years of experience <span className="text-red-500">*</span>
         </label>
         <input
           id="years_of_experience"
@@ -144,17 +145,44 @@ export function ApplyForm({
       </div>
 
       <div>
-        <label htmlFor="past_trips_evidence" className={labelClass}>
-          Links to past trips or social media posts
+        <label htmlFor="trips_per_month" className={labelClass}>
+          On average, how many trips do you organize per month? <span className="text-red-500">*</span>
         </label>
-        <p className="mt-0.5 text-xs text-stone-500">Share links to Facebook posts, Instagram posts, or any evidence of trips you&apos;ve organized.</p>
-        <textarea
-          id="past_trips_evidence"
-          name="past_trips_evidence"
+        <p className="mt-0.5 text-xs text-stone-500 flex items-start gap-1">
+          <span>ℹ</span>
+          <span>This is just an estimate. No minimum required — we welcome organizers at all activity levels.</span>
+        </p>
+        <select
+          id="trips_per_month"
+          name="trips_per_month"
           required
-          rows={4}
+          className={inputClass}
+          defaultValue=""
+        >
+          <option value="" disabled>Select an option</option>
+          <option value="less_than_1">Less than 1 (occasional, a few times a year)</option>
+          <option value="1_to_2">1 to 2 per month</option>
+          <option value="3_to_5">3 to 5 per month</option>
+          <option value="6_to_10">6 to 10 per month</option>
+          <option value="more_than_10">More than 10 per month</option>
+        </select>
+      </div>
+
+      <div>
+        <label htmlFor="operating_locations" className={labelClass}>
+          Where do you usually run your trips? <span className="text-red-500">*</span>
+        </label>
+        <p className="mt-0.5 text-xs text-stone-500 flex items-start gap-1">
+          <span>ℹ</span>
+          <span>No need to be exhaustive — just give us a sense of where you operate and the types of destinations you cover.</span>
+        </p>
+        <textarea
+          id="operating_locations"
+          name="operating_locations"
+          required
+          rows={3}
           className={`${inputClass} resize-none`}
-          placeholder="Paste links to Facebook posts, photos, or any evidence of trips you've led. Minimum 3 trips required."
+          placeholder="e.g. Batangas for freediving, Mt. Pulag and Mt. Batulao for hiking, occasionally Cebu and Palawan"
         />
       </div>
 
@@ -176,7 +204,7 @@ export function ApplyForm({
 
       <div>
         <label htmlFor="personal_facebook_url" className={labelClass}>
-          Personal Facebook profile
+          Personal Facebook profile <span className="text-red-500">*</span>
         </label>
         <p className="mt-0.5 text-xs text-stone-500">Private. Only used by Sama to contact you directly and add you to organizer group chats.</p>
         <input
@@ -192,7 +220,7 @@ export function ApplyForm({
 
       <div>
         <label htmlFor="organizer_facebook_url" className={labelClass}>
-          Facebook Page for your trips
+          Facebook Page for your trips <span className="text-red-500">*</span>
         </label>
         <p className="mt-0.5 text-xs text-stone-500">Public. This is the link joiners will use to contact you from your trip pages. If you don&apos;t have a separate organizer page, your personal profile link is fine.</p>
         <input
@@ -231,7 +259,7 @@ export function ApplyForm({
             I agree to Sama&apos;s{" "}
             <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-trailhead">Terms of Service</a>
             {" "}and{" "}
-            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-trailhead">Privacy Policy</a>.
+            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-trailhead">Privacy Policy</a>. <span className="text-red-500">*</span>
           </span>
         </label>
 
@@ -243,7 +271,7 @@ export function ApplyForm({
             className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 accent-trailhead focus:ring-2 focus:ring-trailhead/30"
           />
           <span className="text-xs leading-relaxed text-stone-600">
-            I confirm that all information provided is accurate and that I am authorized to organize outdoor trips in the Philippines.
+            I confirm that all information provided is accurate and that I am authorized to organize outdoor trips in the Philippines. <span className="text-red-500">*</span>
           </span>
         </label>
       </div>

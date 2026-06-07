@@ -27,14 +27,15 @@ export async function applyToBeOrganizer(
   const personalFacebookUrl = (formData.get("personal_facebook_url") as string)?.trim();
   const organizerFacebookUrl = (formData.get("organizer_facebook_url") as string)?.trim();
   const instagram = (formData.get("instagram") as string)?.trim() || null;
-  const pastTripsEvidence = (formData.get("past_trips_evidence") as string)?.trim();
+  const tripsPerMonth = (formData.get("trips_per_month") as string)?.trim();
+  const operatingLocations = (formData.get("operating_locations") as string)?.trim();
   const activityTypes = formData.getAll("activity_types") as string[];
   const yearsOfExperience = Number((formData.get("years_of_experience") as string)?.trim());
   const emergencyCertified = formData.get("emergency_certified") === "on";
   const termsAgreed = formData.get("terms_agreed") === "on";
   const accuracyConfirmed = formData.get("accuracy_confirmed") === "on";
 
-  if (!displayName || !fullName || !bio || !phone || !personalFacebookUrl || !organizerFacebookUrl || !pastTripsEvidence) {
+  if (!displayName || !fullName || !bio || !phone || !personalFacebookUrl || !organizerFacebookUrl || !tripsPerMonth || !operatingLocations) {
     return { error: "All required fields must be filled in." };
   }
   if (!termsAgreed || !accuracyConfirmed) {
@@ -47,23 +48,32 @@ export async function applyToBeOrganizer(
     return { error: "Please enter your years of experience." };
   }
 
-  const { error } = await supabase.from("organizers").insert({
-    user_id: user.id,
-    email: user.email,
-    display_name: displayName,
-    full_name: fullName,
-    bio,
-    phone,
-    facebook_url: personalFacebookUrl,
-    social_links: { facebook: organizerFacebookUrl, instagram },
-    past_trips_evidence: pastTripsEvidence,
-    activity_types: activityTypes,
-    years_of_experience: yearsOfExperience,
-    emergency_certified: emergencyCertified,
-  });
+  let insertError;
+  try {
+    const { error } = await supabase.from("organizers").insert({
+      user_id: user.id,
+      email: user.email,
+      display_name: displayName,
+      full_name: fullName,
+      bio,
+      phone,
+      facebook_url: personalFacebookUrl,
+      social_links: JSON.stringify({ facebook: organizerFacebookUrl || null, instagram: instagram || null }),
+      activity_types: activityTypes,
+      years_of_experience: yearsOfExperience,
+      emergency_certified: emergencyCertified,
+      trips_per_month: tripsPerMonth,
+      operating_locations: operatingLocations,
+    });
+    insertError = error;
+  } catch (err) {
+    console.error("[organizer] insert failed", err);
+    return { error: "Something went wrong. Please try again." };
+  }
 
-  if (error) {
-    if (error.code === "23505") {
+  if (insertError) {
+    console.error("[organizer] insert error", insertError);
+    if (insertError.code === "23505") {
       return { error: "You have already submitted an application." };
     }
     return { error: "Something went wrong. Please try again." };
