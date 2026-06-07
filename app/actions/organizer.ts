@@ -68,7 +68,7 @@ export async function applyToBeOrganizer(
     insertError = error;
   } catch (err) {
     console.error("[organizer] insert failed", err);
-    return { error: "Something went wrong. Please try again." };
+    return { error: err instanceof Error ? err.message : JSON.stringify(err) };
   }
 
   if (insertError) {
@@ -76,7 +76,7 @@ export async function applyToBeOrganizer(
     if (insertError.code === "23505") {
       return { error: "You have already submitted an application." };
     }
-    return { error: "Something went wrong. Please try again." };
+    return { error: `DB error [${insertError.code}]: ${insertError.message}` };
   }
 
   try {
