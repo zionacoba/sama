@@ -9,7 +9,15 @@ const labelClass = "block text-sm font-medium text-stone-700";
 
 const ACTIVITY_TYPES = ["Hiking", "Freediving", "Beach & Island"] as const;
 
-export function ApplyForm() {
+export function ApplyForm({
+  defaultFullName,
+  defaultPhone,
+  defaultPersonalFacebookUrl,
+}: {
+  defaultFullName?: string | null;
+  defaultPhone?: string | null;
+  defaultPersonalFacebookUrl?: string | null;
+}) {
   const [state, action, pending] = useActionState(applyToBeOrganizer, null);
 
   if (state && "success" in state) {
@@ -35,20 +43,9 @@ export function ApplyForm() {
         </p>
       )}
 
-      <div>
-        <label htmlFor="display_name" className={labelClass}>
-          Display name
-        </label>
-        <p className="mt-0.5 text-xs text-stone-500">Your public-facing name — club, brand, or trail name.</p>
-        <input
-          id="display_name"
-          name="display_name"
-          type="text"
-          required
-          className={inputClass}
-          placeholder="e.g. Summit Seekers PH, Pekeng Mountaineer"
-        />
-      </div>
+      <p className="text-sm text-gray-600 mb-6">
+        This takes about 5 minutes. I personally review every application and will be in touch within a few days.
+      </p>
 
       <div>
         <label htmlFor="full_name" className={labelClass}>
@@ -60,6 +57,7 @@ export function ApplyForm() {
           type="text"
           autoComplete="name"
           required
+          defaultValue={defaultFullName ?? undefined}
           className={inputClass}
           placeholder="Juan dela Cruz"
         />
@@ -75,22 +73,24 @@ export function ApplyForm() {
           type="tel"
           autoComplete="tel"
           required
+          defaultValue={defaultPhone ?? undefined}
           className={inputClass}
           placeholder="+63 9XX XXX XXXX"
         />
       </div>
 
       <div>
-        <label htmlFor="facebook_url" className={labelClass}>
-          Facebook profile URL
+        <label htmlFor="display_name" className={labelClass}>
+          Your organizer name
         </label>
+        <p className="mt-0.5 text-xs text-stone-500">The name joiners will see on your trips and profile. Can be your own name, a club name, or a trail name.</p>
         <input
-          id="facebook_url"
-          name="facebook_url"
-          type="url"
+          id="display_name"
+          name="display_name"
+          type="text"
           required
           className={inputClass}
-          placeholder="https://facebook.com/yourprofile"
+          placeholder="e.g. Summit Seekers PH, Pekeng Mountaineer"
         />
       </div>
 
@@ -108,20 +108,6 @@ export function ApplyForm() {
           rows={4}
           className={`${inputClass} resize-none`}
           placeholder="I've been guiding hikes in Benguet for 5 years…"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="past_trips_evidence" className={labelClass}>
-          Links to past trips
-        </label>
-        <textarea
-          id="past_trips_evidence"
-          name="past_trips_evidence"
-          required
-          rows={4}
-          className={`${inputClass} resize-none`}
-          placeholder="Paste links to Facebook posts, photos, or any evidence of trips you've led. Minimum 3 trips required."
         />
       </div>
 
@@ -158,6 +144,21 @@ export function ApplyForm() {
       </div>
 
       <div>
+        <label htmlFor="past_trips_evidence" className={labelClass}>
+          Links to past trips or social media posts
+        </label>
+        <p className="mt-0.5 text-xs text-stone-500">Share links to Facebook posts, Instagram posts, or any evidence of trips you&apos;ve organized.</p>
+        <textarea
+          id="past_trips_evidence"
+          name="past_trips_evidence"
+          required
+          rows={4}
+          className={`${inputClass} resize-none`}
+          placeholder="Paste links to Facebook posts, photos, or any evidence of trips you've led. Minimum 3 trips required."
+        />
+      </div>
+
+      <div>
         <p className={`${labelClass} mb-2`}>
           Emergency / First Aid certified? <span className="font-normal text-stone-400">(optional)</span>
         </p>
@@ -171,6 +172,51 @@ export function ApplyForm() {
             I have a Basic Life Support or First Aid certification
           </span>
         </label>
+      </div>
+
+      <div>
+        <label htmlFor="personal_facebook_url" className={labelClass}>
+          Personal Facebook profile
+        </label>
+        <p className="mt-0.5 text-xs text-stone-500">Private. Only used by Sama to contact you directly and add you to organizer group chats.</p>
+        <input
+          id="personal_facebook_url"
+          name="personal_facebook_url"
+          type="url"
+          required
+          defaultValue={defaultPersonalFacebookUrl ?? undefined}
+          className={inputClass}
+          placeholder="https://facebook.com/yourname"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="organizer_facebook_url" className={labelClass}>
+          Facebook Page for your trips
+        </label>
+        <p className="mt-0.5 text-xs text-stone-500">Public. This is the link joiners will use to contact you from your trip pages. If you don&apos;t have a separate organizer page, your personal profile link is fine.</p>
+        <input
+          id="organizer_facebook_url"
+          name="organizer_facebook_url"
+          type="url"
+          required
+          className={inputClass}
+          placeholder="https://facebook.com/yourpage"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="instagram" className={labelClass}>
+          Instagram <span className="font-normal text-stone-400">(optional)</span>
+        </label>
+        <p className="mt-0.5 text-xs text-stone-500">Your personal or organizer Instagram. Optional.</p>
+        <input
+          id="instagram"
+          name="instagram"
+          type="text"
+          className={inputClass}
+          placeholder="@yourhandle or https://instagram.com/yourhandle"
+        />
       </div>
 
       <div className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4">

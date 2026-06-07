@@ -36,6 +36,16 @@ export default async function ApplyPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("first_name, last_name, phone, facebook_url")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const fullName = profile?.first_name && profile?.last_name
+    ? `${profile.first_name} ${profile.last_name}`
+    : null;
+
   const cfg = existing
     ? statusConfig[existing.status as keyof typeof statusConfig]
     : null;
@@ -71,7 +81,11 @@ export default async function ApplyPage() {
                 List your outdoor trips on Sama and reach thousands of adventurers.
               </p>
               <div className="mt-8">
-                <ApplyForm />
+                <ApplyForm
+                  defaultFullName={fullName}
+                  defaultPhone={profile?.phone ?? null}
+                  defaultPersonalFacebookUrl={profile?.facebook_url ?? null}
+                />
               </div>
             </>
           )}

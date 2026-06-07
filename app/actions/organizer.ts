@@ -24,7 +24,9 @@ export async function applyToBeOrganizer(
   const fullName = (formData.get("full_name") as string)?.trim();
   const bio = (formData.get("bio") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim();
-  const facebookUrl = (formData.get("facebook_url") as string)?.trim();
+  const personalFacebookUrl = (formData.get("personal_facebook_url") as string)?.trim();
+  const organizerFacebookUrl = (formData.get("organizer_facebook_url") as string)?.trim();
+  const instagram = (formData.get("instagram") as string)?.trim() || null;
   const pastTripsEvidence = (formData.get("past_trips_evidence") as string)?.trim();
   const activityTypes = formData.getAll("activity_types") as string[];
   const yearsOfExperience = Number((formData.get("years_of_experience") as string)?.trim());
@@ -32,7 +34,7 @@ export async function applyToBeOrganizer(
   const termsAgreed = formData.get("terms_agreed") === "on";
   const accuracyConfirmed = formData.get("accuracy_confirmed") === "on";
 
-  if (!displayName || !fullName || !bio || !phone || !facebookUrl || !pastTripsEvidence) {
+  if (!displayName || !fullName || !bio || !phone || !personalFacebookUrl || !organizerFacebookUrl || !pastTripsEvidence) {
     return { error: "All required fields must be filled in." };
   }
   if (!termsAgreed || !accuracyConfirmed) {
@@ -52,7 +54,8 @@ export async function applyToBeOrganizer(
     full_name: fullName,
     bio,
     phone,
-    facebook_url: facebookUrl,
+    facebook_url: personalFacebookUrl,
+    social_links: { facebook: organizerFacebookUrl, instagram },
     past_trips_evidence: pastTripsEvidence,
     activity_types: activityTypes,
     years_of_experience: yearsOfExperience,
