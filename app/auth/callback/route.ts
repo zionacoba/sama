@@ -13,10 +13,13 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       const { data: { user } } = await supabase.auth.getUser();
-      const phone = user?.user_metadata?.phone as string | undefined;
-      if (user && phone) {
+      if (user) {
+        const phone = user.user_metadata?.phone as string | undefined;
         const admin = createSupabaseAdminClient();
-        await admin.from("profiles").upsert({ id: user.id, phone });
+        await admin.from("profiles").upsert(
+          { id: user.id, ...(phone ? { phone } : {}) },
+          { onConflict: "id" }
+        );
       }
       return NextResponse.redirect(`${origin}${safePath}`);
     }
