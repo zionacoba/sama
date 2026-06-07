@@ -66,7 +66,7 @@ export default async function NewTripPage({ searchParams }: PageProps) {
           <div>
             <Link
               href="/"
-              className="text-lg font-bold tracking-tight hover:opacity-90"
+              className="flex items-center gap-2 text-lg font-bold tracking-tight hover:opacity-90"
             >
               <img src="/sama-mark.svg" alt="Sama" className="h-7 w-auto" /> Sama
             </Link>

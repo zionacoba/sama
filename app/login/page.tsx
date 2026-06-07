@@ -58,7 +58,7 @@ function LoginForm() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
           <Link
             href="/"
-            className="text-lg font-bold tracking-tight text-trailhead"
+            className="flex items-center gap-2 text-lg font-bold tracking-tight text-trailhead"
           >
             <img src="/sama-mark.svg" alt="Sama" className="h-7 w-auto" /> Sama
           </Link>

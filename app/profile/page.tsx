@@ -318,7 +318,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
       <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
-          <Link href="/" className="text-lg font-bold tracking-tight text-trailhead">
+          <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight text-trailhead">
             <img src="/sama-mark.svg" alt="Sama" className="h-7 w-auto" /> Sama
           </Link>
           <Link
