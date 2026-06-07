@@ -34,7 +34,7 @@ function SignupForm() {
     e.preventDefault();
     setError(null);
     setAlreadyRegistered(false);
-    setSuccess(null);
+    setSuccess(false);
 
     setLoading(true);
 
