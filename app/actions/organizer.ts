@@ -18,7 +18,7 @@ export async function applyToBeOrganizer(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login?redirectTo=/organizer/apply");
+  if (!user) redirect("/login?redirectTo=/apply");
 
   const displayName = (formData.get("display_name") as string)?.trim();
   const fullName = (formData.get("full_name") as string)?.trim();
@@ -121,7 +121,7 @@ export async function updateOrganizerProfile(
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!organizer || organizer.status !== "approved") redirect("/organizer/apply");
+  if (!organizer || organizer.status !== "approved") redirect("/apply");
 
   const display_name = (formData.get("display_name") as string)?.trim();
   const full_name = (formData.get("full_name") as string)?.trim();

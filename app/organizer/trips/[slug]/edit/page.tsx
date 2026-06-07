@@ -23,7 +23,7 @@ export default async function EditTripPage({ params }: PageProps) {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!organizer) redirect("/organizer/apply");
+  if (!organizer) redirect("/apply");
   if (organizer.status !== "approved") redirect("/organizer/dashboard");
 
   const { data: trip } = await supabase

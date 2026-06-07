@@ -260,7 +260,7 @@ export default async function Home() {
               Are you a trip organizer? List your trips free.
             </p>
             <Link
-              href="/organizer/apply"
+              href="/apply"
               className="inline-flex shrink-0 items-center justify-center rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-trailhead shadow transition hover:bg-trailhead-muted"
             >
               Get started
@@ -272,7 +272,7 @@ export default async function Home() {
       <footer className="border-t border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-500">
         © {new Date().getFullYear()} Sama. Adventure, together.
         {" · "}
-        <Link href="/organizer/apply" className="underline-offset-4 hover:text-trailhead hover:underline">
+        <Link href="/apply" className="underline-offset-4 hover:text-trailhead hover:underline">
           Become an Organizer
         </Link>
         {" · "}

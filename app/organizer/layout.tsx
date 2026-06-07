@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export default async function OrganizerLayout({ children }: { children: React.ReactNode }) {
@@ -16,13 +15,8 @@ export default async function OrganizerLayout({ children }: { children: React.Re
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const headersList = await headers();
-  const pathname = headersList.get("x-invoke-path") || "";
-
-  if (!pathname.includes("/organizer/apply")) {
-    if (!organizer || organizer.status !== "approved") {
-      redirect("/");
-    }
+  if (!organizer || organizer.status !== "approved") {
+    redirect("/");
   }
 
   return <>{children}</>;

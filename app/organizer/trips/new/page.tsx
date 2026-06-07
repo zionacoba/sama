@@ -20,7 +20,7 @@ export default async function NewTripPage({ searchParams }: PageProps) {
     .maybeSingle();
 
   if (!organizer || organizer.status !== "approved") {
-    redirect("/organizer/apply");
+    redirect("/apply");
   }
 
   const { template_id } = await searchParams;

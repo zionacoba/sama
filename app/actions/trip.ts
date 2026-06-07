@@ -38,7 +38,7 @@ export async function createTrip(
     .maybeSingle();
 
   if (!organizer || organizer.status !== "approved") {
-    redirect("/organizer/apply");
+    redirect("/apply");
   }
 
   const is_template = formData.get("is_template") === "true";
@@ -243,7 +243,7 @@ export async function updateTrip(
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!organizer || organizer.status !== "approved") redirect("/organizer/apply");
+  if (!organizer || organizer.status !== "approved") redirect("/apply");
 
   const rawTripId = formData.get("trip_id");
   const tripId = parseInt(rawTripId as string, 10);
@@ -658,7 +658,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!organizer || organizer.status !== "approved") redirect("/organizer/apply");
+  if (!organizer || organizer.status !== "approved") redirect("/apply");
 
   const admin = createSupabaseAdminClient();
 

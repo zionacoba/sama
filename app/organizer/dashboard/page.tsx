@@ -130,7 +130,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!organizer) redirect("/organizer/apply");
+  if (!organizer) redirect("/apply");
 
   if (organizer.status !== "approved") {
     return (
