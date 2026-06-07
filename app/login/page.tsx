@@ -60,7 +60,7 @@ function LoginForm() {
             href="/"
             className="text-lg font-bold tracking-tight text-trailhead"
           >
-            ⛰ Sama
+            <img src="/sama-mark.svg" alt="Sama" className="h-7 w-auto" /> Sama
           </Link>
         </div>
       </header>

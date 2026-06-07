@@ -199,7 +199,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
         <header className="border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
             <Link href="/" className="text-lg font-bold tracking-tight text-trailhead">
-              ⛰ Sama
+              <img src="/sama-mark.svg" alt="Sama" className="h-7 w-auto" /> Sama
             </Link>
           </div>
         </header>
@@ -330,7 +330,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
       <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
           <Link href="/" className="text-lg font-bold tracking-tight text-trailhead">
-            ⛰ Sama
+            <img src="/sama-mark.svg" alt="Sama" className="h-7 w-auto" /> Sama
           </Link>
           <Link href="/trips" className="text-sm font-medium text-stone-600 transition hover:text-trailhead">
             ← All trips

@@ -68,7 +68,7 @@ export default async function NewTripPage({ searchParams }: PageProps) {
               href="/"
               className="text-lg font-bold tracking-tight hover:opacity-90"
             >
-              ⛰ Sama
+              <img src="/sama-mark.svg" alt="Sama" className="h-7 w-auto" /> Sama
             </Link>
             <p className="mt-0.5 text-sm text-trailhead-muted">
               Organizer Dashboard

@@ -208,7 +208,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <div>
             <Link href="/" className="text-lg font-bold tracking-tight hover:opacity-90">
-              ⛰ Sama
+              <img src="/sama-mark.svg" alt="Sama" className="h-7 w-auto" /> Sama
             </Link>
             <p className="mt-0.5 text-sm text-trailhead-muted">Organizer Dashboard</p>
           </div>
