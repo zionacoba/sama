@@ -78,7 +78,7 @@ export default async function ApplyPage() {
                 Become an organizer
               </h1>
               <p className="mt-1 text-sm text-stone-600">
-                List your outdoor trips on Sama and reach thousands of adventurers.
+                List your trips on Sama and let joiners book, pay, and confirm online.
               </p>
               <div className="mt-8">
                 <ApplyForm
