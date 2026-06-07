@@ -22,14 +22,14 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.replace("/");
-    });
-  }, [router]);
-
   const rawRedirectTo = searchParams.get("redirectTo");
   const redirectTo = getSafeRedirect(rawRedirectTo);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.replace(redirectTo);
+    });
+  }, [router, redirectTo]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
