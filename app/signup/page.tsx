@@ -16,6 +16,8 @@ function SignupForm() {
   const redirectTo = getSafeRedirect(searchParams.get("redirectTo"));
 
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -33,8 +35,15 @@ function SignupForm() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setPhoneError(null);
     setAlreadyRegistered(false);
     setSuccess(false);
+
+    const strippedPhone = phone.replace(/[\s-]/g, "");
+    if (!/^\d{10,}$/.test(strippedPhone)) {
+      setPhoneError("Please enter a valid phone number (at least 10 digits, numbers only).");
+      return;
+    }
 
     setLoading(true);
 
@@ -42,7 +51,7 @@ function SignupForm() {
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: { full_name: fullName, phone: strippedPhone },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
       },
     });
@@ -60,6 +69,7 @@ function SignupForm() {
     }
 
     if (data.session) {
+      await supabase.from("profiles").upsert({ id: data.session.user.id, phone: strippedPhone });
       router.push(redirectTo);
       router.refresh();
       return;
@@ -144,6 +154,26 @@ function SignupForm() {
                       className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2"
                       placeholder="Juan dela Cruz"
                     />
+                  </div>
+
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-medium text-stone-700">
+                      Phone number
+                    </label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      name="phone"
+                      autoComplete="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => { setPhone(e.target.value); setPhoneError(null); }}
+                      className={`mt-1.5 w-full rounded-xl border bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:ring-2 ${phoneError ? "border-red-400 focus:border-red-400" : "border-stone-200 focus:border-trailhead"}`}
+                      placeholder="09xxxxxxxxx"
+                    />
+                    {phoneError && (
+                      <p role="alert" className="mt-1.5 text-xs text-red-600">{phoneError}</p>
+                    )}
                   </div>
 
                   <div>
