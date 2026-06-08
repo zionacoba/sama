@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
+import { processPayMongoRefund, type RefundResult } from "@/lib/paymongo-refund";
 
 if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
@@ -90,7 +91,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
     // Fetch and cancel all confirmed/pending/payment_pending bookings for affected trips.
     const { data: affectedBookings } = await admin
       .from("bookings")
-      .select("id, email, full_name, trip_id, slots")
+      .select("id, email, full_name, trip_id, slots, payment_option, amount_due, total_amount, paymongo_payment_id, payment_method, balance_paymongo_payment_id, balance_payment_gateway_status")
       .in("trip_id", tripIds)
       .in("status", ["confirmed", "pending", "payment_pending"]);
 
@@ -117,10 +118,93 @@ export async function rejectOrganizer(id: string): Promise<void> {
       (activeTrips ?? []).map((t) => [t.id, t]),
     );
 
-    // Notify participants.
+    // Process refunds for all cancelled bookings before notifying participants.
+    const refundResultMap = new Map<number, { initial: RefundResult | null; balance: RefundResult | null }>();
+    const manualRefundList: Array<{ id: number; full_name: string; email: string; amount: number }> = [];
+
+    await Promise.allSettled((affectedBookings ?? []).map(async (booking) => {
+      const amountPaid =
+        booking.payment_option === "downpayment" && booking.amount_due != null
+          ? booking.amount_due
+          : (booking.total_amount ?? 0);
+
+      let initialResult: RefundResult | null = null;
+      let balanceResult: RefundResult | null = null;
+
+      if (booking.paymongo_payment_id) {
+        initialResult = await processPayMongoRefund({
+          paymentId: booking.paymongo_payment_id,
+          paymentMethod: booking.payment_method,
+          amountPesos: amountPaid,
+          notes: 'Organizer application rejected',
+        });
+        if (!initialResult.success) {
+          if (!initialResult.requiresManualProcessing) {
+            console.error('[refund] rejectOrganizer initial refund failed', booking.id, initialResult.error);
+          }
+          manualRefundList.push({ id: booking.id, full_name: booking.full_name, email: booking.email, amount: amountPaid });
+        }
+      }
+
+      if (booking.balance_paymongo_payment_id && booking.balance_payment_gateway_status === 'paid') {
+        const balanceAmount = (booking.total_amount ?? 0) - (booking.amount_due ?? 0);
+        if (balanceAmount > 0) {
+          balanceResult = await processPayMongoRefund({
+            paymentId: booking.balance_paymongo_payment_id,
+            paymentMethod: booking.payment_method,
+            amountPesos: balanceAmount,
+            notes: 'Organizer application rejected - balance refund',
+          });
+          if (!balanceResult.success) {
+            if (!balanceResult.requiresManualProcessing) {
+              console.error('[refund] rejectOrganizer balance refund failed', booking.id, balanceResult.error);
+            }
+            if (!manualRefundList.some((b) => b.id === booking.id)) {
+              manualRefundList.push({ id: booking.id, full_name: booking.full_name, email: booking.email, amount: balanceAmount });
+            }
+          }
+        }
+      }
+
+      refundResultMap.set(booking.id, { initial: initialResult, balance: balanceResult });
+    }));
+
+    // Alert admin to any bookings that couldn't be automatically refunded.
+    if (manualRefundList.length > 0 && ADMIN_EMAIL) {
+      const fmtCurrency = (n: number) =>
+        new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+      try {
+        const rows = manualRefundList
+          .map((b) => `<li>Booking ${b.id} — ${escapeHtml(b.full_name)} (${escapeHtml(b.email)}): ${fmtCurrency(b.amount)}</li>`)
+          .join('\n');
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: ADMIN_EMAIL,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `[Admin] Manual refunds required — organizer ${escapeHtml(organizer.full_name)} rejected`,
+          html: `
+            <p>The following bookings could not be automatically refunded after organizer <strong>${escapeHtml(organizer.full_name)}</strong> was rejected (QR Ph payments or API errors). Please process these manually:</p>
+            <ul>${rows}</ul>
+            <p>— Sama System</p>
+          `,
+        });
+      } catch (err) {
+        console.error('[email] failed to send manual refund alert for organizer rejection', err);
+      }
+    }
+
+    // Notify participants — copy reflects whether the refund was automatic or manual.
     for (const booking of affectedBookings ?? []) {
       const trip = tripMap.get(booking.trip_id);
       if (!trip) continue;
+      const refundResult = refundResultMap.get(booking.id);
+      const refundSucceeded = refundResult?.initial?.success === true;
+      const hasPaid = !!booking.paymongo_payment_id;
+      const refundLine = !hasPaid
+        ? `<p>If you have any questions, please contact us at <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`
+        : (refundSucceeded
+            ? `<p>A full refund of your payment has been processed and will reflect within 24 hours.</p>`
+            : `<p>Sama will process your refund manually within 3–5 business days. If you haven't received it after that time, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${booking.id}</strong></p>`);
       try {
         await resend.emails.send({
           from: FROM_ADDRESS,
@@ -130,8 +214,8 @@ export async function rejectOrganizer(id: string): Promise<void> {
           html: `
             <p>Hi ${escapeHtml(booking.full_name)},</p>
             <p>We're sorry to inform you that <strong>${escapeHtml(trip.title)}</strong> is no longer available on Sama.</p>
-            <p>Your booking has been cancelled and you will receive a <strong>full refund</strong> to your original payment method within 3–5 business days.</p>
-            <p>If you have any questions, please contact us at <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
+            <p>Your booking has been cancelled.</p>
+            ${refundLine}
             <p>We apologise for the inconvenience.</p>
             <p>— The Sama Team</p>
           `,

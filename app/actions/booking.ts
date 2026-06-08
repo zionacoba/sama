@@ -756,8 +756,9 @@ export async function cancelBooking(bookingId: number) {
     return { error: "Booking could not be cancelled. It may have already been cancelled." };
   }
 
-  // Flag the associated payout for reconciliation when cancelling after remittance.
-  if (booking.payout_status === "remitted" && booking.payout_id) {
+  // Flag the associated payout for reconciliation whenever cancellation happens after payout creation.
+  const wasInIncludedPayout = booking.payout_status === "included" && !!booking.payout_id;
+  if (booking.payout_id && (booking.payout_status === "remitted" || booking.payout_status === "included")) {
     await admin
       .from("payouts" as "trips")
       .update({ needs_reconciliation: true } as never)
@@ -970,6 +971,40 @@ export async function cancelBooking(bookingId: number) {
       }
     } catch (err) {
       console.error("[email] failed to send cancellation email", err);
+    }
+
+    if (wasInIncludedPayout && ADMIN_EMAIL) {
+      try {
+        let organizerName = "Unknown";
+        if (trip.organizer_id) {
+          const { data: org } = await admin
+            .from("organizers")
+            .select("display_name, full_name")
+            .eq("id", trip.organizer_id)
+            .maybeSingle();
+          organizerName = org?.display_name ?? org?.full_name ?? "Unknown";
+        }
+        const amountInPayout = booking.payment_option === "downpayment" && booking.amount_due != null
+          ? booking.amount_due
+          : (booking.total_amount ?? 0);
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: ADMIN_EMAIL,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `[Admin] Booking cancelled after payout created — review before remitting`,
+          html: `
+            <p>A booking was cancelled after its payout record was created but before remittance. <strong>Do not remit this payout until you have adjusted the amounts.</strong></p>
+            <p><strong>Booking ID:</strong> ${bookingId}</p>
+            <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
+            <p><strong>Organizer:</strong> ${escapeHtml(organizerName)}</p>
+            <p><strong>Participant:</strong> ${escapeHtml(booking.full_name)} (${escapeHtml(booking.email)})</p>
+            <p><strong>Amount in payout:</strong> ${fmtCurrency(amountInPayout)}</p>
+            <p>The payout has been flagged for reconciliation in the admin dashboard.</p>
+          `,
+        });
+      } catch (payoutAlertErr) {
+        console.error("[email] failed to send included payout cancellation alert", payoutAlertErr);
+      }
     }
   }
 
