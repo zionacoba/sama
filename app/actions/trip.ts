@@ -20,6 +20,29 @@ function slugify(title: string): string {
     .slice(0, 80);
 }
 
+const MONTHS = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+
+function buildBaseSlug(title: string, dateStart: string): string {
+  const base = slugify(title);
+  if (dateStart === "2099-12-31") return base;
+  const d = new Date(dateStart + "T00:00:00");
+  return `${base}-${MONTHS[d.getMonth()]}-${d.getFullYear()}`;
+}
+
+type SupabaseClientForSlug = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+async function makeUniqueSlug(base: string, client: SupabaseClientForSlug, excludeId?: number): Promise<string> {
+  let candidate = base;
+  for (let suffix = 2; ; suffix++) {
+    const query = client.from("trips").select("id").eq("slug", candidate).limit(1);
+    const { data } = excludeId !== undefined
+      ? await query.neq("id", excludeId).maybeSingle()
+      : await query.maybeSingle();
+    if (!data) return candidate;
+    candidate = `${base}-${suffix}`;
+  }
+}
+
 export async function createTrip(
   _prevState: { error: string } | { success: true; slug: string; tripId: string | number; warning?: string } | null,
   formData: FormData,
@@ -177,7 +200,7 @@ export async function createTrip(
   const effectivePaymentType = safePrice === 0 ? "full" : payment_type;
   const effectiveMinDownpayment = safePrice === 0 ? null : min_downpayment;
 
-  const slug = `${slugify(title)}-${Date.now().toString(36)}`;
+  const slug = await makeUniqueSlug(buildBaseSlug(title, safeDateStart), supabase);
 
   const { data: insertedRow, error } = await supabase.from("trips").insert({
     title,
@@ -469,10 +492,18 @@ export async function updateTrip(
   const effectivePaymentType = safePrice === 0 ? "full" : payment_type;
   const effectiveMinDownpayment = safePrice === 0 ? null : min_downpayment;
 
+  const titleChanged = title !== existing.title;
+  const startDateChanged = safeDateStart !== existing.date_start;
+  let newSlug: string | undefined;
+  if (titleChanged || startDateChanged) {
+    newSlug = await makeUniqueSlug(buildBaseSlug(title, safeDateStart), supabase, tripId);
+  }
+
   const { error } = await supabase
     .from("trips")
     .update({
       title,
+      ...(newSlug ? { slug: newSlug } : {}),
       activity_type: activity_type || null,
       destination: destination || null,
       difficulty: difficulty || null,
@@ -639,11 +670,12 @@ export async function updateTrip(
 
   revalidatePath("/trips");
   revalidatePath(`/trips/${existing.slug}`);
+  if (newSlug) revalidatePath(`/trips/${newSlug}`);
   revalidatePath("/organizer/dashboard");
 
   return {
     success: true as const,
-    slug: existing.slug,
+    slug: newSlug ?? existing.slug,
     ...(saveWarning ? { warning: saveWarning } : {}),
   };
 }
