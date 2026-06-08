@@ -198,13 +198,16 @@ export async function rejectOrganizer(id: string): Promise<void> {
       const trip = tripMap.get(booking.trip_id);
       if (!trip) continue;
       const refundResult = refundResultMap.get(booking.id);
-      const refundSucceeded = refundResult?.initial?.success === true;
+      const initialSucceeded = refundResult?.initial?.success === true;
+      const balanceSucceeded = refundResult?.balance?.success === true || !refundResult?.balance;
       const hasPaid = !!booking.paymongo_payment_id;
       const refundLine = !hasPaid
         ? `<p>If you have any questions, please contact us at <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`
-        : (refundSucceeded
-            ? `<p>A full refund of your payment has been processed and will reflect within 24 hours.</p>`
-            : `<p>Sama will process your refund manually within 3–5 business days. If you haven't received it after that time, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${booking.id}</strong></p>`);
+        : (initialSucceeded && balanceSucceeded
+            ? `<p>A full refund of your payment has been processed and will reflect automatically within 3–5 business days.</p>`
+            : (initialSucceeded && !balanceSucceeded
+                ? `<p>Your downpayment has been refunded. Your balance payment could not be refunded automatically — Sama will process it manually within 3–5 business days.</p>`
+                : `<p>Sama will process your refund manually within 3–5 business days. If you haven't received it after that time, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${booking.id}</strong></p>`));
       try {
         await resend.emails.send({
           from: FROM_ADDRESS,
@@ -317,6 +320,7 @@ export type PendingPayout = {
     bank_account_number: string | null;
     bank_account_name: string | null;
   } | null;
+  needsReconciliation: boolean;
 };
 
 export type PayoutHistoryEntry = {
@@ -345,7 +349,7 @@ export async function getPendingPayouts(): Promise<{
   // Payouts already created but not yet remitted.
   const { data: pendingRaw } = await admin
     .from("payouts" as "trips")
-    .select("id, organizer_id, total_amount, platform_commission, net_amount, booking_ids, created_at, payout_destination, organizer:organizers(full_name, display_name, email)")
+    .select("id, organizer_id, total_amount, platform_commission, net_amount, booking_ids, created_at, payout_destination, needs_reconciliation, organizer:organizers(full_name, display_name, email)")
     .eq("status", "pending")
     .order("created_at", { ascending: false }) as unknown as {
       data: Array<{
@@ -357,6 +361,7 @@ export async function getPendingPayouts(): Promise<{
         booking_ids: number[];
         created_at: string;
         payout_destination: PendingPayout["payoutDestination"] | null;
+        needs_reconciliation: boolean | null;
         organizer: { full_name: string; display_name: string | null; email: string } | null;
       }> | null;
     };
@@ -372,6 +377,7 @@ export async function getPendingPayouts(): Promise<{
     bookingCount: p.booking_ids?.length ?? 0,
     createdAt: p.created_at,
     payoutDestination: p.payout_destination ?? null,
+    needsReconciliation: p.needs_reconciliation ?? false,
   }));
 
   // Confirmed bookings from past trips not yet included in any payout.

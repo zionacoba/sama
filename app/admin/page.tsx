@@ -291,6 +291,14 @@ export default async function AdminPage({ searchParams }: PageProps) {
       ])
     : [null, null, null, null, null, null];
 
+  const summaryHasError = !!(
+    summaryConfirmedBookings?.error ||
+    summaryGmvRows?.error ||
+    summaryActiveOrganizers?.error ||
+    summaryPendingOrganizers?.error ||
+    summaryActiveTrips?.error ||
+    summaryPendingReviews?.error
+  );
   const summaryGmv = (summaryGmvRows?.data ?? []).reduce((sum: number, b: { total_amount: number }) => sum + (b.total_amount ?? 0), 0);
   const summarySamaRevenue = (summaryGmvRows?.data ?? []).reduce((sum: number, b: { platform_commission: number }) => sum + (b.platform_commission ?? 0), 0);
 
@@ -401,34 +409,39 @@ export default async function AdminPage({ searchParams }: PageProps) {
         {/* ── Summary tab ── */}
         {activeTab === "summary" && (
           <section className="mt-8">
+            {summaryHasError && (
+              <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Some statistics could not be loaded. Refresh to try again.
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               <StatCard
                 label="Confirmed bookings"
-                value={(summaryConfirmedBookings?.count ?? 0).toLocaleString("en-PH")}
+                value={summaryConfirmedBookings?.error ? "—" : (summaryConfirmedBookings?.count ?? 0).toLocaleString("en-PH")}
               />
               <StatCard
                 label="Total GMV"
-                value={formatCurrency(summaryGmv)}
+                value={summaryGmvRows?.error ? "—" : formatCurrency(summaryGmv)}
               />
               <StatCard
                 label="Sama revenue"
-                value={formatCurrency(summarySamaRevenue)}
+                value={summaryGmvRows?.error ? "—" : formatCurrency(summarySamaRevenue)}
               />
               <StatCard
                 label="Active organizers"
-                value={(summaryActiveOrganizers?.count ?? 0).toLocaleString("en-PH")}
+                value={summaryActiveOrganizers?.error ? "—" : (summaryActiveOrganizers?.count ?? 0).toLocaleString("en-PH")}
               />
               <StatCard
                 label="Pending applications"
-                value={(summaryPendingOrganizers?.count ?? 0).toLocaleString("en-PH")}
+                value={summaryPendingOrganizers?.error ? "—" : (summaryPendingOrganizers?.count ?? 0).toLocaleString("en-PH")}
               />
               <StatCard
                 label="Active trips"
-                value={(summaryActiveTrips?.count ?? 0).toLocaleString("en-PH")}
+                value={summaryActiveTrips?.error ? "—" : (summaryActiveTrips?.count ?? 0).toLocaleString("en-PH")}
               />
               <StatCard
                 label="Pending reviews"
-                value={(summaryPendingReviews?.count ?? 0).toLocaleString("en-PH")}
+                value={summaryPendingReviews?.error ? "—" : (summaryPendingReviews?.count ?? 0).toLocaleString("en-PH")}
               />
             </div>
           </section>

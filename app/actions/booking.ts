@@ -813,12 +813,15 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   if (newAmountDue !== null) updatePayload.amount_due = newAmountDue;
   if (newCommission !== null) updatePayload.platform_commission = newCommission;
 
-  const { error: updateError } = await admin
+  const { data: updatedRows, error: updateError } = await admin
     .from("bookings")
     .update(updatePayload)
-    .eq("id", bookingId);
+    .eq("id", bookingId)
+    .eq("slots", originalSlots)
+    .select("id");
 
   if (updateError) return { error: updateError.message };
+  if (!updatedRows || updatedRows.length === 0) return { error: "Your booking was modified by another request. Please refresh and try again." };
 
   await admin.rpc("restore_slot", {
     p_trip_id: booking.trip_id,

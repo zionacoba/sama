@@ -53,6 +53,11 @@ export function PendingPayoutCard({ payout }: { payout: PendingPayout }) {
 
   return (
     <div className="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/60 shadow-sm">
+      {payout.needsReconciliation && (
+        <div className="border-b border-amber-300 bg-amber-100 px-5 py-3 text-sm font-medium text-amber-900">
+          ⚠️ One or more bookings in this payout were cancelled after the payout was created. Review before remitting.
+        </div>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-amber-100 px-5 py-4">
         <div>
           <p className="font-semibold text-stone-900">{payout.organizerName}</p>
