@@ -43,10 +43,10 @@ export function ApplyForm({
         </p>
       )}
 
-      <p className="text-sm text-gray-600 mb-2">
+      <p className="text-sm text-stone-600 mb-2">
         This takes about 5 minutes. I personally review every application and will be in touch within a few days.
       </p>
-      <p className="text-xs text-gray-500 mb-4">Fields marked with <span className="text-red-500">*</span> are required.</p>
+      <p className="text-xs text-stone-500 mb-4">Fields marked with <span className="text-red-500">*</span> are required.</p>
 
       <div>
         <label htmlFor="full_name" className={labelClass}>

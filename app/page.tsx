@@ -179,7 +179,7 @@ export default async function Home() {
           </div>
           <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
           <ul className="flex gap-4 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-            {trips.map((trip) => (
+            {trips.map((trip, index) => (
               <li key={trip.id ?? trip.title} className="w-[75vw] shrink-0 snap-start sm:w-auto">
                 <Link
                   href={`/trips/${trip.slug}`}
@@ -195,6 +195,7 @@ export default async function Home() {
                         className="object-cover"
                         sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 75vw"
                         quality={80}
+                        priority={index < 4}
                       />
                     )}
                   </div>
@@ -229,31 +230,31 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="py-16 bg-white border-t border-gray-100">
+        <section className="py-16 bg-white border-t border-stone-100">
           <div className="max-w-4xl mx-auto px-4 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">How to join a trip</h2>
-            <p className="text-gray-500 mb-12">Booking your next adventure takes less than 5 minutes.</p>
+            <h2 className="text-2xl font-bold text-stone-900 mb-2">How to join a trip</h2>
+            <p className="text-stone-500 mb-12">Booking your next adventure takes less than 5 minutes.</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
               <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xl font-bold mb-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl font-bold mb-4">
                   1
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Find a trip</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">Browse trips by activity, difficulty, or region and find one that fits your schedule.</p>
+                <h3 className="font-semibold text-stone-900 mb-2">Find a trip</h3>
+                <p className="text-sm text-stone-500 leading-relaxed">Browse trips by activity, difficulty, or region and find one that fits your schedule.</p>
               </div>
               <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xl font-bold mb-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl font-bold mb-4">
                   2
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Book and pay via GCash</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">Fill in your details and pay securely online via GCash or QR Ph.</p>
+                <h3 className="font-semibold text-stone-900 mb-2">Book and pay via GCash</h3>
+                <p className="text-sm text-stone-500 leading-relaxed">Fill in your details and pay securely online via GCash or QR Ph.</p>
               </div>
               <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xl font-bold mb-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl font-bold mb-4">
                   3
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Get your confirmation</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">You'll receive a confirmation email right away. Show up ready, everything else is handled.</p>
+                <h3 className="font-semibold text-stone-900 mb-2">Get your confirmation</h3>
+                <p className="text-sm text-stone-500 leading-relaxed">You'll receive a confirmation email right away. Show up ready, everything else is handled.</p>
               </div>
             </div>
           </div>
