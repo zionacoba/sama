@@ -4,7 +4,7 @@ import { useActionState, useRef, useState, useTransition } from "react";
 import { createTrip } from "@/app/actions/trip";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { PhotoUploader, type PhotoItem } from "@/app/components/photo-uploader";
-import { DifficultyInfoButton } from "@/app/components/difficulty-info";
+import { DifficultyInfoButton, RecurringTemplateInfoButton } from "@/app/components/difficulty-info";
 import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
 
 const inputClass =
@@ -40,18 +40,20 @@ export function TripForm({
   defaultValues,
   preselectedTemplateId,
   fromTemplateName = null,
+  defaultIsTemplate = false,
 }: {
   destinations?: string[];
   templates?: { id: string | number; title: string }[];
   defaultValues?: TripDefaults | null;
   preselectedTemplateId?: string;
   fromTemplateName?: string | null;
+  defaultIsTemplate?: boolean;
 }) {
   const [state, action] = useActionState(createTrip, null);
   const [isPending, startTransition] = useTransition();
   const [photoItems, setPhotoItems] = useState<PhotoItem[]>([]);
   type MeetingPoint = { location: string; time: string };
-  const [isTemplate, setIsTemplate] = useState(false);
+  const [isTemplate, setIsTemplate] = useState(defaultIsTemplate);
   const [meetingPoints, setMeetingPoints] = useState<MeetingPoint[]>([{ location: "", time: "" }]);
   const [duration, setDuration] = useState<string>(defaultValues?.duration ?? "");
   const [dateStart, setDateStart] = useState<string>("");
@@ -207,8 +209,9 @@ export function TripForm({
             className="h-4 w-4 rounded border-stone-300 text-trailhead accent-trailhead"
           />
           <input type="hidden" name="is_template" value={isTemplate.toString()} />
-          <span className="text-sm font-medium text-stone-700">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-stone-700">
             This is a recurring trip template
+            <RecurringTemplateInfoButton />
           </span>
         </label>
         <p className="ml-7 mt-0.5 text-xs text-stone-500">

@@ -4,7 +4,7 @@ import { useActionState, useRef, useState, useTransition } from "react";
 import { updateTrip } from "@/app/actions/trip";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { PhotoUploader, type PhotoItem } from "@/app/components/photo-uploader";
-import { DifficultyInfoButton } from "@/app/components/difficulty-info";
+import { DifficultyInfoButton, RecurringTemplateInfoButton } from "@/app/components/difficulty-info";
 import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
 
 const inputClass =
@@ -207,8 +207,9 @@ export function EditTripForm({
             className="h-4 w-4 rounded border-stone-300 text-trailhead accent-trailhead"
           />
           <input type="hidden" name="is_template" value={isTemplate.toString()} />
-          <span className="text-sm font-medium text-stone-700">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-stone-700">
             This is a recurring trip template
+            <RecurringTemplateInfoButton />
           </span>
         </label>
         <p className="ml-7 mt-0.5 text-xs text-stone-500">

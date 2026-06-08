@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { TripForm } from "./trip-form";
 
-type PageProps = { searchParams: Promise<{ template_id?: string }> };
+type PageProps = { searchParams: Promise<{ template_id?: string; template?: string }> };
 
 export default async function NewTripPage({ searchParams }: PageProps) {
   const supabase = await createSupabaseServerClient();
@@ -23,7 +23,7 @@ export default async function NewTripPage({ searchParams }: PageProps) {
     redirect("/apply");
   }
 
-  const { template_id } = await searchParams;
+  const { template_id, template } = await searchParams;
 
   const [{ data: destinationsData }, { data: templatesData }, { data: templateData }] =
     await Promise.all([
@@ -90,6 +90,7 @@ export default async function NewTripPage({ searchParams }: PageProps) {
           defaultValues={fromTemplate}
           preselectedTemplateId={fromTemplate ? String(fromTemplate.id) : undefined}
           fromTemplateName={fromTemplate?.title ?? null}
+          defaultIsTemplate={template === "true"}
         />
       </main>
     </div>

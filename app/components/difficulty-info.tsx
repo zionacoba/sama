@@ -53,6 +53,56 @@ const JOINER: Entry[] = [
   },
 ];
 
+export function RecurringTemplateInfoButton() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onMouseDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative inline-flex items-center">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="How recurring templates work"
+        className="inline-flex items-center justify-center text-stone-400 hover:text-stone-600 transition-colors"
+      >
+        <span
+          aria-hidden="true"
+          className="inline-flex h-[15px] w-[15px] select-none items-center justify-center rounded-full border border-current text-[9px] font-bold leading-none"
+        >
+          i
+        </span>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-stone-200 bg-white p-4 shadow-lg">
+          <p className="mb-3 text-xs font-semibold text-stone-700">
+            Use a template if you run this trip regularly — like every month or every weekend.
+          </p>
+          <p className="mb-2 text-xs text-stone-500">Here&apos;s how it works:</p>
+          <ol className="mb-3 list-decimal space-y-1 pl-4 text-xs text-stone-600">
+            <li>Save this as a template (no date needed)</li>
+            <li>From your dashboard, create a &ldquo;run&rdquo; each time you want to list a new date</li>
+            <li>Each run inherits all your trip details — just add the date, price, and slots</li>
+          </ol>
+          <p className="text-xs text-stone-400">
+            Templates never appear on the public listing. Only runs do.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function DifficultyInfoButton({ variant }: { variant: "organizer" | "joiner" }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);

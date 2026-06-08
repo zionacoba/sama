@@ -305,14 +305,16 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
           {activeView === "templates" && (
             <div className="mt-4 space-y-3">
               {templateGroups.length === 0 ? (
-                <div className="rounded-2xl border border-stone-200 bg-white px-6 py-16 text-center">
-                  <p className="text-sm text-stone-500">No templates yet.</p>
-                  <p className="mt-1 text-xs text-stone-400">Create a trip and check "This is a recurring trip template" to get started.</p>
+                <div className="rounded-2xl border border-stone-200 bg-white px-6 py-14 text-center">
+                  <p className="text-base font-semibold text-stone-800">No templates yet</p>
+                  <p className="mx-auto mt-2 max-w-sm text-sm text-stone-500">
+                    Templates are reusable trip blueprints. If you run the same trip regularly — like a monthly Pulag climb or a weekly freediving session — save it as a template once, then create a new run each time you want to list a specific date.
+                  </p>
                   <Link
-                    href="/organizer/trips/new"
-                    className="mt-4 inline-block rounded-xl bg-trailhead px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark"
+                    href="/organizer/trips/new?template=true"
+                    className="mt-6 inline-block rounded-xl bg-trailhead px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark"
                   >
-                    + New template
+                    Create a template
                   </Link>
                 </div>
               ) : (
