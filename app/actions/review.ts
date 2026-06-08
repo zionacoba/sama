@@ -87,6 +87,7 @@ export async function submitReview(
     full_name: fullName,
     rating,
     body,
+    approved: false,
     ...(bookingId ? { booking_id: bookingId } : {}),
   });
 
@@ -114,7 +115,7 @@ export async function submitReview(
             <p>Hi ${escapeHtml(organizer.display_name ?? organizer.full_name ?? "Organizer")},</p>
             <p>${escapeHtml(fullName ?? "A participant")} left a <strong>${rating}-star review</strong> ${stars} for <strong>${escapeHtml(tripForDate.title)}</strong>:</p>
             <blockquote style="border-left:3px solid #ccc;margin:0;padding:0 1em;color:#555;">${escapeHtml(excerpt)}</blockquote>
-            <p><a href="${siteUrl}/trips/${escapeHtml(tripForDate.slug)}">View the full review on the trip page →</a></p>
+            <p>The review is pending admin approval and will go live once approved.</p>
             <p>— The Sama Team</p>
           `,
         });
@@ -122,6 +123,29 @@ export async function submitReview(
     }
   } catch (emailErr) {
     console.error("[email] failed to notify organizer of new review", emailErr);
+  }
+
+  // Alert admin so the review gets noticed quickly.
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
+  if (ADMIN_EMAIL) {
+    try {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
+      const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: ADMIN_EMAIL,
+        replyTo: REPLY_TO_ADDRESS,
+        subject: `[Admin] New review pending approval — ${tripForDate.title}`,
+        html: `
+          <p><strong>${escapeHtml(fullName ?? "A participant")}</strong> submitted a <strong>${rating}-star review</strong> ${stars} for <strong>${escapeHtml(tripForDate.title)}</strong>:</p>
+          <blockquote style="border-left:3px solid #ccc;margin:0;padding:0 1em;color:#555;">${escapeHtml(body.length > 400 ? body.slice(0, 397) + "…" : body)}</blockquote>
+          <p>Approve it from the <a href="${siteUrl}/admin?tab=reviews">admin Reviews tab</a>.</p>
+          <p>— Sama System</p>
+        `,
+      });
+    } catch (adminEmailErr) {
+      console.error("[email] failed to send admin review alert", adminEmailErr);
+    }
   }
 
   // Only redirect when submitted from the trip page (no booking_id)

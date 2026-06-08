@@ -252,6 +252,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
           .from("reviews")
           .select("id, full_name, rating, body, created_at, trips(title, date_start)")
           .eq("organizer_id", tripData.organizer_id)
+          .eq("approved", true)
           .order("created_at", { ascending: false })
           .limit(3)
       : Promise.resolve({ data: [] }),
@@ -260,6 +261,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
           .from("reviews")
           .select("id", { count: "exact", head: true })
           .eq("organizer_id", tripData.organizer_id)
+          .eq("approved", true)
       : Promise.resolve({ count: 0 }),
     tripData.organizer_id
       ? createSupabaseAdminClient().from("organizers").select("display_name, full_name, bio, photo_url, facebook_url, social_links, is_founding_partner").eq("id", tripData.organizer_id).maybeSingle()

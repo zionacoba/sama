@@ -629,6 +629,90 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   redirect("/admin?tab=payouts");
 }
 
+export async function updatePayoutReference(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const admin = createSupabaseAdminClient();
+
+  const payoutId = formData.get("payoutId") as string;
+  const remittanceReference = (formData.get("remittanceReference") as string)?.trim();
+
+  if (!payoutId || !remittanceReference) redirect("/admin?tab=payouts&payoutError=missing");
+
+  const { error } = await (admin
+    .from("payouts" as "trips")
+    .update({ remittance_reference: remittanceReference })
+    .eq("id", payoutId)
+    .eq("status", "remitted") as unknown as Promise<{ error: { message: string } | null }>);
+
+  if (error) {
+    console.error("[updatePayoutReference] failed:", error.message);
+    redirect("/admin?tab=payouts&payoutError=create");
+  }
+
+  revalidatePath("/admin");
+  redirect("/admin?tab=payouts");
+}
+
+// ─── REVIEW ACTIONS ───────────────────────────────────────────────────────────
+
+export type PendingReview = {
+  id: number;
+  fullName: string | null;
+  rating: number;
+  body: string;
+  createdAt: string;
+  tripTitle: string;
+  tripSlug: string;
+};
+
+export async function getPendingReviews(): Promise<PendingReview[]> {
+  await requireAdmin();
+  const admin = createSupabaseAdminClient();
+
+  const { data } = await admin
+    .from("reviews")
+    .select("id, full_name, rating, body, created_at, trips(title, slug)")
+    .eq("approved", false)
+    .order("created_at", { ascending: false }) as unknown as {
+      data: Array<{
+        id: number;
+        full_name: string | null;
+        rating: number;
+        body: string;
+        created_at: string;
+        trips: { title: string; slug: string } | null;
+      }> | null;
+    };
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    fullName: r.full_name,
+    rating: r.rating,
+    body: r.body,
+    createdAt: r.created_at,
+    tripTitle: r.trips?.title ?? "Unknown trip",
+    tripSlug: r.trips?.slug ?? "",
+  }));
+}
+
+export async function approveReview(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const admin = createSupabaseAdminClient();
+
+  const reviewId = formData.get("reviewId") as string;
+  if (!reviewId) redirect("/admin?tab=reviews");
+
+  await admin
+    .from("reviews")
+    .update({ approved: true })
+    .eq("id", reviewId);
+
+  revalidatePath("/admin");
+  revalidatePath("/trips", "layout");
+  revalidatePath("/organizers", "layout");
+  redirect("/admin?tab=reviews");
+}
+
 export async function markPayoutRemittedAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const admin = createSupabaseAdminClient();

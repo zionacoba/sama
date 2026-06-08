@@ -839,9 +839,12 @@ export async function cancelBooking(bookingId: number) {
     }
 
     // Calculate refund based on cancellation policy.
-    const daysUntilTrip = Math.floor(
-      (new Date(trip.date_start).getTime() - Date.now()) / 86_400_000,
-    );
+    // Compare calendar dates in Philippine time so boundary days (e.g. cancelling
+    // at 6am on the 7th calendar day) are counted correctly and not floored to 6.
+    const todayManilaStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+    const todayManila = new Date(todayManilaStr);
+    const tripDay = new Date(trip.date_start);
+    const daysUntilTrip = Math.round((tripDay.getTime() - todayManila.getTime()) / 86_400_000);
     const amountPaid =
       booking.payment_option === "downpayment" && booking.amount_due != null
         ? booking.amount_due

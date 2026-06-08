@@ -9,18 +9,22 @@ import {
   getPendingPayouts,
   getPayoutHistory,
   createPayoutAction,
+  getPendingReviews,
+  approveReview,
   type PendingPayoutOrganizer,
   type PayoutHistoryEntry,
+  type PendingReview,
 } from "@/app/actions/admin";
 import { PendingPayoutCard } from "./pending-payout-card";
 import { OrganizerApproveButton } from "./organizer-approve-button";
+import { EditRemittanceReferenceButton } from "./edit-remittance-reference-button";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 const PAGE_SIZE = 20;
 
 type PageProps = {
-  searchParams: Promise<{ tab?: string; page?: string; commissionError?: string; payoutError?: string; orgFilter?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string; commissionError?: string; payoutError?: string; orgFilter?: string; reviewError?: string }>;
 };
 
 type OrganizerApplication = {
@@ -211,7 +215,10 @@ function PayoutHistoryTable({ history }: { history: PayoutHistoryEntry[] }) {
                     <td className="px-4 py-3 font-medium text-stone-900">{p.organizerName}</td>
                     <td className="px-4 py-3 text-right font-semibold text-trailhead">{formatCurrency(p.netAmount)}</td>
                     <td className="px-4 py-3 text-right text-stone-500">{formatCurrency(p.platformCommission)}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-stone-700">{p.remittanceReference ?? "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-stone-700">
+                      {p.remittanceReference ?? "—"}
+                      <EditRemittanceReferenceButton payoutId={p.id} currentReference={p.remittanceReference} />
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-stone-600">{formatCreatedAt(p.remittedAt)}</td>
                     <td className="px-4 py-3 text-right text-stone-700">{p.bookingCount}</td>
                     <td className="max-w-[180px] truncate px-4 py-3 text-xs text-stone-500" title={p.notes ?? ""}>{p.notes ?? "—"}</td>
@@ -234,8 +241,8 @@ function PayoutHistoryTable({ history }: { history: PayoutHistoryEntry[] }) {
 }
 
 export default async function AdminPage({ searchParams }: PageProps) {
-  const { tab = "bookings", page: pageParam, commissionError, payoutError, orgFilter = "pending" } = await searchParams;
-  const activeTab = tab === "organizers" ? "organizers" : tab === "payouts" ? "payouts" : "bookings";
+  const { tab = "bookings", page: pageParam, commissionError, payoutError, orgFilter = "pending", reviewError } = await searchParams;
+  const activeTab = tab === "organizers" ? "organizers" : tab === "payouts" ? "payouts" : tab === "reviews" ? "reviews" : "bookings";
   const page = Math.max(1, Number(pageParam) || 1);
 
   const authClient = await createSupabaseServerClient();
@@ -282,6 +289,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
   const [pendingPayouts, payoutHistory] = activeTab === "payouts"
     ? await Promise.all([getPendingPayouts(), getPayoutHistory()])
     : [null, null];
+
+  // Reviews data fetched only when on that tab.
+  const pendingReviews: PendingReview[] = activeTab === "reviews" ? await getPendingReviews() : [];
 
   const bookings = (bookingData ?? []) as unknown as Booking[];
   const totalBookings = bookingCount ?? 0;
@@ -346,6 +356,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
           </Link>
           <Link href="/admin?tab=payouts" className={tabClass("payouts")}>
             Payouts
+          </Link>
+          <Link href="/admin?tab=reviews" className={tabClass("reviews")}>
+            Reviews
           </Link>
         </div>
 
@@ -630,6 +643,53 @@ export default async function AdminPage({ searchParams }: PageProps) {
               <p className="mt-4 text-sm text-stone-500">
                 {orgCounts.pending} pending · {orgCounts.all} total
               </p>
+            )}
+          </section>
+        )}
+
+        {/* ── Reviews tab ── */}
+        {activeTab === "reviews" && (
+          <section className="mt-8">
+            {reviewError && (
+              <p role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                Failed to approve review. Please try again.
+              </p>
+            )}
+            <div className="mb-4">
+              <h2 className="text-xl font-bold text-stone-900">Pending Reviews</h2>
+              <p className="mt-0.5 text-sm text-stone-500">Reviews submitted but not yet approved — they won't appear publicly until approved.</p>
+            </div>
+            {pendingReviews.length === 0 ? (
+              <div className="rounded-2xl border border-stone-200 bg-white px-6 py-12 text-center shadow-sm">
+                <p className="text-stone-500">No reviews pending approval.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {pendingReviews.map((review) => (
+                  <div key={review.id} className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                    <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-stone-900">{review.fullName ?? "Anonymous"}</span>
+                          <span className="text-amber-500">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
+                          <span className="text-xs text-stone-400">on {review.tripTitle}</span>
+                        </div>
+                        <p className="mt-2 text-sm leading-relaxed text-stone-700">{review.body}</p>
+                        <p className="mt-1 text-xs text-stone-400">{formatCreatedAt(review.createdAt)}</p>
+                      </div>
+                      <form action={approveReview}>
+                        <input type="hidden" name="reviewId" value={review.id} />
+                        <button
+                          type="submit"
+                          className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                        >
+                          Approve
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </section>
         )}

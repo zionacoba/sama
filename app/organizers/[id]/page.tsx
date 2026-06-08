@@ -119,6 +119,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
       .from("reviews")
       .select("id, full_name, rating, body, created_at, trips(title, slug, date_start)")
       .eq("organizer_id", id)
+      .eq("approved", true)
       .order("created_at", { ascending: false }),
     user
       ? admin.from("organizers").select("id").eq("user_id", user.id).maybeSingle()

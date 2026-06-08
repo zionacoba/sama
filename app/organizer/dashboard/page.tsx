@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { DashboardFilters } from "./dashboard-filters";
 import { TripRow, TripRunRow, type OrganizerTrip, type TripCounts } from "./trip-row";
 
@@ -94,9 +95,82 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     page: pageParam,
   } = resolvedParams;
 
-  const activeView = tab === "templates" ? "templates" : "trips";
+  const activeView = tab === "templates" ? "templates" : tab === "earnings" ? "earnings" : "trips";
   const page = Math.max(1, parseInt(pageParam ?? "1", 10));
   const now = new Date().toISOString();
+
+  // --- Earnings tab data (fetched only when needed) ---
+  type UnpaidBookingRow = { id: number; tripTitle: string; slots: number; netAmount: number };
+  type PayoutHistoryRow = { id: string; remittedAt: string; netAmount: number; bookingCount: number; remittanceReference: string | null };
+  let pendingEarningsTotal = 0;
+  let unpaidBookingRows: UnpaidBookingRow[] = [];
+  let payoutHistoryRows: PayoutHistoryRow[] = [];
+  let lifetimeEarnings = 0;
+
+  if (activeView === "earnings") {
+    const admin = createSupabaseAdminClient();
+    const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+
+    const [{ data: unpaidRaw }, { data: payoutsRaw }] = await Promise.all([
+      admin
+        .from("bookings")
+        .select("id, slots, total_amount, amount_due, platform_commission, payment_option, balance_collected, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
+        .eq("status", "confirmed")
+        .eq("payout_status", "unpaid") as unknown as Promise<{
+          data: Array<{
+            id: number;
+            slots: number;
+            total_amount: number;
+            amount_due: number | null;
+            platform_commission: number | null;
+            payment_option: string;
+            balance_collected: boolean;
+            trip: { title: string; date_start: string; organizer_id: string } | null;
+          }> | null;
+        }>,
+      admin
+        .from("payouts" as "trips")
+        .select("id, net_amount, booking_ids, remitted_at, remittance_reference")
+        .eq("organizer_id", organizer.id)
+        .eq("status", "remitted")
+        .order("remitted_at", { ascending: false }) as unknown as Promise<{
+          data: Array<{
+            id: string;
+            net_amount: number;
+            booking_ids: number[];
+            remitted_at: string;
+            remittance_reference: string | null;
+          }> | null;
+        }>,
+    ]);
+
+    // Filter unpaid bookings to this organizer only, from past trips.
+    const myUnpaid = (unpaidRaw ?? []).filter(
+      (b) => b.trip != null && b.trip.organizer_id === organizer.id && b.trip.date_start < todayStr,
+    );
+
+    for (const b of myUnpaid) {
+      const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
+      const gross = isDownpaymentOnly ? Number(b.amount_due ?? 0) : Number(b.total_amount);
+      const fullCommission = Number(b.platform_commission ?? 0);
+      const commission = isDownpaymentOnly && Number(b.total_amount) > 0
+        ? Math.round((Number(b.amount_due ?? 0) / Number(b.total_amount)) * fullCommission * 100) / 100
+        : fullCommission;
+      const net = Math.round((gross - commission) * 100) / 100;
+      pendingEarningsTotal = Math.round((pendingEarningsTotal + net) * 100) / 100;
+      unpaidBookingRows.push({ id: b.id, tripTitle: b.trip!.title, slots: b.slots, netAmount: net });
+    }
+
+    payoutHistoryRows = (payoutsRaw ?? []).map((p) => ({
+      id: p.id,
+      remittedAt: p.remitted_at,
+      netAmount: Number(p.net_amount),
+      bookingCount: p.booking_ids?.length ?? 0,
+      remittanceReference: p.remittance_reference,
+    }));
+
+    lifetimeEarnings = payoutHistoryRows.reduce((s, p) => Math.round((s + p.netAmount) * 100) / 100, 0);
+  }
 
   // --- Trips tab filtering ---
   let filtered = [...regularTrips];
@@ -220,6 +294,14 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                 </Link>
               );
             })}
+            <Link
+              href="/organizer/dashboard?tab=earnings"
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                activeView === "earnings" ? "bg-trailhead text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
+              }`}
+            >
+              Earnings
+            </Link>
           </div>
 
           {/* ── Trips tab ── */}
@@ -362,6 +444,106 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                   </div>
                 ))
               )}
+            </div>
+          )}
+
+          {/* ── Earnings tab ── */}
+          {activeView === "earnings" && (
+            <div className="mt-6 space-y-8">
+              {/* Pending earnings */}
+              <div>
+                <h2 className="text-lg font-bold text-stone-900">Pending Earnings</h2>
+                <p className="mt-0.5 text-sm text-stone-500">Confirmed bookings from completed trips not yet remitted to you</p>
+                <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-100 bg-stone-50 px-5 py-4">
+                    <div>
+                      <p className="text-2xl font-bold text-trailhead">
+                        {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(pendingEarningsTotal)}
+                      </p>
+                      <p className="text-sm text-stone-500">pending payout</p>
+                    </div>
+                    <div className="text-right text-sm text-stone-500">
+                      <p className="font-medium text-stone-700">Estimated next payout</p>
+                      <p>
+                        {(() => {
+                          const d = new Date();
+                          const day = d.getDay();
+                          const daysUntilTuesday = (2 - day + 7) % 7 || 7;
+                          const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + daysUntilTuesday);
+                          return new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(next);
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                  {unpaidBookingRows.length === 0 ? (
+                    <p className="px-5 py-8 text-center text-sm text-stone-500">No pending earnings yet.</p>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-stone-100 text-xs font-semibold uppercase tracking-wide text-stone-400">
+                          <th className="px-5 py-2.5 text-left">Trip</th>
+                          <th className="px-5 py-2.5 text-right">Slots</th>
+                          <th className="px-5 py-2.5 text-right">Your earnings</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {unpaidBookingRows.map((b) => (
+                          <tr key={b.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
+                            <td className="px-5 py-3 text-stone-900">{b.tripTitle}</td>
+                            <td className="px-5 py-3 text-right text-stone-600">{b.slots}</td>
+                            <td className="px-5 py-3 text-right font-semibold text-trailhead">
+                              {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(b.netAmount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+
+              {/* Payout history */}
+              <div>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h2 className="text-lg font-bold text-stone-900">Payout History</h2>
+                  <p className="text-sm text-stone-500">
+                    Lifetime earnings:{" "}
+                    <span className="font-semibold text-stone-900">
+                      {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(lifetimeEarnings)}
+                    </span>
+                  </p>
+                </div>
+                <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                  {payoutHistoryRows.length === 0 ? (
+                    <p className="px-5 py-8 text-center text-sm text-stone-500">No payouts received yet.</p>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-stone-100 text-xs font-semibold uppercase tracking-wide text-stone-400">
+                          <th className="px-5 py-2.5 text-left">Date remitted</th>
+                          <th className="px-5 py-2.5 text-right">Amount received</th>
+                          <th className="px-5 py-2.5 text-right">Bookings</th>
+                          <th className="px-5 py-2.5 text-left">Reference</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {payoutHistoryRows.map((p) => (
+                          <tr key={p.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
+                            <td className="whitespace-nowrap px-5 py-3 text-stone-600">
+                              {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(p.remittedAt))}
+                            </td>
+                            <td className="px-5 py-3 text-right font-semibold text-trailhead">
+                              {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(p.netAmount)}
+                            </td>
+                            <td className="px-5 py-3 text-right text-stone-600">{p.bookingCount}</td>
+                            <td className="px-5 py-3 font-mono text-xs text-stone-700">{p.remittanceReference ?? "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
