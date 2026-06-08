@@ -85,22 +85,47 @@ export async function deleteAccount(): Promise<{ success: true } | { error: stri
     .update({ full_name: "Deleted User" })
     .eq("user_id", user.id);
 
-  // Remove organizer row if present; delete profile photos from Storage first.
+  // Remove organizer row if present; delete uploaded photos from Storage first.
   if (organizerRow) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const pathsToDelete: string[] = [];
     const org = organizerRow as { id: string; photo_url: string | null; cover_image_url: string | null };
+
+    // Delete organizer profile photo and cover image.
+    const orgPhotoPaths: string[] = [];
     for (const url of [org.photo_url, org.cover_image_url]) {
       if (url && supabaseUrl) {
         const prefix = `${supabaseUrl}/storage/v1/object/public/organizer-photos/`;
         if (url.startsWith(prefix)) {
-          pathsToDelete.push(url.slice(prefix.length));
+          orgPhotoPaths.push(url.slice(prefix.length));
         }
       }
     }
-    if (pathsToDelete.length > 0) {
-      await admin.storage.from("organizer-photos").remove(pathsToDelete);
+    if (orgPhotoPaths.length > 0) {
+      await admin.storage.from("organizer-photos").remove(orgPhotoPaths);
     }
+
+    // Delete trip photos for all trips owned by this organizer.
+    const { data: tripRows } = await admin
+      .from("trips")
+      .select("photos")
+      .eq("organizer_id", org.id);
+
+    if (tripRows && tripRows.length > 0 && supabaseUrl) {
+      const tripPhotoPrefix = `${supabaseUrl}/storage/v1/object/public/trip-photos/`;
+      const tripPhotoPaths: string[] = [];
+      for (const trip of tripRows) {
+        const photos = (trip.photos as string[] | null) ?? [];
+        for (const url of photos) {
+          if (url.startsWith(tripPhotoPrefix)) {
+            tripPhotoPaths.push(url.slice(tripPhotoPrefix.length));
+          }
+        }
+      }
+      if (tripPhotoPaths.length > 0) {
+        await admin.storage.from("trip-photos").remove(tripPhotoPaths);
+      }
+    }
+
     await admin.from("organizers").delete().eq("id", organizerRow.id);
   }
 
