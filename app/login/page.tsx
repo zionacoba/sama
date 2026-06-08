@@ -53,7 +53,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-full bg-stone-50 font-sans text-stone-900">
+    <div className="flex min-h-screen flex-col bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
           <Link
