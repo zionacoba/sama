@@ -22,12 +22,12 @@ export default async function OrganizerProfileEditPage() {
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-          <div>
-            <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight hover:opacity-90">
-              <img src="/sama-mark.svg" alt="Sama" className="h-7 w-auto" /> Sama
-            </Link>
-            <p className="mt-0.5 text-sm text-trailhead-muted">Organizer Dashboard</p>
-          </div>
+          <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight hover:opacity-90">
+            <img src="/sama-mark.svg" alt="Sama" className="h-7 w-auto brightness-0 invert" />
+            Sama
+            <span className="mx-1 font-normal text-trailhead-muted">·</span>
+            <span className="text-base font-normal text-trailhead-muted">Organizer Dashboard</span>
+          </Link>
           <Link
             href="/organizer/dashboard"
             className="text-sm font-medium text-trailhead-muted transition hover:text-white"
