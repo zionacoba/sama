@@ -26,6 +26,7 @@ type PageProps = {
 type OrganizerApplication = {
   id: string;
   full_name: string;
+  display_name: string | null;
   email: string;
   bio: string;
   phone: string;
@@ -38,6 +39,9 @@ type OrganizerApplication = {
   is_founding_partner: boolean;
   commission_rate: number | null;
   created_at: string;
+  trips_per_month: number | null;
+  operating_locations: string | null;
+  social_links: { facebook?: string | null; organizer_facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
 };
 
 type Booking = {
@@ -301,7 +305,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
       .range(from, to),
     adminClient
       .from("organizers")
-      .select("id, full_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_experience, emergency_certified, status, is_founding_partner, commission_rate, created_at")
+      .select("id, full_name, display_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_experience, emergency_certified, status, is_founding_partner, commission_rate, created_at, trips_per_month, operating_locations, social_links")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -471,137 +475,158 @@ export default async function AdminPage({ searchParams }: PageProps) {
               </p>
             )}
 
-            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-trailhead/20 bg-trailhead text-white">
-                      <th className="w-36 px-3 py-3 font-semibold">Full name</th>
-                      <th className="w-40 px-3 py-3 font-semibold">Email</th>
-                      <th className="w-28 px-3 py-3 font-semibold">Phone</th>
-                      <th className="w-14 px-3 py-3 font-semibold">FB</th>
-                      <th className="w-32 px-3 py-3 font-semibold">Bio</th>
-                      <th className="w-28 px-3 py-3 font-semibold">Activity</th>
-                      <th className="w-10 px-3 py-3 font-semibold">Exp</th>
-                      <th className="w-10 px-3 py-3 font-semibold">FA</th>
-                      <th className="w-20 px-3 py-3 font-semibold">Status</th>
-                      <th className="w-24 px-3 py-3 font-semibold">Applied</th>
-                      <th className="w-28 px-3 py-3 font-semibold">Commission</th>
-                      <th className="w-32 px-3 py-3 font-semibold">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {applications.length === 0 ? (
-                      <tr>
-                        <td colSpan={12} className="px-4 py-12 text-center text-stone-500">
-                          No applications yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      applications.map((app) => (
-                        <tr key={app.id} className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30">
-                          <td className="w-36 max-w-[9rem] truncate px-3 py-3 font-medium text-stone-900" title={app.full_name}>
-                            <a href={`/organizers/${app.id}`} target="_blank" rel="noopener noreferrer" className="hover:text-trailhead hover:underline underline-offset-2">{app.full_name}</a>
-                          </td>
-                          <td className="w-40 max-w-[10rem] truncate px-3 py-3 text-stone-600" title={app.email}>{app.email}</td>
-                          <td className="w-28 px-3 py-3 text-stone-600">{app.phone}</td>
-                          <td className="w-14 px-3 py-3">
-                            {app.facebook_url ? (
-                              <a
-                                href={app.facebook_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-trailhead underline-offset-2 hover:underline"
-                              >
-                                View
-                              </a>
-                            ) : <span className="text-stone-300">—</span>}
-                          </td>
-                          <td className="w-32 max-w-[8rem] px-3 py-3 text-stone-600">
-                            <p className="truncate text-xs" title={app.bio ?? ""}>{app.bio}</p>
-                          </td>
-                          <td className="w-28 max-w-[7rem] px-3 py-3 text-stone-600">
-                            {app.activity_types?.length
-                              ? <span className="block truncate text-xs" title={app.activity_types.join(", ")}>{app.activity_types.join(", ")}</span>
-                              : <span className="text-stone-300">—</span>}
-                          </td>
-                          <td className="w-10 px-3 py-3 text-center text-stone-700">
-                            {app.years_experience ?? <span className="text-stone-300">—</span>}
-                          </td>
-                          <td className="w-10 px-3 py-3 text-center">
-                            {app.emergency_certified
-                              ? <span className="text-emerald-600">✓</span>
-                              : <span className="text-stone-300">—</span>}
-                          </td>
-                          <td className="w-20 px-3 py-3"><StatusBadge status={app.status} /></td>
-                          <td className="w-24 whitespace-nowrap px-3 py-3 text-xs text-stone-500">
-                            {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(app.created_at))}
-                          </td>
-                          <td className="w-28 px-3 py-3">
-                            <form action={updateCommissionRate} className="flex items-center gap-1">
-                              <input type="hidden" name="organizerId" value={app.id} />
-                              <input
-                                type="number"
-                                name="ratePercent"
-                                defaultValue={Math.round((app.commission_rate ?? 0.05) * 100)}
-                                min={1}
-                                max={20}
-                                step={1}
-                                className="w-14 rounded border border-stone-200 px-1.5 py-1 text-xs text-stone-900 focus:border-trailhead focus:outline-none"
-                              />
-                              <span className="text-xs text-stone-400">%</span>
-                              <button
-                                type="submit"
-                                className="rounded bg-trailhead/10 px-2 py-1 text-xs font-semibold text-trailhead hover:bg-trailhead/20"
-                              >
-                                Save
-                              </button>
-                            </form>
-                          </td>
-                          <td className="w-32 px-3 py-3">
-                            <div className="flex flex-col gap-2">
-                              {app.status === "pending" && (
-                                <div className="flex items-center gap-2">
-                                  <form action={approveOrganizer.bind(null, app.id)}>
-                                    <button
-                                      type="submit"
-                                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
-                                    >
-                                      Approve
-                                    </button>
-                                  </form>
-                                  <form action={rejectOrganizer.bind(null, app.id)}>
-                                    <button
-                                      type="submit"
-                                      className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
-                                    >
-                                      Reject
-                                    </button>
-                                  </form>
-                                </div>
-                              )}
-                              <form action={toggleFoundingPartner}>
-                                <input type="hidden" name="id" value={app.id} />
-                                <input type="hidden" name="is_founding_partner" value={(!app.is_founding_partner).toString()} />
-                                <button
-                                  type="submit"
-                                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                                    app.is_founding_partner
-                                      ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                                      : "border border-stone-200 text-stone-500 hover:border-stone-400 hover:text-stone-700"
-                                  }`}
-                                >
-                                  {app.is_founding_partner ? "✦ Founding" : "Mark founding"}
+            <div className="space-y-3">
+              {applications.length === 0 ? (
+                <div className="rounded-2xl border border-stone-200 bg-white px-6 py-12 text-center shadow-sm">
+                  <p className="text-stone-500">No applications yet.</p>
+                </div>
+              ) : (
+                applications.map((app) => {
+                  const sl = app.social_links;
+                  const organizerFbUrl = sl?.organizer_facebook ?? sl?.facebook ?? null;
+                  return (
+                    <details key={app.id} className="group overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                      <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 hover:bg-stone-50">
+                        <span className="flex-1 min-w-0">
+                          <span className="font-semibold text-stone-900">{app.full_name}</span>
+                          {app.display_name && app.display_name !== app.full_name && (
+                            <span className="ml-2 text-sm text-stone-400">&ldquo;{app.display_name}&rdquo;</span>
+                          )}
+                        </span>
+                        <StatusBadge status={app.status} />
+                        <span className="whitespace-nowrap text-xs text-stone-400">{formatDateShort(app.created_at)}</span>
+                        <svg className="h-4 w-4 shrink-0 text-stone-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </summary>
+
+                      <div className="border-t border-stone-100 px-5 py-5">
+                        <dl className="grid grid-cols-1 gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Full name</dt>
+                            <dd className="mt-0.5 text-stone-900">{app.full_name}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Display name</dt>
+                            <dd className="mt-0.5 text-stone-900">{app.display_name || <span className="text-stone-300">—</span>}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Email</dt>
+                            <dd className="mt-0.5 text-stone-900">{app.email}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Phone</dt>
+                            <dd className="mt-0.5 text-stone-900">{app.phone || <span className="text-stone-300">—</span>}</dd>
+                          </div>
+                          <div className="sm:col-span-2 lg:col-span-3">
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Bio</dt>
+                            <dd className="mt-0.5 leading-relaxed text-stone-900">{app.bio || <span className="text-stone-300">—</span>}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Activity types</dt>
+                            <dd className="mt-0.5 text-stone-900">{app.activity_types?.length ? app.activity_types.join(", ") : <span className="text-stone-300">—</span>}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Years of experience</dt>
+                            <dd className="mt-0.5 text-stone-900">{app.years_experience ?? <span className="text-stone-300">—</span>}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Trips per month</dt>
+                            <dd className="mt-0.5 text-stone-900">{app.trips_per_month ?? <span className="text-stone-300">—</span>}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Operating locations</dt>
+                            <dd className="mt-0.5 text-stone-900">{app.operating_locations || <span className="text-stone-300">—</span>}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Personal Facebook</dt>
+                            <dd className="mt-0.5">
+                              {app.facebook_url
+                                ? <a href={app.facebook_url} target="_blank" rel="noopener noreferrer" className="text-trailhead underline-offset-2 hover:underline">View ↗</a>
+                                : <span className="text-stone-300">—</span>}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Organizer Facebook Page</dt>
+                            <dd className="mt-0.5">
+                              {organizerFbUrl
+                                ? <a href={organizerFbUrl} target="_blank" rel="noopener noreferrer" className="text-trailhead underline-offset-2 hover:underline">View ↗</a>
+                                : <span className="text-stone-300">—</span>}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Instagram</dt>
+                            <dd className="mt-0.5">
+                              {sl?.instagram
+                                ? <a href={sl.instagram} target="_blank" rel="noopener noreferrer" className="text-trailhead underline-offset-2 hover:underline">View ↗</a>
+                                : <span className="text-stone-300">—</span>}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Emergency certified</dt>
+                            <dd className="mt-0.5 text-stone-900">{app.emergency_certified ? "Yes" : "No"}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Applied</dt>
+                            <dd className="mt-0.5 text-stone-900">{formatCreatedAt(app.created_at)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Status</dt>
+                            <dd className="mt-0.5"><StatusBadge status={app.status} /></dd>
+                          </div>
+                        </dl>
+
+                        <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-stone-100 pt-4">
+                          {app.status === "pending" && (
+                            <>
+                              <form action={approveOrganizer.bind(null, app.id)}>
+                                <button type="submit" className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700">
+                                  Approve
                                 </button>
                               </form>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                              <form action={rejectOrganizer.bind(null, app.id)}>
+                                <button type="submit" className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700">
+                                  Reject
+                                </button>
+                              </form>
+                            </>
+                          )}
+                          <form action={updateCommissionRate} className="flex items-center gap-1">
+                            <input type="hidden" name="organizerId" value={app.id} />
+                            <input
+                              type="number"
+                              name="ratePercent"
+                              defaultValue={Math.round((app.commission_rate ?? 0.05) * 100)}
+                              min={1}
+                              max={20}
+                              step={1}
+                              className="w-14 rounded border border-stone-200 px-1.5 py-1 text-xs text-stone-900 focus:border-trailhead focus:outline-none"
+                            />
+                            <span className="text-xs text-stone-400">%</span>
+                            <button type="submit" className="rounded bg-trailhead/10 px-2 py-1 text-xs font-semibold text-trailhead hover:bg-trailhead/20">
+                              Save commission
+                            </button>
+                          </form>
+                          <form action={toggleFoundingPartner}>
+                            <input type="hidden" name="id" value={app.id} />
+                            <input type="hidden" name="is_founding_partner" value={(!app.is_founding_partner).toString()} />
+                            <button
+                              type="submit"
+                              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                                app.is_founding_partner
+                                  ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                  : "border border-stone-200 text-stone-500 hover:border-stone-400 hover:text-stone-700"
+                              }`}
+                            >
+                              {app.is_founding_partner ? "✦ Founding" : "Mark founding"}
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    </details>
+                  );
+                })
+              )}
             </div>
 
             {applications.length > 0 && (

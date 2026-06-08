@@ -86,7 +86,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
   ] = await Promise.all([
     admin
       .from("organizers")
-      .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links, is_founding_partner")
+      .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links, is_founding_partner, status")
       .eq("id", id)
       .maybeSingle(),
     admin
@@ -106,6 +106,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
   ]);
 
   if (!organizer) notFound();
+  if (organizer.status !== "approved") notFound();
 
   const isOwner = !!currentUserOrg && String(currentUserOrg.id) === String(id);
 
