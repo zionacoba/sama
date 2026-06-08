@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { DashboardFilters } from "./dashboard-filters";
 import { TripRow, TripRunRow, type OrganizerTrip, type TripCounts } from "./trip-row";
+import { RespondToReviewForm } from "@/app/organizers/[id]/respond-to-review-form";
 
 export const maxDuration = 60;
 
@@ -95,7 +96,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     page: pageParam,
   } = resolvedParams;
 
-  const activeView = tab === "templates" ? "templates" : tab === "earnings" ? "earnings" : "trips";
+  const activeView = tab === "templates" ? "templates" : tab === "earnings" ? "earnings" : tab === "reviews" ? "reviews" : "trips";
   const page = Math.max(1, parseInt(pageParam ?? "1", 10));
   const now = new Date().toISOString();
 
@@ -170,6 +171,30 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     }));
 
     lifetimeEarnings = payoutHistoryRows.reduce((s, p) => Math.round((s + p.netAmount) * 100) / 100, 0);
+  }
+
+  // --- Reviews tab data ---
+  type OrganizerReview = {
+    id: number;
+    full_name: string | null;
+    rating: number;
+    body: string;
+    created_at: string;
+    organizer_response: string | null;
+    organizer_responded_at: string | null;
+    trips: { title: string; slug: string; date_start: string } | null;
+  };
+  let organizerReviews: OrganizerReview[] = [];
+
+  if (activeView === "reviews") {
+    const admin = createSupabaseAdminClient();
+    const { data: reviewsData } = await admin
+      .from("reviews")
+      .select("id, full_name, rating, body, created_at, organizer_response, organizer_responded_at, trips!reviews_trip_id_fkey(title, slug, date_start)")
+      .eq("organizer_id", organizer.id)
+      .eq("approved", true)
+      .order("created_at", { ascending: false });
+    organizerReviews = (reviewsData ?? []) as unknown as OrganizerReview[];
   }
 
   // --- Trips tab filtering ---
@@ -301,6 +326,14 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
               }`}
             >
               Earnings
+            </Link>
+            <Link
+              href="/organizer/dashboard?tab=reviews"
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                activeView === "reviews" ? "bg-trailhead text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
+              }`}
+            >
+              Reviews
             </Link>
           </div>
 
@@ -443,6 +476,60 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                     )}
                   </div>
                 ))
+              )}
+            </div>
+          )}
+
+          {/* ── Reviews tab ── */}
+          {activeView === "reviews" && (
+            <div className="mt-6 space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-stone-900">Reviews</h2>
+                <p className="mt-0.5 text-sm text-stone-500">Approved reviews from participants on your trips. Click Reply to add or edit your public response.</p>
+              </div>
+              {organizerReviews.length === 0 ? (
+                <div className="rounded-2xl border border-stone-200 bg-white px-6 py-12 text-center shadow-sm">
+                  <p className="text-stone-500">No approved reviews yet.</p>
+                </div>
+              ) : (
+                <ul className="space-y-4">
+                  {organizerReviews.map((review) => (
+                    <li key={review.id} className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-semibold text-stone-900">{review.full_name ?? "Verified adventurer"}</p>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <span className="text-amber-400">{"★".repeat(Math.round(review.rating))}</span>
+                            <span className="text-stone-200">{"★".repeat(5 - Math.round(review.rating))}</span>
+                            <span className="text-xs text-stone-400">
+                              {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(review.created_at))}
+                            </span>
+                          </div>
+                        </div>
+                        {review.trips && (
+                          <Link
+                            href={`/trips/${review.trips.slug}`}
+                            target="_blank"
+                            className="shrink-0 rounded-lg border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-600 transition hover:border-trailhead hover:text-trailhead"
+                          >
+                            {review.trips.title}
+                          </Link>
+                        )}
+                      </div>
+                      <p className="mt-3 leading-relaxed text-stone-600">{review.body}</p>
+                      {review.organizer_response && (
+                        <div className="mt-3 ml-4 rounded-xl border border-stone-100 bg-stone-50 px-4 py-3">
+                          <p className="text-xs font-semibold text-stone-500">Your response</p>
+                          <p className="mt-1 text-sm leading-relaxed text-stone-600">{review.organizer_response}</p>
+                        </div>
+                      )}
+                      <RespondToReviewForm
+                        reviewId={review.id}
+                        currentResponse={review.organizer_response ?? ""}
+                      />
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           )}

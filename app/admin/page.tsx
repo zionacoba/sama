@@ -241,8 +241,8 @@ function PayoutHistoryTable({ history }: { history: PayoutHistoryEntry[] }) {
 }
 
 export default async function AdminPage({ searchParams }: PageProps) {
-  const { tab = "bookings", page: pageParam, commissionError, payoutError, orgFilter = "pending", reviewError } = await searchParams;
-  const activeTab = tab === "organizers" ? "organizers" : tab === "payouts" ? "payouts" : tab === "reviews" ? "reviews" : "bookings";
+  const { tab = "summary", page: pageParam, commissionError, payoutError, orgFilter = "pending", reviewError } = await searchParams;
+  const activeTab = tab === "bookings" ? "bookings" : tab === "organizers" ? "organizers" : tab === "payouts" ? "payouts" : tab === "reviews" ? "reviews" : "summary";
   const page = Math.max(1, Number(pageParam) || 1);
 
   const authClient = await createSupabaseServerClient();
@@ -269,6 +269,30 @@ export default async function AdminPage({ searchParams }: PageProps) {
 
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
+
+  const todayISO = new Date().toISOString().split("T")[0];
+
+  // Summary stats — fetched only when on summary tab (or always for header counts).
+  const [
+    summaryConfirmedBookings,
+    summaryGmvRows,
+    summaryActiveOrganizers,
+    summaryPendingOrganizers,
+    summaryActiveTrips,
+    summaryPendingReviews,
+  ] = activeTab === "summary"
+    ? await Promise.all([
+        adminClient.from("bookings").select("id", { count: "exact", head: true }).eq("status", "confirmed"),
+        adminClient.from("bookings").select("total_amount, platform_commission").eq("status", "confirmed"),
+        adminClient.from("organizers").select("id", { count: "exact", head: true }).eq("status", "approved"),
+        adminClient.from("organizers").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        adminClient.from("trips").select("id", { count: "exact", head: true }).eq("status", "active").gt("date_start", todayISO),
+        adminClient.from("reviews").select("id", { count: "exact", head: true }).eq("approved", false),
+      ])
+    : [null, null, null, null, null, null];
+
+  const summaryGmv = (summaryGmvRows?.data ?? []).reduce((sum: number, b: { total_amount: number }) => sum + (b.total_amount ?? 0), 0);
+  const summarySamaRevenue = (summaryGmvRows?.data ?? []).reduce((sum: number, b: { platform_commission: number }) => sum + (b.platform_commission ?? 0), 0);
 
   const [
     { data: bookingData, error: bookingError, count: bookingCount },
@@ -324,6 +348,15 @@ export default async function AdminPage({ searchParams }: PageProps) {
         : "text-stone-600 hover:bg-stone-100"
     }`;
 
+  function StatCard({ label, value }: { label: string; value: string | number }) {
+    return (
+      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+        <p className="text-sm font-medium text-stone-500">{label}</p>
+        <p className="mt-2 text-3xl font-bold tracking-tight text-stone-900">{value}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
@@ -346,6 +379,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
         </h1>
 
         <div className="mt-4 flex gap-2">
+          <Link href="/admin?tab=summary" className={tabClass("summary")}>
+            Summary
+          </Link>
           <Link href="/admin?tab=bookings" className={tabClass("bookings")}>
             Bookings
             <span className="ml-1.5 text-xs font-normal opacity-75">({totalBookings})</span>
@@ -361,6 +397,42 @@ export default async function AdminPage({ searchParams }: PageProps) {
             Reviews
           </Link>
         </div>
+
+        {/* ── Summary tab ── */}
+        {activeTab === "summary" && (
+          <section className="mt-8">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <StatCard
+                label="Confirmed bookings"
+                value={(summaryConfirmedBookings?.count ?? 0).toLocaleString("en-PH")}
+              />
+              <StatCard
+                label="Total GMV"
+                value={formatCurrency(summaryGmv)}
+              />
+              <StatCard
+                label="Sama revenue"
+                value={formatCurrency(summarySamaRevenue)}
+              />
+              <StatCard
+                label="Active organizers"
+                value={(summaryActiveOrganizers?.count ?? 0).toLocaleString("en-PH")}
+              />
+              <StatCard
+                label="Pending applications"
+                value={(summaryPendingOrganizers?.count ?? 0).toLocaleString("en-PH")}
+              />
+              <StatCard
+                label="Active trips"
+                value={(summaryActiveTrips?.count ?? 0).toLocaleString("en-PH")}
+              />
+              <StatCard
+                label="Pending reviews"
+                value={(summaryPendingReviews?.count ?? 0).toLocaleString("en-PH")}
+              />
+            </div>
+          </section>
+        )}
 
         {/* ── Bookings tab ── */}
         {activeTab === "bookings" && (

@@ -738,6 +738,198 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
   return { success: true };
 }
 
+export async function partialCancelBooking(bookingId: number, slotsToCancel: number) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  if (!Number.isInteger(slotsToCancel) || slotsToCancel < 1) {
+    return { error: "Invalid number of slots to cancel." };
+  }
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: booking } = await admin
+    .from("bookings")
+    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, payment_method, payout_status, payout_id, cancellation_policy, platform_commission, commission_rate_used")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking) return { error: "Booking not found." };
+  if (booking.user_id !== user.id) return { error: "You don't have permission to modify this booking." };
+  if (!["confirmed", "pending"].includes(booking.status)) {
+    return { error: "Only confirmed or pending bookings can be partially cancelled." };
+  }
+  if (slotsToCancel >= booking.slots) {
+    return { error: "To cancel all slots, use the full cancellation option." };
+  }
+
+  const { data: tripDateCheck } = await admin
+    .from("trips")
+    .select("date_start, slug, title, organizer_id, cancellation_policy")
+    .eq("id", booking.trip_id)
+    .maybeSingle();
+
+  const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  if (tripDateCheck && tripDateCheck.date_start < todayPH) {
+    return { error: "This trip has already taken place. Bookings can no longer be modified." };
+  }
+
+  const originalSlots = booking.slots;
+  const remainingSlots = originalSlots - slotsToCancel;
+
+  const amountPaid =
+    booking.payment_option === "downpayment" && booking.amount_due != null
+      ? booking.amount_due
+      : (booking.total_amount ?? 0);
+
+  const todayManilaStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  const todayManila = new Date(todayManilaStr);
+  const tripDay = new Date(tripDateCheck!.date_start);
+  const daysUntilTrip = Math.round((tripDay.getTime() - todayManila.getTime()) / 86_400_000);
+
+  const fullRefundableAmount = calculateRefundAmount(
+    booking.cancellation_policy ?? tripDateCheck?.cancellation_policy ?? "flexible",
+    amountPaid,
+    daysUntilTrip,
+  );
+
+  const refundAmount = fullRefundableAmount !== null
+    ? Math.round((slotsToCancel / originalSlots) * fullRefundableAmount * 100) / 100
+    : null;
+
+  const newTotalAmount = Math.round((booking.total_amount ?? 0) * (remainingSlots / originalSlots) * 100) / 100;
+  const newAmountDue = booking.amount_due != null
+    ? Math.round(booking.amount_due * (remainingSlots / originalSlots) * 100) / 100
+    : null;
+  const newCommission = booking.platform_commission != null
+    ? Math.round((booking.platform_commission as number) * (remainingSlots / originalSlots) * 100) / 100
+    : null;
+
+  const updatePayload: Record<string, unknown> = {
+    slots: remainingSlots,
+    total_amount: newTotalAmount,
+  };
+  if (newAmountDue !== null) updatePayload.amount_due = newAmountDue;
+  if (newCommission !== null) updatePayload.platform_commission = newCommission;
+
+  const { error: updateError } = await admin
+    .from("bookings")
+    .update(updatePayload)
+    .eq("id", bookingId);
+
+  if (updateError) return { error: updateError.message };
+
+  await admin.rpc("restore_slot", {
+    p_trip_id: booking.trip_id,
+    p_slots_requested: slotsToCancel,
+  });
+
+  let refundResult: RefundResult | null = null;
+  if (refundAmount !== null && refundAmount > 0) {
+    refundResult = await processPayMongoRefund({
+      paymentId: booking.paymongo_payment_id,
+      paymentMethod: booking.payment_method,
+      amountPesos: refundAmount,
+      notes: `Partial cancellation: ${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""} cancelled`,
+    });
+    if (!refundResult.success && !refundResult.requiresManualProcessing) {
+      console.error("[refund] partialCancelBooking refund failed", bookingId, refundResult.error);
+    }
+  }
+
+  const fmtCurrency = (n: number) =>
+    new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+
+  if (tripDateCheck) {
+    const tripDate = new Intl.DateTimeFormat("en-PH", {
+      weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila",
+    }).format(new Date(tripDateCheck.date_start));
+
+    if (tripDateCheck.organizer_id) {
+      const { data: organizer } = await admin
+        .from("organizers")
+        .select("email")
+        .eq("id", tripDateCheck.organizer_id)
+        .maybeSingle();
+
+      if (organizer?.email) {
+        try {
+          await resend.emails.send({
+            from: FROM_ADDRESS,
+            to: organizer.email,
+            replyTo: REPLY_TO_ADDRESS,
+            subject: `${booking.full_name} cancelled ${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""} for ${tripDateCheck.title}`,
+            html: `
+              <p>Hi,</p>
+              <p><strong>${escapeHtml(booking.full_name)}</strong> cancelled <strong>${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""}</strong> from their booking for <strong>${escapeHtml(tripDateCheck.title)}</strong> on ${tripDate}. They now have <strong>${remainingSlots} slot${remainingSlots !== 1 ? "s" : ""}</strong> remaining. The cancelled slot${slotsToCancel !== 1 ? "s" : ""} have been returned to the available pool.</p>
+              <p>— The Sama Team</p>
+            `,
+          });
+        } catch (err) {
+          console.error("[email] failed to notify organizer of partial cancellation", err);
+        }
+      }
+    }
+
+    const refundLine =
+      refundAmount === null
+        ? `<p>If you are eligible for a refund, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking details.</p>`
+        : refundAmount > 0
+          ? (refundResult?.success
+              ? `<p>Your refund of <strong>${fmtCurrency(refundAmount)}</strong> for the cancelled slot${slotsToCancel !== 1 ? "s" : ""} has been processed and will reflect within 24 hours.</p>`
+              : `<p>Your refund of <strong>${fmtCurrency(refundAmount)}</strong> will be processed. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> if you don't receive it within 5–7 business days.</p>`)
+          : `<p>Based on our cancellation policy, this cancellation is not eligible for a refund.</p>`;
+
+    try {
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: booking.email,
+        replyTo: REPLY_TO_ADDRESS,
+        subject: `Booking updated: ${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""} cancelled for ${tripDateCheck.title}`,
+        html: `
+          <p>Hi ${escapeHtml(booking.full_name)},</p>
+          <p>You've cancelled <strong>${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""}</strong> from your booking for <strong>${escapeHtml(tripDateCheck.title)}</strong> on ${tripDate}. Your booking now has <strong>${remainingSlots} slot${remainingSlots !== 1 ? "s" : ""}</strong>.</p>
+          ${refundLine}
+          <p>— The Sama Team</p>
+        `,
+      });
+    } catch (err) {
+      console.error("[email] failed to send partial cancellation confirmation", err);
+    }
+
+    const needsManualRefund = refundResult && !refundResult.success;
+    if (needsManualRefund && ADMIN_EMAIL) {
+      try {
+        const isQrPh = refundResult?.requiresManualProcessing;
+        const refundNote = isQrPh
+          ? "Payment method is QR Ph — must be refunded manually."
+          : `Automatic refund failed: ${refundResult?.error ?? "Unknown error"}`;
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: ADMIN_EMAIL,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `[Admin] Manual refund required (partial cancel): ${escapeHtml(booking.full_name)} — ${tripDateCheck.title}`,
+          html: `
+            <p>A partial cancellation refund could not be automatically processed.</p>
+            <p><strong>Booking ID:</strong> ${bookingId}</p>
+            <p><strong>Slots cancelled:</strong> ${slotsToCancel}</p>
+            <p><strong>Participant:</strong> ${escapeHtml(booking.full_name)} (${escapeHtml(booking.email)})</p>
+            <p><strong>Refund amount:</strong> ${refundAmount != null && refundAmount > 0 ? fmtCurrency(refundAmount) : "N/A"}</p>
+            <p><strong>Reason:</strong> ${refundNote}</p>
+          `,
+        });
+      } catch (alertErr) {
+        console.error("[email] failed to send partial cancel manual refund alert", alertErr);
+      }
+    }
+  }
+
+  revalidatePath("/profile");
+  revalidatePath(`/profile/bookings/${bookingId}`);
+  return { success: true as const, refundAmount };
+}
+
 export async function cancelBooking(bookingId: number) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

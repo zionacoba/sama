@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 type ReviewState = { success: true } | { error: string } | null;
@@ -150,6 +151,64 @@ export async function submitReview(
 
   // Only redirect when submitted from the trip page (no booking_id)
   if (!bookingId) redirect(`/trips/${tripSlug}`);
+
+  return { success: true };
+}
+
+export async function respondToReview(
+  reviewId: number,
+  response: string,
+): Promise<{ success: true } | { error: string }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const trimmed = response.trim();
+  if (!trimmed) return { error: "Response cannot be empty." };
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: organizer } = await admin
+    .from("organizers")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("status", "approved")
+    .maybeSingle();
+
+  if (!organizer) return { error: "Not an approved organizer." };
+
+  const { data: review } = await admin
+    .from("reviews")
+    .select("id, trip_id, organizer_id")
+    .eq("id", reviewId)
+    .maybeSingle();
+
+  if (!review) return { error: "Review not found." };
+  if (String(review.organizer_id) !== String(organizer.id)) {
+    return { error: "You can only respond to reviews on your own trips." };
+  }
+
+  const { error } = await admin
+    .from("reviews")
+    .update({
+      organizer_response: trimmed,
+      organizer_responded_at: new Date().toISOString(),
+    })
+    .eq("id", reviewId);
+
+  if (error) return { error: error.message };
+
+  const { data: trip } = await admin
+    .from("trips")
+    .select("slug")
+    .eq("id", review.trip_id)
+    .maybeSingle();
+
+  if (trip?.slug) {
+    revalidatePath(`/trips/${trip.slug}`);
+  }
+  revalidatePath(`/organizers/${organizer.id}`);
+  revalidatePath("/organizer/dashboard");
 
   return { success: true };
 }

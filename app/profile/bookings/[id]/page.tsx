@@ -6,6 +6,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { CancelBookingButton } from "@/app/profile/cancel-booking-button";
 import { PayBalanceButton } from "./pay-balance-button";
+import { PartialCancelButton } from "./partial-cancel-button";
+import { calculateRefundAmount } from "@/lib/cancellation-policies";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -177,6 +179,22 @@ export default async function BookingDetailPage({ params }: PageProps) {
   const balance = booking.total_amount != null && booking.amount_due != null
     ? Math.max(0, booking.total_amount - booking.amount_due)
     : null;
+
+  const amountPaid =
+    booking.payment_option === "downpayment" && booking.amount_due != null
+      ? booking.amount_due
+      : booking.total_amount;
+  const todayManilaStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  const todayManila = new Date(todayManilaStr);
+  const tripDay = new Date(trip.date_start);
+  const daysUntilTrip = Math.round((tripDay.getTime() - todayManila.getTime()) / 86_400_000);
+  const fullRefundable = amountPaid != null
+    ? calculateRefundAmount(trip.cancellation_policy ?? "flexible", amountPaid, daysUntilTrip)
+    : null;
+  const refundRatio = (fullRefundable !== null && amountPaid != null && amountPaid > 0)
+    ? fullRefundable / amountPaid
+    : null;
+  const pricePerSlot = booking.total_amount != null ? booking.total_amount / booking.slots : 0;
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -359,6 +377,14 @@ export default async function BookingDetailPage({ params }: PageProps) {
             balance > 0 && (
               <PayBalanceButton bookingId={booking.id} balanceAmount={formatCurrency(balance)} />
             )}
+          {isActive && isFuture && booking.slots > 1 && (
+            <PartialCancelButton
+              bookingId={booking.id}
+              totalSlots={booking.slots}
+              pricePerSlot={pricePerSlot}
+              refundRatio={refundRatio}
+            />
+          )}
           {isActive && isFuture && (
             <CancelBookingButton
               bookingId={booking.id}

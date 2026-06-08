@@ -62,6 +62,8 @@ type Review = {
   rating: number;
   body: string;
   created_at: string;
+  organizer_response: string | null;
+  organizer_responded_at: string | null;
   trips: { title: string; date_start: string } | null;
 };
 
@@ -250,7 +252,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
     tripData.organizer_id
       ? supabase
           .from("reviews")
-          .select("id, full_name, rating, body, created_at, trips(title, date_start)")
+          .select("id, full_name, rating, body, created_at, organizer_response, organizer_responded_at, trips(title, date_start)")
           .eq("organizer_id", tripData.organizer_id)
           .eq("approved", true)
           .order("created_at", { ascending: false })
@@ -578,6 +580,12 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                           )}
                         </div>
                         <p className="mt-3 leading-relaxed text-stone-600">{review.body}</p>
+                        {review.organizer_response && (
+                          <div className="mt-3 ml-4 rounded-xl border border-stone-100 bg-stone-50 px-4 py-3">
+                            <p className="text-xs font-semibold text-stone-500">Response from {organizerName}</p>
+                            <p className="mt-1 text-sm leading-relaxed text-stone-600">{review.organizer_response}</p>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>

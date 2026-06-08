@@ -6,6 +6,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { OrganizerTripsSection } from "./trips-section";
 import { BioExpander } from "./bio-expander";
+import { RespondToReviewForm } from "./respond-to-review-form";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -31,6 +32,8 @@ type Review = {
   rating: number;
   body: string;
   created_at: string;
+  organizer_response: string | null;
+  organizer_responded_at: string | null;
   trips: { title: string; slug: string; date_start: string } | null;
 };
 
@@ -117,7 +120,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
       .order("date_start", { ascending: true }),
     admin
       .from("reviews")
-      .select("id, full_name, rating, body, created_at, trips(title, slug, date_start)")
+      .select("id, full_name, rating, body, created_at, organizer_response, organizer_responded_at, trips(title, slug, date_start)")
       .eq("organizer_id", id)
       .eq("approved", true)
       .order("created_at", { ascending: false }),
@@ -357,6 +360,18 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                     </p>
                   )}
                   <p className="mt-3 leading-relaxed text-stone-600">{review.body}</p>
+                  {review.organizer_response && (
+                    <div className="mt-3 ml-4 rounded-xl border border-stone-100 bg-stone-50 px-4 py-3">
+                      <p className="text-xs font-semibold text-stone-500">Response from {publicName}</p>
+                      <p className="mt-1 text-sm leading-relaxed text-stone-600">{review.organizer_response}</p>
+                    </div>
+                  )}
+                  {isOwner && (
+                    <RespondToReviewForm
+                      reviewId={review.id}
+                      currentResponse={review.organizer_response ?? ""}
+                    />
+                  )}
                 </li>
               ))}
             </ul>

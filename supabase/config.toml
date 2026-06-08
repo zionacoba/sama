@@ -1,0 +1,3 @@
+[functions.stale-application-reminder]
+verify_jwt = false
+schedule = "0 1 * * 1"
