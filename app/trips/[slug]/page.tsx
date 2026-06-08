@@ -509,6 +509,12 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                 {organizer.bio && (
                   <p className="mt-3 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
                 )}
+                <Link
+                  href={`/organizers/${tripData.organizer_id}`}
+                  className="mt-3 inline-flex items-center text-sm font-semibold text-trailhead underline-offset-4 hover:underline"
+                >
+                  See all trips by {organizer.display_name ?? organizer.full_name} →
+                </Link>
               </div>
             )}
 

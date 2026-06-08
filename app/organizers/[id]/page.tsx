@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { OrganizerTripsSection } from "./trips-section";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -20,6 +21,7 @@ type Trip = {
   total_slots: number;
   remaining_slots: number;
   photos: string[] | null;
+  status: string;
 };
 
 type Review = {
@@ -41,14 +43,6 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
-
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("en-PH", {
     year: "numeric",
@@ -58,19 +52,6 @@ function formatDate(date: string) {
   }).format(new Date(date));
 }
 
-function DifficultyBadge({ level }: { level: string }) {
-  const colorClass =
-    level === "Beginner"
-      ? "bg-emerald-100 text-emerald-800"
-      : level === "Intermediate"
-        ? "bg-amber-100 text-amber-900"
-        : "bg-red-100 text-red-800";
-  return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colorClass}`}>
-      {level}
-    </span>
-  );
-}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
@@ -124,14 +105,14 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
   ] = await Promise.all([
     admin
       .from("organizers")
-      .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links, is_founding_partner, status")
+      .select("id, display_name, full_name, bio, photo_url, cover_image_url, social_links, activity_types, is_founding_partner, status")
       .eq("id", id)
       .maybeSingle(),
     admin
       .from("trips")
-      .select("id, slug, title, activity_type, difficulty, date_start, price, total_slots, remaining_slots, photos")
+      .select("id, slug, title, activity_type, difficulty, date_start, price, total_slots, remaining_slots, photos, status")
       .eq("organizer_id", id)
-      .eq("status", "active")
+      .neq("status", "draft")
       .order("date_start", { ascending: true }),
     admin
       .from("reviews")
@@ -150,8 +131,6 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
 
   const trips = (allTrips ?? []) as Trip[];
   const reviews = (reviewsData ?? []) as unknown as Review[];
-  const now = new Date().toISOString();
-  const upcomingTrips = trips.filter((t) => t.date_start > now);
 
   const avgRating =
     reviews.length > 0
@@ -255,6 +234,22 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
               <p className="mt-4 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
             )}
             {(() => {
+              const types = organizer.activity_types as string[] | null;
+              if (!types || types.length === 0) return null;
+              return (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {types.map((type) => (
+                    <span
+                      key={type}
+                      className="inline-flex items-center rounded-full bg-trailhead-muted px-2.5 py-0.5 text-xs font-semibold text-trailhead"
+                    >
+                      {type}
+                    </span>
+                  ))}
+                </div>
+              );
+            })()}
+            {(() => {
               const sl = organizer.social_links as { facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
               const links = [
                 { key: "facebook", url: sl?.facebook, icon: (
@@ -304,61 +299,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
             </div>
         </div>
 
-        {/* Upcoming trips */}
-        <section className="mt-8">
-          <h2 className="text-lg font-bold tracking-tight text-stone-900">
-            Upcoming trips
-          </h2>
-          {upcomingTrips.length === 0 ? (
-            <p className="mt-4 text-stone-500">No upcoming trips at the moment.</p>
-          ) : (
-            <div className="-mx-4 mt-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
-              <ul className="flex gap-4 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-                {upcomingTrips.map((trip) => (
-                  <li key={trip.id} className="w-[75vw] shrink-0 snap-start sm:flex sm:w-auto sm:flex-col">
-                    <Link
-                      href={`/trips/${trip.slug}`}
-                      className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
-                    >
-                      <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
-                        <div className="relative aspect-[2/1] overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:aspect-[4/3]">
-                          {trip.photos?.[0] && (
-                            <Image
-                              src={trip.photos[0]}
-                              alt={trip.title}
-                              fill
-                              className="object-cover"
-                              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 75vw"
-                              quality={80}
-                            />
-                          )}
-                        </div>
-                        <div className="flex flex-1 flex-col gap-2 p-4">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {trip.activity_type && (
-                              <span className="inline-flex items-center rounded-full bg-trailhead-muted px-2 py-0.5 text-xs font-semibold text-trailhead">
-                                {trip.activity_type}
-                              </span>
-                            )}
-                            <DifficultyBadge level={trip.difficulty} />
-                          </div>
-                          <h3 className="font-bold text-stone-900">{trip.title}</h3>
-                          <p className="text-xs text-stone-400">{formatDate(trip.date_start)}</p>
-                          <div className="mt-auto border-t border-stone-100 pt-3">
-                            <p className="text-lg font-bold text-trailhead">{formatPrice(trip.price)}</p>
-                            <p className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-400"}`}>
-                              {trip.remaining_slots} slot{trip.remaining_slots !== 1 ? "s" : ""} left
-                            </p>
-                          </div>
-                        </div>
-                      </article>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
+        <OrganizerTripsSection trips={trips} />
 
         {/* Reviews */}
         <section className="mt-8">
