@@ -55,6 +55,7 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers must apply and be approved by Sama before listing trips.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers are independent operators and are solely responsible for their trips, participants, safety, permits, and compliance with applicable laws.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers must hold all required permits (DENR, LGU, etc.) for restricted trails and sites.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers can create recurring trip templates with multiple dated runs, allowing participants to book specific departure dates.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama reserves the right to suspend or remove any organizer who violates platform policies.</span></li>
               </ul>
             </section>
@@ -67,6 +68,7 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama charges a platform commission on each booking as agreed with the organizer.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>No hidden fees are charged to participants — the price shown is the price you pay.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama absorbs all payment processing fees on behalf of organizers.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Advanced difficulty trips require manual review and approval by the organizer before your booking is confirmed.</span></li>
               </ul>
             </section>
 

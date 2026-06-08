@@ -69,6 +69,7 @@ export default function PrivacyPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Browser type and device information</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Pages visited and time spent</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>IP address</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>IP address at the time of waiver acceptance, for legal record-keeping purposes</span></li>
               </ul>
             </section>
 
@@ -102,7 +103,7 @@ export default function PrivacyPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">5. Data Retention</h2>
               <p className="mt-2 leading-relaxed">
-                We retain your personal data for as long as your account is active or as required by law. Personal data associated with cancelled bookings is retained for record-keeping purposes. You may request deletion of your personal data at any time by deleting your account or contacting <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>. Booking transaction records are retained for a minimum of 5 years for legal and dispute resolution purposes.
+                We retain your personal data for as long as your account is active or as required by law. Personal data associated with cancelled bookings is retained for record-keeping purposes. You may request deletion of your personal data at any time by deleting your account or contacting <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>. Booking transaction records are retained for a minimum of 5 years for legal and dispute resolution purposes. Profile photos and trip photos uploaded to Sama are permanently deleted from our storage when you delete your account.
               </p>
             </section>
 
