@@ -579,7 +579,7 @@ export async function updateTrip(
                 <p>Hi ${escapeHtml(booking.full_name)},</p>
                 <p>The organizer has made changes to <strong>${escapeHtml(title)}</strong> that may affect your booking:</p>
                 ${changeHtml}
-                <p>Please review the updated trip details here: <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/trips/${existing.slug}">${(process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph").replace("https://", "")}/trips/${existing.slug}</a></p>
+                <p>Please review the updated trip details here: <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/trips/${newSlug ?? existing.slug}">${(process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph").replace("https://", "")}/trips/${newSlug ?? existing.slug}</a></p>
                 <p>If you have questions, contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
                 <p>— The Sama Team</p>
               `,

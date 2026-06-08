@@ -60,6 +60,7 @@ export default async function Image({
 
   const titleSize = title.length > 50 ? 54 : title.length > 35 ? 64 : 72;
 
+  try {
   return new ImageResponse(
     (
       <div
@@ -116,7 +117,7 @@ export default async function Image({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://sama.com.ph/sama-mark.svg"
+            src="https://sama.com.ph/sama-badge.png"
             alt=""
             style={{ height: 24, width: "auto", filter: "brightness(0) invert(1)" }}
           />
@@ -166,4 +167,26 @@ export default async function Image({
     ),
     { ...size },
   );
+  } catch {
+    return new ImageResponse(
+      (
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            height: "100%",
+            background: "linear-gradient(135deg, #292524 0%, #1c1917 100%)",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#ffffff",
+            fontSize: 72,
+            fontWeight: 700,
+          }}
+        >
+          Sama
+        </div>
+      ),
+      { ...size },
+    );
+  }
 }

@@ -72,14 +72,14 @@ function groupByMonth(trips: Trip[]) {
 }
 
 export function OrganizerTripsSection({ trips }: { trips: Trip[] }) {
-  const now = new Date().toISOString();
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
 
   const upcoming = trips
-    .filter((t) => t.status === "active" && t.date_start > now)
+    .filter((t) => t.status === "active" && t.date_start >= today)
     .sort((a, b) => a.date_start.localeCompare(b.date_start));
 
   const past = trips
-    .filter((t) => t.status === "active" && t.date_start <= now)
+    .filter((t) => t.status === "active" && t.date_start < today)
     .sort((a, b) => b.date_start.localeCompare(a.date_start));
 
   const defaultTab: "upcoming" | "past" = upcoming.length > 0 ? "upcoming" : "past";
