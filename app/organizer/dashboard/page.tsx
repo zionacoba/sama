@@ -142,7 +142,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
   const pendingCount = (bookingSummaries ?? []).filter((b) => b.status === "pending").length;
 
   return (
-    <div className="min-h-full bg-stone-50 font-sans text-stone-900">
+    <div className="min-h-screen bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight hover:opacity-90">
