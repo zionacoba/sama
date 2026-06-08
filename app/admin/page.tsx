@@ -20,7 +20,7 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 const PAGE_SIZE = 20;
 
 type PageProps = {
-  searchParams: Promise<{ tab?: string; page?: string; commissionError?: string; payoutError?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string; commissionError?: string; payoutError?: string; orgFilter?: string }>;
 };
 
 type OrganizerApplication = {
@@ -265,7 +265,7 @@ function PayoutHistoryTable({ history }: { history: PayoutHistoryEntry[] }) {
 }
 
 export default async function AdminPage({ searchParams }: PageProps) {
-  const { tab = "bookings", page: pageParam, commissionError, payoutError } = await searchParams;
+  const { tab = "bookings", page: pageParam, commissionError, payoutError, orgFilter = "pending" } = await searchParams;
   const activeTab = tab === "organizers" ? "organizers" : tab === "payouts" ? "payouts" : "bookings";
   const page = Math.max(1, Number(pageParam) || 1);
 
@@ -319,11 +319,24 @@ export default async function AdminPage({ searchParams }: PageProps) {
   const totalPages = Math.ceil(totalBookings / PAGE_SIZE);
 
   const allApplications = (orgData ?? []) as OrganizerApplication[];
-  const applications = [
+  const allSorted = [
     ...allApplications.filter((a) => a.status === "pending"),
     ...allApplications.filter((a) => a.status === "approved"),
     ...allApplications.filter((a) => a.status === "rejected"),
   ];
+
+  const validOrgFilters = ["all", "pending", "approved", "rejected"] as const;
+  type OrgFilter = typeof validOrgFilters[number];
+  const activeOrgFilter: OrgFilter = (validOrgFilters as readonly string[]).includes(orgFilter) ? orgFilter as OrgFilter : "pending";
+
+  const orgCounts = {
+    all: allSorted.length,
+    pending: allSorted.filter((a) => a.status === "pending").length,
+    approved: allSorted.filter((a) => a.status === "approved").length,
+    rejected: allSorted.filter((a) => a.status === "rejected").length,
+  };
+
+  const applications = activeOrgFilter === "all" ? allSorted : allSorted.filter((a) => a.status === activeOrgFilter);
 
   const tabClass = (t: string) =>
     `px-4 py-2 text-sm font-semibold rounded-lg transition ${
@@ -474,6 +487,25 @@ export default async function AdminPage({ searchParams }: PageProps) {
                 Failed to load applications: {orgError.message}
               </p>
             )}
+
+            <div className="mb-4 flex gap-2">
+              {(["all", "pending", "approved", "rejected"] as const).map((f) => (
+                <Link
+                  key={f}
+                  href={`/admin?tab=organizers&orgFilter=${f}`}
+                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition capitalize ${
+                    activeOrgFilter === f
+                      ? "bg-trailhead text-white shadow-sm"
+                      : "text-stone-600 hover:bg-stone-100"
+                  }`}
+                >
+                  {f.charAt(0).toUpperCase() + f.slice(1)}{" "}
+                  <span className={`text-xs font-normal ${activeOrgFilter === f ? "opacity-75" : "text-stone-400"}`}>
+                    ({orgCounts[f]})
+                  </span>
+                </Link>
+              ))}
+            </div>
 
             <div className="space-y-3">
               {applications.length === 0 ? (
@@ -629,9 +661,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
               )}
             </div>
 
-            {applications.length > 0 && (
+            {allSorted.length > 0 && (
               <p className="mt-4 text-sm text-stone-500">
-                {applications.filter((a) => a.status === "pending").length} pending · {applications.length} total
+                {orgCounts.pending} pending · {orgCounts.all} total
               </p>
             )}
           </section>
