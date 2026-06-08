@@ -22,7 +22,18 @@ export function BioExpander({ bio }: { bio: string }) {
           </button>
         </>
       ) : (
-        bio
+        <>
+          {bio}
+          {needsTruncation && (
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              className="ml-1 font-medium text-trailhead underline-offset-2 hover:underline"
+            >
+              Read less
+            </button>
+          )}
+        </>
       )}
     </p>
   );

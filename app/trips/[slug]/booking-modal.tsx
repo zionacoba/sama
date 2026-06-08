@@ -442,7 +442,7 @@ export function BookingModal({
                       }
                       className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
-                    <p className="text-xs text-gray-400 mt-1">Maximum 10 slots per booking.</p>
+                    <p className="text-xs text-stone-400 mt-1">Maximum 10 slots per booking.</p>
                   </div>
 
                   {/* Pickup point */}

@@ -138,6 +138,8 @@ export function TripForm({
     }
 
     const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sama.com.ph";
+    const tripUrl = `${siteOrigin}/trips/${state.slug}`;
+    const isDraftSave = submitIntentRef.current === "draft";
     return (
       <div className="flex flex-col items-center py-12 text-center">
         {checkmark}
@@ -148,12 +150,23 @@ export function TripForm({
           </p>
         )}
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <a
-            href={`${siteOrigin}/trips/${state.slug}`}
-            className="rounded-xl border border-stone-200 px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900"
-          >
-            View listing
-          </a>
+          {isDraftSave ? (
+            <a
+              href={tripUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-xl border border-stone-200 px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900"
+            >
+              Preview listing
+            </a>
+          ) : (
+            <a
+              href={tripUrl}
+              className="rounded-xl border border-stone-200 px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900"
+            >
+              View listing
+            </a>
+          )}
           <a
             href="/organizer/dashboard"
             className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
@@ -194,7 +207,7 @@ export function TripForm({
       )}
 
       {preselectedTemplateId && (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+        <div className="rounded-xl border border-trailhead/30 bg-trailhead-muted px-4 py-3 text-sm text-trailhead">
           Pre-filled from your template. Add a date and price to create this run.
         </div>
       )}
@@ -489,7 +502,7 @@ export function TripForm({
               <option value="custom">{CANCELLATION_POLICIES.custom.label} — {CANCELLATION_POLICIES.custom.short}</option>
             </select>
             {cancellationPolicy !== "custom" && (
-              <p className="mt-1.5 text-xs text-gray-500">
+              <p className="mt-1.5 text-xs text-stone-500">
                 {({
                   flexible: "Full refund up to 7 days before the trip. 50% refund between 3 and 7 days. No refund within 3 days.",
                   moderate: "Full refund up to 14 days before the trip. 50% refund between 7 and 14 days. No refund within 7 days.",

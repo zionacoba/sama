@@ -180,6 +180,22 @@ function LoginForm() {
           </div>
         </div>
       </main>
+
+      <footer className="border-t border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-500">
+        © {new Date().getFullYear()} Sama. Adventure, together.
+        {" · "}
+        <Link href="/terms" className="underline-offset-4 hover:text-trailhead hover:underline">
+          Terms of Service
+        </Link>
+        {" · "}
+        <Link href="/privacy" className="underline-offset-4 hover:text-trailhead hover:underline">
+          Privacy Policy
+        </Link>
+        {" · "}
+        <a href="mailto:hello@sama.com.ph" className="underline-offset-4 hover:text-trailhead hover:underline">
+          Contact
+        </a>
+      </footer>
     </div>
   );
 }

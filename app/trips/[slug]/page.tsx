@@ -582,16 +582,16 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
             {(() => {
               const contactUrl = organizer?.social_links?.facebook || organizer?.facebook_url;
               return contactUrl ? (
-                <div className="mt-8 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                  <p className="text-sm font-medium text-gray-900 mb-1">Have questions about this trip?</p>
-                  <p className="text-sm text-gray-500 mb-3">
+                <div className="mt-8 p-4 bg-stone-50 rounded-xl border border-stone-100">
+                  <p className="text-sm font-medium text-stone-900 mb-1">Have questions about this trip?</p>
+                  <p className="text-sm text-stone-500 mb-3">
                     Reach out to {organizer!.display_name ?? organizer!.full_name} directly before booking.
                   </p>
                   <a
                     href={contactUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-trailhead hover:underline"
                   >
                     Message on Facebook
                   </a>

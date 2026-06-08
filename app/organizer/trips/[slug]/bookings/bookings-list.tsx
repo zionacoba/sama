@@ -174,11 +174,11 @@ export function BookingsListWithTabs({
       </div>
 
       {paymentType === "downpayment" && minDownpayment != null ? (
-        <div className="text-sm text-gray-500 mb-3">
+        <div className="text-sm text-stone-500 mb-3">
           Trip price: {formatCurrency(price)} · Downpayment: {formatCurrency(minDownpayment)} · Balance due: {formatCurrency(price - minDownpayment)}
         </div>
       ) : (
-        <div className="text-sm text-gray-500 mb-3">
+        <div className="text-sm text-stone-500 mb-3">
           Trip price: {formatCurrency(price)} · Full payment
         </div>
       )}
@@ -209,7 +209,7 @@ export function BookingsListWithTabs({
                       <td className="px-5 py-3.5 font-medium text-stone-900">
                         <div>
                           {b.nickname && <span className="font-medium">{b.nickname}</span>}
-                          <span className={b.nickname ? "text-sm text-gray-500 block" : "font-medium"}>
+                          <span className={b.nickname ? "text-sm text-stone-500 block" : "font-medium"}>
                             {b.full_name}
                           </span>
                         </div>
@@ -218,13 +218,13 @@ export function BookingsListWithTabs({
                             href={b.facebook_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="ml-0 text-xs text-blue-600 hover:underline"
+                            className="ml-0 text-xs text-trailhead hover:underline"
                           >
                             FB Profile
                           </a>
                         )}
                         {(b.medical_notes || b.notes) && (
-                          <p className="text-xs text-gray-400 mt-0.5">
+                          <p className="text-xs text-stone-400 mt-0.5">
                             🏥 {[b.medical_notes, b.notes].filter(Boolean).join(' · ')}
                           </p>
                         )}
