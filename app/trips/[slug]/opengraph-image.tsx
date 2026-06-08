@@ -108,12 +108,19 @@ export default async function Image({
             left: 56,
             display: "flex",
             alignItems: "center",
+            gap: 10,
             color: "#ffffff",
             fontSize: 28,
             fontWeight: 700,
           }}
         >
-          ⛰ Sama
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://sama.com.ph/sama-mark.svg"
+            alt=""
+            style={{ height: 24, width: "auto", filter: "brightness(0) invert(1)" }}
+          />
+          Sama
         </div>
 
         <div
