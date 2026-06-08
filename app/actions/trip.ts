@@ -21,7 +21,7 @@ function slugify(title: string): string {
 }
 
 export async function createTrip(
-  _prevState: { error: string } | { success: true; warning?: string } | null,
+  _prevState: { error: string } | { success: true; slug: string; tripId: string | number; warning?: string } | null,
   formData: FormData,
 ) {
   const supabase = await createSupabaseServerClient();
@@ -179,7 +179,7 @@ export async function createTrip(
 
   const slug = `${slugify(title)}-${Date.now().toString(36)}`;
 
-  const { error } = await supabase.from("trips").insert({
+  const { data: insertedRow, error } = await supabase.from("trips").insert({
     title,
     slug,
     activity_type: activity_type || null,
@@ -208,26 +208,22 @@ export async function createTrip(
     messenger_gc_link,
     is_template,
     template_id: template_id || null,
-  });
+  }).select("id").single();
 
-  if (error) {
-    return { error: error.message };
+  if (error || !insertedRow) {
+    return { error: error?.message ?? "Failed to create trip." };
   }
+
+  const tripId = insertedRow.id as string | number;
 
   revalidatePath("/trips");
   revalidatePath("/organizer/dashboard");
 
-  if (status === "active" && !is_template && !messenger_gc_link) {
-    return {
-      success: true as const,
-      warning: "You haven't added a Messenger Group Chat link. Participants won't receive a group chat link in their confirmation email. You can add it anytime by editing the trip.",
-    };
-  }
+  const warning = (status === "active" && !is_template && !messenger_gc_link)
+    ? "You haven't added a Messenger Group Chat link. Participants won't receive a group chat link in their confirmation email. You can add it anytime by editing the trip."
+    : undefined;
 
-  if (status === "active" && !is_template) {
-    redirect(`/trips/${slug}?published=1`);
-  }
-  redirect("/organizer/dashboard");
+  return { success: true as const, slug, tripId, ...(warning ? { warning } : {}) };
 }
 
 export async function updateTrip(

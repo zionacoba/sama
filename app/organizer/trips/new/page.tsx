@@ -42,7 +42,7 @@ export default async function NewTripPage({ searchParams }: PageProps) {
         ? supabase
             .from("trips")
             .select(
-              "id, title, activity_type, difficulty, destination, duration, description, includes, what_to_bring, photos, payment_type, min_downpayment, downpayment_cutoff_days, cancellation_policy, cancellation_policy_custom, waiver_text, messenger_gc_link",
+              "id, title, activity_type, difficulty, destination, region, duration, description, includes, what_to_bring, photos, payment_type, min_downpayment, downpayment_cutoff_days, cancellation_policy, cancellation_policy_custom, waiver_text, messenger_gc_link",
             )
             .eq("id", template_id)
             .eq("organizer_id", organizer.id)
@@ -84,25 +84,13 @@ export default async function NewTripPage({ searchParams }: PageProps) {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
-            {fromTemplate ? `New run from ${fromTemplate.title}` : "Create a new trip"}
-          </h1>
-          <p className="mt-1 text-stone-600">
-            {fromTemplate
-              ? "Fill in the date, price, and slots for this run."
-              : "Fill in the details below to publish your trip on Sama."}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-          <TripForm
-            destinations={destinations}
-            templates={templates}
-            defaultValues={fromTemplate}
-            preselectedTemplateId={fromTemplate ? String(fromTemplate.id) : undefined}
-          />
-        </div>
+        <TripForm
+          destinations={destinations}
+          templates={templates}
+          defaultValues={fromTemplate}
+          preselectedTemplateId={fromTemplate ? String(fromTemplate.id) : undefined}
+          fromTemplateName={fromTemplate?.title ?? null}
+        />
       </main>
     </div>
   );

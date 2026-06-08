@@ -39,11 +39,13 @@ export function TripForm({
   templates = [],
   defaultValues,
   preselectedTemplateId,
+  fromTemplateName = null,
 }: {
   destinations?: string[];
   templates?: { id: string | number; title: string }[];
   defaultValues?: TripDefaults | null;
   preselectedTemplateId?: string;
+  fromTemplateName?: string | null;
 }) {
   const [state, action] = useActionState(createTrip, null);
   const [isPending, startTransition] = useTransition();
@@ -86,9 +88,94 @@ export function TripForm({
   }
 
   const errorMessage = hasSubmitted && !editedAfterSubmit && !isPending ? state?.error : null;
-  const warningMessage = hasSubmitted && !editedAfterSubmit && !isPending && state && "success" in state ? state.warning : null;
+
+  if (state && "success" in state) {
+    const checkmark = (
+      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
+        <svg
+          width="40"
+          height="40"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-emerald-600"
+          aria-hidden="true"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </div>
+    );
+
+    if (isTemplate) {
+      return (
+        <div className="flex flex-col items-center py-12 text-center">
+          {checkmark}
+          <h1 className="text-2xl font-bold tracking-tight text-stone-900">Template saved!</h1>
+          <p className="mt-3 max-w-sm text-sm text-stone-500">
+            Your template is ready. Create a run to list a specific date that joiners can book.
+          </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <a
+              href={`/organizer/trips/new?template_id=${state.tripId}`}
+              className="rounded-xl border border-stone-200 px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900"
+            >
+              Create a run
+            </a>
+            <a
+              href="/organizer/dashboard"
+              className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
+            >
+              Go to dashboard
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sama.com.ph";
+    return (
+      <div className="flex flex-col items-center py-12 text-center">
+        {checkmark}
+        <h1 className="text-2xl font-bold tracking-tight text-stone-900">Trip saved!</h1>
+        {state.warning && (
+          <p className="mt-4 max-w-sm rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {state.warning}
+          </p>
+        )}
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <a
+            href={`${siteOrigin}/trips/${state.slug}`}
+            className="rounded-xl border border-stone-200 px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900"
+          >
+            View listing
+          </a>
+          <a
+            href="/organizer/dashboard"
+            className="rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
+          >
+            Go to dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
+    <div>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+          {fromTemplateName ? `New run from ${fromTemplateName}` : "Create a new trip"}
+        </h1>
+        <p className="mt-1 text-stone-600">
+          {fromTemplateName
+            ? "Fill in the date, price, and slots for this run."
+            : "Fill in the details below to publish your trip on Sama."}
+        </p>
+      </div>
+      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
     <form
       ref={formRef}
       onSubmit={handleSubmit}
@@ -104,19 +191,9 @@ export function TripForm({
         </p>
       )}
 
-      {warningMessage && (
-        <div
-          role="alert"
-          className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
-        >
-          <p className="font-semibold">Trip published</p>
-          <p className="mt-1">{warningMessage}</p>
-          <a
-            href="/organizer/dashboard"
-            className="mt-2 inline-block text-xs font-semibold underline underline-offset-2 hover:text-amber-900"
-          >
-            Go to dashboard
-          </a>
+      {preselectedTemplateId && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          Pre-filled from your template. Add a date and price to create this run.
         </div>
       )}
 
@@ -609,5 +686,7 @@ export function TripForm({
         </button>
       </div>
     </form>
+      </div>
+    </div>
   );
 }
