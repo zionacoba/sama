@@ -41,8 +41,8 @@ function SignupForm() {
     setSuccess(false);
 
     const strippedPhone = phone.replace(/[\s-]/g, "");
-    if (!/^\d{10,}$/.test(strippedPhone)) {
-      setPhoneError("Please enter a valid phone number (at least 10 digits, numbers only).");
+    if (!/^(\+63|0)\d{9,10}$/.test(strippedPhone)) {
+      setPhoneError("Please enter a valid Philippine phone number (e.g. 09xxxxxxxxx or +639xxxxxxxxx).");
       return;
     }
 

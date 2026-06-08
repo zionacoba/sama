@@ -399,7 +399,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
           ) : (
             <>
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-              {groups.map(({ key, representative: trip, runs }) => {
+              {groups.map(({ key, representative: trip, runs }, index) => {
                 const isGrouped = runs.length > 1;
                 const minPrice = isGrouped
                   ? Math.min(...runs.map((r) => Number(r.price)))
@@ -414,6 +414,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                         className="object-cover"
                         sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                         quality={80}
+                        priority={index < 4}
                       />
                     )}
                   </div>

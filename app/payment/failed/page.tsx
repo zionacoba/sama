@@ -34,7 +34,7 @@ export default async function PaymentFailedPage({ searchParams }: PageProps) {
           <h1 className="text-2xl font-bold text-stone-900">Payment was not completed</h1>
 
           <p className="mt-3 text-sm text-stone-600">
-            Your booking slot is reserved for 30 minutes. You can try again or contact us for help.
+            Your booking slot is reserved for 45 minutes. You can try again or contact us for help.
           </p>
 
           {bookingId && (

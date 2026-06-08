@@ -47,7 +47,8 @@ Deno.serve(async (_req) => {
   const { data: trips, error: tripsError } = await supabase
     .from("trips")
     .select("id, title, slug, date_start, messenger_gc_link")
-    .eq("date_start", targetDatePH);
+    .eq("date_start", targetDatePH)
+    .eq("status", "active");
 
   if (tripsError) {
     console.error("[pre-trip-reminder] trips fetch error:", tripsError.message);

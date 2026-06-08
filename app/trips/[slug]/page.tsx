@@ -579,24 +579,33 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               </div>
             )}
 
-            {(() => {
-              const contactUrl = organizer?.social_links?.facebook || organizer?.facebook_url;
-              return contactUrl ? (
+            {organizer && (() => {
+              const contactUrl = organizer.social_links?.facebook || organizer.facebook_url;
+              return (
                 <div className="mt-8 p-4 bg-stone-50 rounded-xl border border-stone-100">
                   <p className="text-sm font-medium text-stone-900 mb-1">Have questions about this trip?</p>
                   <p className="text-sm text-stone-500 mb-3">
-                    Reach out to {organizer!.display_name ?? organizer!.full_name} directly before booking.
+                    Reach out to {organizer.display_name ?? organizer.full_name} directly before booking.
                   </p>
-                  <a
-                    href={contactUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-trailhead hover:underline"
-                  >
-                    Message on Facebook
-                  </a>
+                  {contactUrl ? (
+                    <a
+                      href={contactUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-trailhead hover:underline"
+                    >
+                      Message on Facebook
+                    </a>
+                  ) : (
+                    <p className="text-sm text-stone-600">
+                      Have questions? Email{" "}
+                      <a href="mailto:hello@sama.com.ph" className="font-medium text-trailhead underline-offset-4 hover:underline">
+                        hello@sama.com.ph
+                      </a>
+                    </p>
+                  )}
                 </div>
-              ) : null;
+              );
             })()}
           </div>
 

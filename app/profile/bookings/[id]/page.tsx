@@ -253,9 +253,11 @@ export default async function BookingDetailPage({ params }: PageProps) {
                   </a>
                 ) : (
                   <span className="text-stone-600">
-                    {organizerDisplayName
-                      ? `Contact ${organizerDisplayName} through the group chat you were invited to.`
-                      : "Contact your organizer through the group chat you were invited to."}
+                    Need help reaching your organizer? Email us at{" "}
+                    <a href="mailto:hello@sama.com.ph" className="font-medium text-trailhead underline-offset-4 hover:underline">
+                      hello@sama.com.ph
+                    </a>{" "}
+                    and we&apos;ll connect you.
                   </span>
                 )}
               </DetailRow>
