@@ -60,7 +60,7 @@ export async function createBooking(input: CreateBookingInput) {
 
   const { data: trip, error: tripFetchError } = await admin
     .from("trips")
-    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, downpayment_cutoff_days, messenger_gc_link, waiver_text")
+    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, downpayment_cutoff_days, messenger_gc_link, waiver_text, cancellation_policy")
     .eq("slug", input.tripSlug)
     .maybeSingle();
 
@@ -205,6 +205,12 @@ export async function createBooking(input: CreateBookingInput) {
   // Remove any waitlist entry for this user+trip now that they have a booking.
   await admin.from("waitlist").delete().eq("trip_id", trip.id).eq("user_id", user.id);
 
+  // Snapshot the cancellation policy at booking time so later trip changes don't affect this booking.
+  await admin
+    .from("bookings")
+    .update({ cancellation_policy: trip.cancellation_policy ?? null })
+    .eq("id", newBooking.id);
+
   const participantTokens =
     input.slots > 1
       ? participantRows.slice(1).map((p) => ({ slotIndex: p.slot_number, token: p.token }))
@@ -344,6 +350,11 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   if (trip.status !== "active") {
     return { error: "This trip is no longer active and bookings cannot be approved." };
+  }
+
+  const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  if (trip.date_start < todayPH) {
+    return { error: "This trip has already passed. You cannot approve or reject bookings for past trips." };
   }
 
   // Concurrency-safe update: only succeeds if the booking is still pending.
@@ -736,13 +747,24 @@ export async function cancelBooking(bookingId: number) {
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status, payout_status, payout_id")
+    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status, payout_status, payout_id, cancellation_policy")
     .eq("id", bookingId)
     .maybeSingle();
 
   if (!booking) return { error: "Booking not found." };
   if (booking.user_id !== user.id) return { error: "You don't have permission to cancel this booking." };
   if (["cancelled", "rejected", "transferred"].includes(booking.status)) return { error: "This booking is already cancelled or rejected." };
+
+  // Block cancellation after the trip has already taken place.
+  const { data: tripDateCheck } = await admin
+    .from("trips")
+    .select("date_start")
+    .eq("id", booking.trip_id)
+    .maybeSingle();
+  const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  if (tripDateCheck && tripDateCheck.date_start < todayPH) {
+    return { error: "This trip has already taken place. Bookings can no longer be cancelled." };
+  }
 
   const { data: cancelledBooking, error: cancelError } = await admin
     .from("bookings")
@@ -825,7 +847,7 @@ export async function cancelBooking(bookingId: number) {
         ? booking.amount_due
         : (booking.total_amount ?? 0);
     const refundAmount = calculateRefundAmount(
-      trip.cancellation_policy ?? "flexible",
+      booking.cancellation_policy ?? trip.cancellation_policy ?? "flexible",
       amountPaid,
       daysUntilTrip,
     );

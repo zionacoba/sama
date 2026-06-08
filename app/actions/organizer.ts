@@ -59,6 +59,85 @@ export async function applyToBeOrganizer(
     return { error: "This display name is already taken. Please choose a different one." };
   }
 
+  // Check if this user already has an organizer row.
+  const { data: existingOrganizer } = await supabase
+    .from("organizers")
+    .select("id, status")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existingOrganizer) {
+    if (existingOrganizer.status !== "rejected") {
+      return { error: "You have already submitted an application." };
+    }
+
+    // Rejected — allow reapplication by updating the existing row and resetting to pending.
+    const { error: reapplyError } = await supabase
+      .from("organizers")
+      .update({
+        display_name: displayName,
+        full_name: fullName,
+        bio,
+        phone,
+        facebook_url: personalFacebookUrl,
+        social_links: JSON.stringify({ facebook: organizerFacebookUrl || null, instagram: instagram || null }),
+        activity_types: activityTypes,
+        years_experience: yearsOfExperience,
+        emergency_certified: emergencyCertified,
+        trips_per_month: tripsPerMonth,
+        operating_locations: operatingLocations,
+        status: "pending",
+      })
+      .eq("id", existingOrganizer.id);
+
+    if (reapplyError) {
+      console.error("[organizer] reapply update failed", reapplyError);
+      if (reapplyError.code === "23505" && reapplyError.message?.includes("organizers_display_name_unique")) {
+        return { error: "This display name is already taken. Please choose a different one." };
+      }
+      return { error: "Something went wrong. Please try again." };
+    }
+
+    try {
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: user.email!,
+        replyTo: REPLY_TO_ADDRESS,
+        subject: "We received your Sama organizer application!",
+        html: `
+          <p>Hi ${escapeHtml(fullName)},</p>
+          <p>Thanks for reapplying to be a Sama organizer. We'll review your application and get back to you within a few days.</p>
+          <p>In the meantime, feel free to browse trips at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}">${process.env.NEXT_PUBLIC_SITE_URL?.replace("https://", "") || "sama.com.ph"}</a>.</p>
+          <p>— The Sama Team</p>
+        `,
+      });
+    } catch (err) {
+      console.error("[email] failed to send organizer reapplication confirmation", err);
+    }
+
+    try {
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: ADMIN_EMAIL,
+        replyTo: REPLY_TO_ADDRESS,
+        subject: `Organizer reapplication: ${escapeHtml(displayName)}`,
+        html: `
+          <p>A rejected organizer has reapplied.</p>
+          <ul>
+            <li><strong>Name:</strong> ${escapeHtml(fullName)}</li>
+            <li><strong>Display name:</strong> ${escapeHtml(displayName)}</li>
+            <li><strong>Email:</strong> ${escapeHtml(user.email!)}</li>
+          </ul>
+          <p><a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/admin">Review it in the admin dashboard</a></p>
+        `,
+      });
+    } catch (err) {
+      console.error("[email] failed to notify admin of organizer reapplication", err);
+    }
+
+    return { success: true };
+  }
+
   let insertError;
   try {
     const { error } = await supabase.from("organizers").insert({

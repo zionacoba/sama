@@ -243,7 +243,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
         <p>Thank you for your interest in becoming a Sama organizer.</p>
         <p>After reviewing your application, we're unable to approve it at this time.</p>
         ${tripsUnpublishedNote}
-        <p>If you have questions or would like to reapply in the future, feel free to reach out to us.</p>
+        <p>If you'd like to reapply in the future, you can do so at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/apply">sama.com.ph/apply</a>.</p>
         <p>— The Sama Team</p>
       `,
     });
