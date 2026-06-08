@@ -1,14 +1,8 @@
-import fs from "fs";
-import path from "path";
 import { ImageResponse } from "next/og";
 
 export const alt = "Trip on Sama";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-
-const badgePath = path.join(process.cwd(), "public", "sama-badge.png");
-const badgeBase64 = fs.readFileSync(badgePath).toString("base64");
-const badgeSrc = `data:image/png;base64,${badgeBase64}`;
 
 type TripRow = {
   title: string;
@@ -120,12 +114,6 @@ export default async function Image({
               fontWeight: 700,
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={badgeSrc}
-              alt=""
-              style={{ height: 28, width: 28, filter: "brightness(0) invert(1)" }}
-            />
             Sama
           </div>
 
