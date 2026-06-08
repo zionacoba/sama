@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -69,6 +70,43 @@ function DifficultyBadge({ level }: { level: string }) {
       {level}
     </span>
   );
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const admin = createSupabaseAdminClient();
+  const { data: organizer } = await admin
+    .from("organizers")
+    .select("display_name, full_name, bio, photo_url, status")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!organizer || organizer.status !== "approved") {
+    return { title: "Organizer not found" };
+  }
+
+  const publicName = organizer.display_name ?? organizer.full_name;
+  const title = `${publicName} — Sama Organizer`;
+  const description = organizer.bio
+    ? organizer.bio.slice(0, 150).trimEnd() + (organizer.bio.length > 150 ? "…" : "")
+    : `Join ${publicName}'s outdoor trips on Sama.`;
+
+  return {
+    title: { absolute: title },
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `/organizers/${id}`,
+      type: "profile",
+      ...(organizer.photo_url ? { images: [organizer.photo_url] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
 }
 
 export default async function OrganizerProfilePage({ params }: PageProps) {

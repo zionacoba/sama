@@ -58,13 +58,19 @@ export function RecurringTemplateInfoButton() {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function onMouseDown(e: MouseEvent) {
+    function onOutside(e: MouseEvent | TouchEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
-    if (open) document.addEventListener("mousedown", onMouseDown);
-    return () => document.removeEventListener("mousedown", onMouseDown);
+    if (open) {
+      document.addEventListener("mousedown", onOutside);
+      document.addEventListener("touchstart", onOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("touchstart", onOutside);
+    };
   }, [open]);
 
   return (
@@ -108,13 +114,19 @@ export function DifficultyInfoButton({ variant }: { variant: "organizer" | "join
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function onMouseDown(e: MouseEvent) {
+    function onOutside(e: MouseEvent | TouchEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
-    if (open) document.addEventListener("mousedown", onMouseDown);
-    return () => document.removeEventListener("mousedown", onMouseDown);
+    if (open) {
+      document.addEventListener("mousedown", onOutside);
+      document.addEventListener("touchstart", onOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("touchstart", onOutside);
+    };
   }, [open]);
 
   const entries = variant === "organizer" ? ORGANIZER : JOINER;
