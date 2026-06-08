@@ -83,13 +83,13 @@ export async function createBooking(input: CreateBookingInput) {
     return { error: "You must agree to both waivers before booking." };
   }
 
-  // Prevent duplicate bookings for the same trip (cancelled bookings allow re-booking).
+  // Prevent duplicate bookings for the same trip (cancelled/rejected/transferred bookings allow re-booking).
   const { data: existingBooking } = await admin
     .from("bookings")
     .select("id")
     .eq("trip_id", trip.id)
     .eq("user_id", user.id)
-    .in("status", ["confirmed", "pending", "payment_pending"])
+    .not("status", "in", '("cancelled","rejected","transferred")')
     .maybeSingle();
 
   if (existingBooking) {
