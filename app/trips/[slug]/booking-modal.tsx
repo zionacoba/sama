@@ -365,6 +365,9 @@ export function BookingModal({
                   <p className="text-xs text-stone-400">
                     You&apos;ll be redirected to PayMongo to complete payment via GCash, QR Ph, or card.
                   </p>
+                  <p className="text-xs text-stone-400">
+                    GCash refunds are processed automatically. QR Ph refunds are processed manually and may take 3–5 business days.
+                  </p>
 
                   <div aria-live="polite" aria-atomic="true">
                     {error && (
