@@ -1,9 +1,14 @@
+import fs from "fs";
+import path from "path";
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
 export const alt = "Trip on Sama";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+const badgePath = path.join(process.cwd(), "public", "sama-badge.png");
+const badgeBase64 = fs.readFileSync(badgePath).toString("base64");
+const badgeSrc = `data:image/png;base64,${badgeBase64}`;
 
 type TripRow = {
   title: string;
@@ -61,112 +66,112 @@ export default async function Image({
   const titleSize = title.length > 50 ? 54 : title.length > 35 ? 64 : 72;
 
   try {
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          display: "flex",
-          width: "100%",
-          height: "100%",
-          position: "relative",
-          backgroundColor: "#1c1917",
-        }}
-      >
-        {photoDataUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={photoDataUrl}
-            alt=""
+    return new ImageResponse(
+      (
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            height: "100%",
+            position: "relative",
+            backgroundColor: "#1c1917",
+          }}
+        >
+          {photoDataUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photoDataUrl}
+              alt=""
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+          )}
+
+          <div
             style={{
               position: "absolute",
               top: 0,
               left: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
+              right: 0,
+              bottom: 0,
+              backgroundImage: photoDataUrl
+                ? "linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.22) 38%, rgba(0,0,0,0.84) 100%)"
+                : "linear-gradient(135deg, #292524 0%, #1c1917 100%)",
+              display: "flex",
             }}
           />
-        )}
 
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundImage: photoDataUrl
-              ? "linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.22) 38%, rgba(0,0,0,0.84) 100%)"
-              : "linear-gradient(135deg, #292524 0%, #1c1917 100%)",
-            display: "flex",
-          }}
-        />
+          <div
+            style={{
+              position: "absolute",
+              top: 48,
+              left: 56,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              color: "#ffffff",
+              fontSize: 28,
+              fontWeight: 700,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={badgeSrc}
+              alt=""
+              style={{ height: 28, width: 28, filter: "brightness(0) invert(1)" }}
+            />
+            Sama
+          </div>
 
-        <div
-          style={{
-            position: "absolute",
-            top: 48,
-            left: 56,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            color: "#ffffff",
-            fontSize: 28,
-            fontWeight: 700,
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://sama.com.ph/sama-badge.png"
-            alt=""
-            style={{ height: 24, width: "auto", filter: "brightness(0) invert(1)" }}
-          />
-          Sama
-        </div>
-
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            paddingLeft: 56,
-            paddingRight: 56,
-            paddingBottom: 52,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {destination ? (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              paddingLeft: 56,
+              paddingRight: 56,
+              paddingBottom: 52,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {destination ? (
+              <div
+                style={{
+                  color: "rgba(255,255,255,0.70)",
+                  fontSize: 22,
+                  letterSpacing: "0.08em",
+                  marginBottom: 12,
+                  display: "flex",
+                }}
+              >
+                {destination.toUpperCase()}
+              </div>
+            ) : null}
             <div
               style={{
-                color: "rgba(255,255,255,0.70)",
-                fontSize: 22,
-                letterSpacing: "0.08em",
-                marginBottom: 12,
+                color: "#ffffff",
+                fontSize: titleSize,
+                fontWeight: 700,
+                lineHeight: 1.1,
+                letterSpacing: "-0.025em",
                 display: "flex",
               }}
             >
-              {destination.toUpperCase()}
+              {title}
             </div>
-          ) : null}
-          <div
-            style={{
-              color: "#ffffff",
-              fontSize: titleSize,
-              fontWeight: 700,
-              lineHeight: 1.1,
-              letterSpacing: "-0.025em",
-              display: "flex",
-            }}
-          >
-            {title}
           </div>
         </div>
-      </div>
-    ),
-    { ...size },
-  );
+      ),
+      { ...size },
+    );
   } catch {
     return new ImageResponse(
       (
