@@ -4,6 +4,7 @@ import { useActionState, useRef, useState, useTransition } from "react";
 import { updateTrip } from "@/app/actions/trip";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { PhotoUploader, type PhotoItem } from "@/app/components/photo-uploader";
+import { DifficultyInfoButton } from "@/app/components/difficulty-info";
 import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
 
 const inputClass =
@@ -212,9 +213,12 @@ export function EditTripForm({
           </select>
         </div>
         <div>
-          <label htmlFor="difficulty" className={labelClass}>
-            Level
-          </label>
+          <div className="flex items-center gap-1">
+            <label htmlFor="difficulty" className={labelClass}>
+              Level
+            </label>
+            <DifficultyInfoButton variant="organizer" />
+          </div>
           <select
             id="difficulty"
             name="difficulty"

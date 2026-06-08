@@ -11,6 +11,7 @@ import { PhotoGallery } from "@/app/components/photo-gallery";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { formatDate, formatDateShort, formatDateRange, formatReviewDate } from "@/lib/format";
 import { PublishedBanner } from "@/app/trips/[slug]/published-banner";
+import { DifficultyInfoButton } from "@/app/components/difficulty-info";
 import Script from "next/script";
 
 type TripDetail = {
@@ -345,7 +346,10 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
           <div className="mx-auto max-w-6xl">
             <div className="flex flex-wrap items-center gap-2">
               {tripData.activity_type && <ActivityBadge type={tripData.activity_type} />}
-              <DifficultyBadge level={tripData.difficulty} />
+              <span className="inline-flex items-center gap-1">
+                <DifficultyBadge level={tripData.difficulty} />
+                <DifficultyInfoButton variant="joiner" />
+              </span>
               {totalReviewCount > 0 && avgRating !== null && (
                 <a href="#reviews" className="group flex items-center gap-1.5">
                   <Stars rating={avgRating} />
