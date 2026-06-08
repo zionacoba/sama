@@ -13,6 +13,7 @@ import {
   type PayoutHistoryEntry,
 } from "@/app/actions/admin";
 import { PendingPayoutCard } from "./pending-payout-card";
+import { OrganizerApproveButton } from "./organizer-approve-button";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
@@ -579,11 +580,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                         <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-stone-100 pt-4">
                           {app.status === "pending" && (
                             <>
-                              <form action={approveOrganizer.bind(null, app.id)}>
-                                <button type="submit" className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700">
-                                  Approve
-                                </button>
-                              </form>
+                              <OrganizerApproveButton id={app.id} />
                               <form action={rejectOrganizer.bind(null, app.id)}>
                                 <button type="submit" className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700">
                                   Reject

@@ -21,11 +21,16 @@ export async function approveOrganizer(id: string): Promise<void> {
 
   const { data: organizer } = await admin
     .from("organizers")
-    .select("email, full_name, display_name")
+    .select("email, full_name, display_name, status")
     .eq("id", id)
     .maybeSingle();
 
   if (!organizer) return;
+
+  // Idempotency guard — skip DB write and email if already approved.
+  if (organizer.status === "approved") {
+    redirect("/admin?tab=organizers");
+  }
 
   await admin.from("organizers").update({ status: "approved" }).eq("id", id);
 
