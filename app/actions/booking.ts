@@ -175,6 +175,9 @@ export async function createBooking(input: CreateBookingInput) {
     if (bookingError?.message?.includes("not_enough_slots")) {
       return { error: "This trip is fully booked." };
     }
+    if (bookingError?.code === "23505") {
+      return { error: "You already have an active booking for this trip." };
+    }
     return { error: "Booking failed. Please try again or contact support." };
   }
 

@@ -457,28 +457,18 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   const netAmount = Math.round((totalAmount - totalCommission) * 100) / 100;
   const confirmedIds = bookings.map((b) => b.id);
 
-  const { data: payout, error } = await admin
-    .from("payouts" as "trips")
-    .insert({
-      organizer_id: organizerId,
-      booking_ids: confirmedIds,
-      total_amount: totalAmount,
-      platform_commission: totalCommission,
-      net_amount: netAmount,
-      status: "pending",
-    })
-    .select("id")
-    .single() as unknown as { data: { id: string } | null; error: { message: string } | null };
+  const { data: payoutId, error } = await admin.rpc("create_payout_atomic", {
+    p_organizer_id: organizerId,
+    p_booking_ids: confirmedIds,
+    p_total_amount: totalAmount,
+    p_platform_commission: totalCommission,
+    p_net_amount: netAmount,
+  }) as unknown as { data: string | null; error: { message: string } | null };
 
-  if (error || !payout) {
-    console.error("[createPayout] insert failed:", error?.message);
+  if (error || !payoutId) {
+    console.error("[createPayout] RPC failed:", error?.message);
     redirect("/admin?tab=payouts&payoutError=create");
   }
-
-  await admin
-    .from("bookings")
-    .update({ payout_status: "included", payout_id: payout.id })
-    .in("id", confirmedIds);
 
   revalidatePath("/admin");
   redirect("/admin?tab=payouts");

@@ -15,6 +15,8 @@ function verifySignature(rawBody: string, sigHeader: string, secret: string): bo
 
   if (!timestamp || !testSig) return false;
 
+  if (Math.abs(Date.now() / 1000 - parseInt(timestamp, 10)) > 300) return false;
+
   const expected = createHmac("sha256", secret)
     .update(`${timestamp}.${rawBody}`)
     .digest("hex");
