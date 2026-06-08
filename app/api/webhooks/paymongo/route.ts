@@ -6,6 +6,7 @@ import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
 function verifySignature(rawBody: string, sigHeader: string, secret: string): boolean {
   const parts = sigHeader.split(",");
@@ -153,7 +154,35 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
     .select()
     .single();
 
-  if (updateError || !updatedBooking) {
+  if (updateError) {
+    console.error(`[webhook] DB update failed for booking ${booking.id}:`, updateError);
+    if (ADMIN_EMAIL) {
+      const fmt = (n: number) =>
+        new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: ADMIN_EMAIL,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: "Action needed: booking stuck in payment_pending",
+          html: `
+            <p>A webhook DB update failed. The booking is stuck in <strong>payment_pending</strong> and needs manual recovery.</p>
+            <p><strong>Booking ID:</strong> ${booking.id}</p>
+            <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
+            <p><strong>Amount:</strong> ${fmt(booking.total_amount)}</p>
+            <p><strong>Participant email:</strong> ${escapeHtml(booking.email)}</p>
+            <p><strong>Error:</strong> ${escapeHtml(updateError.message)}</p>
+          `,
+        });
+      } catch (alertErr) {
+        console.error("[webhook] failed to send stuck booking alert", alertErr);
+      }
+    }
+    return;
+  }
+
+  if (!updatedBooking) {
+    // Idempotency: already processed.
     console.log(`[webhook] Duplicate delivery for booking ${booking.id} — skipping`);
     return;
   }

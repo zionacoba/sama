@@ -136,7 +136,14 @@ function OrganizerPayoutCard({ org }: { org: PendingPayoutOrganizer }) {
               <tr key={b.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
                 <td className="px-5 py-3 font-medium text-stone-900">{b.tripTitle}</td>
                 <td className="whitespace-nowrap px-5 py-3 text-stone-600">{formatDateShort(b.tripDate)}</td>
-                <td className="px-5 py-3 text-stone-700">{b.participantName}</td>
+                <td className="px-5 py-3 text-stone-700">
+                  {b.participantName}
+                  {b.downpaymentOnly && (
+                    <span className="ml-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      Downpayment only — balance not yet collected
+                    </span>
+                  )}
+                </td>
                 <td className="px-5 py-3 text-right text-stone-700">{formatCurrency(b.totalAmount)}</td>
                 <td className="px-5 py-3 text-right text-stone-400">−{formatCurrency(b.platformCommission)}</td>
                 <td className="px-5 py-3 text-right font-semibold text-trailhead">{formatCurrency(b.netAmount)}</td>
@@ -198,15 +205,24 @@ function PayoutHistoryTable({ history }: { history: PayoutHistoryEntry[] }) {
               </tr>
             ) : (
               history.map((p) => (
-                <tr key={p.id} className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30">
-                  <td className="px-4 py-3 font-medium text-stone-900">{p.organizerName}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-trailhead">{formatCurrency(p.netAmount)}</td>
-                  <td className="px-4 py-3 text-right text-stone-500">{formatCurrency(p.platformCommission)}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-stone-700">{p.remittanceReference ?? "—"}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-stone-600">{formatCreatedAt(p.remittedAt)}</td>
-                  <td className="px-4 py-3 text-right text-stone-700">{p.bookingCount}</td>
-                  <td className="max-w-[180px] truncate px-4 py-3 text-xs text-stone-500" title={p.notes ?? ""}>{p.notes ?? "—"}</td>
-                </tr>
+                <>
+                  <tr key={p.id} className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30">
+                    <td className="px-4 py-3 font-medium text-stone-900">{p.organizerName}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-trailhead">{formatCurrency(p.netAmount)}</td>
+                    <td className="px-4 py-3 text-right text-stone-500">{formatCurrency(p.platformCommission)}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-stone-700">{p.remittanceReference ?? "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-stone-600">{formatCreatedAt(p.remittedAt)}</td>
+                    <td className="px-4 py-3 text-right text-stone-700">{p.bookingCount}</td>
+                    <td className="max-w-[180px] truncate px-4 py-3 text-xs text-stone-500" title={p.notes ?? ""}>{p.notes ?? "—"}</td>
+                  </tr>
+                  {p.needsReconciliation && (
+                    <tr key={`${p.id}-reconciliation`} className="border-b border-amber-100 bg-amber-50">
+                      <td colSpan={7} className="px-4 py-2 text-xs font-medium text-amber-800">
+                        ⚠ One or more bookings in this payout have been cancelled after remittance. Manual reconciliation may be needed.
+                      </td>
+                    </tr>
+                  )}
+                </>
               ))
             )}
           </tbody>

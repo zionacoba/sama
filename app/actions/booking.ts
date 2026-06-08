@@ -71,6 +71,14 @@ export async function createBooking(input: CreateBookingInput) {
   if (trip.status !== "active" || trip.date_start < new Date().toISOString().split("T")[0]) {
     return { error: "This trip is no longer available for booking." };
   }
+
+  if (input.slots > trip.remaining_slots) {
+    return {
+      error: trip.remaining_slots > 0
+        ? `Sorry, only ${trip.remaining_slots} slot${trip.remaining_slots !== 1 ? "s are" : " is"} available for this trip.`
+        : "Sorry, this trip is fully booked.",
+    };
+  }
   if (!input.waiverAgreed || !input.platformWaiverAgreed) {
     return { error: "You must agree to both waivers before booking." };
   }
@@ -207,6 +215,36 @@ export async function createBooking(input: CreateBookingInput) {
       .from("bookings")
       .update({ status: autoApprove ? "confirmed" : "pending" })
       .eq("id", newBooking.id);
+
+    if (autoApprove) {
+      const tripDate = new Intl.DateTimeFormat("en-PH", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila",
+      }).format(new Date(trip.date_start));
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: input.email,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `You're confirmed for ${trip.title}!`,
+          html: `
+            <p>Hi ${escapeHtml(input.fullName)},</p>
+            <p>Your booking for <strong>${escapeHtml(trip.title)}</strong> is confirmed. Here's a summary:</p>
+            <ul>
+              <li><strong>Booking ref:</strong> ${bookingRef}</li>
+              <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
+              <li><strong>Date:</strong> ${tripDate}</li>
+              <li><strong>Slots booked:</strong> ${input.slots}</li>
+            </ul>
+            ${trip.messenger_gc_link ? `<p>Join the group chat for trip updates and coordination:<br><a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>` : ""}
+            <p>You can view your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
+            <p>— The Sama Team</p>
+          `,
+        });
+      } catch (err) {
+        console.error("[email] failed to send free booking confirmation", err);
+      }
+    }
+
     revalidatePath(`/trips/${input.tripSlug}`);
     return { success: true as const, checkoutUrl: null, bookingRef };
   }
@@ -638,7 +676,7 @@ export async function cancelBooking(bookingId: number) {
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status")
+    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status, payout_status, payout_id")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -656,6 +694,14 @@ export async function cancelBooking(bookingId: number) {
 
   if (cancelError || !cancelledBooking) {
     return { error: "Booking could not be cancelled. It may have already been cancelled." };
+  }
+
+  // Flag the associated payout for reconciliation when cancelling after remittance.
+  if (booking.payout_status === "remitted" && booking.payout_id) {
+    await admin
+      .from("payouts" as "trips")
+      .update({ needs_reconciliation: true } as never)
+      .eq("id", booking.payout_id);
   }
 
   await admin

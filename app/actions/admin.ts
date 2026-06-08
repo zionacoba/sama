@@ -202,6 +202,7 @@ export type PendingPayoutOrganizer = {
     totalAmount: number;
     platformCommission: number;
     netAmount: number;
+    downpaymentOnly: boolean;
   }>;
   totalAmount: number;
   totalCommission: number;
@@ -230,6 +231,7 @@ export type PayoutHistoryEntry = {
   remittedAt: string;
   remittanceReference: string | null;
   notes: string | null;
+  needsReconciliation: boolean;
 };
 
 // ─── PAYOUT QUERIES ───────────────────────────────────────────────────────────
@@ -275,13 +277,14 @@ export async function getPendingPayouts(): Promise<{
   // Confirmed bookings from past trips not yet included in any payout.
   const { data: rawBookings } = await admin
     .from("bookings")
-    .select("id, full_name, total_amount, platform_commission, payment_option, balance_collected, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
+    .select("id, full_name, total_amount, amount_due, platform_commission, payment_option, balance_collected, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
     .eq("status", "confirmed")
     .eq("payout_status", "unpaid") as unknown as {
       data: Array<{
         id: number;
         full_name: string;
         total_amount: number;
+        amount_due: number | null;
         platform_commission: number | null;
         payment_option: string;
         balance_collected: boolean;
@@ -289,10 +292,11 @@ export async function getPendingPayouts(): Promise<{
       }> | null;
     };
 
-  // Keep only fully-paid bookings from trips that have already taken place.
+  // Include fully-paid bookings and downpayment bookings (even without balance collected)
+  // from trips that have already taken place.
   const eligible = (rawBookings ?? []).filter((b) => {
     if (!b.trip?.date_start || b.trip.date_start >= today) return false;
-    return b.payment_option === "full" || b.balance_collected === true;
+    return b.payment_option === "full" || b.payment_option === "downpayment";
   });
 
   if (eligible.length === 0) return { unpaid: [], pending };
@@ -331,19 +335,25 @@ export async function getPendingPayouts(): Promise<{
     }
 
     const group = grouped.get(orgId)!;
-    const commission = Number(b.platform_commission ?? 0);
-    const net = Number(b.total_amount) - commission;
+    const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
+    const grossAmount = isDownpaymentOnly ? Number(b.amount_due ?? 0) : Number(b.total_amount);
+    const fullCommission = Number(b.platform_commission ?? 0);
+    const commission = isDownpaymentOnly && Number(b.total_amount) > 0
+      ? Math.round((Number(b.amount_due ?? 0) / Number(b.total_amount)) * fullCommission * 100) / 100
+      : fullCommission;
+    const net = Math.round((grossAmount - commission) * 100) / 100;
 
     group.bookings.push({
       id: b.id,
       tripTitle: b.trip!.title,
       tripDate: b.trip!.date_start,
       participantName: b.full_name,
-      totalAmount: Number(b.total_amount),
+      totalAmount: grossAmount,
       platformCommission: commission,
       netAmount: net,
+      downpaymentOnly: isDownpaymentOnly,
     });
-    group.totalAmount = Math.round((group.totalAmount + Number(b.total_amount)) * 100) / 100;
+    group.totalAmount = Math.round((group.totalAmount + grossAmount) * 100) / 100;
     group.totalCommission = Math.round((group.totalCommission + commission) * 100) / 100;
     group.totalNet = Math.round((group.totalNet + net) * 100) / 100;
   }
@@ -357,7 +367,7 @@ export async function getPayoutHistory(): Promise<PayoutHistoryEntry[]> {
 
   const { data } = await admin
     .from("payouts" as "trips")
-    .select("id, total_amount, platform_commission, net_amount, booking_ids, remitted_at, remittance_reference, notes, organizer:organizers(full_name, display_name)")
+    .select("id, total_amount, platform_commission, net_amount, booking_ids, remitted_at, remittance_reference, notes, needs_reconciliation, organizer:organizers(full_name, display_name)")
     .eq("status", "remitted")
     .order("remitted_at", { ascending: false }) as unknown as {
       data: Array<{
@@ -369,6 +379,7 @@ export async function getPayoutHistory(): Promise<PayoutHistoryEntry[]> {
         remitted_at: string;
         remittance_reference: string | null;
         notes: string | null;
+        needs_reconciliation: boolean;
         organizer: { full_name: string; display_name: string | null } | null;
       }> | null;
     };
@@ -383,6 +394,7 @@ export async function getPayoutHistory(): Promise<PayoutHistoryEntry[]> {
     remittedAt: p.remitted_at,
     remittanceReference: p.remittance_reference,
     notes: p.notes,
+    needsReconciliation: p.needs_reconciliation ?? false,
   }));
 }
 
@@ -407,15 +419,36 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   // Compute totals server-side from the actual booking records.
   const { data: bookings } = await admin
     .from("bookings")
-    .select("id, total_amount, platform_commission")
+    .select("id, total_amount, amount_due, platform_commission, payment_option, balance_collected")
     .in("id", bookingIds)
     .eq("payout_status", "unpaid")
-    .eq("status", "confirmed");
+    .eq("status", "confirmed") as unknown as {
+      data: Array<{
+        id: number;
+        total_amount: number;
+        amount_due: number | null;
+        platform_commission: number | null;
+        payment_option: string;
+        balance_collected: boolean;
+      }> | null;
+    };
 
   if (!bookings || bookings.length === 0) redirect("/admin?tab=payouts&payoutError=missing");
 
-  const totalAmount = Math.round(bookings.reduce((s, b) => s + Number(b.total_amount), 0) * 100) / 100;
-  const totalCommission = Math.round(bookings.reduce((s, b) => s + Number(b.platform_commission ?? 0), 0) * 100) / 100;
+  const totalAmount = Math.round(bookings.reduce((s, b) => {
+    const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
+    return s + (isDownpaymentOnly ? Number(b.amount_due ?? 0) : Number(b.total_amount));
+  }, 0) * 100) / 100;
+
+  const totalCommission = Math.round(bookings.reduce((s, b) => {
+    const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
+    const fullCommission = Number(b.platform_commission ?? 0);
+    if (isDownpaymentOnly && Number(b.total_amount) > 0) {
+      return s + (Number(b.amount_due ?? 0) / Number(b.total_amount)) * fullCommission;
+    }
+    return s + fullCommission;
+  }, 0) * 100) / 100;
+
   const netAmount = Math.round((totalAmount - totalCommission) * 100) / 100;
   const confirmedIds = bookings.map((b) => b.id);
 

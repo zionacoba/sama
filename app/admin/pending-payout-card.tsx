@@ -25,10 +25,17 @@ function formatCreatedAt(date: string) {
 export function PendingPayoutCard({ payout }: { payout: PendingPayout }) {
   const [confirming, setConfirming] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [networkError, setNetworkError] = useState<string | null>(null);
 
   function handleConfirm(formData: FormData) {
+    setNetworkError(null);
     startTransition(async () => {
-      await markPayoutRemittedAction(formData);
+      try {
+        await markPayoutRemittedAction(formData);
+      } catch {
+        setNetworkError("Something went wrong. Please try again.");
+        setConfirming(false);
+      }
     });
   }
 
@@ -47,6 +54,11 @@ export function PendingPayoutCard({ payout }: { payout: PendingPayout }) {
           </p>
         </div>
       </div>
+      {networkError && (
+        <p role="alert" className="mx-5 mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {networkError}
+        </p>
+      )}
       <form action={handleConfirm} className="flex flex-wrap items-end gap-3 px-5 py-4">
         <input type="hidden" name="payoutId" value={payout.id} />
         <div className="flex-1 min-w-[200px]">
