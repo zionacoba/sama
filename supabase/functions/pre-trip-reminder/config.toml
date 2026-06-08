@@ -1,0 +1,2 @@
+[functions.pre-trip-reminder]
+schedule = "0 0 * * *"
