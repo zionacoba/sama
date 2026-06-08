@@ -156,7 +156,12 @@ export default async function TripsPage({ searchParams }: PageProps) {
     .from("trips")
     .select("id, slug, title, activity_type, difficulty, price, date_start, date_end, remaining_slots, total_slots, photos, destination, region, duration, is_template, template_id", { count: "exact" })
     .eq("status", "active")
-    .gt("date_start", new Date().toISOString())
+    .gt("date_start", (() => {
+      // Cutoff: tomorrow (PHT date) at 12:00 noon PHT = 04:00 UTC. PHT = UTC+8, no DST.
+      const phtOffsetMs = 8 * 60 * 60 * 1000;
+      const tomorrowPHT = new Date(Date.now() + phtOffsetMs + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      return `${tomorrowPHT}T04:00:00.000Z`;
+    })())
     .gt("remaining_slots", 0)
     .or("is_template.is.null,is_template.eq.false");
 
