@@ -77,22 +77,12 @@ export function DifficultyInfoButton({ variant }: { variant: "organizer" | "join
         aria-label="Difficulty level guide"
         className="inline-flex items-center justify-center text-stone-400 hover:text-stone-600 transition-colors"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        <span
           aria-hidden="true"
+          className="inline-flex h-[15px] w-[15px] select-none items-center justify-center rounded-full border border-current text-[9px] font-bold leading-none"
         >
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 16v-4" />
-          <path d="M12 8h.01" />
-        </svg>
+          i
+        </span>
       </button>
 
       {open && (

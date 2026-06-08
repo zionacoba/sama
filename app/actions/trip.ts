@@ -227,7 +227,7 @@ export async function createTrip(
 }
 
 export async function updateTrip(
-  _prevState: { error: string } | { success: true; warning?: string } | null,
+  _prevState: { error: string } | { success: true; slug: string; warning?: string } | null,
   formData: FormData,
 ) {
   const supabase = await createSupabaseServerClient();
@@ -637,14 +637,11 @@ export async function updateTrip(
   revalidatePath(`/trips/${existing.slug}`);
   revalidatePath("/organizer/dashboard");
 
-  if (saveWarning) {
-    return { success: true as const, warning: saveWarning };
-  }
-
-  if (status === "active" && !is_template) {
-    redirect(`/trips/${existing.slug}?published=1`);
-  }
-  redirect("/organizer/dashboard");
+  return {
+    success: true as const,
+    slug: existing.slug,
+    ...(saveWarning ? { warning: saveWarning } : {}),
+  };
 }
 
 export async function cancelTrip(tripSlug: string): Promise<{ error: string } | void> {

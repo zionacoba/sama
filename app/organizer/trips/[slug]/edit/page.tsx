@@ -81,12 +81,7 @@ export default async function EditTripPage({ params }: PageProps) {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-        <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-          <h1 className="mb-6 text-xl font-bold tracking-tight text-stone-900">
-            Edit trip
-          </h1>
-          <EditTripForm trip={trip} destinations={destinations} templates={templates} />
-        </div>
+        <EditTripForm slug={slug} trip={trip} destinations={destinations} templates={templates} />
       </main>
     </div>
   );
