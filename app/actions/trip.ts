@@ -273,7 +273,7 @@ export async function updateTrip(
 
   const { data: existing, error: fetchError } = await supabase
     .from("trips")
-    .select("id, slug, status, title, organizer_id, total_slots, remaining_slots, date_start, date_end, price, meeting_points, difficulty, payment_type, min_downpayment")
+    .select("id, slug, status, title, organizer_id, total_slots, remaining_slots, date_start, date_end, price, meeting_points, difficulty, payment_type, min_downpayment, photos")
     .eq("id", tripId)
     .maybeSingle();
 
@@ -317,6 +317,23 @@ export async function updateTrip(
   let photos: string[] = [];
   try { photos = photosJson ? JSON.parse(photosJson) : []; } catch { return { error: "Invalid photo data." }; }
   if (photos.length > 5) return { error: "Maximum 5 photos allowed." };
+
+  // Delete photos removed from the trip during editing.
+  const existingPhotos = Array.isArray(existing.photos) ? (existing.photos as string[]) : [];
+  if (existingPhotos.length > 0) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (supabaseUrl) {
+      const prefix = `${supabaseUrl}/storage/v1/object/public/trip-photos/`;
+      const removedPaths = existingPhotos
+        .filter((url) => !photos.includes(url) && url.startsWith(prefix))
+        .map((url) => url.slice(prefix.length));
+      if (removedPaths.length > 0) {
+        const adminForStorage = createSupabaseAdminClient();
+        await adminForStorage.storage.from("trip-photos").remove(removedPaths);
+      }
+    }
+  }
+
   const payment_type = (formData.get("payment_type") as string) || "full";
   const min_downpayment_raw = formData.get("min_downpayment") as string;
   const min_downpayment = payment_type === "downpayment"

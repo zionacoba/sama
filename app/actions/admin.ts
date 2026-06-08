@@ -505,7 +505,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   }
 
   if (orgForSnapshot) {
-    await (admin
+    const { error: snapshotError } = await (admin
       .from("payouts" as "trips")
       .update({
         payout_destination: {
@@ -517,7 +517,28 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
           bank_account_name: orgForSnapshot.bank_account_name,
         },
       })
-      .eq("id", payoutId) as unknown as Promise<unknown>);
+      .eq("id", payoutId) as unknown as Promise<{ error: { message: string } | null }>);
+
+    if (snapshotError) {
+      console.error("[createPayout] failed to save payout_destination snapshot:", snapshotError.message);
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: ADMIN_EMAIL,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: "Action needed: payout destination snapshot failed to save",
+          html: `
+            <p>The payout was created successfully but the destination snapshot failed to save. The payout will show no destination until manually fixed.</p>
+            <p><strong>Payout ID:</strong> ${escapeHtml(payoutId)}</p>
+            <p><strong>Organizer ID:</strong> ${escapeHtml(organizerId)}</p>
+            <p><strong>Error:</strong> ${escapeHtml(snapshotError.message)}</p>
+            <p>Please update the payout_destination field manually via the database console.</p>
+          `,
+        });
+      } catch (alertErr) {
+        console.error("[createPayout] failed to send snapshot alert:", alertErr);
+      }
+    }
   }
 
   revalidatePath("/admin");

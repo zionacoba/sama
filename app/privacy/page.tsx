@@ -90,7 +90,7 @@ export default function PrivacyPage() {
               <h2 className="text-lg font-bold text-stone-900">4. How We Share Your Information</h2>
               <p className="mt-2 leading-relaxed">We do not sell your personal data. We share your information only with:</p>
               <ul className="mt-2 space-y-1.5 leading-relaxed">
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Organizers</strong> — your name, phone, emergency contact, pickup point, and medical notes are shared with the organizer of trips you book</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Organizers</strong> — your name, email, phone, emergency contact, pickup point, and medical notes are shared with the organizer of trips you book</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">PayMongo</strong> — payment processing. Their privacy policy applies to payment data</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Resend</strong> — transactional email delivery</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Supabase</strong> — database and authentication infrastructure</span></li>
