@@ -108,6 +108,10 @@ export async function createTrip(
   const status = (formData.get("status") as string) === "draft" ? "draft" : "active";
   const isDraft = status === "draft";
 
+  if (is_template && !isDraft) {
+    return { error: "Templates can't be published directly. Go to your dashboard and create a run from this template to list a specific date." };
+  }
+
   if (!title) {
     return { error: "Please enter a trip title." };
   }
@@ -329,6 +333,10 @@ export async function updateTrip(
   const statusInput = formData.get("status") as string | null;
   const status = statusInput === "active" ? "active" : statusInput === "draft" ? "draft" : (existing.status ?? "active");
   const isDraft = status === "draft";
+
+  if (is_template && !isDraft) {
+    return { error: "Templates can't be published directly. Go to your dashboard and create a run from this template to list a specific date." };
+  }
 
   if (!title) {
     return { error: "Please enter a trip title." };
@@ -656,6 +664,17 @@ export async function publishTrip(tripSlug: string): Promise<{ error: string } |
     .maybeSingle();
 
   if (!organizer || organizer.status !== "approved") return { error: "Not authorized." };
+
+  const { data: tripData } = await supabase
+    .from("trips")
+    .select("is_template")
+    .eq("slug", tripSlug)
+    .eq("organizer_id", organizer.id)
+    .maybeSingle();
+
+  if (tripData?.is_template) {
+    return { error: "Templates can't be published directly. Go to your dashboard and create a run from this template to list a specific date." };
+  }
 
   const hasGcash = organizer.payout_method === "gcash" && !!organizer.gcash_number;
   const hasBank = organizer.payout_method === "bank_transfer" && !!organizer.bank_account_number;
