@@ -11,7 +11,8 @@ import { calculateRefundAmount } from "@/lib/cancellation-policies";
 import { processPayMongoRefund, type RefundResult } from "@/lib/paymongo-refund";
 import { createPaymentLink } from "@/lib/create-payment-link";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? (() => { throw new Error("ADMIN_EMAIL environment variable is not set"); })();
+if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
 type CreateBookingInput = {
@@ -517,7 +518,42 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
   if (booking.balance_collected) return { error: "Balance has already been paid." };
   if (booking.balance_payment_gateway_status === "paid") return { error: "Balance has already been paid online." };
   if (booking.balance_payment_id && booking.balance_payment_gateway_status !== "paid") {
-    return { error: "A payment link already exists for this balance. Please check your email or try again in a few minutes." };
+    // Check if the existing PayMongo link is still active before blocking re-generation.
+    const secretKey = process.env.PAYMONGO_SECRET_KEY;
+    if (secretKey) {
+      try {
+        const auth = "Basic " + Buffer.from(`${secretKey}:`).toString("base64");
+        const pmRes = await fetch(`https://api.paymongo.com/v1/links/${booking.balance_payment_id}`, {
+          headers: { Authorization: auth, Accept: "application/json" },
+        });
+
+        if (pmRes.ok) {
+          const pmData = await pmRes.json();
+          const linkStatus = pmData.data?.attributes?.status as string | undefined;
+          if (linkStatus === "unpaid") {
+            // Link is still live — return the existing checkout URL to the joiner.
+            const existingUrl = pmData.data?.attributes?.checkout_url as string | undefined;
+            if (existingUrl) return { success: true, checkoutUrl: existingUrl };
+            // URL missing in response — fall through and generate a new link.
+          }
+          // "archived" or any other terminal status: clear and generate a fresh link.
+          if (linkStatus !== "unpaid") {
+            await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
+          }
+        } else if (pmRes.status === 404) {
+          await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
+        } else {
+          // PayMongo API error — allow re-generation rather than permanently blocking.
+          console.error("[createBalancePaymentLink] PayMongo link status check failed:", pmRes.status);
+          await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
+        }
+      } catch (err) {
+        // Network error — allow re-generation.
+        console.error("[createBalancePaymentLink] PayMongo link status check error:", err);
+        await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
+      }
+    }
+    // No secret key: fall through and generate a new link.
   }
 
   const { data: trip } = await admin

@@ -5,6 +5,8 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { DashboardFilters } from "./dashboard-filters";
 import { TripRow, TripRunRow, type OrganizerTrip, type TripCounts } from "./trip-row";
 
+export const maxDuration = 60;
+
 const PAGE_SIZE = 20;
 
 const isTemplateLike = (t: OrganizerTrip) =>
