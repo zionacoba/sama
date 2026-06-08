@@ -215,41 +215,42 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
     return;
   }
 
+  const tripDate = new Intl.DateTimeFormat("en-PH", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "Asia/Manila",
+  }).format(new Date(trip.date_start));
+
+  const bookingRef = booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
+  const fmt = (n: number) =>
+    new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+      maximumFractionDigits: 0,
+    }).format(n);
+
+  const isDownpay =
+    booking.payment_option === "downpayment" &&
+    booking.amount_due != null &&
+    booking.total_amount != null &&
+    booking.amount_due < booking.total_amount;
+
+  const amountLine = isDownpay
+    ? `<li><strong>Amount paid:</strong> ${fmt(booking.amount_due)} downpayment</li><li><strong>Remaining balance:</strong> ${fmt(booking.total_amount - booking.amount_due)}</li>`
+    : `<li><strong>Total paid:</strong> ${fmt(booking.total_amount)}</li>`;
+
+  const balanceNote = isDownpay
+    ? `<p>Your remaining balance of <strong>${fmt(booking.total_amount - booking.amount_due)}</strong> can be paid online through Sama or directly to your organizer on the day of the trip, whichever they prefer. Your organizer will let you know in the group chat.</p>`
+    : "";
+
+  const meetingLine = booking.meeting_point
+    ? `<li><strong>Meeting point:</strong> ${escapeHtml(booking.meeting_point)}</li>`
+    : "";
+
+  // Participant confirmation email — failure triggers admin alert so no booking is silently missed.
   try {
-    const tripDate = new Intl.DateTimeFormat("en-PH", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      timeZone: "Asia/Manila",
-    }).format(new Date(trip.date_start));
-
-    const bookingRef = booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
-    const fmt = (n: number) =>
-      new Intl.NumberFormat("en-PH", {
-        style: "currency",
-        currency: "PHP",
-        maximumFractionDigits: 0,
-      }).format(n);
-
-    const isDownpay =
-      booking.payment_option === "downpayment" &&
-      booking.amount_due != null &&
-      booking.total_amount != null &&
-      booking.amount_due < booking.total_amount;
-
-    const amountLine = isDownpay
-      ? `<li><strong>Amount paid:</strong> ${fmt(booking.amount_due)} downpayment</li><li><strong>Remaining balance:</strong> ${fmt(booking.total_amount - booking.amount_due)}</li>`
-      : `<li><strong>Total paid:</strong> ${fmt(booking.total_amount)}</li>`;
-
-    const balanceNote = isDownpay
-      ? `<p>Your remaining balance of <strong>${fmt(booking.total_amount - booking.amount_due)}</strong> can be paid online through Sama or directly to your organizer on the day of the trip, whichever they prefer. Your organizer will let you know in the group chat.</p>`
-      : "";
-
-    const meetingLine = booking.meeting_point
-      ? `<li><strong>Meeting point:</strong> ${escapeHtml(booking.meeting_point)}</li>`
-      : "";
-
     await resend.emails.send({
       from: FROM_ADDRESS,
       to: booking.email,
@@ -295,8 +296,33 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
           <p>— The Sama Team</p>
         `,
     });
+  } catch (err) {
+    console.error("[webhook] booking confirmation email failed:", err);
+    if (ADMIN_EMAIL) {
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: ADMIN_EMAIL,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: "Action needed: booking confirmation email failed to send",
+          html: `
+            <p>The booking confirmation email failed to send. The booking was created successfully but the participant was not notified.</p>
+            <p><strong>Booking ID:</strong> ${booking.id}</p>
+            <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
+            <p><strong>Participant email:</strong> ${escapeHtml(booking.email)}</p>
+            <p><strong>Error:</strong> ${escapeHtml(String(err))}</p>
+            <p>Please send a manual confirmation to the participant.</p>
+          `,
+        });
+      } catch (alertErr) {
+        console.error("[webhook] failed to send confirmation email alert:", alertErr);
+      }
+    }
+  }
 
-    if (trip.organizer_id) {
+  // Organizer new-booking notification.
+  if (trip.organizer_id) {
+    try {
       const { data: organizer } = await admin
         .from("organizers")
         .select("email")
@@ -339,9 +365,9 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
           `,
         });
       }
+    } catch (err) {
+      console.error("[webhook] organizer notification email failed:", err);
     }
-  } catch (err) {
-    console.error("[webhook] email send error:", err);
   }
 
   revalidatePath(`/trips/${trip.slug}`);

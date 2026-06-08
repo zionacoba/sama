@@ -22,10 +22,22 @@ function formatCreatedAt(date: string) {
   }).format(new Date(date));
 }
 
+function formatDestination(dest: PendingPayout["payoutDestination"]): string | null {
+  if (!dest) return null;
+  if (dest.payout_method === "gcash" && dest.gcash_number) {
+    return `GCash ${dest.gcash_number}${dest.gcash_name ? ` (${dest.gcash_name})` : ""}`;
+  }
+  if (dest.payout_method === "bank_transfer" && dest.bank_account_number) {
+    return `${dest.bank_name ?? "Bank"} ${dest.bank_account_number}${dest.bank_account_name ? ` (${dest.bank_account_name})` : ""}`;
+  }
+  return null;
+}
+
 export function PendingPayoutCard({ payout }: { payout: PendingPayout }) {
   const [confirming, setConfirming] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [networkError, setNetworkError] = useState<string | null>(null);
+  const destLine = formatDestination(payout.payoutDestination);
 
   function handleConfirm(formData: FormData) {
     setNetworkError(null);
@@ -45,6 +57,12 @@ export function PendingPayoutCard({ payout }: { payout: PendingPayout }) {
         <div>
           <p className="font-semibold text-stone-900">{payout.organizerName}</p>
           <p className="text-sm text-stone-500">{payout.organizerEmail}</p>
+          {destLine && (
+            <p className="mt-0.5 text-sm font-medium text-stone-700">→ {destLine}</p>
+          )}
+          {!destLine && (
+            <p className="mt-0.5 text-sm text-red-600">⚠ No destination on record — verify before sending</p>
+          )}
           <p className="mt-1 text-xs text-stone-400">Created {formatCreatedAt(payout.createdAt)}</p>
         </div>
         <div className="text-right">
@@ -92,7 +110,7 @@ export function PendingPayoutCard({ payout }: { payout: PendingPayout }) {
           <div className="w-full rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
             <p className="font-semibold text-stone-900">Mark as remitted?</p>
             <p className="mt-1 text-sm text-stone-600">
-              Confirm you have sent {formatCurrency(payout.netAmount)} to {payout.organizerName} via PayMongo. This cannot be undone.
+              Confirm you have sent {formatCurrency(payout.netAmount)} to {payout.organizerName}{destLine ? ` via ${destLine}` : ""}. This cannot be undone.
             </p>
             <div className="mt-3 flex gap-2">
               <button

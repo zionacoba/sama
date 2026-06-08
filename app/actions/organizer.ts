@@ -195,6 +195,24 @@ export async function updateOrganizerProfile(
     return { error: "This display name is already taken. Please choose a different one." };
   }
 
+  // Prevent removing or blanking payout details while a payout is pending remittance.
+  const wouldHaveNoPayout =
+    !payout_method ||
+    (payout_method === "gcash" && !gcash_number) ||
+    (payout_method === "bank_transfer" && !bank_account_number);
+
+  if (wouldHaveNoPayout) {
+    const { count: pendingPayoutCount } = await (admin
+      .from("payouts" as "trips")
+      .select("id", { count: "exact", head: true })
+      .eq("organizer_id", organizer.id)
+      .eq("status", "pending") as unknown as Promise<{ count: number | null }>);
+
+    if ((pendingPayoutCount ?? 0) > 0) {
+      return { error: "You have a pending payout. Please keep your payout details active until it has been sent." };
+    }
+  }
+
   // Prevent removing payout details while confirmed bookings on upcoming trips exist.
   if (!payout_method) {
     const now = new Date().toISOString();

@@ -43,6 +43,8 @@ Deno.serve(async (_req) => {
       continue;
     }
 
+    await supabase.from("booking_participants").delete().eq("booking_id", booking.id);
+
     cleaned++;
   }
 

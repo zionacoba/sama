@@ -31,7 +31,7 @@ export async function deleteAccount(): Promise<{ success: true } | { error: stri
   // Block deletion if the user is an organizer with active trips.
   const { data: organizerRow } = await admin
     .from("organizers")
-    .select("id")
+    .select("id, photo_url, cover_image_url")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -85,8 +85,22 @@ export async function deleteAccount(): Promise<{ success: true } | { error: stri
     .update({ full_name: "Deleted User" })
     .eq("user_id", user.id);
 
-  // Remove organizer row if present.
+  // Remove organizer row if present; delete profile photos from Storage first.
   if (organizerRow) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const pathsToDelete: string[] = [];
+    const org = organizerRow as { id: string; photo_url: string | null; cover_image_url: string | null };
+    for (const url of [org.photo_url, org.cover_image_url]) {
+      if (url && supabaseUrl) {
+        const prefix = `${supabaseUrl}/storage/v1/object/public/organizer-photos/`;
+        if (url.startsWith(prefix)) {
+          pathsToDelete.push(url.slice(prefix.length));
+        }
+      }
+    }
+    if (pathsToDelete.length > 0) {
+      await admin.storage.from("organizer-photos").remove(pathsToDelete);
+    }
     await admin.from("organizers").delete().eq("id", organizerRow.id);
   }
 

@@ -225,6 +225,14 @@ export type PendingPayout = {
   netAmount: number;
   bookingCount: number;
   createdAt: string;
+  payoutDestination: {
+    payout_method: string | null;
+    gcash_number: string | null;
+    gcash_name: string | null;
+    bank_name: string | null;
+    bank_account_number: string | null;
+    bank_account_name: string | null;
+  } | null;
 };
 
 export type PayoutHistoryEntry = {
@@ -253,7 +261,7 @@ export async function getPendingPayouts(): Promise<{
   // Payouts already created but not yet remitted.
   const { data: pendingRaw } = await admin
     .from("payouts" as "trips")
-    .select("id, organizer_id, total_amount, platform_commission, net_amount, booking_ids, created_at, organizer:organizers(full_name, display_name, email)")
+    .select("id, organizer_id, total_amount, platform_commission, net_amount, booking_ids, created_at, payout_destination, organizer:organizers(full_name, display_name, email)")
     .eq("status", "pending")
     .order("created_at", { ascending: false }) as unknown as {
       data: Array<{
@@ -264,6 +272,7 @@ export async function getPendingPayouts(): Promise<{
         net_amount: number;
         booking_ids: number[];
         created_at: string;
+        payout_destination: PendingPayout["payoutDestination"] | null;
         organizer: { full_name: string; display_name: string | null; email: string } | null;
       }> | null;
     };
@@ -278,6 +287,7 @@ export async function getPendingPayouts(): Promise<{
     netAmount: Number(p.net_amount),
     bookingCount: p.booking_ids?.length ?? 0,
     createdAt: p.created_at,
+    payoutDestination: p.payout_destination ?? null,
   }));
 
   // Confirmed bookings from past trips not yet included in any payout.
@@ -458,6 +468,13 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   const netAmount = Math.round((totalAmount - totalCommission) * 100) / 100;
   const confirmedIds = bookings.map((b) => b.id);
 
+  // Snapshot payout destination before the atomic creation so the record reflects the state at creation time.
+  const { data: orgForSnapshot } = await admin
+    .from("organizers")
+    .select("payout_method, gcash_number, gcash_name, bank_name, bank_account_number, bank_account_name")
+    .eq("id", organizerId)
+    .maybeSingle();
+
   const { data: payoutId, error } = await admin.rpc("create_payout_atomic", {
     p_organizer_id: organizerId,
     p_booking_ids: confirmedIds,
@@ -468,6 +485,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
 
   if (error || !payoutId) {
     console.error("[createPayout] RPC failed:", error?.message);
+
     try {
       await resend.emails.send({
         from: FROM_ADDRESS,
@@ -484,6 +502,22 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
       console.error("[createPayout] failed to send admin alert:", alertErr);
     }
     redirect("/admin?tab=payouts&payoutError=create");
+  }
+
+  if (orgForSnapshot) {
+    await (admin
+      .from("payouts" as "trips")
+      .update({
+        payout_destination: {
+          payout_method: orgForSnapshot.payout_method,
+          gcash_number: orgForSnapshot.gcash_number,
+          gcash_name: orgForSnapshot.gcash_name,
+          bank_name: orgForSnapshot.bank_name,
+          bank_account_number: orgForSnapshot.bank_account_number,
+          bank_account_name: orgForSnapshot.bank_account_name,
+        },
+      })
+      .eq("id", payoutId) as unknown as Promise<unknown>);
   }
 
   revalidatePath("/admin");

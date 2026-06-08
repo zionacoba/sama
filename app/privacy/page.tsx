@@ -102,7 +102,7 @@ export default function PrivacyPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">5. Data Retention</h2>
               <p className="mt-2 leading-relaxed">
-                We retain your personal data for as long as your account is active or as required by law. Personal data associated with cancelled bookings is deleted automatically upon cancellation. Booking transaction records are retained for a minimum of 5 years for legal and dispute resolution purposes.
+                We retain your personal data for as long as your account is active or as required by law. Personal data associated with cancelled bookings is retained for record-keeping purposes. You may request deletion of your personal data at any time by deleting your account or contacting <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>. Booking transaction records are retained for a minimum of 5 years for legal and dispute resolution purposes.
               </p>
             </section>
 
