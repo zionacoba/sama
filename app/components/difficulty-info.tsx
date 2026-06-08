@@ -109,7 +109,11 @@ export function RecurringTemplateInfoButton() {
   );
 }
 
-export function DifficultyInfoButton({ variant }: { variant: "organizer" | "joiner" }) {
+type DifficultyInfoProps =
+  | { variant: "organizer"; difficulty?: never }
+  | { variant: "joiner"; difficulty: string };
+
+export function DifficultyInfoButton({ variant, difficulty }: DifficultyInfoProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -129,7 +133,9 @@ export function DifficultyInfoButton({ variant }: { variant: "organizer" | "join
     };
   }, [open]);
 
-  const entries = variant === "organizer" ? ORGANIZER : JOINER;
+  const joinerEntry = variant === "joiner"
+    ? JOINER.find((e) => e.level === difficulty) ?? null
+    : null;
 
   return (
     <div ref={ref} className="relative inline-flex items-center">
@@ -148,27 +154,38 @@ export function DifficultyInfoButton({ variant }: { variant: "organizer" | "join
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-stone-200 bg-white p-4 shadow-lg">
-          {variant === "organizer" && (
-            <p className="mb-3 text-xs text-stone-500">
-              Choose the level that honestly matches your trip. When in doubt, go one level higher — it&apos;s better to pleasantly surprise participants than leave them struggling.
-            </p>
-          )}
-          <div className="space-y-3">
-            {entries.map(({ level, description, examples }) => (
-              <div key={level}>
-                <span
-                  className={`mb-1 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeClass(level)}`}
-                >
-                  {level}
-                </span>
-                <p className="text-xs text-stone-600">{description}</p>
-                {examples && (
-                  <p className="mt-0.5 text-xs text-stone-400">Examples: {examples}</p>
-                )}
+        <div className="absolute left-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-stone-200 bg-white p-4 shadow-lg">
+          {variant === "organizer" ? (
+            <>
+              <p className="mb-3 text-xs text-stone-500">
+                Choose the level that honestly matches your trip. When in doubt, go one level higher — it&apos;s better to pleasantly surprise participants than leave them struggling.
+              </p>
+              <div className="space-y-3">
+                {ORGANIZER.map(({ level, description, examples }) => (
+                  <div key={level}>
+                    <span
+                      className={`mb-1 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeClass(level)}`}
+                    >
+                      {level}
+                    </span>
+                    <p className="text-xs text-stone-600">{description}</p>
+                    {examples && (
+                      <p className="mt-0.5 text-xs text-stone-400">Examples: {examples}</p>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          ) : joinerEntry ? (
+            <>
+              <span
+                className={`mb-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeClass(joinerEntry.level)}`}
+              >
+                {joinerEntry.level}
+              </span>
+              <p className="text-xs text-stone-600">{joinerEntry.description}</p>
+            </>
+          ) : null}
         </div>
       )}
     </div>

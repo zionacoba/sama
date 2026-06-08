@@ -348,7 +348,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               {tripData.activity_type && <ActivityBadge type={tripData.activity_type} />}
               <span className="inline-flex items-center gap-1">
                 <DifficultyBadge level={tripData.difficulty} />
-                <DifficultyInfoButton variant="joiner" />
+                <DifficultyInfoButton variant="joiner" difficulty={tripData.difficulty} />
               </span>
               {totalReviewCount > 0 && avgRating !== null && (
                 <a href="#reviews" className="group flex items-center gap-1.5">
