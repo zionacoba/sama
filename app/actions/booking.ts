@@ -610,6 +610,27 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
   });
   if (slotErr) {
     console.error(`[markAsTransferred] restore_slot failed for booking ${bookingId}:`, slotErr.message);
+    await admin
+      .from("bookings")
+      .update({ status: "confirmed", transferred_to_email: null })
+      .eq("id", bookingId);
+    try {
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: ADMIN_EMAIL,
+        replyTo: REPLY_TO_ADDRESS,
+        subject: "Action needed: slot restore failed on transfer",
+        html: `
+          <p>A booking transfer was reverted because the slot restore failed. The booking remains confirmed.</p>
+          <p><strong>Booking ID:</strong> ${bookingId}</p>
+          <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
+          <p><strong>Error:</strong> ${escapeHtml(slotErr.message)}</p>
+        `,
+      });
+    } catch (alertErr) {
+      console.error("[markAsTransferred] failed to send admin alert:", alertErr);
+    }
+    return { error: "Transfer failed: could not restore slot. Please try again." };
   }
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {

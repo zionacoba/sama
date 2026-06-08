@@ -6,7 +6,7 @@ Deno.serve(async (_req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - 45 * 60 * 1000).toISOString();
 
   const { data: staleBookings, error } = await supabase
     .from("bookings")

@@ -467,6 +467,21 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
 
   if (error || !payoutId) {
     console.error("[createPayout] RPC failed:", error?.message);
+    try {
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: ADMIN_EMAIL,
+        replyTo: REPLY_TO_ADDRESS,
+        subject: "Action needed: payout creation failed",
+        html: `
+          <p>The payout creation RPC failed. No payout was created and the bookings remain unpaid.</p>
+          <p><strong>Error:</strong> ${escapeHtml(error?.message ?? "unknown error")}</p>
+          <p>Please retry the payout from the admin dashboard or contact support.</p>
+        `,
+      });
+    } catch (alertErr) {
+      console.error("[createPayout] failed to send admin alert:", alertErr);
+    }
     redirect("/admin?tab=payouts&payoutError=create");
   }
 

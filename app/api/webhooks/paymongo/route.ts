@@ -125,6 +125,29 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
     booking.status === "rejected" ||
     booking.status === "transferred"
   ) {
+    // A cancelled booking with no gateway status was cancelled by the cleanup job, not the user.
+    // The payment still went through — a manual refund is required.
+    if (booking.status === "cancelled" && booking.payment_gateway_status === null && ADMIN_EMAIL) {
+      const fmt = (n: number) =>
+        new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: ADMIN_EMAIL,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: "Action needed: payment received for cancelled booking — manual refund required",
+          html: `
+            <p>A payment was received for a booking that was already cancelled by the cleanup job.</p>
+            <p><strong>Booking ID:</strong> ${booking.id}</p>
+            <p><strong>Amount:</strong> ${fmt(booking.total_amount ?? 0)}</p>
+            <p><strong>Participant email:</strong> ${escapeHtml(booking.email)}</p>
+            <p>Please issue a manual refund via the PayMongo dashboard.</p>
+          `,
+        });
+      } catch (alertErr) {
+        console.error("[webhook] failed to send cancelled-booking payment alert:", alertErr);
+      }
+    }
     console.warn(`[webhook] booking ${booking.id} has status '${booking.status}' — skipping paid event`);
     return;
   }
