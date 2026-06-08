@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { BookingModal } from "@/app/trips/[slug]/booking-modal";
@@ -197,6 +197,15 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
   ]);
 
   if (!trip) {
+    const adminForRedirect = createSupabaseAdminClient();
+    const { data: slugRedirect } = await adminForRedirect
+      .from("trip_slug_redirects")
+      .select("new_slug")
+      .eq("old_slug", slug)
+      .maybeSingle();
+    if (slugRedirect?.new_slug) {
+      redirect(`/trips/${slugRedirect.new_slug}`);
+    }
     return (
       <div className="min-h-full bg-stone-50 text-stone-900 font-sans">
         <header className="border-b border-stone-200/80 bg-white/90 backdrop-blur-md">

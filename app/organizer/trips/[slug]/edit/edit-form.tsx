@@ -172,6 +172,8 @@ export function EditTripForm({
           ) : (
             <a
               href={tripUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               className="rounded-xl border border-stone-200 px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900"
             >
               View listing

@@ -514,6 +514,11 @@ export async function updateTrip(
   let newSlug: string | undefined;
   if (titleChanged || startDateChanged) {
     newSlug = await makeUniqueSlug(buildBaseSlug(title, safeDateStart), supabase, tripId);
+    const adminForRedirect = createSupabaseAdminClient();
+    await adminForRedirect.from("trip_slug_redirects").upsert(
+      { old_slug: existing.slug, new_slug: newSlug, trip_id: tripId },
+      { onConflict: "old_slug" }
+    );
   }
 
   const { error } = await supabase
