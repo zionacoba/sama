@@ -158,28 +158,28 @@ export function OrganizerTripsSection({ trips }: { trips: Trip[] }) {
         </p>
       ) : (
         <>
-          <div className="-mx-4 mt-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
-            <ul className="flex snap-x snap-mandatory gap-4 sm:grid sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+          <div className="mt-4">
+            <ul className="flex flex-col gap-3">
               {visibleTrips.map((trip) => (
-                <li key={trip.id} className="w-[75vw] shrink-0 snap-start sm:flex sm:w-auto sm:flex-col">
+                <li key={trip.id}>
                   <Link
                     href={`/trips/${trip.slug}`}
-                    className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
+                    className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
                   >
-                    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
-                      <div className="relative aspect-[2/1] overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:aspect-[4/3]">
+                    <article className="flex overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
+                      <div className="relative w-[100px] shrink-0 overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:w-[140px]">
                         {trip.photos?.[0] && (
                           <Image
                             src={trip.photos[0]}
                             alt={trip.title}
                             fill
                             className="object-cover"
-                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 75vw"
+                            sizes="(min-width: 640px) 140px, 100px"
                             quality={80}
                           />
                         )}
                       </div>
-                      <div className="flex flex-1 flex-col gap-2 p-4">
+                      <div className="flex flex-1 flex-col gap-1.5 p-3 sm:p-4">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {trip.activity_type && (
                             <span className="inline-flex items-center rounded-full bg-trailhead-muted px-2 py-0.5 text-xs font-semibold text-trailhead">
@@ -188,10 +188,10 @@ export function OrganizerTripsSection({ trips }: { trips: Trip[] }) {
                           )}
                           <DifficultyBadge level={trip.difficulty} />
                         </div>
-                        <h3 className="font-bold text-stone-900">{trip.title}</h3>
+                        <h3 className="line-clamp-2 font-bold leading-snug text-stone-900">{trip.title}</h3>
                         <p className="text-xs text-stone-400">{formatDate(trip.date_start)}</p>
-                        <div className="mt-auto border-t border-stone-100 pt-3">
-                          <p className="text-lg font-bold text-trailhead">{formatPrice(trip.price)}</p>
+                        <div className="mt-auto flex items-baseline gap-3">
+                          <p className="text-base font-bold text-trailhead">{formatPrice(trip.price)}</p>
                           {activeTab === "upcoming" && (
                             <p className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-400"}`}>
                               {trip.remaining_slots} slot{trip.remaining_slots !== 1 ? "s" : ""} left
