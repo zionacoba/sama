@@ -51,6 +51,26 @@ function DifficultyBadge({ level }: { level: string }) {
 
 const PAGE_SIZE = 6;
 
+function groupByMonth(trips: Trip[]) {
+  const groups: { label: string; key: string; trips: Trip[] }[] = [];
+  for (const trip of trips) {
+    const date = new Date(trip.date_start);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const label = new Intl.DateTimeFormat("en-PH", {
+      month: "long",
+      year: "numeric",
+      timeZone: "Asia/Manila",
+    }).format(date);
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) {
+      last.trips.push(trip);
+    } else {
+      groups.push({ label, key, trips: [trip] });
+    }
+  }
+  return groups;
+}
+
 export function OrganizerTripsSection({ trips }: { trips: Trip[] }) {
   const now = new Date().toISOString();
 
@@ -158,52 +178,57 @@ export function OrganizerTripsSection({ trips }: { trips: Trip[] }) {
         </p>
       ) : (
         <>
-          <div className="mt-4">
-            <ul className="flex flex-col gap-3">
-              {visibleTrips.map((trip) => (
-                <li key={trip.id}>
-                  <Link
-                    href={`/trips/${trip.slug}`}
-                    className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
-                  >
-                    <article className="flex overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
-                      <div className="relative w-[100px] shrink-0 overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:w-[140px]">
-                        {trip.photos?.[0] && (
-                          <Image
-                            src={trip.photos[0]}
-                            alt={trip.title}
-                            fill
-                            className="object-cover"
-                            sizes="(min-width: 640px) 140px, 100px"
-                            quality={80}
-                          />
-                        )}
-                      </div>
-                      <div className="flex flex-1 flex-col gap-1.5 p-3 sm:p-4">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {trip.activity_type && (
-                            <span className="inline-flex items-center rounded-full bg-trailhead-muted px-2 py-0.5 text-xs font-semibold text-trailhead">
-                              {trip.activity_type}
-                            </span>
-                          )}
-                          <DifficultyBadge level={trip.difficulty} />
-                        </div>
-                        <h3 className="line-clamp-2 font-bold leading-snug text-stone-900">{trip.title}</h3>
-                        <p className="text-xs text-stone-400">{formatDate(trip.date_start)}</p>
-                        <div className="mt-auto flex items-baseline gap-3">
-                          <p className="text-base font-bold text-trailhead">{formatPrice(trip.price)}</p>
-                          {activeTab === "upcoming" && (
-                            <p className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-400"}`}>
-                              {trip.remaining_slots} slot{trip.remaining_slots !== 1 ? "s" : ""} left
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </article>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          <div className="mt-4 flex flex-col gap-6">
+            {groupByMonth(visibleTrips).map((group) => (
+              <div key={group.key}>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">{group.label}</p>
+                <ul className="flex flex-col gap-3">
+                  {group.trips.map((trip) => (
+                    <li key={trip.id}>
+                      <Link
+                        href={`/trips/${trip.slug}`}
+                        className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
+                      >
+                        <article className="flex overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
+                          <div className="relative w-[100px] shrink-0 overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:w-[140px]">
+                            {trip.photos?.[0] && (
+                              <Image
+                                src={trip.photos[0]}
+                                alt={trip.title}
+                                fill
+                                className="object-cover"
+                                sizes="(min-width: 640px) 140px, 100px"
+                                quality={80}
+                              />
+                            )}
+                          </div>
+                          <div className="flex flex-1 flex-col gap-1.5 p-3 sm:p-4">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {trip.activity_type && (
+                                <span className="inline-flex items-center rounded-full bg-trailhead-muted px-2 py-0.5 text-xs font-semibold text-trailhead">
+                                  {trip.activity_type}
+                                </span>
+                              )}
+                              <DifficultyBadge level={trip.difficulty} />
+                            </div>
+                            <h3 className="line-clamp-2 font-bold leading-snug text-stone-900">{trip.title}</h3>
+                            <p className="text-xs text-stone-400">{formatDate(trip.date_start)}</p>
+                            <div className="mt-auto flex items-baseline gap-3">
+                              <p className="text-base font-bold text-trailhead">{formatPrice(trip.price)}</p>
+                              {activeTab === "upcoming" && (
+                                <p className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-400"}`}>
+                                  {trip.remaining_slots} slot{trip.remaining_slots !== 1 ? "s" : ""} left
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
           {hasMore && (
             <div className="mt-6 text-center">
