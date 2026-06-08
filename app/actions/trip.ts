@@ -644,6 +644,38 @@ export async function updateTrip(
   };
 }
 
+export async function publishTrip(tripSlug: string): Promise<{ error: string } | { success: true }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { data: organizer } = await supabase
+    .from("organizers")
+    .select("id, status, payout_method, gcash_number, bank_account_number")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!organizer || organizer.status !== "approved") return { error: "Not authorized." };
+
+  const hasGcash = organizer.payout_method === "gcash" && !!organizer.gcash_number;
+  const hasBank = organizer.payout_method === "bank_transfer" && !!organizer.bank_account_number;
+  if (!hasGcash && !hasBank) {
+    return { error: "Please add your payout details (GCash or bank account) in your organizer profile before publishing." };
+  }
+
+  const { error } = await supabase
+    .from("trips")
+    .update({ status: "active" })
+    .eq("slug", tripSlug)
+    .eq("organizer_id", organizer.id)
+    .eq("status", "draft");
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/organizer/dashboard");
+  return { success: true };
+}
+
 export async function cancelTrip(tripSlug: string): Promise<{ error: string } | void> {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

@@ -2,111 +2,13 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { ShareButton } from "@/app/components/share-button";
-import { CancelTripButton } from "@/app/components/cancel-trip-button";
 import { DashboardFilters } from "./dashboard-filters";
+import { TripRow, TripRunRow, type OrganizerTrip, type TripCounts } from "./trip-row";
 
 const PAGE_SIZE = 20;
 
-type OrganizerTrip = {
-  id: string | number;
-  slug: string;
-  title: string;
-  activity_type: string | null;
-  difficulty: string;
-  date_start: string;
-  price: number;
-  total_slots: number;
-  remaining_slots: number;
-  status: string;
-  is_template: boolean | null;
-  template_id: string | null;
-};
-
-type TripCounts = { pending: number; confirmed: number };
-
 const isTemplateLike = (t: OrganizerTrip) =>
   t.is_template === true || t.date_start === "2099-12-31";
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("en-PH", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "Asia/Manila",
-  }).format(new Date(date));
-}
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
-
-function tripBadge(trip: OrganizerTrip) {
-  if (trip.status === "draft") return { label: "Draft", cls: "bg-stone-100 text-stone-500" };
-  const now = new Date().toISOString().slice(0, 10);
-  if (trip.date_start < now) return { label: "Past", cls: "bg-stone-100 text-stone-500" };
-  if (trip.remaining_slots === 0) return { label: "Full", cls: "bg-amber-100 text-amber-700" };
-  return { label: "Active", cls: "bg-emerald-100 text-emerald-700" };
-}
-
-function TripRow({ trip, counts }: { trip: OrganizerTrip; counts: TripCounts }) {
-  const badge = tripBadge(trip);
-  const slotsBooked = trip.total_slots - trip.remaining_slots;
-  const today = new Date().toISOString().slice(0, 10);
-  const canCancel = trip.status === "active" && trip.date_start >= today;
-  const totalBookings = counts.pending + counts.confirmed;
-  return (
-    <div className="flex flex-col gap-3 border-b border-stone-100 px-5 py-4 last:border-0 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${badge.cls}`}>
-            {badge.label}
-          </span>
-          <span className="font-semibold text-stone-900">{trip.title}</span>
-          {counts.pending > 0 && (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
-              {counts.pending} pending
-            </span>
-          )}
-        </div>
-        <p className="mt-0.5 text-xs text-stone-400">
-          {formatDate(trip.date_start)} · {formatPrice(trip.price)} · {slotsBooked}/{trip.total_slots} slots filled
-        </p>
-      </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
-        <Link
-          href={`/organizer/trips/${trip.slug}/bookings`}
-          className="rounded-lg bg-trailhead px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-trailhead-dark"
-        >
-          View bookings
-        </Link>
-        <Link
-          href={`/organizer/trips/${trip.slug}/edit`}
-          className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
-        >
-          Edit
-        </Link>
-        <ShareButton
-          url={`/trips/${trip.slug}`}
-          title={trip.title}
-          className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
-        />
-        {canCancel && (
-          <CancelTripButton
-            tripSlug={trip.slug}
-            tripTitle={trip.title}
-            totalBookings={totalBookings}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
 
 type PageProps = {
   searchParams: Promise<{
@@ -448,45 +350,9 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                     {/* Nested runs */}
                     {runs.length > 0 && (
                       <div className="border-t border-stone-100">
-                        {runs.map((run, idx) => {
-                          const runBadge = tripBadge(run);
-                          const slotsBooked = run.total_slots - run.remaining_slots;
-                          return (
-                            <div
-                              key={run.id}
-                              className={`flex flex-col gap-3 px-5 py-3 sm:flex-row sm:items-center sm:justify-between ${idx !== 0 ? "border-t border-stone-100" : ""} bg-stone-50`}
-                            >
-                              <div className="ml-4 min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${runBadge.cls}`}>
-                                    {runBadge.label}
-                                  </span>
-                                  <span className="text-sm font-medium text-stone-700">{formatDate(run.date_start)}</span>
-                                  <span className="text-xs text-stone-400">{formatPrice(run.price)} · {slotsBooked}/{run.total_slots} slots filled</span>
-                                </div>
-                              </div>
-                              <div className="ml-4 flex shrink-0 items-center gap-2 sm:ml-0">
-                                <Link
-                                  href={`/organizer/trips/${run.slug}/bookings`}
-                                  className="rounded-lg bg-trailhead px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-trailhead-dark"
-                                >
-                                  View bookings
-                                </Link>
-                                <Link
-                                  href={`/organizer/trips/${run.slug}/edit`}
-                                  className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
-                                >
-                                  Edit
-                                </Link>
-                                <ShareButton
-                                  url={`/trips/${run.slug}`}
-                                  title={run.title}
-                                  className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
+                        {runs.map((run, idx) => (
+                          <TripRunRow key={run.id} run={run} idx={idx} />
+                        ))}
                       </div>
                     )}
                   </div>
