@@ -48,6 +48,17 @@ export async function applyToBeOrganizer(
     return { error: "Please enter your years of experience." };
   }
 
+  const { data: takenName } = await supabase
+    .from("organizers")
+    .select("id")
+    .ilike("display_name", displayName)
+    .in("status", ["approved", "pending"])
+    .maybeSingle();
+
+  if (takenName) {
+    return { error: "This display name is already taken. Please choose a different one." };
+  }
+
   let insertError;
   try {
     const { error } = await supabase.from("organizers").insert({
@@ -168,6 +179,18 @@ export async function updateOrganizerProfile(
   }
 
   const admin = createSupabaseAdminClient();
+
+  const { data: takenName } = await admin
+    .from("organizers")
+    .select("id")
+    .ilike("display_name", display_name)
+    .in("status", ["approved", "pending"])
+    .neq("id", organizer.id)
+    .maybeSingle();
+
+  if (takenName) {
+    return { error: "This display name is already taken. Please choose a different one." };
+  }
 
   // Prevent removing payout details while confirmed bookings on upcoming trips exist.
   if (!payout_method) {

@@ -132,6 +132,33 @@ export async function saveProfile(
   return { success: true };
 }
 
+export async function saveEmergencyContact(
+  _prev: ProfileState,
+  formData: FormData,
+): Promise<ProfileState> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const name = (formData.get("emergency_contact_name") as string)?.trim();
+  const phone = (formData.get("emergency_contact_phone") as string)?.trim();
+
+  if (!name || !phone) return { error: "Both name and phone are required." };
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .upsert({
+      id: user.id,
+      emergency_contact_name: name,
+      emergency_contact_phone: phone,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
 export async function saveFacebookUrl(userId: string, facebookUrl: string): Promise<{ success: true } | { error: string }> {
   if (!facebookUrl || facebookUrl.trim() === "") return { success: true };
 

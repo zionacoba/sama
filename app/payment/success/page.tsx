@@ -1,6 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Navbar } from "@/app/components/navbar";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { EmergencyContactPrompt } from "./emergency-contact-prompt";
 
 export const metadata: Metadata = {
   title: "Payment received | Sama",
@@ -13,6 +16,20 @@ type PageProps = {
 
 export default async function PaymentSuccessPage({ searchParams }: PageProps) {
   const { bookingId } = await searchParams;
+
+  const authClient = await createSupabaseServerClient();
+  const { data: { user } } = await authClient.auth.getUser();
+
+  let hasEmergencyContact = true;
+  if (user) {
+    const admin = createSupabaseAdminClient();
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("emergency_contact_name, emergency_contact_phone")
+      .eq("id", user.id)
+      .maybeSingle();
+    hasEmergencyContact = !!(profile?.emergency_contact_name && profile?.emergency_contact_phone);
+  }
 
   return (
     <>
@@ -45,6 +62,8 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
               </span>
             </p>
           )}
+
+          {user && !hasEmergencyContact && <EmergencyContactPrompt />}
 
           <div className="mt-8 flex flex-col items-center gap-3">
             <Link
