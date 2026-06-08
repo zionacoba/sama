@@ -325,7 +325,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
           </Link>
           <Link href="/admin?tab=organizers" className={tabClass("organizers")}>
             Organizers
-            <span className="ml-1.5 text-xs font-normal opacity-75">({applications.length})</span>
+            <span className="ml-1.5 text-xs font-normal opacity-75">({allSorted.length})</span>
           </Link>
           <Link href="/admin?tab=payouts" className={tabClass("payouts")}>
             Payouts

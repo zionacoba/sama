@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { markPayoutRemittedAction, type PendingPayout } from "@/app/actions/admin";
 
 function formatCurrency(amount: number) {
@@ -24,6 +24,13 @@ function formatCreatedAt(date: string) {
 
 export function PendingPayoutCard({ payout }: { payout: PendingPayout }) {
   const [confirming, setConfirming] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  function handleConfirm(formData: FormData) {
+    startTransition(async () => {
+      await markPayoutRemittedAction(formData);
+    });
+  }
 
   return (
     <div className="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/60 shadow-sm">
@@ -40,7 +47,7 @@ export function PendingPayoutCard({ payout }: { payout: PendingPayout }) {
           </p>
         </div>
       </div>
-      <form action={markPayoutRemittedAction} className="flex flex-wrap items-end gap-3 px-5 py-4">
+      <form action={handleConfirm} className="flex flex-wrap items-end gap-3 px-5 py-4">
         <input type="hidden" name="payoutId" value={payout.id} />
         <div className="flex-1 min-w-[200px]">
           <label className="mb-1 block text-xs font-medium text-stone-600">Reference number *</label>
@@ -78,14 +85,16 @@ export function PendingPayoutCard({ payout }: { payout: PendingPayout }) {
             <div className="mt-3 flex gap-2">
               <button
                 type="submit"
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                disabled={isPending}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Confirm
+                {isPending ? "Sending…" : "Confirm"}
               </button>
               <button
                 type="button"
+                disabled={isPending}
                 onClick={() => setConfirming(false)}
-                className="rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-stone-400"
+                className="rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Cancel
               </button>

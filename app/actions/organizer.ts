@@ -85,6 +85,9 @@ export async function applyToBeOrganizer(
   if (insertError) {
     console.error("[organizer] insert error", insertError);
     if (insertError.code === "23505") {
+      if (insertError.message?.includes("organizers_display_name_unique")) {
+        return { error: "This display name is already taken. Please choose a different one." };
+      }
       return { error: "You have already submitted an application." };
     }
     return { error: "Something went wrong. Please try again." };
@@ -225,7 +228,12 @@ export async function updateOrganizerProfile(
     })
     .eq("id", organizer.id);
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505" && error.message?.includes("organizers_display_name_unique")) {
+      return { error: "This display name is already taken. Please choose a different one." };
+    }
+    return { error: error.message };
+  }
 
   revalidatePath("/trips");
   revalidatePath(`/organizers/${organizer.id}`);
