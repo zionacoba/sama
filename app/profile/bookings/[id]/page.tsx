@@ -45,6 +45,7 @@ type BookingDetail = {
     cancellation_policy: string | null;
     cancellation_policy_custom: string | null;
     messenger_gc_link: string | null;
+    organizer_id: string | null;
   };
 };
 
@@ -133,7 +134,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
       trip:trips!bookings_trip_id_fkey(
         title, slug, date_start, date_end, destination, region, difficulty,
         activity_type, duration, cancellation_policy, cancellation_policy_custom,
-        messenger_gc_link
+        messenger_gc_link, organizer_id
       )
     `)
     .eq("id", bookingId)
@@ -149,6 +150,23 @@ export default async function BookingDetailPage({ params }: PageProps) {
   const isFuture = trip.date_start >= new Date().toISOString().split("T")[0];
 
   const safeGcLink = trip.messenger_gc_link?.startsWith("http") ? trip.messenger_gc_link : null;
+
+  let organizerFacebook: string | null = null;
+  let organizerDisplayName: string | null = null;
+  if (booking.status === "confirmed" && !safeGcLink && trip.organizer_id) {
+    const { data: orgData } = await admin
+      .from("organizers")
+      .select("display_name, full_name, facebook_url, social_links")
+      .eq("id", trip.organizer_id)
+      .maybeSingle();
+    if (orgData) {
+      organizerDisplayName = (orgData.display_name ?? orgData.full_name) || null;
+      organizerFacebook =
+        orgData.facebook_url ||
+        (orgData.social_links as { facebook?: string } | null)?.facebook ||
+        null;
+    }
+  }
 
   const policyKey = (trip.cancellation_policy ?? "flexible") as keyof typeof CANCELLATION_POLICIES;
   const policy = CANCELLATION_POLICIES[policyKey] ?? CANCELLATION_POLICIES.flexible;
@@ -213,16 +231,33 @@ export default async function BookingDetailPage({ params }: PageProps) {
             {trip.activity_type && (
               <DetailRow label="Activity">{trip.activity_type}</DetailRow>
             )}
-            {booking.status === "confirmed" && safeGcLink && (
-              <DetailRow label="Group chat">
-                <a
-                  href={safeGcLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-trailhead/30 bg-trailhead-muted px-3 py-1.5 text-sm font-semibold text-trailhead transition hover:bg-trailhead hover:text-white"
-                >
-                  Join Messenger GC →
-                </a>
+            {booking.status === "confirmed" && (
+              <DetailRow label="Contact organizer">
+                {safeGcLink ? (
+                  <a
+                    href={safeGcLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-trailhead/30 bg-trailhead-muted px-3 py-1.5 text-sm font-semibold text-trailhead transition hover:bg-trailhead hover:text-white"
+                  >
+                    Join Messenger GC →
+                  </a>
+                ) : organizerFacebook ? (
+                  <a
+                    href={organizerFacebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-trailhead/30 bg-trailhead-muted px-3 py-1.5 text-sm font-semibold text-trailhead transition hover:bg-trailhead hover:text-white"
+                  >
+                    Contact organizer on Facebook →
+                  </a>
+                ) : (
+                  <span className="text-stone-600">
+                    {organizerDisplayName
+                      ? `Contact ${organizerDisplayName} through the group chat you were invited to.`
+                      : "Contact your organizer through the group chat you were invited to."}
+                  </span>
+                )}
               </DetailRow>
             )}
           </dl>

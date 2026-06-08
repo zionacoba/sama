@@ -362,6 +362,9 @@ export function BookingModal({
                       <> · <span className="font-semibold text-trailhead">Due now: {formatCurrency(amountDue)}</span></>
                     )}
                   </p>
+                  <p className="text-xs text-stone-400">
+                    You&apos;ll be redirected to PayMongo to complete payment via GCash, QR Ph, or card.
+                  </p>
 
                   <div aria-live="polite" aria-atomic="true">
                     {error && (
@@ -694,6 +697,12 @@ export function BookingModal({
                   <a href="mailto:hello@sama.com.ph" className="underline hover:text-stone-600">
                     hello@sama.com.ph
                   </a>
+                </p>
+                <p className="mb-2 flex items-center justify-center gap-1 text-xs text-stone-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
+                    <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
+                  </svg>
+                  Payments secured by PayMongo. Pay via GCash, QR Ph, or card.
                 </p>
                 <div className="flex gap-2">
                   <button

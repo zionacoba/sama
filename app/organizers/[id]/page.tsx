@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { OrganizerTripsSection } from "./trips-section";
+import { BioExpander } from "./bio-expander";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -231,9 +232,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                 )}
               </div>
 
-              {organizer.bio && (
-                <p className="mt-4 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
-              )}
+              {organizer.bio && <BioExpander bio={organizer.bio} />}
 
               {/* Activity type chips — muted, between bio and stats */}
               {(() => {

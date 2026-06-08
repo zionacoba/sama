@@ -53,6 +53,7 @@ type OrganizerInfo = {
   photo_url: string | null;
   facebook_url: string | null;
   social_links: { facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
+  is_founding_partner: boolean | null;
 };
 
 type Review = {
@@ -252,7 +253,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
           .eq("organizer_id", tripData.organizer_id)
       : Promise.resolve({ count: 0 }),
     tripData.organizer_id
-      ? createSupabaseAdminClient().from("organizers").select("display_name, full_name, bio, photo_url, facebook_url, social_links").eq("id", tripData.organizer_id).maybeSingle()
+      ? createSupabaseAdminClient().from("organizers").select("display_name, full_name, bio, photo_url, facebook_url, social_links, is_founding_partner").eq("id", tripData.organizer_id).maybeSingle()
       : Promise.resolve({ data: null }),
     tripData.template_id
       ? supabase
@@ -506,6 +507,14 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                     {organizer.display_name ?? organizer.full_name}
                   </span>
                 </Link>
+                {organizer.is_founding_partner && (
+                  <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-500 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.745 3.745 0 0 1 3.296-1.043A3.745 3.745 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 0 1 3.296 1.043 3.745 3.745 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
+                    </svg>
+                    Founding Partner
+                  </span>
+                )}
                 {organizer.bio && (
                   <p className="mt-3 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
                 )}

@@ -673,8 +673,7 @@ export async function updateTrip(
             <p>The organizer of <strong>${escapeHtml(title)}</strong> has switched to full payment. Your booking requires the remaining balance to be settled.</p>
             <p>Amount paid: <strong>${fmt(Number(booking.amount_due))}</strong><br>
             Remaining balance: <strong>${fmt(balance)}</strong></p>
-            <p>Please contact your organizer directly to arrange payment of the outstanding balance.</p>
-            <p>You can view your booking at <a href="${siteUrl}/profile">${siteUrl.replace("https://", "")}/profile</a>.</p>
+            <p>You can pay your balance online: <a href="${siteUrl}/profile/bookings/${booking.id}">${siteUrl.replace("https://", "")}/profile/bookings/${booking.id}</a>.</p>
             <p>If you have questions, email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
             <p>— The Sama Team</p>
           `,
