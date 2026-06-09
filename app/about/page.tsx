@@ -194,7 +194,7 @@ export default function AboutPage() {
               access it.&rdquo;
             </p>
             <footer className="mt-6 text-sm font-semibold tracking-widest text-white/60">
-              Sama. Adventure, together.
+              Sama.
             </footer>
           </blockquote>
         </section>
