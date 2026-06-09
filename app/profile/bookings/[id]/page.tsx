@@ -164,9 +164,13 @@ export default async function BookingDetailPage({ params }: PageProps) {
       .maybeSingle();
     if (orgData) {
       organizerDisplayName = (orgData.display_name ?? orgData.full_name) || null;
+      const rawSl = orgData.social_links;
+      const sl = typeof rawSl === "string"
+        ? (() => { try { return JSON.parse(rawSl) as { facebook?: string }; } catch { return null; } })()
+        : (rawSl as { facebook?: string } | null);
       organizerFacebook =
         orgData.facebook_url ||
-        (orgData.social_links as { facebook?: string } | null)?.facebook ||
+        sl?.facebook ||
         null;
     }
   }

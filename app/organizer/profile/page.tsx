@@ -18,6 +18,11 @@ export default async function OrganizerProfileEditPage() {
   if (!organizer) redirect("/apply");
   if (organizer.status !== "approved") redirect("/organizer/dashboard");
 
+  const rawSl = organizer.social_links;
+  const parsedSocialLinks = typeof rawSl === "string"
+    ? (() => { try { return JSON.parse(rawSl); } catch { return null; } })()
+    : rawSl;
+
   return (
     <div className="min-h-screen bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
@@ -40,7 +45,7 @@ export default async function OrganizerProfileEditPage() {
       <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
           <h1 className="mb-6 text-xl font-bold tracking-tight text-stone-900">Edit profile</h1>
-          <ProfileForm organizer={organizer} />
+          <ProfileForm organizer={{ ...organizer, social_links: parsedSocialLinks }} />
         </div>
       </main>
 

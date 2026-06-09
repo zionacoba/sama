@@ -582,7 +582,10 @@ export default async function AdminPage({ searchParams }: PageProps) {
                 </div>
               ) : (
                 applications.map((app) => {
-                  const sl = app.social_links;
+                  const rawSl = app.social_links;
+                  const sl = typeof rawSl === "string"
+                    ? (() => { try { return JSON.parse(rawSl); } catch { return null; } })()
+                    : rawSl;
                   const organizerFbUrl = sl?.organizer_facebook ?? sl?.facebook ?? null;
                   return (
                     <details key={app.id} className="group overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">

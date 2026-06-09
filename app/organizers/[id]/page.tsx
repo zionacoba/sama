@@ -271,7 +271,10 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                   </div>
                 </div>
                 {(() => {
-                  const sl = organizer.social_links as { facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
+                  const rawSl = organizer.social_links;
+                  const sl = (typeof rawSl === "string"
+                    ? (() => { try { return JSON.parse(rawSl); } catch { return null; } })()
+                    : rawSl) as { facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
                   const links = [
                     { key: "facebook", url: sl?.facebook, icon: (
                       <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
