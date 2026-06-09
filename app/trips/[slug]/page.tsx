@@ -302,6 +302,15 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
   const organizer = organizerData as OrganizerInfo | null;
   const organizerName = organizer?.display_name ?? organizer?.full_name ?? null;
 
+  const organizerContactUrl = (() => {
+    if (!organizer) return null;
+    const rawLinks = organizer.social_links as unknown;
+    const sl = typeof rawLinks === "string"
+      ? (() => { try { return JSON.parse(rawLinks) as OrganizerInfo["social_links"]; } catch { return null; } })()
+      : organizer.social_links;
+    return sl?.facebook?.trim() || organizer.facebook_url?.trim() || null;
+  })();
+
   const avgRating =
     reviews.length > 0
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
@@ -599,34 +608,31 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               </div>
             )}
 
-            {organizer && (() => {
-              const contactUrl = organizer.social_links?.facebook || organizer.facebook_url;
-              return (
-                <div className="mt-8 p-4 bg-stone-50 rounded-xl border border-stone-100">
-                  <p className="text-sm font-medium text-stone-900 mb-1">Have questions about this trip?</p>
-                  <p className="text-sm text-stone-500 mb-3">
-                    Reach out to {organizer.display_name ?? organizer.full_name} directly before booking.
-                  </p>
-                  {contactUrl ? (
-                    <a
-                      href={contactUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm font-medium text-trailhead hover:underline"
-                    >
-                      Message on Facebook
+            {organizer && (
+              <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
+                <p className="text-sm font-medium text-stone-900 mb-1">Have questions about this trip?</p>
+                <p className="text-sm text-stone-500 mb-3">
+                  Reach out to {organizer.display_name ?? organizer.full_name} directly before booking.
+                </p>
+                {organizerContactUrl ? (
+                  <a
+                    href={organizerContactUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-trailhead hover:underline"
+                  >
+                    Message on Facebook →
+                  </a>
+                ) : (
+                  <p className="text-sm text-stone-600">
+                    Have questions? Email{" "}
+                    <a href="mailto:hello@sama.com.ph" className="font-medium text-trailhead underline-offset-4 hover:underline">
+                      hello@sama.com.ph
                     </a>
-                  ) : (
-                    <p className="text-sm text-stone-600">
-                      Have questions? Email{" "}
-                      <a href="mailto:hello@sama.com.ph" className="font-medium text-trailhead underline-offset-4 hover:underline">
-                        hello@sama.com.ph
-                      </a>
-                    </p>
-                  )}
-                </div>
-              );
-            })()}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Desktop sidebar */}
