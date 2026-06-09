@@ -17,6 +17,7 @@ export const metadata: Metadata = {
       "Discover hikes, camps, dives, and island hops across the Philippines. Book trusted trips from local organizers.",
     url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}`,
     type: "website",
+    images: [{ url: "https://sama.com.ph/opengraph-image.png" }],
   },
 };
 
