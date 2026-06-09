@@ -214,26 +214,6 @@ export function TripForm({
         </div>
       )}
 
-      {/* Template toggle */}
-      <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
-        <label className="flex cursor-pointer items-center gap-3">
-          <input
-            type="checkbox"
-            checked={isTemplate}
-            onChange={(e) => setIsTemplate(e.target.checked)}
-            className="h-4 w-4 rounded border-stone-300 text-trailhead accent-trailhead"
-          />
-          <input type="hidden" name="is_template" value={isTemplate.toString()} />
-          <span className="flex items-center gap-1.5 text-sm font-medium text-stone-700">
-            This is a recurring trip template
-            <RecurringTemplateInfoButton />
-          </span>
-        </label>
-        <p className="ml-7 mt-0.5 text-xs text-stone-500">
-          Templates hold the trip details. You&apos;ll create separate dated runs linked to this template.
-        </p>
-      </div>
-
       {/* Template link (only for non-templates when templates exist) */}
       {!isTemplate && templates.length > 0 && (
         <div>
@@ -673,6 +653,26 @@ export function TripForm({
         />
         <p className="mt-1.5 text-xs text-stone-500">
           This waiver will be shown to each participant when they confirm their spot. You can customize it or use the default template.
+        </p>
+      </div>
+
+      {/* Template toggle — advanced option, shown at bottom */}
+      <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
+        <label className="flex cursor-pointer items-center gap-3">
+          <input
+            type="checkbox"
+            checked={isTemplate}
+            onChange={(e) => setIsTemplate(e.target.checked)}
+            className="h-4 w-4 rounded border-stone-300 text-trailhead accent-trailhead"
+          />
+          <input type="hidden" name="is_template" value={isTemplate.toString()} />
+          <span className="flex items-center gap-1.5 text-sm font-medium text-stone-700">
+            This is a recurring trip template
+            <RecurringTemplateInfoButton />
+          </span>
+        </label>
+        <p className="ml-7 mt-0.5 text-xs text-stone-500">
+          Most organizers skip this — only check if you run this exact trip regularly on different dates.
         </p>
       </div>
 

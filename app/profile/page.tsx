@@ -11,6 +11,7 @@ import { ProfileForm } from "./profile-form";
 import { DeleteAccountButton } from "@/app/components/delete-account-button";
 import { ParticipantShareLinks } from "./participant-share-links";
 import { removeWaitlistEntry } from "@/app/actions/waitlist";
+import { Footer } from "@/app/components/footer";
 
 type PageProps = {
   searchParams: Promise<{ tab?: string }>;
@@ -535,27 +536,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
         )}
       </main>
 
-      <footer className="border-t border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-500">
-        © {new Date().getFullYear()} Sama. Adventure, together.
-        {" · "}
-        <Link href="/apply" className="underline-offset-4 hover:text-trailhead hover:underline">
-          Become an Organizer
-        </Link>
-        {" · "}
-        <Link href="/terms" className="underline-offset-4 hover:text-trailhead hover:underline">
-          Terms of Service
-        </Link>
-        {" · "}
-        <Link href="/privacy" className="underline-offset-4 hover:text-trailhead hover:underline">
-          Privacy Policy
-        </Link>
-        <p className="mt-2 text-xs text-stone-400">
-          Need help?{" "}
-          <a href="mailto:hello@sama.com.ph" className="underline-offset-4 hover:text-trailhead hover:underline">
-            hello@sama.com.ph
-          </a>
-        </p>
-      </footer>
+      <Footer />
     </div>
   );
 }

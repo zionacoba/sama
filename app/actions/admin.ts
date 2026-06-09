@@ -23,7 +23,7 @@ export async function approveOrganizer(id: string): Promise<void> {
 
   const { data: organizer } = await admin
     .from("organizers")
-    .select("email, full_name, display_name, status")
+    .select("email, full_name, display_name, status, commission_rate")
     .eq("id", id)
     .maybeSingle();
 
@@ -36,6 +36,9 @@ export async function approveOrganizer(id: string): Promise<void> {
 
   await admin.from("organizers").update({ status: "approved" }).eq("id", id);
 
+  const commissionRate = organizer.commission_rate ?? 10;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
+
   try {
     await resend.emails.send({
       from: FROM_ADDRESS,
@@ -46,8 +49,15 @@ export async function approveOrganizer(id: string): Promise<void> {
         <p>Hi ${escapeHtml(organizer.full_name)},</p>
         <p>Great news — your application to become a Sama organizer has been <strong>approved</strong>!</p>
         <p>You can now log in to your organizer dashboard to create and publish trips:</p>
-        <p><a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/organizer/dashboard">${(process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph").replace("https://", "")}/organizer/dashboard</a></p>
-        <p>Welcome to the Sama community. We're excited to have you on board.</p>
+        <p><a href="${siteUrl}/organizer/dashboard">${siteUrl.replace("https://", "")}/organizer/dashboard</a></p>
+        <p>Here's how to get started:</p>
+        <ol>
+          <li>Complete your organizer profile — add a photo, bio, and payout details</li>
+          <li>Create your first trip listing</li>
+          <li>Share your trip link with your community</li>
+        </ol>
+        <p>Your platform fee is <strong>${commissionRate}%</strong> per booking, locked in for life as a Founding Partner. Payouts are sent every Tuesday via your preferred payout method.</p>
+        <p>If you have any questions, just reply to this email.</p>
         <p>— The Sama Team</p>
       `,
     });

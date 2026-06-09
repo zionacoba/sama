@@ -8,6 +8,7 @@ import { BookingModal } from "@/app/trips/[slug]/booking-modal";
 import { WaitlistModal } from "@/app/trips/[slug]/waitlist-modal";
 import { ShareButton } from "@/app/components/share-button";
 import { PhotoGallery } from "@/app/components/photo-gallery";
+import { Footer } from "@/app/components/footer";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { formatDate, formatDateShort, formatDateRange, formatReviewDate } from "@/lib/format";
 import { PublishedBanner } from "@/app/trips/[slug]/published-banner";
@@ -781,21 +782,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
         )}
       </main>
 
-      <footer className="border-t border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-500">
-        © {new Date().getFullYear()} Sama. Adventure, together.
-        {" · "}
-        <Link href="/apply" className="underline-offset-4 hover:text-trailhead hover:underline">
-          Become an Organizer
-        </Link>
-        {" · "}
-        <Link href="/terms" className="underline-offset-4 hover:text-trailhead hover:underline">
-          Terms of Service
-        </Link>
-        {" · "}
-        <Link href="/privacy" className="underline-offset-4 hover:text-trailhead hover:underline">
-          Privacy Policy
-        </Link>
-      </footer>
+      <Footer />
     </div>
     </>
   );

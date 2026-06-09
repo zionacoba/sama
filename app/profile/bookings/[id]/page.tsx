@@ -8,6 +8,7 @@ import { CancelBookingButton } from "@/app/profile/cancel-booking-button";
 import { PayBalanceButton } from "./pay-balance-button";
 import { PartialCancelButton } from "./partial-cancel-button";
 import { calculateRefundAmount } from "@/lib/cancellation-policies";
+import { Footer } from "@/app/components/footer";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -396,13 +397,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
         </div>
       </main>
 
-      <footer className="border-t border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-500">
-        © {new Date().getFullYear()} Sama. Adventure, together.
-        {" · "}
-        <Link href="/terms" className="underline-offset-4 hover:text-trailhead hover:underline">Terms</Link>
-        {" · "}
-        <Link href="/privacy" className="underline-offset-4 hover:text-trailhead hover:underline">Privacy</Link>
-      </footer>
+      <Footer />
     </div>
   );
 }

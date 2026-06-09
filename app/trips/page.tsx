@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Navbar } from "@/app/components/navbar";
+import { Footer } from "@/app/components/footer";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { TripFilters } from "./trip-filters";
 
@@ -532,21 +533,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
         </section>
       </main>
 
-      <footer className="border-t border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-500">
-        © {new Date().getFullYear()} Sama. Adventure, together.
-        {" · "}
-        <Link href="/apply" className="underline-offset-4 hover:text-trailhead hover:underline">
-          Become an Organizer
-        </Link>
-        {" · "}
-        <Link href="/terms" className="underline-offset-4 hover:text-trailhead hover:underline">
-          Terms of Service
-        </Link>
-        {" · "}
-        <Link href="/privacy" className="underline-offset-4 hover:text-trailhead hover:underline">
-          Privacy Policy
-        </Link>
-      </footer>
+      <Footer />
     </div>
   );
 }
