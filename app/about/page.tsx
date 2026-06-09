@@ -54,27 +54,6 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Highlight cards */}
-        <div className="border-b border-stone-100 bg-white px-4 py-10">
-          <div className="mx-auto grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-trailhead/10 bg-trailhead/5 px-6 py-5">
-              <p className="text-xl font-bold text-stone-900">20</p>
-              <p className="mt-1 text-sm font-semibold text-trailhead">Founding Organizers</p>
-              <p className="mt-1 text-xs text-stone-400">Vetted, accountable partners</p>
-            </div>
-            <div className="rounded-xl border border-trailhead/10 bg-trailhead/5 px-6 py-5">
-              <p className="text-xl font-bold text-stone-900">Destinations</p>
-              <p className="mt-1 text-sm font-semibold text-trailhead">Across the Philippines</p>
-              <p className="mt-1 text-xs text-stone-400">Trips across the Philippines</p>
-            </div>
-            <div className="rounded-xl border border-trailhead/10 bg-trailhead/5 px-6 py-5">
-              <p className="text-xl font-bold text-stone-900">Built for</p>
-              <p className="mt-1 text-sm font-semibold text-trailhead">The outdoor community</p>
-              <p className="mt-1 text-xs text-stone-400">By someone who loves it</p>
-            </div>
-          </div>
-        </div>
-
         {/* Our Name */}
         <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
@@ -193,9 +172,6 @@ export default function AboutPage() {
               world. Sama exists to make sure it stays that way, and that every Filipino can
               access it.&rdquo;
             </p>
-            <footer className="mt-6 text-sm font-semibold tracking-widest text-white/60">
-              Sama.
-            </footer>
           </blockquote>
         </section>
 
