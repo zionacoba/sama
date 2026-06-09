@@ -53,7 +53,7 @@ type OrganizerInfo = {
   bio: string | null;
   photo_url: string | null;
   facebook_url: string | null;
-  social_links: { facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
+  social_links: { organizer_facebook?: string | null; facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
   is_founding_partner: boolean | null;
 };
 
@@ -308,7 +308,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
     const sl = typeof rawLinks === "string"
       ? (() => { try { return JSON.parse(rawLinks) as OrganizerInfo["social_links"]; } catch { return null; } })()
       : organizer.social_links;
-    return sl?.facebook?.trim() || organizer.facebook_url?.trim() || null;
+    return sl?.organizer_facebook?.trim() || sl?.facebook?.trim() || organizer.facebook_url?.trim() || null;
   })();
 
   const avgRating =

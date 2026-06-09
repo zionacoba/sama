@@ -166,11 +166,12 @@ export default async function BookingDetailPage({ params }: PageProps) {
       organizerDisplayName = (orgData.display_name ?? orgData.full_name) || null;
       const rawSl = orgData.social_links;
       const sl = typeof rawSl === "string"
-        ? (() => { try { return JSON.parse(rawSl) as { facebook?: string }; } catch { return null; } })()
-        : (rawSl as { facebook?: string } | null);
+        ? (() => { try { return JSON.parse(rawSl) as { organizer_facebook?: string; facebook?: string }; } catch { return null; } })()
+        : (rawSl as { organizer_facebook?: string; facebook?: string } | null);
       organizerFacebook =
-        orgData.facebook_url ||
+        sl?.organizer_facebook ||
         sl?.facebook ||
+        orgData.facebook_url ||
         null;
     }
   }
