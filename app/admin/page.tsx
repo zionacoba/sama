@@ -18,6 +18,7 @@ import {
 import { PendingPayoutCard } from "./pending-payout-card";
 import { OrganizerApproveButton } from "./organizer-approve-button";
 import { EditRemittanceReferenceButton } from "./edit-remittance-reference-button";
+import { ExportPayoutCsvButton } from "./export-payout-csv-button";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
@@ -830,8 +831,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
 
             {/* Payout history */}
             <div>
-              <div className="mb-4">
+              <div className="mb-4 flex items-center justify-between gap-4">
                 <h2 className="text-xl font-bold text-stone-900">Payout History</h2>
+                <ExportPayoutCsvButton />
               </div>
               <PayoutHistoryTable history={payoutHistory ?? []} />
             </div>

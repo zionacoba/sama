@@ -504,6 +504,71 @@ export async function getPayoutHistory(): Promise<PayoutHistoryEntry[]> {
   }));
 }
 
+export async function exportPayoutHistoryCSV(): Promise<string> {
+  await requireAdmin();
+  const admin = createSupabaseAdminClient();
+
+  const { data } = await admin
+    .from("payouts" as "trips")
+    .select("id, total_amount, platform_commission, net_amount, booking_ids, remitted_at, remittance_reference, needs_reconciliation, payout_destination, organizer:organizers(full_name, display_name)")
+    .eq("status", "remitted")
+    .order("remitted_at", { ascending: false }) as unknown as {
+      data: Array<{
+        id: string;
+        total_amount: number;
+        platform_commission: number;
+        net_amount: number;
+        booking_ids: number[];
+        remitted_at: string;
+        remittance_reference: string | null;
+        needs_reconciliation: boolean;
+        payout_destination: {
+          payout_method: string | null;
+          gcash_number: string | null;
+          gcash_name: string | null;
+          bank_name: string | null;
+          bank_account_number: string | null;
+          bank_account_name: string | null;
+        } | null;
+        organizer: { full_name: string; display_name: string | null } | null;
+      }> | null;
+    };
+
+  function esc(value: string | number | boolean | null | undefined): string {
+    const str = value == null ? "" : String(value);
+    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  }
+
+  type PayoutDestination = { payout_method: string | null; gcash_number: string | null; gcash_name: string | null; bank_name: string | null; bank_account_number: string | null; bank_account_name: string | null } | null;
+  function accountDetails(dest: PayoutDestination): string {
+    if (!dest) return "";
+    if (dest.payout_method === "gcash") {
+      return [dest.gcash_number, dest.gcash_name ? `(${dest.gcash_name})` : ""].filter(Boolean).join(" ");
+    }
+    return [dest.bank_name, dest.bank_account_number, dest.bank_account_name ? `(${dest.bank_account_name})` : ""].filter(Boolean).join(" ");
+  }
+
+  const headers = ["Date", "Organizer", "Payout Method", "Account Details", "Gross Amount", "Commission", "Net Amount", "Bookings", "Reference", "Needs Reconciliation"];
+
+  const rows = (data ?? []).map((p) => [
+    esc(p.remitted_at.slice(0, 10)),
+    esc(p.organizer?.display_name ?? p.organizer?.full_name ?? ""),
+    esc(p.payout_destination?.payout_method ?? ""),
+    esc(accountDetails(p.payout_destination)),
+    esc(Number(p.total_amount)),
+    esc(Number(p.platform_commission)),
+    esc(Number(p.net_amount)),
+    esc(p.booking_ids?.length ?? 0),
+    esc(p.remittance_reference),
+    esc(p.needs_reconciliation ? "yes" : "no"),
+  ].join(","));
+
+  return [headers.join(","), ...rows].join("\n");
+}
+
 // ─── PAYOUT FORM ACTIONS ──────────────────────────────────────────────────────
 
 export async function createPayoutAction(formData: FormData): Promise<void> {

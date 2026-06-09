@@ -6,6 +6,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { DashboardFilters } from "./dashboard-filters";
 import { TripRow, TripRunRow, type OrganizerTrip, type TripCounts } from "./trip-row";
 import { RespondToReviewForm } from "@/app/organizers/[id]/respond-to-review-form";
+import { ExportEarningsCsvButton } from "./export-earnings-csv-button";
 
 export const maxDuration = 60;
 
@@ -591,14 +592,17 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
 
               {/* Payout history */}
               <div>
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h2 className="text-lg font-bold text-stone-900">Payout History</h2>
-                  <p className="text-sm text-stone-500">
-                    Lifetime earnings:{" "}
-                    <span className="font-semibold text-stone-900">
-                      {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(lifetimeEarnings)}
-                    </span>
-                  </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <h2 className="text-lg font-bold text-stone-900">Payout History</h2>
+                    <p className="text-sm text-stone-500">
+                      Lifetime earnings:{" "}
+                      <span className="font-semibold text-stone-900">
+                        {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(lifetimeEarnings)}
+                      </span>
+                    </p>
+                  </div>
+                  {payoutHistoryRows.length > 0 && <ExportEarningsCsvButton rows={payoutHistoryRows} />}
                 </div>
                 <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
                   {payoutHistoryRows.length === 0 ? (
