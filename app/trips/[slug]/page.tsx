@@ -609,7 +609,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
             )}
 
             {organizer && (
-              <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
+              <div className="block lg:hidden p-4 bg-stone-50 rounded-xl border border-stone-100">
                 <p className="text-sm font-medium text-stone-900 mb-1">Have questions about this trip?</p>
                 <p className="text-sm text-stone-500 mb-3">
                   Reach out to {organizer.display_name ?? organizer.full_name} directly before booking.
@@ -637,7 +637,8 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
           {/* Desktop sidebar */}
           <aside className="hidden lg:sticky lg:top-6 lg:block">
-            <div className="space-y-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+            <div className="space-y-4">
+            <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm space-y-4">
               <div>
                 <p className="text-2xl font-bold text-trailhead">{formatPrice(tripData.price)}</p>
                 <p className="text-xs text-stone-500">per person</p>
@@ -713,6 +714,32 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   autoOpen={book === "1"}
                 />
               )}
+            </div>
+            {organizer && (
+              <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
+                <p className="text-sm font-medium text-stone-900 mb-1">Have questions about this trip?</p>
+                <p className="text-sm text-stone-500 mb-3">
+                  Reach out to {organizer.display_name ?? organizer.full_name} directly before booking.
+                </p>
+                {organizerContactUrl ? (
+                  <a
+                    href={organizerContactUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-trailhead hover:underline"
+                  >
+                    Message on Facebook →
+                  </a>
+                ) : (
+                  <p className="text-sm text-stone-600">
+                    Have questions? Email{" "}
+                    <a href="mailto:hello@sama.com.ph" className="font-medium text-trailhead underline-offset-4 hover:underline">
+                      hello@sama.com.ph
+                    </a>
+                  </p>
+                )}
+              </div>
+            )}
             </div>
           </aside>
         </div>
