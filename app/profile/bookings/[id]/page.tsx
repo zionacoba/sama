@@ -390,6 +390,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
               bookingId={booking.id}
               tripTitle={trip.title}
               tripDate={formatDate(trip.date_start)}
+              refundAmount={fullRefundable}
             />
           )}
         </div>

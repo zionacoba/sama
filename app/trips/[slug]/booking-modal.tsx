@@ -62,6 +62,7 @@ export function BookingModal({
 }: BookingModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [showSignInPrompt, setShowSignInPrompt] = useState(false);
 
   const resolvedWaiverText = waiverText
     ? waiverText.replace(/\[Organizer Name\]/gi, organizerName || "the organizer")
@@ -230,7 +231,7 @@ export function BookingModal({
 
   function handleBookClick() {
     if (!sessionRef.current) {
-      router.push(`/login?redirectTo=${encodeURIComponent(`/trips/${tripSlug}?book=1`)}`);
+      setShowSignInPrompt(true);
       return;
     }
     setOpen(true);
@@ -313,6 +314,32 @@ export function BookingModal({
         >
           {difficulty === "Advanced" ? "Apply to Join" : "Book This Trip"}
         </button>
+      )}
+
+      {showSignInPrompt && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowSignInPrompt(false); }}
+        >
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="text-base font-bold text-stone-900">Sign in to continue</h2>
+            <p className="mt-2 text-sm text-stone-600">You&apos;ll need an account to book this trip.</p>
+            <div className="mt-5 flex gap-3">
+              <a
+                href={`/login?redirectTo=${encodeURIComponent(`/trips/${tripSlug}?book=1`)}`}
+                className="flex-1 rounded-xl bg-trailhead px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark"
+              >
+                Sign in
+              </a>
+              <a
+                href={`/signup?redirectTo=${encodeURIComponent(`/trips/${tripSlug}?book=1`)}`}
+                className="flex-1 rounded-xl border border-stone-200 px-4 py-2.5 text-center text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900"
+              >
+                Create account
+              </a>
+            </div>
+          </div>
+        </div>
       )}
 
       {open && (

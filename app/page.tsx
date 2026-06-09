@@ -246,7 +246,7 @@ export default async function Home() {
                 <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl font-bold mb-4">
                   2
                 </div>
-                <h3 className="font-semibold text-stone-900 mb-2">Book and pay via GCash</h3>
+                <h3 className="font-semibold text-stone-900 mb-2">Book and pay securely online.</h3>
                 <p className="text-sm text-stone-500 leading-relaxed">Fill in your details and pay securely online via GCash or QR Ph.</p>
               </div>
               <div className="flex flex-col items-center">

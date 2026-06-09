@@ -3,14 +3,24 @@
 import { useState, useTransition } from "react";
 import { cancelBooking } from "@/app/actions/booking";
 
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 export function CancelBookingButton({
   bookingId,
   tripTitle,
   tripDate,
+  refundAmount,
 }: {
   bookingId: number;
   tripTitle: string;
   tripDate: string;
+  refundAmount: number | null;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -50,15 +60,10 @@ export function CancelBookingButton({
               <strong>{tripTitle}</strong> on {tripDate}?
             </p>
             <p className="mt-3 text-sm text-stone-600">
-              If you are eligible for a refund based on our cancellation policy,
-              email{" "}
-              <a
-                href="mailto:hello@sama.com.ph"
-                className="font-medium text-trailhead underline-offset-2 hover:underline"
-              >
-                hello@sama.com.ph
-              </a>{" "}
-              after cancelling and we&apos;ll process it for you.
+              {refundAmount != null && refundAmount > 0
+                ? <>You will receive a <strong>{formatCurrency(refundAmount)}</strong> refund within 3–5 business days.</>
+                : "No refund is available based on the cancellation policy."
+              }
             </p>
             {error && (
               <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
