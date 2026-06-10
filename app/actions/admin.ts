@@ -287,6 +287,13 @@ export async function updateCommissionRate(formData: FormData): Promise<void> {
 
 // ─── PAYOUT TYPES ─────────────────────────────────────────────────────────────
 
+export type OrganizerDeduction = {
+  id: string;
+  bookingId: number;
+  amount: number;
+  createdAt: string;
+};
+
 export type PendingPayoutOrganizer = {
   organizerId: string;
   displayName: string;
@@ -310,6 +317,9 @@ export type PendingPayoutOrganizer = {
   totalAmount: number;
   totalCommission: number;
   totalNet: number;
+  pendingDeductions: OrganizerDeduction[];
+  totalDeductions: number;
+  adjustedNet: number;
 };
 
 export type PendingPayout = {
@@ -419,12 +429,32 @@ export async function getPendingPayouts(): Promise<{
 
   const organizerIds = [...new Set(eligible.map((b) => b.trip!.organizer_id))];
 
-  const { data: organizers } = await admin
-    .from("organizers")
-    .select("id, full_name, display_name, email, payout_method, gcash_number, gcash_name, bank_name, bank_account_number, bank_account_name")
-    .in("id", organizerIds);
+  const [{ data: organizers }, { data: deductionsRaw }] = await Promise.all([
+    admin
+      .from("organizers")
+      .select("id, full_name, display_name, email, payout_method, gcash_number, gcash_name, bank_name, bank_account_number, bank_account_name")
+      .in("id", organizerIds),
+    admin
+      .from("organizer_deductions" as "trips")
+      .select("id, organizer_id, booking_id, amount, created_at")
+      .in("organizer_id", organizerIds)
+      .eq("status", "pending") as unknown as Promise<{
+        data: Array<{ id: string; organizer_id: string; booking_id: number; amount: number; created_at: string }> | null;
+      }>,
+  ]);
 
   const orgMap = new Map((organizers ?? []).map((o) => [o.id, o]));
+  const deductionsByOrg = new Map<string, OrganizerDeduction[]>();
+  for (const d of (deductionsRaw ?? [])) {
+    if (!deductionsByOrg.has(d.organizer_id)) deductionsByOrg.set(d.organizer_id, []);
+    deductionsByOrg.get(d.organizer_id)!.push({
+      id: d.id,
+      bookingId: d.booking_id,
+      amount: Number(d.amount),
+      createdAt: d.created_at,
+    });
+  }
+
   const grouped = new Map<string, PendingPayoutOrganizer>();
 
   for (const b of eligible) {
@@ -433,6 +463,8 @@ export async function getPendingPayouts(): Promise<{
     if (!org) continue;
 
     if (!grouped.has(orgId)) {
+      const deductions = deductionsByOrg.get(orgId) ?? [];
+      const totalDeductions = Math.round(deductions.reduce((s, d) => s + d.amount, 0) * 100) / 100;
       grouped.set(orgId, {
         organizerId: orgId,
         displayName: org.display_name ?? org.full_name,
@@ -447,6 +479,9 @@ export async function getPendingPayouts(): Promise<{
         totalAmount: 0,
         totalCommission: 0,
         totalNet: 0,
+        pendingDeductions: deductions,
+        totalDeductions,
+        adjustedNet: 0,
       });
     }
 
@@ -472,6 +507,10 @@ export async function getPendingPayouts(): Promise<{
     group.totalAmount = Math.round((group.totalAmount + grossAmount) * 100) / 100;
     group.totalCommission = Math.round((group.totalCommission + commission) * 100) / 100;
     group.totalNet = Math.round((group.totalNet + net) * 100) / 100;
+  }
+
+  for (const group of grouped.values()) {
+    group.adjustedNet = Math.max(0, Math.round((group.totalNet - group.totalDeductions) * 100) / 100);
   }
 
   return { unpaid: [...grouped.values()], pending };
@@ -633,6 +672,28 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   const netAmount = Math.round((totalAmount - totalCommission) * 100) / 100;
   const confirmedIds = bookings.map((b) => b.id);
 
+  // Fetch pending deductions and subtract from net amount before remitting.
+  const { data: pendingDeductionsRaw } = await (admin
+    .from("organizer_deductions" as "trips")
+    .select("id, amount")
+    .eq("organizer_id", organizerId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: true }) as unknown as Promise<{
+      data: Array<{ id: string; amount: number }> | null;
+    }>);
+
+  const pendingDeductions = pendingDeductionsRaw ?? [];
+  let remainingNet = netAmount;
+  const deductionIdsToApply: string[] = [];
+  for (const d of pendingDeductions) {
+    const amt = Number(d.amount);
+    if (remainingNet >= amt) {
+      remainingNet = Math.round((remainingNet - amt) * 100) / 100;
+      deductionIdsToApply.push(d.id);
+    }
+  }
+  const adjustedNetAmount = remainingNet;
+
   // Snapshot payout destination before the atomic creation so the record reflects the state at creation time.
   const { data: orgForSnapshot } = await admin
     .from("organizers")
@@ -645,7 +706,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
     p_booking_ids: confirmedIds,
     p_total_amount: totalAmount,
     p_platform_commission: totalCommission,
-    p_net_amount: netAmount,
+    p_net_amount: adjustedNetAmount,
   }) as unknown as { data: string | null; error: { message: string } | null };
 
   if (error || !payoutId) {
@@ -703,6 +764,17 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
       } catch (alertErr) {
         console.error("[createPayout] failed to send snapshot alert:", alertErr);
       }
+    }
+  }
+
+  // Mark applied deductions now that the payout was created successfully.
+  if (deductionIdsToApply.length > 0 && payoutId) {
+    const { error: deductionUpdateError } = await (admin
+      .from("organizer_deductions" as "trips")
+      .update({ status: "applied", applied_payout_id: payoutId } as never)
+      .in("id", deductionIdsToApply) as unknown as Promise<{ error: { message: string } | null }>);
+    if (deductionUpdateError) {
+      console.error("[createPayout] failed to mark deductions as applied:", deductionUpdateError.message);
     }
   }
 

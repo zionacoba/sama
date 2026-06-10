@@ -1096,6 +1096,22 @@ export async function cancelBooking(bookingId: number) {
         .eq("id", bookingId);
     }
 
+    // Record a deduction against the organizer when a refund is issued after their payout was already remitted.
+    if (booking.payout_status === "remitted" && trip.organizer_id && refundAmount !== null && refundAmount > 0) {
+      const { error: deductionError } = await (admin
+        .from("organizer_deductions" as "trips")
+        .insert({
+          organizer_id: trip.organizer_id,
+          booking_id: bookingId,
+          amount: refundAmount,
+          reason: "Joiner cancellation refund after payout remitted",
+          status: "pending",
+        } as never) as unknown as Promise<{ error: { message: string } | null }>);
+      if (deductionError) {
+        console.error("[deduction] failed to record organizer deduction", bookingId, deductionError.message);
+      }
+    }
+
     // Process automatic refunds — a failed refund never blocks the cancellation.
     let refundResult: RefundResult | null = null;
     let balanceRefundResult: RefundResult | null = null;

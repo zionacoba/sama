@@ -14,6 +14,7 @@ import {
   type PendingPayoutOrganizer,
   type PayoutHistoryEntry,
   type PendingReview,
+  type OrganizerDeduction,
 } from "@/app/actions/admin";
 import { PendingPayoutCard } from "./pending-payout-card";
 import { OrganizerApproveButton } from "./organizer-approve-button";
@@ -169,6 +170,37 @@ function OrganizerPayoutCard({ org }: { org: PendingPayoutOrganizer }) {
         </table>
       </div>
 
+      {org.pendingDeductions.length > 0 && (
+        <div className="border-t border-stone-100 bg-amber-50 px-5 py-3 text-sm">
+          <p className="font-semibold text-amber-900">
+            Deductions from post-remittance cancellations
+          </p>
+          <table className="mt-2 w-full text-xs">
+            <tbody>
+              {org.pendingDeductions.map((d: OrganizerDeduction) => (
+                <tr key={d.id} className="border-b border-amber-100 last:border-0">
+                  <td className="py-1 text-stone-600">
+                    {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(d.createdAt))}
+                    {" · Booking #"}{d.bookingId}
+                  </td>
+                  <td className="py-1 text-right font-medium text-red-700">−{formatCurrency(d.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td className="pt-2 font-semibold text-amber-900">Total deductions</td>
+                <td className="pt-2 text-right font-bold text-red-700">−{formatCurrency(org.totalDeductions)}</td>
+              </tr>
+              <tr>
+                <td className="font-semibold text-amber-900">Adjusted net payout</td>
+                <td className="text-right font-bold text-trailhead">{formatCurrency(org.adjustedNet)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
       <div className="flex justify-end border-t border-stone-100 bg-stone-50 px-5 py-3">
         <form action={createPayoutAction}>
           <input type="hidden" name="organizerId" value={org.organizerId} />
@@ -177,7 +209,8 @@ function OrganizerPayoutCard({ org }: { org: PendingPayoutOrganizer }) {
             type="submit"
             className="rounded-xl bg-trailhead px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-trailhead-dark"
           >
-            Create Payout — {formatCurrency(org.totalNet)} net
+            Create Payout — {formatCurrency(org.adjustedNet)} net
+            {org.pendingDeductions.length > 0 && ` (after ${formatCurrency(org.totalDeductions)} deduction${org.pendingDeductions.length !== 1 ? "s" : ""})`}
           </button>
         </form>
       </div>

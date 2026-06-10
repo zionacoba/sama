@@ -104,16 +104,19 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
   // --- Earnings tab data (fetched only when needed) ---
   type UnpaidBookingRow = { id: number; tripTitle: string; slots: number; netAmount: number };
   type PayoutHistoryRow = { id: string; remittedAt: string; netAmount: number; bookingCount: number; remittanceReference: string | null };
+  type PendingDeductionRow = { id: string; bookingId: number; amount: number; createdAt: string };
   let pendingEarningsTotal = 0;
   let unpaidBookingRows: UnpaidBookingRow[] = [];
   let payoutHistoryRows: PayoutHistoryRow[] = [];
   let lifetimeEarnings = 0;
+  let pendingDeductionRows: PendingDeductionRow[] = [];
+  let totalPendingDeductions = 0;
 
   if (activeView === "earnings") {
     const admin = createSupabaseAdminClient();
     const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
 
-    const [{ data: unpaidRaw }, { data: payoutsRaw }] = await Promise.all([
+    const [{ data: unpaidRaw }, { data: payoutsRaw }, { data: deductionsRaw }] = await Promise.all([
       admin
         .from("bookings")
         .select("id, slots, total_amount, amount_due, platform_commission, payment_option, balance_collected, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
@@ -144,6 +147,14 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
             remittance_reference: string | null;
           }> | null;
         }>,
+      admin
+        .from("organizer_deductions" as "trips")
+        .select("id, booking_id, amount, created_at")
+        .eq("organizer_id", organizer.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: true }) as unknown as Promise<{
+          data: Array<{ id: string; booking_id: number; amount: number; created_at: string }> | null;
+        }>,
     ]);
 
     // Filter unpaid bookings to this organizer only, from past trips.
@@ -162,6 +173,14 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
       pendingEarningsTotal = Math.round((pendingEarningsTotal + net) * 100) / 100;
       unpaidBookingRows.push({ id: b.id, tripTitle: b.trip!.title, slots: b.slots, netAmount: net });
     }
+
+    pendingDeductionRows = (deductionsRaw ?? []).map((d) => ({
+      id: d.id,
+      bookingId: d.booking_id,
+      amount: Number(d.amount),
+      createdAt: d.created_at,
+    }));
+    totalPendingDeductions = Math.round(pendingDeductionRows.reduce((s, d) => s + d.amount, 0) * 100) / 100;
 
     payoutHistoryRows = (payoutsRaw ?? []).map((p) => ({
       id: p.id,
@@ -589,6 +608,44 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                   )}
                 </div>
               </div>
+
+              {/* Pending deduction notice */}
+              {pendingDeductionRows.length > 0 && (
+                <div className="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50 shadow-sm">
+                  <div className="border-b border-amber-100 px-5 py-4">
+                    <h2 className="text-base font-bold text-amber-900">Upcoming Deduction</h2>
+                    <p className="mt-1 text-sm text-amber-800">
+                      A deduction of{" "}
+                      <span className="font-semibold">
+                        {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(totalPendingDeductions)}
+                      </span>{" "}
+                      will be applied to your next payout for a refund issued after a previous payout was sent. This keeps your account balanced without requiring a manual transfer back.
+                    </p>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-amber-100 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                        <th className="px-5 py-2.5 text-left">Date</th>
+                        <th className="px-5 py-2.5 text-left">Booking ref</th>
+                        <th className="px-5 py-2.5 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingDeductionRows.map((d) => (
+                        <tr key={d.id} className="border-b border-amber-100 last:border-0">
+                          <td className="whitespace-nowrap px-5 py-3 text-stone-600">
+                            {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(d.createdAt))}
+                          </td>
+                          <td className="px-5 py-3 text-stone-700">#{d.bookingId}</td>
+                          <td className="px-5 py-3 text-right font-semibold text-red-700">
+                            −{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(d.amount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               {/* Payout history */}
               <div>
