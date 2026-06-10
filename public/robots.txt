@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /organizer/
+Disallow: /profile
+Disallow: /api/
 
 User-agent: facebookexternalhit
 Allow: /

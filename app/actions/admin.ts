@@ -772,6 +772,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
     const { error: deductionUpdateError } = await (admin
       .from("organizer_deductions" as "trips")
       .update({ status: "applied", applied_payout_id: payoutId } as never)
+      .eq("status", "pending")
       .in("id", deductionIdsToApply) as unknown as Promise<{ error: { message: string } | null }>);
     if (deductionUpdateError) {
       console.error("[createPayout] failed to mark deductions as applied:", deductionUpdateError.message);

@@ -69,7 +69,7 @@ export async function createBooking(input: CreateBookingInput) {
   }
   if (!trip) return { error: "Trip not found." };
 
-  if (trip.status !== "active" || trip.date_start < new Date().toISOString().split("T")[0]) {
+  if (trip.status !== "active" || trip.date_start < new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date())) {
     return { error: "This trip is no longer available for booking." };
   }
 
@@ -574,7 +574,7 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
     .maybeSingle();
 
   if (!trip) return { error: "Trip not found." };
-  if (trip.date_start < new Date().toISOString().split("T")[0]) {
+  if (trip.date_start < new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date())) {
     return { error: "This trip has already taken place." };
   }
 
@@ -1028,6 +1028,7 @@ export async function cancelBooking(bookingId: number) {
   if (!booking) return { error: "Booking not found." };
   if (booking.user_id !== user.id) return { error: "You don't have permission to cancel this booking." };
   if (["cancelled", "rejected", "transferred"].includes(booking.status)) return { error: "This booking is already cancelled or rejected." };
+  if (booking.status === "no_show") return { error: "This booking has been marked as no-show and cannot be cancelled." };
 
   // Block cancellation after the trip has already taken place.
   const { data: tripDateCheck } = await admin
@@ -1199,13 +1200,16 @@ export async function cancelBooking(bookingId: number) {
         maximumFractionDigits: 0,
       }).format(n);
 
+    const balanceRefundFailed = balanceRefundAmount > 0 && balanceRefundResult != null && !balanceRefundResult.success;
     const refundLine =
       refundAmount === null
         ? `<p>If you are eligible for a refund, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking details and we'll process it for you.</p>`
         : refundAmount > 0
-          ? (refundResult?.success
-              ? `<p>Based on our cancellation policy, your refund of <strong>${fmtCurrency(refundAmount)}</strong> has been processed and will reflect within 24 hours.</p>`
-              : `<p>Based on our cancellation policy, your refund will be <strong>${fmtCurrency(refundAmount)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process it within 5–7 business days.</p>`)
+          ? (refundResult?.success && balanceRefundFailed
+              ? `<p>Based on our cancellation policy, your downpayment refund of <strong>${fmtCurrency(downpaymentRefundAmount!)}</strong> has been processed and will reflect within 24 hours. Your balance refund of <strong>${fmtCurrency(balanceRefundAmount)}</strong> is being processed manually — we'll email you once it's done.</p>`
+              : refundResult?.success
+                ? `<p>Based on our cancellation policy, your refund of <strong>${fmtCurrency(refundAmount)}</strong> has been processed and will reflect within 24 hours.</p>`
+                : `<p>Based on our cancellation policy, your refund will be <strong>${fmtCurrency(refundAmount)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process it within 5–7 business days.</p>`)
           : `<p>Based on our cancellation policy, this cancellation is not eligible for a refund.</p>`;
 
     try {

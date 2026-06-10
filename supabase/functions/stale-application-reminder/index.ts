@@ -36,7 +36,15 @@ async function sendEmail(to: string, subject: string, html: string) {
   }
 }
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  if (!cronSecret || req.headers.get("Authorization") !== `Bearer ${cronSecret}`) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   if (!ADMIN_EMAIL) {
     console.error("[stale-application-reminder] ADMIN_EMAIL not set");
     return new Response(JSON.stringify({ error: "ADMIN_EMAIL not set" }), {
