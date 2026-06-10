@@ -98,6 +98,8 @@ export function BookingModal({
   const [platformWaiverError, setPlatformWaiverError] = useState(false);
   const [paymentOption, setPaymentOption] = useState<"full" | "downpayment">("full");
 
+  const isDemo = /^\[demo\]/i.test(tripTitle.trim());
+
   const errorSummaryRef = useRef<HTMLDivElement>(null);
   const slotsExceedsAvailable = slots > remainingSlots;
   const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
@@ -351,7 +353,17 @@ export function BookingModal({
 
   return (
     <>
-      {remainingSlots === 0 ? (
+      {isDemo ? (
+        <button
+          type="button"
+          disabled
+          className={compact
+            ? "w-full cursor-not-allowed rounded-xl bg-stone-200 px-5 py-3 text-sm font-semibold text-stone-500"
+            : "mt-10 w-full cursor-not-allowed rounded-xl bg-stone-200 px-6 py-4 text-base font-semibold text-stone-500 sm:w-auto sm:min-w-[240px]"}
+        >
+          Booking not available for this trip
+        </button>
+      ) : remainingSlots === 0 ? (
         <button
           type="button"
           disabled
@@ -452,11 +464,14 @@ export function BookingModal({
                       <p className="text-xs text-stone-500">
                         You&apos;ll be taken to a secure payment page.<br />Please don&apos;t close this window.
                       </p>
+                      <p className="text-xs text-stone-400">
+                        GCash refunds are processed automatically. QR Ph refunds may take 3–5 business days.
+                      </p>
                     </>
                   )}
                 </div>
               ) : (
-                <form id="booking-form" onSubmit={handleSubmit} className="space-y-3">
+                <form id="booking-form" onSubmit={handleSubmit} className="space-y-4">
                   <fieldset disabled={loading} className="contents">
                   {/* Compact price line */}
                   <p className="text-sm text-stone-500">
@@ -466,13 +481,6 @@ export function BookingModal({
                       <> · <span className="font-semibold text-trailhead">Due now: {formatCurrency(amountDue)}</span></>
                     )}
                   </p>
-                  <p className="text-xs text-stone-400">
-                    You&apos;ll be redirected to PayMongo to complete payment via GCash or QR Ph.
-                  </p>
-                  <p className="text-xs text-stone-400">
-                    GCash refunds are processed automatically. QR Ph refunds are processed manually and may take 3–5 business days.
-                  </p>
-
                   <div ref={errorSummaryRef} aria-live="polite" aria-atomic="true">
                     {error && (
                       <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -686,11 +694,6 @@ export function BookingModal({
                           <span className="block text-xs opacity-75">{formatCurrency(downpaymentAmount)} deposit</span>
                         </button>
                       </div>
-                      {paymentOption === "downpayment" && (
-                        <p className="mt-2 text-xs text-stone-500">
-                          Balance of {formatCurrency(totalAmount - downpaymentAmount)} can be paid online through Sama or directly to your organizer on the day of the trip, whichever they prefer. Your organizer will let you know in the group chat.
-                        </p>
-                      )}
                     </div>
                   )}
 
