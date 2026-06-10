@@ -79,7 +79,7 @@ export function RecurringTemplateInfoButton() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="How recurring templates work"
-        className="inline-flex items-center justify-center text-stone-400 hover:text-stone-600 transition-colors"
+        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-stone-400 hover:text-stone-600 transition-colors"
       >
         <span
           aria-hidden="true"
@@ -143,7 +143,7 @@ export function DifficultyInfoButton({ variant, difficulty }: DifficultyInfoProp
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="Difficulty level guide"
-        className="inline-flex items-center justify-center text-stone-400 hover:text-stone-600 transition-colors"
+        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-stone-400 hover:text-stone-600 transition-colors"
       >
         <span
           aria-hidden="true"

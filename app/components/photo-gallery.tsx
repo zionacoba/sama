@@ -161,8 +161,11 @@ export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string })
         >
           {/* Top bar: counter + close */}
           <div className="shrink-0 flex items-center justify-between px-4 py-3">
-            <span className="tabular-nums text-sm font-medium text-white/70">
-              {lightboxIndex! + 1} / {totalCount}
+            <span
+              className="tabular-nums text-sm font-medium text-white/70"
+              aria-label={`Photo ${lightboxIndex! + 1} of ${totalCount}`}
+            >
+              <span aria-hidden="true">{lightboxIndex! + 1} / {totalCount}</span>
             </span>
             <button
               type="button"

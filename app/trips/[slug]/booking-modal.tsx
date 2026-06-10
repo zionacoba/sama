@@ -95,6 +95,7 @@ export function BookingModal({
   const [platformWaiverError, setPlatformWaiverError] = useState(false);
   const [paymentOption, setPaymentOption] = useState<"full" | "downpayment">("full");
 
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
   const slotsExceedsAvailable = slots > remainingSlots;
   const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
   const totalAmount = unitPrice * slots;
@@ -211,6 +212,21 @@ export function BookingModal({
     };
   }, [open, success]);
 
+  useEffect(() => {
+    if (!showSignInPrompt) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setShowSignInPrompt(false);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showSignInPrompt]);
+
+  useEffect(() => {
+    if (error) {
+      errorSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [error]);
+
   function resetForm() {
     setFullName("");
     setEmail("");
@@ -257,7 +273,10 @@ export function BookingModal({
     const hasErrors = !platformWaiverAccepted || !waiverAccepted || !phoneValid || isSamePhone;
     if (!platformWaiverAccepted) setPlatformWaiverError(true);
     if (!waiverAccepted) setWaiverError(true);
-    if (hasErrors) return;
+    if (hasErrors) {
+      setError("Please fix the highlighted fields before continuing.");
+      return;
+    }
     setError(null);
     setLoading(true);
 
@@ -380,7 +399,7 @@ export function BookingModal({
             <button
               type="button"
               onClick={loading || success ? undefined : handleClose}
-              className="absolute right-3 top-3 z-10 rounded-lg p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800 disabled:opacity-40"
+              className="absolute right-3 top-3 z-10 rounded-lg p-2.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800 disabled:opacity-40"
               aria-label="Close"
               disabled={loading || success}
             >
@@ -414,7 +433,7 @@ export function BookingModal({
                     GCash refunds are processed automatically. QR Ph refunds are processed manually and may take 3–5 business days.
                   </p>
 
-                  <div aria-live="polite" aria-atomic="true">
+                  <div ref={errorSummaryRef} aria-live="polite" aria-atomic="true">
                     {error && (
                       <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                         {error}

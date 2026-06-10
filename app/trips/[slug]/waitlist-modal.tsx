@@ -27,6 +27,7 @@ export function WaitlistModal({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [joined, setJoined] = useState(initialOnWaitlist);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -43,8 +44,12 @@ export function WaitlistModal({
       if ("error" in result) {
         setError(result.error);
       } else {
-        setJoined(true);
-        setOpen(false);
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          setOpen(false);
+          setJoined(true);
+        }, 2500);
       }
     });
   }
@@ -109,6 +114,12 @@ export function WaitlistModal({
               </button>
             </div>
 
+            {showSuccess ? (
+              <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-5 text-center">
+                <p className="font-semibold text-emerald-800">You&apos;re on the waitlist!</p>
+                <p className="mt-1 text-sm text-emerald-700">We&apos;ll email you if a slot opens up.</p>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               {error && (
                 <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -172,6 +183,7 @@ export function WaitlistModal({
                 {isPending ? "Joining…" : "Join Waitlist"}
               </button>
             </form>
+            )}
           </div>
         </div>
       )}
