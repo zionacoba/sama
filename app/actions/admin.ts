@@ -642,7 +642,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
     .select("id, total_amount, amount_due, platform_commission, payment_option, balance_collected")
     .in("id", bookingIds)
     .eq("payout_status", "unpaid")
-    .eq("status", "confirmed") as unknown as {
+    .in("status", ["confirmed", "no_show"]) as unknown as {
       data: Array<{
         id: number;
         total_amount: number;
