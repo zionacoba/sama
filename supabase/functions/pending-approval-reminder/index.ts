@@ -28,8 +28,9 @@ async function sendEmail(to: string, subject: string, html: string) {
 }
 
 Deno.serve(async (req) => {
-  const cronSecret = Deno.env.get("CRON_SECRET");
-  if (!cronSecret || req.headers.get("Authorization") !== `Bearer ${cronSecret}`) {
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
+  if (!serviceRoleKey || token !== serviceRoleKey) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
