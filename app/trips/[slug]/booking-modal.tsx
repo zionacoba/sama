@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { createBooking } from "@/app/actions/booking";
@@ -63,6 +64,7 @@ export function BookingModal({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const resolvedWaiverText = waiverText
     ? waiverText.replace(/\[Organizer Name\]/gi, organizerName || "the organizer")
@@ -138,6 +140,8 @@ export function BookingModal({
       }
     }
   }
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -317,7 +321,7 @@ export function BookingModal({
         </button>
       )}
 
-      {showSignInPrompt && (
+      {showSignInPrompt && mounted && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
           onClick={() => setShowSignInPrompt(false)}
@@ -343,7 +347,8 @@ export function BookingModal({
               </a>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {open && (
