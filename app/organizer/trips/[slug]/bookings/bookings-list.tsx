@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { BookingActions } from "@/app/organizer/dashboard/booking-actions";
 import { MarkBalanceButton } from "./mark-balance-button";
 import { MarkTransferButton } from "./mark-transfer-button";
+import { MarkNoShowButton } from "./mark-no-show-button";
 
 type Booking = {
   id: number;
@@ -67,10 +68,12 @@ function StatusBadge({ status }: { status: string }) {
     rejected: "bg-red-100 text-red-700",
     payment_pending: "bg-sky-100 text-sky-700",
     transferred: "bg-stone-100 text-stone-600",
+    no_show: "bg-stone-100 text-stone-500",
   };
   const labels: Record<string, string> = {
     payment_pending: "Awaiting payment",
     transferred: "Transferred",
+    no_show: "No show",
   };
   const label = labels[status] ?? (status.charAt(0).toUpperCase() + status.slice(1));
   return (
@@ -90,6 +93,7 @@ export function BookingsListWithTabs({
   price,
   paymentType,
   minDownpayment,
+  tripDateStart,
 }: {
   bookings: Booking[];
   participantsRecord: Record<string, BookingParticipant[]>;
@@ -98,14 +102,18 @@ export function BookingsListWithTabs({
   price: number;
   paymentType: string | null;
   minDownpayment: number | null;
+  tripDateStart: string;
 }) {
   const [tab, setTab] = useState<Tab>("confirmed");
+
+  const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  const tripHasPassed = tripDateStart < todayPH;
 
   const confirmedBookings = bookings.filter((b) => b.status === "confirmed");
   const pendingBookings = bookings.filter((b) => b.status === "pending");
   const awaitingPaymentBookings = bookings.filter((b) => b.status === "payment_pending");
   const cancelledBookings = bookings.filter(
-    (b) => b.status === "cancelled" || b.status === "rejected" || b.status === "transferred",
+    (b) => b.status === "cancelled" || b.status === "rejected" || b.status === "transferred" || b.status === "no_show",
   );
 
   const displayed =
@@ -124,7 +132,7 @@ export function BookingsListWithTabs({
     { key: "pending", label: "Pending", count: pendingBookings.length, badge: "amber" },
     { key: "awaiting_payment", label: "Awaiting Payment", count: awaitingPaymentBookings.length, badge: "sky" },
     { key: "all", label: "All", count: bookings.length },
-    { key: "cancelled", label: "Cancelled / Rejected / Transferred", count: cancelledBookings.length },
+    { key: "cancelled", label: "Cancelled / Rejected / No shows", count: cancelledBookings.length },
   ];
 
   const emptyMessage =
@@ -135,7 +143,7 @@ export function BookingsListWithTabs({
         : tab === "awaiting_payment"
           ? "No bookings awaiting payment."
           : tab === "cancelled"
-            ? "No cancelled, rejected, or transferred bookings."
+            ? "No cancelled, rejected, transferred, or no show bookings."
             : "No bookings yet.";
 
   return (
@@ -307,7 +315,12 @@ export function BookingsListWithTabs({
                           <BookingActions bookingId={b.id} />
                         )}
                         {b.status === "confirmed" && (
-                          <MarkTransferButton bookingId={b.id} participantName={b.full_name} />
+                          <div className="flex flex-col items-end gap-1.5">
+                            <MarkTransferButton bookingId={b.id} participantName={b.full_name} />
+                            {tripHasPassed && (
+                              <MarkNoShowButton bookingId={b.id} participantName={b.full_name} />
+                            )}
+                          </div>
                         )}
                       </td>
                     </tr>

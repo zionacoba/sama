@@ -738,6 +738,58 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
   return { success: true };
 }
 
+export async function markAsNoShow(bookingId: number) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { data: organizer } = await supabase
+    .from("organizers")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("status", "approved")
+    .maybeSingle();
+
+  if (!organizer) return { error: "Not an approved organizer." };
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: booking } = await admin
+    .from("bookings")
+    .select("id, trip_id, status, full_name")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking) return { error: "Booking not found." };
+  if (booking.status !== "confirmed") return { error: "Only confirmed bookings can be marked as no show." };
+
+  const { data: trip } = await admin
+    .from("trips")
+    .select("id, slug, date_start, organizer_id")
+    .eq("id", booking.trip_id)
+    .maybeSingle();
+
+  if (!trip || trip.organizer_id?.toString() !== organizer.id?.toString()) {
+    return { error: "You don't have permission to manage this booking." };
+  }
+
+  const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  if (trip.date_start >= todayPH) {
+    return { error: "The trip has not yet taken place." };
+  }
+
+  const { error } = await admin
+    .from("bookings")
+    .update({ status: "no_show" })
+    .eq("id", bookingId)
+    .eq("status", "confirmed");
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/organizer/trips/[slug]/bookings", "page");
+  return { success: true };
+}
+
 export async function partialCancelBooking(bookingId: number, slotsToCancel: number) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

@@ -404,7 +404,7 @@ export async function getPendingPayouts(): Promise<{
   const { data: rawBookings } = await admin
     .from("bookings")
     .select("id, full_name, total_amount, amount_due, platform_commission, payment_option, balance_collected, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
-    .eq("status", "confirmed")
+    .in("status", ["confirmed", "no_show"])
     .eq("payout_status", "unpaid") as unknown as {
       data: Array<{
         id: number;

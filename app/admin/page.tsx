@@ -92,15 +92,18 @@ function formatDateShort(date: string) {
 
 function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
+  const label = normalized === "no_show" ? "No show" : status;
   const styles =
     normalized === "confirmed" || normalized === "approved"
       ? "bg-emerald-100 text-emerald-800"
       : normalized === "cancelled" || normalized === "rejected"
         ? "bg-red-100 text-red-800"
-        : "bg-amber-100 text-amber-900";
+        : normalized === "no_show"
+          ? "bg-stone-100 text-stone-500"
+          : "bg-amber-100 text-amber-900";
   return (
     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${styles}`}>
-      {status}
+      {label}
     </span>
   );
 }

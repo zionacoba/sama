@@ -182,7 +182,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
 
   const pending = bookings.filter((b) => b.status === "pending");
   const confirmed = bookings.filter((b) => b.status === "confirmed");
-  const rejected = bookings.filter((b) => b.status === "rejected" || b.status === "cancelled" || b.status === "transferred");
+  const rejected = bookings.filter((b) => b.status === "rejected" || b.status === "cancelled" || b.status === "transferred" || b.status === "no_show");
 
   const needsManualApproval = trip.difficulty === "Advanced";
   const awaitingPayment = bookings.filter((b) => b.status === "payment_pending");
@@ -293,6 +293,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
             price={trip.price}
             paymentType={trip.payment_type}
             minDownpayment={trip.min_downpayment}
+            tripDateStart={trip.date_start}
             navLinks={
               <>
                 <Link
