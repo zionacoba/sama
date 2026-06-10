@@ -92,6 +92,7 @@ export function BookingModal({
   const [platformWaiverError, setPlatformWaiverError] = useState(false);
   const [paymentOption, setPaymentOption] = useState<"full" | "downpayment">("full");
 
+  const slotsExceedsAvailable = slots > remainingSlots;
   const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
   const totalAmount = unitPrice * slots;
   const daysUntilTrip = Math.floor((new Date(tripDateStart).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
@@ -465,14 +466,19 @@ export function BookingModal({
                       type="number"
                       required
                       min={1}
-                      max={Math.min(remainingSlots, 10)}
+                      max={10}
                       value={slots}
                       onChange={(e) =>
-                        setSlots(Math.min(Math.min(remainingSlots, 10), Math.max(1, Number(e.target.value) || 1)))
+                        setSlots(Math.min(10, Math.max(1, Number(e.target.value) || 1)))
                       }
                       className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
                     />
                     <p className="text-xs text-stone-400 mt-1">Maximum 10 slots per booking.</p>
+                    {slotsExceedsAvailable && (
+                      <p role="alert" className="mt-1.5 text-xs text-red-600">
+                        Only {remainingSlots} slot{remainingSlots === 1 ? "" : "s"} available for this trip.
+                      </p>
+                    )}
                   </div>
 
                   {/* Pickup point */}
@@ -745,7 +751,7 @@ export function BookingModal({
                   <button
                     type="submit"
                     form="booking-form"
-                    disabled={loading}
+                    disabled={loading || slotsExceedsAvailable}
                     className="flex-1 rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {loading ? "Submitting…" : "Confirm booking"}
