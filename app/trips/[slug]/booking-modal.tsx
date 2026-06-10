@@ -318,28 +318,29 @@ export function BookingModal({
       )}
 
       {showSignInPrompt && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClick={() => setShowSignInPrompt(false)}
+        >
           <div
-            className="flex min-h-full items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
-            onClick={(e) => { if (e.target === e.currentTarget) setShowSignInPrompt(false); }}
+            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-              <h2 className="text-base font-bold text-stone-900">Sign in to continue</h2>
-              <p className="mt-2 text-sm text-stone-600">You&apos;ll need an account to book this trip.</p>
-              <div className="mt-5 flex gap-3">
-                <a
-                  href={`/login?redirectTo=${encodeURIComponent(`/trips/${tripSlug}?book=1`)}`}
-                  className="flex-1 rounded-xl bg-trailhead px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark"
-                >
-                  Sign in
-                </a>
-                <a
-                  href={`/signup?redirectTo=${encodeURIComponent(`/trips/${tripSlug}?book=1`)}`}
-                  className="flex-1 rounded-xl border border-stone-200 px-4 py-2.5 text-center text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900"
-                >
-                  Create account
-                </a>
-              </div>
+            <h2 className="text-base font-bold text-stone-900">Sign in to continue</h2>
+            <p className="mt-2 text-sm text-stone-600">You&apos;ll need an account to book this trip.</p>
+            <div className="mt-5 flex gap-3">
+              <a
+                href={`/login?redirectTo=${encodeURIComponent(`/trips/${tripSlug}?book=1`)}`}
+                className="flex-1 rounded-xl bg-trailhead px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark"
+              >
+                Sign in
+              </a>
+              <a
+                href={`/signup?redirectTo=${encodeURIComponent(`/trips/${tripSlug}?book=1`)}`}
+                className="flex-1 rounded-xl border border-stone-200 px-4 py-2.5 text-center text-sm font-semibold text-stone-700 transition hover:border-stone-400 hover:text-stone-900"
+              >
+                Create account
+              </a>
             </div>
           </div>
         </div>
