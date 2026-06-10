@@ -66,15 +66,18 @@ export function BookingModal({
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [pendingBookClick, setPendingBookClick] = useState(false);
 
   const resolvedWaiverText = waiverText
     ? waiverText.replace(/\[Organizer Name\]/gi, organizerName || "the organizer")
     : null;
   const [success, setSuccess] = useState(false);
+  const [redirectBlocked, setRedirectBlocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [waiverExpanded, setWaiverExpanded] = useState(false);
   const sessionRef = useRef<Session | null>(null);
+  const redirectUrlRef = useRef<string | null>(null);
   const openRef = useRef(false);
   openRef.current = open;
 
@@ -174,6 +177,16 @@ export function BookingModal({
     }
   }, [autoOpen, sessionReady]);
 
+  useEffect(() => {
+    if (!pendingBookClick || !sessionReady) return;
+    setPendingBookClick(false);
+    if (sessionRef.current) {
+      setOpen(true);
+    } else {
+      setShowSignInPrompt(true);
+    }
+  }, [pendingBookClick, sessionReady]);
+
   // Push a history entry when the modal opens so the Android back button
   // closes the modal instead of navigating away from the page.
   useEffect(() => {
@@ -256,6 +269,10 @@ export function BookingModal({
   }
 
   function handleBookClick() {
+    if (!sessionReady) {
+      setPendingBookClick(true);
+      return;
+    }
     if (!sessionRef.current) {
       setShowSignInPrompt(true);
       return;
@@ -274,7 +291,10 @@ export function BookingModal({
     if (!platformWaiverAccepted) setPlatformWaiverError(true);
     if (!waiverAccepted) setWaiverError(true);
     if (hasErrors) {
-      setError("Please fix the highlighted fields before continuing.");
+      const onlyWaiversBlocking = phoneValid && !isSamePhone && (!platformWaiverAccepted || !waiverAccepted);
+      setError(onlyWaiversBlocking
+        ? "Please accept the waiver(s) at the bottom of the form to continue."
+        : "Please fix the highlighted fields before continuing.");
       return;
     }
     setError(null);
@@ -307,11 +327,16 @@ export function BookingModal({
       }
 
       if (result.checkoutUrl) {
+        redirectUrlRef.current = result.checkoutUrl;
         setSuccess(true);
         setTimeout(() => {
           window.location.href = result.checkoutUrl!;
         }, 1500);
-        // loading stays true — page will redirect imminently
+        // Safety: if still on this page after 8s, the redirect was blocked
+        setTimeout(() => {
+          setRedirectBlocked(true);
+          setLoading(false);
+        }, 8000);
       } else {
         setError(
           `Booking created but payment link failed. Please contact support at hello@sama.com.ph with your booking reference: ${result.bookingRef}`
@@ -409,11 +434,26 @@ export function BookingModal({
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-10 pb-5">
               {success ? (
                 <div className="flex flex-col items-center gap-4 py-10 text-center">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-trailhead border-t-transparent" />
-                  <p className="text-sm font-semibold text-stone-800">Redirecting to payment…</p>
-                  <p className="text-xs text-stone-500">
-                    You&apos;ll be taken to a secure payment page.<br />Please don&apos;t close this window.
-                  </p>
+                  {redirectBlocked ? (
+                    <>
+                      <p className="text-sm font-semibold text-stone-800">Your browser blocked the redirect.</p>
+                      <a
+                        href={redirectUrlRef.current ?? "#"}
+                        className="rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
+                      >
+                        Continue to payment →
+                      </a>
+                      <p className="text-xs text-stone-500">Click the button above to complete your payment.</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-trailhead border-t-transparent" />
+                      <p className="text-sm font-semibold text-stone-800">Redirecting to payment…</p>
+                      <p className="text-xs text-stone-500">
+                        You&apos;ll be taken to a secure payment page.<br />Please don&apos;t close this window.
+                      </p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <form id="booking-form" onSubmit={handleSubmit} className="space-y-3">
