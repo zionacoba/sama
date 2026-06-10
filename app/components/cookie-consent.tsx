@@ -20,7 +20,7 @@ export function CookieConsent() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-stone-200 bg-white px-4 py-4 shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-stone-200 bg-white px-4 pt-4 pb-24 lg:pb-4 shadow-lg">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-stone-600">
           We use cookies to keep you logged in and improve your experience. By

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
@@ -16,19 +17,50 @@ type Props = {
 
 export function MobileMenu({ isLoggedIn, isAdmin, email, displayName, organizerStatus, organizerId }: Props) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   const pathname = usePathname();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (
+        !containerRef.current?.contains(e.target as Node) &&
+        !dropdownRef.current?.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  function handleToggle() {
+    if (!open && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setMenuPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setOpen((v) => !v);
+  }
+
   const close = () => setOpen(false);
 
   return (
-    <div className="relative sm:hidden">
+    <div ref={containerRef} className="relative sm:hidden">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
         aria-label={open ? "Close menu" : "Open menu"}
         aria-expanded={open}
         className="flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 text-stone-600 transition hover:bg-stone-100"
@@ -44,8 +76,12 @@ export function MobileMenu({ isLoggedIn, isAdmin, email, displayName, organizerS
         )}
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl">
+      {mounted && open && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{ top: menuPos.top, right: menuPos.right }}
+          className="fixed z-50 w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl"
+        >
           <nav className="flex flex-col text-sm" aria-label="Mobile navigation">
             <Link
               href="/trips"
@@ -134,7 +170,8 @@ export function MobileMenu({ isLoggedIn, isAdmin, email, displayName, organizerS
               </>
             )}
           </nav>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

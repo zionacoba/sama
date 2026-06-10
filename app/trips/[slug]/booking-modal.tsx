@@ -65,6 +65,7 @@ export function BookingModal({
   const [open, setOpen] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
 
   const resolvedWaiverText = waiverText
     ? waiverText.replace(/\[Organizer Name\]/gi, organizerName || "the organizer")
@@ -147,6 +148,7 @@ export function BookingModal({
     supabase.auth.getSession().then(({ data: { session } }) => {
       applySession(session);
       if (session?.user) applyProfile(session.user.id);
+      setSessionReady(true);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -163,10 +165,13 @@ export function BookingModal({
   }, []);
 
   useEffect(() => {
-    if (autoOpen && sessionRef.current) setOpen(true);
-  // Only fire on mount — sessionRef will be populated by the auth effect above
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoOpen]);
+    if (!autoOpen || !sessionReady) return;
+    if (sessionRef.current) {
+      setOpen(true);
+    } else {
+      setShowSignInPrompt(true);
+    }
+  }, [autoOpen, sessionReady]);
 
   // Push a history entry when the modal opens so the Android back button
   // closes the modal instead of navigating away from the page.
@@ -244,6 +249,7 @@ export function BookingModal({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (loading || success) return;
     const phoneValid = /^(\+63|0)\d{9,10}$/.test(phone.replace(/\s/g, ""));
     if (!phoneValid) setPhoneError(true);
     const isSamePhone = phone.replace(/\s/g, "") === emergencyContactPhone.replace(/\s/g, "") && phone.trim() !== "";
@@ -277,6 +283,7 @@ export function BookingModal({
 
       if (!result.success) {
         setError(result.error);
+        setLoading(false);
         return;
       }
 
@@ -285,14 +292,15 @@ export function BookingModal({
         setTimeout(() => {
           window.location.href = result.checkoutUrl!;
         }, 1500);
+        // loading stays true — page will redirect imminently
       } else {
         setError(
           `Booking created but payment link failed. Please contact support at hello@sama.com.ph with your booking reference: ${result.bookingRef}`
         );
+        setLoading(false);
       }
     } catch {
       setError("Something went wrong. Please try again.");
-    } finally {
       setLoading(false);
     }
   }
@@ -390,6 +398,7 @@ export function BookingModal({
                 </div>
               ) : (
                 <form id="booking-form" onSubmit={handleSubmit} className="space-y-3">
+                  <fieldset disabled={loading} className="contents">
                   {/* Compact price line */}
                   <p className="text-sm text-stone-500">
                     {tripTitle} · {formatCurrency(unitPrice)} × {slots} slot{slots !== 1 ? "s" : ""} ={" "}
@@ -729,7 +738,7 @@ export function BookingModal({
                       )}
                     </div>
                   </div>
-
+                  </fieldset>
                 </form>
               )}
             </div>
