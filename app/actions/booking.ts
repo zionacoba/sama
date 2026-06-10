@@ -751,7 +751,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, payment_method, payout_status, payout_id, cancellation_policy, platform_commission, commission_rate_used")
+    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, payment_method, payout_status, payout_id, cancellation_policy, platform_commission, commission_rate_used, balance_payment_gateway_status, balance_paymongo_payment_id")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -779,9 +779,11 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   const remainingSlots = originalSlots - slotsToCancel;
 
   const amountPaid =
-    booking.payment_option === "downpayment" && booking.amount_due != null
-      ? booking.amount_due
-      : (booking.total_amount ?? 0);
+    booking.balance_payment_gateway_status === 'paid'
+      ? (booking.total_amount ?? 0)
+      : booking.payment_option === "downpayment" && booking.amount_due != null
+        ? booking.amount_due
+        : (booking.total_amount ?? 0);
 
   const todayManilaStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
   const todayManila = new Date(todayManilaStr);
@@ -797,6 +799,15 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   const refundAmount = fullRefundableAmount !== null
     ? Math.round((slotsToCancel / originalSlots) * fullRefundableAmount * 100) / 100
     : null;
+
+  // Split refund proportionally between downpayment and balance payment sources
+  const partialBalanceAmount = (booking.total_amount ?? 0) - (booking.amount_due ?? 0);
+  const partialBalanceRefundAmount =
+    booking.balance_payment_gateway_status === 'paid' && booking.balance_paymongo_payment_id && partialBalanceAmount > 0 && refundAmount !== null
+      ? Math.round(refundAmount * (partialBalanceAmount / amountPaid) * 100) / 100
+      : 0;
+  const downpaymentRefundAmount =
+    refundAmount !== null ? Math.round((refundAmount - partialBalanceRefundAmount) * 100) / 100 : null;
 
   const newTotalAmount = Math.round((booking.total_amount ?? 0) * (remainingSlots / originalSlots) * 100) / 100;
   const newAmountDue = booking.amount_due != null
@@ -829,15 +840,29 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   });
 
   let refundResult: RefundResult | null = null;
-  if (refundAmount !== null && refundAmount > 0) {
+  let balanceRefundResult: RefundResult | null = null;
+
+  if (downpaymentRefundAmount !== null && downpaymentRefundAmount > 0) {
     refundResult = await processPayMongoRefund({
       paymentId: booking.paymongo_payment_id,
       paymentMethod: booking.payment_method,
-      amountPesos: refundAmount,
+      amountPesos: downpaymentRefundAmount,
       notes: `Partial cancellation: ${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""} cancelled`,
     });
     if (!refundResult.success && !refundResult.requiresManualProcessing) {
       console.error("[refund] partialCancelBooking refund failed", bookingId, refundResult.error);
+    }
+  }
+
+  if (partialBalanceRefundAmount > 0 && booking.balance_paymongo_payment_id) {
+    balanceRefundResult = await processPayMongoRefund({
+      paymentId: booking.balance_paymongo_payment_id,
+      paymentMethod: booking.payment_method,
+      amountPesos: partialBalanceRefundAmount,
+      notes: `Partial cancellation: ${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""} cancelled - balance refund`,
+    });
+    if (!balanceRefundResult.success && !balanceRefundResult.requiresManualProcessing) {
+      console.error("[refund] partialCancelBooking balance refund failed", bookingId, balanceRefundResult.error);
     }
   }
 
@@ -901,13 +926,15 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
       console.error("[email] failed to send partial cancellation confirmation", err);
     }
 
-    const needsManualRefund = refundResult && !refundResult.success;
+    const needsManualRefund =
+      (refundResult && !refundResult.success) ||
+      (balanceRefundResult && !balanceRefundResult.success);
     if (needsManualRefund && ADMIN_EMAIL) {
       try {
-        const isQrPh = refundResult?.requiresManualProcessing;
+        const isQrPh = refundResult?.requiresManualProcessing || balanceRefundResult?.requiresManualProcessing;
         const refundNote = isQrPh
           ? "Payment method is QR Ph — must be refunded manually."
-          : `Automatic refund failed: ${refundResult?.error ?? "Unknown error"}`;
+          : `Automatic refund failed: ${refundResult?.error ?? balanceRefundResult?.error ?? "Unknown error"}`;
         await resend.emails.send({
           from: FROM_ADDRESS,
           to: ADMIN_EMAIL,
@@ -1041,14 +1068,26 @@ export async function cancelBooking(bookingId: number) {
     const tripDay = new Date(trip.date_start);
     const daysUntilTrip = Math.round((tripDay.getTime() - todayManila.getTime()) / 86_400_000);
     const amountPaid =
-      booking.payment_option === "downpayment" && booking.amount_due != null
-        ? booking.amount_due
-        : (booking.total_amount ?? 0);
+      booking.balance_payment_gateway_status === 'paid'
+        ? (booking.total_amount ?? 0)
+        : booking.payment_option === "downpayment" && booking.amount_due != null
+          ? booking.amount_due
+          : (booking.total_amount ?? 0);
     const refundAmount = calculateRefundAmount(
       booking.cancellation_policy ?? trip.cancellation_policy ?? "flexible",
       amountPaid,
       daysUntilTrip,
     );
+
+    // Split refund proportionally between downpayment and balance payment sources
+    const balanceAmount = (booking.total_amount ?? 0) - (booking.amount_due ?? 0);
+    const refundPercentage = amountPaid > 0 && refundAmount !== null ? refundAmount / amountPaid : 0;
+    const balanceRefundAmount =
+      booking.balance_payment_gateway_status === 'paid' && booking.balance_paymongo_payment_id && balanceAmount > 0
+        ? Math.round(refundPercentage * balanceAmount * 100) / 100
+        : 0;
+    const downpaymentRefundAmount =
+      refundAmount !== null ? Math.round((refundAmount - balanceRefundAmount) * 100) / 100 : null;
 
     if (refundAmount !== null) {
       await admin
@@ -1061,11 +1100,11 @@ export async function cancelBooking(bookingId: number) {
     let refundResult: RefundResult | null = null;
     let balanceRefundResult: RefundResult | null = null;
 
-    if (refundAmount !== null && refundAmount > 0) {
+    if (downpaymentRefundAmount !== null && downpaymentRefundAmount > 0) {
       refundResult = await processPayMongoRefund({
         paymentId: booking.paymongo_payment_id,
         paymentMethod: booking.payment_method,
-        amountPesos: refundAmount,
+        amountPesos: downpaymentRefundAmount,
         notes: 'Joiner cancelled booking',
       });
       if (!refundResult.success && !refundResult.requiresManualProcessing) {
@@ -1073,12 +1112,11 @@ export async function cancelBooking(bookingId: number) {
       }
     }
 
-    if (booking.balance_payment_gateway_status === 'paid' && booking.balance_paymongo_payment_id) {
-      const balanceAmount = (booking.total_amount ?? 0) - (booking.amount_due ?? 0);
+    if (balanceRefundAmount > 0 && booking.balance_paymongo_payment_id) {
       balanceRefundResult = await processPayMongoRefund({
         paymentId: booking.balance_paymongo_payment_id,
         paymentMethod: booking.payment_method,
-        amountPesos: balanceAmount,
+        amountPesos: balanceRefundAmount,
         notes: 'Joiner cancelled booking - balance refund',
       });
       if (!balanceRefundResult.success && !balanceRefundResult.requiresManualProcessing) {
