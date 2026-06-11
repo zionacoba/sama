@@ -64,7 +64,7 @@ export function ProfileForm({
           type="tel"
           value={ecPhone}
           onChange={(e) => setEcPhone(e.target.value)}
-          placeholder="+63 9XX XXX XXXX"
+          placeholder="09XX XXX XXXX"
           className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
       </div>

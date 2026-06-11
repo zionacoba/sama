@@ -110,7 +110,7 @@ export function ProfileForm({ firstName, lastName, nickname, pronouns, address, 
           name="phone"
           type="tel"
           defaultValue={phone ?? ""}
-          placeholder="+63 9xx xxx xxxx"
+          placeholder="09XX XXX XXXX"
           className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
       </div>

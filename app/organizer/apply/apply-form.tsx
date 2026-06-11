@@ -76,7 +76,7 @@ export function ApplyForm() {
           autoComplete="tel"
           required
           className={inputClass}
-          placeholder="+63 9XX XXX XXXX"
+          placeholder="09XX XXX XXXX"
         />
       </div>
 

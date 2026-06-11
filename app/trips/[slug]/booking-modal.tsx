@@ -528,6 +528,7 @@ export function BookingModal({
                       pattern="[0-9+\-\s]+"
                       value={phone}
                       disabled={loading}
+                      placeholder="09XX XXX XXXX"
                       onChange={(e) => { setPhone(e.target.value); setPhoneError(false); }}
                       className={`mt-1.5 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50 ${phoneError ? "border-red-400 focus:border-red-400" : "border-stone-200 focus:border-trailhead"}`}
                     />
@@ -656,7 +657,7 @@ export function BookingModal({
                         value={emergencyContactPhone}
                         disabled={loading}
                         onChange={(e) => { setEmergencyContactPhone(e.target.value); setSamePhoneError(false); }}
-                        placeholder="+63 9XX XXX XXXX"
+                        placeholder="09XX XXX XXXX"
                         className={`mt-1.5 w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50 ${samePhoneError ? "border-red-400 focus:border-red-400" : "border-stone-200 focus:border-trailhead"}`}
                       />
                       {samePhoneError && (

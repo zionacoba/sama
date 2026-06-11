@@ -571,7 +571,11 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   )}
                 </div>
                 {reviews.length === 0 && (
-                  <p className="mt-4 text-stone-500">No reviews yet for this organizer.</p>
+                  <div className="mt-4 rounded-2xl border border-stone-100 bg-stone-50 px-6 py-8 text-center">
+                    <p className="text-2xl" aria-hidden>★</p>
+                    <p className="mt-2 text-sm font-medium text-stone-600">No reviews yet for this organizer.</p>
+                    <p className="mt-1 text-xs text-stone-400">Reviews appear here after participants complete a trip.</p>
+                  </div>
                 )}
                 {reviews.length > 0 && (
                   <ul className="mt-4 space-y-4">
@@ -744,7 +748,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
         {/* Mobile fixed bottom bar */}
         {!isOwnTrip && (
-          <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white/95 px-4 pt-3 backdrop-blur-sm lg:hidden" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+          <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white/95 pt-3 backdrop-blur-sm lg:hidden" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))', paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))' }}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-base font-bold text-trailhead">{formatPrice(tripData.price)}</p>

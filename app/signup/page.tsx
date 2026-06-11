@@ -200,7 +200,7 @@ function SignupForm() {
                       value={phone}
                       onChange={(e) => { setPhone(e.target.value); setPhoneError(null); }}
                       className={`mt-1.5 w-full rounded-xl border bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:ring-2 ${phoneError ? "border-red-400 focus:border-red-400" : "border-stone-200 focus:border-trailhead"}`}
-                      placeholder="09xxxxxxxxx"
+                      placeholder="09XX XXX XXXX"
                     />
                     {phoneError && (
                       <p role="alert" className="mt-1.5 text-xs text-red-600">{phoneError}</p>

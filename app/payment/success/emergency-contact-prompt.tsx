@@ -50,7 +50,7 @@ export function EmergencyContactPrompt() {
             name="emergency_contact_phone"
             type="tel"
             required
-            placeholder="+63 9XX XXX XXXX"
+            placeholder="09XX XXX XXXX"
             className={inputClass}
           />
         </div>

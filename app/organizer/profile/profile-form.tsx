@@ -220,7 +220,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
           required
           defaultValue={organizer.phone}
           className={inputClass}
-          placeholder="+63 9XX XXX XXXX"
+          placeholder="09XX XXX XXXX"
         />
       </div>
 
@@ -351,7 +351,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
                   type="text"
                   defaultValue={organizer.gcash_number ?? ""}
                   className={inputClass}
-                  placeholder="09XXXXXXXXX"
+                  placeholder="09XX XXX XXXX"
                 />
               </div>
               <div>

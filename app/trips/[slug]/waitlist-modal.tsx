@@ -158,7 +158,7 @@ export function WaitlistModal({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className={inputClass}
-                  placeholder="+63 9XX XXX XXXX"
+                  placeholder="09XX XXX XXXX"
                 />
               </div>
 

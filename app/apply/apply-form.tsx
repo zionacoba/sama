@@ -76,7 +76,7 @@ export function ApplyForm({
           required
           defaultValue={defaultPhone ?? undefined}
           className={inputClass}
-          placeholder="+63 9XX XXX XXXX"
+          placeholder="09XX XXX XXXX"
         />
       </div>
 
