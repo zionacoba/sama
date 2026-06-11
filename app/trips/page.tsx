@@ -354,6 +354,29 @@ export default async function TripsPage({ searchParams }: PageProps) {
               </div>
             </div>
 
+            {/* Active-filter bar — always visible outside scroll containers */}
+            {(activity || duration || difficulty || region) && (() => {
+              const activeCount = [activity, duration, difficulty, region].filter(Boolean).length;
+              const clearSp = new URLSearchParams();
+              if (search) clearSp.set("search", search);
+              if (sort && sort !== "soonest") clearSp.set("sort", sort);
+              const clearQs = clearSp.toString();
+              const clearHref = `/trips${clearQs ? `?${clearQs}` : ""}`;
+              return (
+                <div className="mt-2 flex items-center justify-between rounded-xl border border-trailhead/20 bg-trailhead/5 px-3 py-1.5">
+                  <span className="text-xs font-medium text-trailhead">
+                    {activeCount} filter{activeCount !== 1 ? "s" : ""} active
+                  </span>
+                  <Link
+                    href={clearHref}
+                    className="text-xs font-semibold text-trailhead underline-offset-2 hover:underline"
+                  >
+                    Clear all
+                  </Link>
+                </div>
+              );
+            })()}
+
             <p className="mt-2 text-xs text-stone-500">
               {totalTrips} trip{totalTrips !== 1 ? "s" : ""} found
               {search && (
