@@ -116,7 +116,7 @@ export default async function Home() {
               Discover trips. Book your slot. Join the group.
             </h1>
             <p className="mt-3 text-pretty text-stone-600 sm:text-lg">
-              Find guided hikes, freediving weekends, and beach trips across the Philippines in one place, with reviewed organizers, clear trip details, secure payment, and instant confirmation.
+              Find guided hikes, freediving weekends, and beach trips across the Philippines, led by trusted local organizers.
             </p>
             <form
               action="/trips"
