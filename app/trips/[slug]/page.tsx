@@ -399,6 +399,9 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               {tripData.duration && <span>⏱ {tripData.duration}</span>}
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3">
+              <span className="hidden lg:inline-flex items-center text-xl font-bold text-trailhead">
+                {formatPrice(tripData.price)}
+              </span>
               <span className={`hidden lg:inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 tripData.remaining_slots === 0
                   ? "bg-stone-100 text-stone-500"
