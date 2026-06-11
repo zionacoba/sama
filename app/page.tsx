@@ -113,10 +113,10 @@ export default async function Home() {
         <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-16 md:py-32">
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-balance text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" style={{ color: "#1A3D2B" }}>
-              Your next adventure starts here
+              Discover trips. Book your slot. Join the group.
             </h1>
             <p className="mt-3 text-pretty text-stone-600 sm:text-lg">
-              Guided hikes, freediving weekends, and beach trips across the Philippines, for every level.
+              Find guided hikes, freediving weekends, and beach trips across the Philippines in one place, with reviewed organizers, clear trip details, secure payment, and instant confirmation.
             </p>
             <form
               action="/trips"
@@ -159,9 +159,6 @@ export default async function Home() {
                 </Link>
               ))}
             </div>
-            <p className="mt-4 text-xs text-stone-400">
-              Every organizer is personally reviewed and approved by Sama.
-            </p>
           </div>
         </section>
 
