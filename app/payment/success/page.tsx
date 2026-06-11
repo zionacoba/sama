@@ -51,10 +51,19 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
   type BookingSummary = {
     id: number;
     total_amount: number;
+    amount_due: number | null;
+    payment_option: string | null;
+    meeting_point: string | null;
     trip: {
       title: string;
       date_start: string;
-      organizer: { display_name: string | null; full_name: string } | null;
+      messenger_gc_link: string | null;
+      organizer: {
+        display_name: string | null;
+        full_name: string;
+        facebook_url: string | null;
+        social_links: unknown;
+      } | null;
     } | null;
   };
 
@@ -62,7 +71,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
   if (bookingId) {
     const { data } = await admin
       .from("bookings")
-      .select("id, total_amount, trip:trips(title, date_start, organizer:organizers(display_name, full_name))")
+      .select("id, total_amount, amount_due, payment_option, meeting_point, trip:trips(title, date_start, messenger_gc_link, organizer:organizers(display_name, full_name, facebook_url, social_links))")
       .eq("id", bookingId)
       .maybeSingle();
     booking = data as BookingSummary | null;
@@ -71,6 +80,29 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
   const bookingRef = bookingId
     ? parseInt(bookingId, 10).toString(16).toUpperCase().slice(-8).padStart(8, "0")
     : null;
+
+  const hasRemainingBalance =
+    booking?.payment_option === "downpayment" &&
+    booking.amount_due != null &&
+    booking.amount_due < booking.total_amount;
+
+  const messengerLink = booking?.trip?.messenger_gc_link ?? null;
+
+  const organizerContactUrl = (() => {
+    const org = booking?.trip?.organizer;
+    if (!org) return null;
+    const rawLinks = org.social_links;
+    const sl =
+      typeof rawLinks === "string"
+        ? (() => {
+            try { return JSON.parse(rawLinks) as { organizer_facebook?: string; facebook?: string }; }
+            catch { return null; }
+          })()
+        : (rawLinks as { organizer_facebook?: string; facebook?: string } | null);
+    return (
+      (sl?.organizer_facebook?.trim() || sl?.facebook?.trim() || org.facebook_url?.trim()) ?? null
+    );
+  })();
 
   return (
     <>
@@ -121,6 +153,64 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
                 <span className="font-mono font-medium text-stone-600">{bookingRef}</span>
               </p>
             )
+          )}
+
+          {booking && (
+            <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-5 text-left">
+              <h2 className="mb-3 text-sm font-bold text-stone-900">What&apos;s next</h2>
+              <ul className="space-y-2.5 text-sm text-stone-600">
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 shrink-0 text-trailhead">✓</span>
+                  <span>Check your email for your booking confirmation and full trip details.</span>
+                </li>
+                {booking.meeting_point && (
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0">📍</span>
+                    <span><strong className="text-stone-700">Meeting point:</strong> {booking.meeting_point}</span>
+                  </li>
+                )}
+                {hasRemainingBalance && (
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0">💳</span>
+                    <span>
+                      Your remaining balance of{" "}
+                      <strong className="text-stone-700">{formatCurrency(booking.total_amount - (booking.amount_due ?? 0))}</strong>{" "}
+                      can be paid online before the trip or in cash directly to the organizer on the day.
+                    </span>
+                  </li>
+                )}
+                {messengerLink ? (
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0">💬</span>
+                    <span>
+                      <a href={messengerLink} target="_blank" rel="noopener noreferrer" className="text-trailhead underline-offset-4 hover:underline">
+                        Join the trip group chat
+                      </a>{" "}
+                      for updates and coordination.
+                    </span>
+                  </li>
+                ) : organizerContactUrl ? (
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0">💬</span>
+                    <span>
+                      Questions?{" "}
+                      <a href={organizerContactUrl} target="_blank" rel="noopener noreferrer" className="text-trailhead underline-offset-4 hover:underline">
+                        Message the organizer on Facebook
+                      </a>.
+                    </span>
+                  </li>
+                ) : null}
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 shrink-0">📋</span>
+                  <span>
+                    <Link href={`/profile/bookings/${booking.id}`} className="text-trailhead underline-offset-4 hover:underline">
+                      View your booking anytime
+                    </Link>{" "}
+                    from your profile.
+                  </span>
+                </li>
+              </ul>
+            </div>
           )}
 
           {user && !hasEmergencyContact && <EmergencyContactPrompt />}

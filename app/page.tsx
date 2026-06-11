@@ -159,6 +159,9 @@ export default async function Home() {
                 </Link>
               ))}
             </div>
+            <p className="mt-4 text-xs text-stone-400">
+              Every organizer is personally reviewed and approved by Sama.
+            </p>
           </div>
         </section>
 
