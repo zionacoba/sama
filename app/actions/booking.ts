@@ -295,6 +295,13 @@ export async function createBooking(input: CreateBookingInput) {
     return { error: "We could not create your payment link. Please try again." };
   }
 
+  if (!checkoutUrl) {
+    console.error("[createBooking] payment link created but checkoutUrl missing, rolling back slot");
+    await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+    await admin.from("bookings").delete().eq("id", newBooking.id);
+    return { error: "We could not create your payment link. Please try again." };
+  }
+
   revalidatePath(`/trips/${input.tripSlug}`);
   return {
     success: true as const,

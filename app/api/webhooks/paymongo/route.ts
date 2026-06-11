@@ -180,7 +180,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
     .eq("id", booking.id)
     .eq("payment_gateway_status", null)
     .select()
-    .single();
+    .maybeSingle();
 
   if (updateError) {
     console.error(`[webhook] DB update failed for booking ${booking.id}:`, updateError);
@@ -413,9 +413,13 @@ async function handleBalancePayment(
     .eq("id", booking.id)
     .is("balance_payment_gateway_status", null)
     .select()
-    .single();
+    .maybeSingle();
 
-  if (updateError || !updatedBooking) {
+  if (updateError) {
+    console.error(`[webhook] balance payment DB update failed for booking ${booking.id}:`, updateError);
+    return;
+  }
+  if (!updatedBooking) {
     console.log(`[webhook] Duplicate balance payment delivery for booking ${booking.id} — skipping`);
     return;
   }

@@ -472,7 +472,6 @@ export function BookingModal({
                 </div>
               ) : (
                 <form id="booking-form" onSubmit={handleSubmit} className="space-y-4">
-                  <fieldset disabled={loading} className="contents">
                   {/* Compact price line */}
                   <p className="text-sm text-stone-500">
                     {tripTitle} · {formatCurrency(unitPrice)} × {slots} slot{slots !== 1 ? "s" : ""} ={" "}
@@ -500,8 +499,9 @@ export function BookingModal({
                       required
                       maxLength={100}
                       value={fullName}
+                      disabled={loading}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                     />
                   </div>
 
@@ -514,8 +514,9 @@ export function BookingModal({
                       type="email"
                       required
                       value={email}
+                      disabled={loading}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                     />
                   </div>
 
@@ -530,8 +531,9 @@ export function BookingModal({
                       maxLength={20}
                       pattern="[0-9+\-\s]+"
                       value={phone}
+                      disabled={loading}
                       onChange={(e) => { setPhone(e.target.value); setPhoneError(false); }}
-                      className={`mt-1.5 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-trailhead/30 ${phoneError ? "border-red-400 focus:border-red-400" : "border-stone-200 focus:border-trailhead"}`}
+                      className={`mt-1.5 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50 ${phoneError ? "border-red-400 focus:border-red-400" : "border-stone-200 focus:border-trailhead"}`}
                     />
                     {phoneError && (
                       <p role="alert" className="mt-1.5 text-xs text-red-600">
@@ -552,10 +554,11 @@ export function BookingModal({
                       min={1}
                       max={10}
                       value={slots}
+                      disabled={loading}
                       onChange={(e) =>
                         setSlots(Math.min(10, Math.max(1, Number(e.target.value) || 1)))
                       }
-                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                     />
                     <p className="text-xs text-stone-400 mt-1">Maximum 10 slots per booking.</p>
                     {slotsExceedsAvailable && (
@@ -575,8 +578,9 @@ export function BookingModal({
                         id="booking-meeting-point"
                         required
                         value={selectedMeetingPoint}
+                        disabled={loading}
                         onChange={(e) => setSelectedMeetingPoint(e.target.value)}
-                        className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                        className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                       >
                         <option value="">Select a pickup point…</option>
                         {meetingPoints.map((mp) => (
@@ -607,12 +611,13 @@ export function BookingModal({
                               required
                               maxLength={100}
                               value={name}
+                              disabled={loading}
                               onChange={(e) => {
                                 const next = [...participants];
                                 next[i] = e.target.value;
                                 setParticipants(next);
                               }}
-                              className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                              className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                               placeholder="Full name"
                             />
                           </div>
@@ -636,9 +641,10 @@ export function BookingModal({
                         required
                         maxLength={100}
                         value={emergencyContactName}
+                        disabled={loading}
                         onChange={(e) => setEmergencyContactName(e.target.value)}
                         placeholder="Full name"
-                        className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                        className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                       />
                     </div>
                     <div>
@@ -652,9 +658,10 @@ export function BookingModal({
                         maxLength={20}
                         pattern="[0-9+\-\s]+"
                         value={emergencyContactPhone}
+                        disabled={loading}
                         onChange={(e) => { setEmergencyContactPhone(e.target.value); setSamePhoneError(false); }}
                         placeholder="+63 9XX XXX XXXX"
-                        className={`mt-1.5 w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-trailhead/30 ${samePhoneError ? "border-red-400 focus:border-red-400" : "border-stone-200 focus:border-trailhead"}`}
+                        className={`mt-1.5 w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50 ${samePhoneError ? "border-red-400 focus:border-red-400" : "border-stone-200 focus:border-trailhead"}`}
                       />
                       {samePhoneError && (
                         <p role="alert" className="mt-1.5 text-xs text-red-600">
@@ -671,8 +678,9 @@ export function BookingModal({
                       <div className="mt-1.5 grid grid-cols-2 gap-2">
                         <button
                           type="button"
+                          disabled={loading}
                           onClick={() => setPaymentOption("full")}
-                          className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
+                          className={`rounded-xl border px-4 py-3 text-left text-sm transition disabled:opacity-50 ${
                             paymentOption === "full"
                               ? "border-trailhead bg-trailhead-muted font-semibold text-trailhead"
                               : "border-stone-200 bg-white text-stone-700 hover:border-trailhead"
@@ -683,8 +691,9 @@ export function BookingModal({
                         </button>
                         <button
                           type="button"
+                          disabled={loading}
                           onClick={() => setPaymentOption("downpayment")}
-                          className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
+                          className={`rounded-xl border px-4 py-3 text-left text-sm transition disabled:opacity-50 ${
                             paymentOption === "downpayment"
                               ? "border-trailhead bg-trailhead-muted font-semibold text-trailhead"
                               : "border-stone-200 bg-white text-stone-700 hover:border-trailhead"
@@ -707,9 +716,10 @@ export function BookingModal({
                       rows={2}
                       maxLength={500}
                       value={notes}
+                      disabled={loading}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Allergies, medications, dietary restrictions, or other health info"
-                      className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+                      className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                     />
                   </div>
 
@@ -736,11 +746,12 @@ export function BookingModal({
                         <input
                           type="checkbox"
                           checked={platformWaiverAccepted}
+                          disabled={loading}
                           onChange={(e) => {
                             setPlatformWaiverAccepted(e.target.checked);
                             if (e.target.checked) setPlatformWaiverError(false);
                           }}
-                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
+                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                         />
                         <span className="text-xs leading-relaxed text-stone-600">
                           I understand that Sama is a technology marketplace connecting independent trip organizers with participants. Sama does not operate or take responsibility for any trip. By booking, I agree to Sama&apos;s{" "}
@@ -767,8 +778,9 @@ export function BookingModal({
                           </div>
                           <button
                             type="button"
+                            disabled={loading}
                             onClick={() => setWaiverExpanded(!waiverExpanded)}
-                            className="mt-1 text-xs text-trailhead underline-offset-2 hover:underline"
+                            className="mt-1 text-xs text-trailhead underline-offset-2 hover:underline disabled:opacity-50"
                           >
                             {waiverExpanded ? "See less" : "See more"}
                           </button>
@@ -778,11 +790,12 @@ export function BookingModal({
                         <input
                           type="checkbox"
                           checked={waiverAccepted}
+                          disabled={loading}
                           onChange={(e) => {
                             setWaiverAccepted(e.target.checked);
                             if (e.target.checked) setWaiverError(false);
                           }}
-                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
+                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                         />
                         <span className="text-xs leading-relaxed text-stone-600">
                           {resolvedWaiverText
@@ -800,7 +813,6 @@ export function BookingModal({
                       )}
                     </div>
                   </div>
-                  </fieldset>
                 </form>
               )}
             </div>
