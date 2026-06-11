@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 function badgeClass(level: string) {
   return level === "Beginner"
@@ -55,6 +55,7 @@ const JOINER: Entry[] = [
 
 export function RecurringTemplateInfoButton() {
   const [open, setOpen] = useState(false);
+  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({ left: 0 });
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -73,11 +74,23 @@ export function RecurringTemplateInfoButton() {
     };
   }, [open]);
 
+  function handleToggle() {
+    if (!open && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const TOOLTIP_W = 320; // w-80
+      const MARGIN = 16;
+      const overflow = rect.left + TOOLTIP_W - (window.innerWidth - MARGIN);
+      const left = overflow > 0 ? -overflow : 0;
+      setTooltipStyle({ left: Math.max(left, -(rect.left - MARGIN)) });
+    }
+    setOpen((v) => !v);
+  }
+
   return (
     <div ref={ref} className="relative inline-flex items-center">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
         aria-label="How recurring templates work"
         className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-stone-400 hover:text-stone-600 transition-colors"
       >
@@ -90,7 +103,7 @@ export function RecurringTemplateInfoButton() {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-stone-200 bg-white p-4 shadow-lg">
+        <div className="absolute top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-stone-200 bg-white p-4 shadow-lg" style={tooltipStyle}>
           <p className="mb-3 text-xs font-semibold text-stone-700">
             Use a template if you run this trip regularly — like every month or every weekend.
           </p>
@@ -115,6 +128,7 @@ type DifficultyInfoProps =
 
 export function DifficultyInfoButton({ variant, difficulty }: DifficultyInfoProps) {
   const [open, setOpen] = useState(false);
+  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({ left: 0 });
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -133,6 +147,18 @@ export function DifficultyInfoButton({ variant, difficulty }: DifficultyInfoProp
     };
   }, [open]);
 
+  function handleToggle() {
+    if (!open && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const TOOLTIP_W = 256; // w-64
+      const MARGIN = 16;
+      const overflow = rect.left + TOOLTIP_W - (window.innerWidth - MARGIN);
+      const left = overflow > 0 ? -overflow : 0;
+      setTooltipStyle({ left: Math.max(left, -(rect.left - MARGIN)) });
+    }
+    setOpen((v) => !v);
+  }
+
   const joinerEntry = variant === "joiner"
     ? JOINER.find((e) => e.level === difficulty) ?? null
     : null;
@@ -141,7 +167,7 @@ export function DifficultyInfoButton({ variant, difficulty }: DifficultyInfoProp
     <div ref={ref} className="relative inline-flex items-center">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
         aria-label="Difficulty level guide"
         className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-stone-400 hover:text-stone-600 transition-colors"
       >
@@ -154,7 +180,7 @@ export function DifficultyInfoButton({ variant, difficulty }: DifficultyInfoProp
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-stone-200 bg-white p-4 shadow-lg">
+        <div className="absolute top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-stone-200 bg-white p-4 shadow-lg" style={tooltipStyle}>
           {variant === "organizer" ? (
             <>
               <p className="mb-3 text-xs text-stone-500">
