@@ -453,7 +453,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
             {tripData.meeting_points && tripData.meeting_points.length > 0 ? (
               <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-                <h2 className="text-xs font-semibold text-stone-500">Meeting points</h2>
+                <h2 className="text-lg font-bold text-stone-900">Meeting points</h2>
                 <ul className="mt-2 space-y-1">
                   {tripData.meeting_points.map((mp, idx) => (
                     <li key={idx} className="text-stone-700">
@@ -465,14 +465,14 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               </div>
             ) : tripData.meeting_point ? (
               <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-                <h2 className="text-xs font-semibold text-stone-500">Meeting point</h2>
+                <h2 className="text-lg font-bold text-stone-900">Meeting point</h2>
                 <p className="mt-1.5 font-medium text-stone-900">{tripData.meeting_point}</p>
               </div>
             ) : null}
 
             {siblingRunsData && siblingRunsData.length > 0 && (
               <div className="rounded-2xl border border-trailhead/20 bg-trailhead-muted p-4 sm:p-5">
-                <h2 className="text-xs font-semibold text-stone-500">Other available dates</h2>
+                <h2 className="text-lg font-bold text-stone-900">Other available dates</h2>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {siblingRunsData.map((run) => (
                     <Link
@@ -497,7 +497,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               <div className="grid gap-4 sm:grid-cols-2">
                 {includesList.length > 0 && (
                   <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-                    <h2 className="text-base font-bold text-stone-900">What&apos;s included</h2>
+                    <h2 className="text-lg font-bold text-stone-900">What&apos;s included</h2>
                     <ul className="mt-3 space-y-1.5">
                       {includesList.map((item) => (
                         <li key={item} className="flex items-start gap-2 text-sm text-stone-600">
@@ -510,7 +510,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                 )}
                 {whatToBringList.length > 0 && (
                   <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-                    <h2 className="text-base font-bold text-stone-900">What to bring</h2>
+                    <h2 className="text-lg font-bold text-stone-900">What to bring</h2>
                     <ul className="mt-3 space-y-1.5">
                       {whatToBringList.map((item) => (
                         <li key={item} className="flex items-start gap-2 text-sm text-stone-600">
@@ -567,7 +567,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
             {organizer && (
               <div id="reviews">
                 <div className="flex items-baseline justify-between gap-4">
-                  <h2 className="text-xl font-bold tracking-tight text-stone-900">
+                  <h2 className="text-lg font-bold text-stone-900">
                     Reviews for {organizer.display_name ?? organizer.full_name}
                     {totalReviewCount > 0 && (
                       <span className="ml-2 text-base font-normal text-stone-500">({totalReviewCount})</span>
