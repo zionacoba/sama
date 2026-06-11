@@ -7,6 +7,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { createBooking } from "@/app/actions/booking";
 import { formatDateRange } from "@/lib/format";
+import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
 
 type MeetingPoint = { location: string; time: string };
 
@@ -63,9 +64,8 @@ export function BookingModal({
   const [sessionReady, setSessionReady] = useState(false);
   const [pendingBookClick, setPendingBookClick] = useState(false);
 
-  const resolvedWaiverText = waiverText
-    ? waiverText.replace(/\[Organizer Name\]/gi, organizerName || "the organizer")
-    : null;
+  const rawWaiverText = waiverText ?? DEFAULT_WAIVER_TEXT;
+  const resolvedWaiverText = rawWaiverText.replace(/\[Organizer Name\]/gi, organizerName || "the organizer");
   const [success, setSuccess] = useState(false);
   const [redirectBlocked, setRedirectBlocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -703,6 +703,12 @@ export function BookingModal({
                     </div>
                   )}
 
+                  {paymentOption === "downpayment" && canUseDownpayment && (
+                    <p className="text-xs text-stone-500 -mt-1">
+                      Your remaining balance of {formatCurrency(totalAmount - downpaymentAmount)} can be paid online before the trip, or directly to your organizer on the day.
+                    </p>
+                  )}
+
                   {/* Medical / dietary notes */}
                   <div>
                     <label htmlFor="booking-notes" className="block text-sm font-medium text-stone-700">
@@ -782,11 +788,9 @@ export function BookingModal({
                           className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                         />
                         <span className="text-xs leading-relaxed text-stone-600">
-                          {resolvedWaiverText
+                          {slots === 1
                             ? "I have read and agree to the waiver above."
-                            : slots === 1
-                              ? "I understand the risks of this outdoor activity and agree to participate at my own risk. I have read and agree to the cancellation policy for this trip."
-                              : "I understand the risks of this outdoor activity and agree to participate at my own risk. I confirm that I have informed all other participants listed in this booking of the trip risks, cancellation policy, and terms. I am booking on their behalf with their full knowledge and consent. Each participant will receive a personal link to confirm their own details and sign their individual waiver."
+                            : "I have read and agree to the waiver above. I confirm that I have informed all other participants listed in this booking of the trip risks, cancellation policy, and terms. I am booking on their behalf with their full knowledge and consent. Each participant will receive a personal link to confirm their own details and sign their individual waiver."
                           }
                         </span>
                       </label>

@@ -203,12 +203,17 @@ function BookingCard({
           booking.trip.date_start >= new Date().toISOString().split("T")[0] &&
           booking.amount_due != null &&
           Math.max(0, booking.total_amount - booking.amount_due) > 0 && (
-            <Link
-              href={`/profile/bookings/${booking.id}`}
-              className="self-start text-xs font-semibold text-amber-700 underline-offset-2 hover:text-amber-900 hover:underline"
-            >
-              Pay remaining balance ({formatCurrency(Math.max(0, booking.total_amount - booking.amount_due))}) →
-            </Link>
+            <>
+              <Link
+                href={`/profile/bookings/${booking.id}`}
+                className="self-start text-xs font-semibold text-amber-700 underline-offset-2 hover:text-amber-900 hover:underline"
+              >
+                Pay remaining balance ({formatCurrency(Math.max(0, booking.total_amount - booking.amount_due))}) →
+              </Link>
+              <p className="text-xs text-stone-400">
+                Pay online before the trip, or directly to your organizer on the day.
+              </p>
+            </>
           )}
 
         <Link

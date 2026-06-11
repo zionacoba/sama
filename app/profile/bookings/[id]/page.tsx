@@ -49,6 +49,7 @@ type BookingDetail = {
     cancellation_policy_custom: string | null;
     messenger_gc_link: string | null;
     organizer_id: string | null;
+    what_to_bring: string | null;
   };
 };
 
@@ -102,6 +103,11 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function parseList(text: string | null): string[] {
+  if (!text?.trim()) return [];
+  return text.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+}
+
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5 py-3 sm:flex-row sm:items-start sm:gap-4">
@@ -137,7 +143,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
       trip:trips!bookings_trip_id_fkey(
         title, slug, date_start, date_end, destination, region, difficulty,
         activity_type, duration, cancellation_policy, cancellation_policy_custom,
-        messenger_gc_link, organizer_id
+        messenger_gc_link, organizer_id, what_to_bring
       )
     `)
     .eq("id", bookingId)
@@ -306,7 +312,12 @@ export default async function BookingDetailPage({ params }: PageProps) {
                       Fully paid ✓{booking.balance_payment_gateway_status === "paid" ? " (paid online)" : " (collected)"}
                     </span>
                   ) : (
-                    <span className="font-semibold text-amber-700">{formatCurrency(balance ?? 0)} outstanding</span>
+                    <span>
+                      <span className="font-semibold text-amber-700">{formatCurrency(balance ?? 0)} outstanding</span>
+                      <span className="mt-1 block text-xs text-stone-500">
+                        You can pay this online before the trip, or directly to your organizer on the day.
+                      </span>
+                    </span>
                   )}
                 </DetailRow>
               </>
@@ -355,6 +366,23 @@ export default async function BookingDetailPage({ params }: PageProps) {
             )}
           </dl>
         </section>
+
+        {/* What to bring */}
+        {parseList(trip.what_to_bring).length > 0 && (
+          <section className="mt-6 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+            <div className="border-b border-stone-100 bg-stone-50 px-5 py-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-500">What to bring</h2>
+            </div>
+            <ul className="divide-y divide-stone-100 px-5 py-1">
+              {parseList(trip.what_to_bring).map((item) => (
+                <li key={item} className="flex items-start gap-2 py-2.5 text-sm text-stone-700">
+                  <span className="mt-0.5 shrink-0 text-stone-400">•</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* Cancellation policy */}
         <section className="mt-6 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
