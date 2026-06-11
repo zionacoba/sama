@@ -100,6 +100,7 @@ export function BookingModal({
 
   const isDemo = /^\[demo\]/i.test(tripTitle.trim());
 
+  const formRef = useRef<HTMLFormElement>(null);
   const errorSummaryRef = useRef<HTMLDivElement>(null);
   const slotsExceedsAvailable = slots > remainingSlots;
   const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
@@ -471,7 +472,7 @@ export function BookingModal({
                   )}
                 </div>
               ) : (
-                <form id="booking-form" onSubmit={handleSubmit} className="space-y-4">
+                <form id="booking-form" ref={formRef} onSubmit={handleSubmit} className="space-y-4">
                   {/* Compact price line */}
                   <p className="text-sm text-stone-500">
                     {tripTitle} · {formatCurrency(unitPrice)} × {slots} slot{slots !== 1 ? "s" : ""} ={" "}
@@ -840,9 +841,9 @@ export function BookingModal({
                     Close
                   </button>
                   <button
-                    type="submit"
-                    form="booking-form"
+                    type="button"
                     disabled={loading || slotsExceedsAvailable}
+                    onClick={() => formRef.current?.requestSubmit()}
                     className="flex-1 rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {loading ? "Submitting…" : "Confirm booking"}
