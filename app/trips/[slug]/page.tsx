@@ -368,20 +368,27 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
         {/* Compact hero */}
         <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 pt-4 pb-5">
           <div className="mx-auto max-w-6xl">
-            <div className="flex flex-wrap items-center gap-2">
-              {tripData.activity_type && <ActivityBadge type={tripData.activity_type} />}
-              <span className="inline-flex items-center gap-1">
-                <DifficultyBadge level={tripData.difficulty} />
-                <DifficultyInfoButton variant="joiner" difficulty={tripData.difficulty} />
-              </span>
-              {totalReviewCount > 0 && avgRating !== null && (
-                <a href="#reviews" className="group flex items-center gap-1.5">
-                  <Stars rating={avgRating} />
-                  <span className="text-xs text-stone-500 underline-offset-4 group-hover:text-trailhead group-hover:underline">
-                    {avgRating.toFixed(1)} · {totalReviewCount} review{totalReviewCount !== 1 ? "s" : ""}
-                  </span>
-                </a>
-              )}
+            <div className="flex items-center gap-2">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                {tripData.activity_type && <ActivityBadge type={tripData.activity_type} />}
+                <span className="inline-flex items-center gap-1">
+                  <DifficultyBadge level={tripData.difficulty} />
+                  <DifficultyInfoButton variant="joiner" difficulty={tripData.difficulty} />
+                </span>
+                {totalReviewCount > 0 && avgRating !== null && (
+                  <a href="#reviews" className="group flex items-center gap-1.5">
+                    <Stars rating={avgRating} />
+                    <span className="text-xs text-stone-500 underline-offset-4 group-hover:text-trailhead group-hover:underline">
+                      {avgRating.toFixed(1)} · {totalReviewCount} review{totalReviewCount !== 1 ? "s" : ""}
+                    </span>
+                  </a>
+                )}
+              </div>
+              <ShareButton
+                url={`/trips/${slug}`}
+                title={tripData.title}
+                className="lg:hidden flex-shrink-0 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-600 shadow-sm transition hover:border-trailhead hover:text-trailhead"
+              />
             </div>
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
               {tripData.title}
@@ -403,11 +410,13 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   ? "Full"
                   : `${tripData.remaining_slots} of ${tripData.total_slots} slots left`}
               </span>
-              <ShareButton
-                url={`/trips/${slug}`}
-                title={tripData.title}
-                className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-600 shadow-sm transition hover:border-trailhead hover:text-trailhead"
-              />
+              <div className="hidden lg:block">
+                <ShareButton
+                  url={`/trips/${slug}`}
+                  title={tripData.title}
+                  className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-600 shadow-sm transition hover:border-trailhead hover:text-trailhead"
+                />
+              </div>
             </div>
           </div>
         </section>
