@@ -111,8 +111,8 @@ export default async function Home() {
 
       <main>
         <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-16 md:py-32">
-          <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-balance text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" style={{ color: "#1A3D2B" }}>
+          <div className="mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl text-center">
+            <h1 className="text-balance text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl xl:text-6xl" style={{ color: "#1A3D2B" }}>
               Discover trips. Book your slot. Join the group.
             </h1>
             <p className="mt-3 text-pretty text-stone-600 sm:text-lg">
@@ -121,7 +121,7 @@ export default async function Home() {
             <form
               action="/trips"
               method="GET"
-              className="mt-8 flex flex-col gap-3 sm:mx-auto sm:max-w-xl sm:flex-row sm:items-stretch"
+              className="mt-8 flex flex-col gap-3 sm:mx-auto sm:max-w-xl lg:max-w-2xl sm:flex-row sm:items-stretch"
             >
               <label className="sr-only" htmlFor="search">
                 Search trips
