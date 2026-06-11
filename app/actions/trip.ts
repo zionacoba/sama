@@ -638,7 +638,7 @@ export async function updateTrip(
             subject: `A slot just opened for ${title}`,
             html: `
               <p>Hi ${escapeHtml(entry.full_name)},</p>
-              <p>Good news! A slot just opened for <strong>${escapeHtml(title)}</strong> on ${slotTripDate}. Book now at <a href="${siteUrl}/trips/${existing.slug}">${siteUrl.replace("https://", "")}/trips/${existing.slug}</a> — it's first come, first served. Only one slot is available so act quickly.</p>
+              <p>A slot just opened for <strong>${escapeHtml(title)}</strong> on ${slotTripDate}. Spots are limited and it's first come, first served, so book soon. Book now at <a href="${siteUrl}/trips/${existing.slug}">${siteUrl.replace("https://", "")}/trips/${existing.slug}</a>.</p>
               <p>— The Sama Team</p>
             `,
           });

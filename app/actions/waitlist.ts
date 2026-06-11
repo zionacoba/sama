@@ -40,6 +40,17 @@ export async function joinWaitlist(
     return { error: "You already have a booking for this trip." };
   }
 
+  const { data: tripForSlotCheck } = await admin
+    .from("trips")
+    .select("remaining_slots")
+    .eq("id", input.tripId)
+    .maybeSingle();
+
+  if (!tripForSlotCheck) return { error: "Trip not found." };
+  if ((tripForSlotCheck.remaining_slots ?? 0) > 0) {
+    return { error: "This trip has available slots — you can book directly instead of joining the waitlist." };
+  }
+
   const { error } = await admin.from("waitlist").insert({
     trip_id: input.tripId,
     user_id: user.id,
@@ -146,7 +157,7 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
       subject: `A slot just opened for ${trip.title}`,
       html: `
         <p>Hi ${escapeHtml(entry.full_name)},</p>
-        <p>Good news! A slot just opened for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}. Book now at <a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a> — it's first come, first served. Only one slot is available so act quickly.</p>
+        <p>A slot just opened for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}. Spots are limited and it's first come, first served, so book soon. Book now at <a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a>.</p>
         <p>— The Sama Team</p>
       `,
     });
