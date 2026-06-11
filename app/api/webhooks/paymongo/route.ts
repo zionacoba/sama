@@ -178,7 +178,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
       ...(paymentTransactionId ? { paymongo_payment_id: paymentTransactionId } : {}),
     })
     .eq("id", booking.id)
-    .eq("payment_gateway_status", null)
+    .is("payment_gateway_status", null)
     .select()
     .maybeSingle();
 
