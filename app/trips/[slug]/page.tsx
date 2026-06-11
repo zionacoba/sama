@@ -392,7 +392,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               {tripData.duration && <span>⏱ {tripData.duration}</span>}
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+              <span className={`hidden lg:inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 tripData.remaining_slots === 0
                   ? "bg-stone-100 text-stone-500"
                   : tripData.remaining_slots < 5
@@ -403,9 +403,6 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   ? "Full"
                   : `${tripData.remaining_slots} of ${tripData.total_slots} slots left`}
               </span>
-              <p className="text-xl font-bold text-trailhead lg:hidden">
-                {formatPrice(tripData.price)}
-              </p>
               <ShareButton
                 url={`/trips/${slug}`}
                 title={tripData.title}
