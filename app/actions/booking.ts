@@ -1074,6 +1074,14 @@ export async function cancelBooking(bookingId: number) {
     .delete()
     .eq("booking_id", bookingId);
 
+  // Restore the slot unconditionally — we have everything we need from the
+  // booking row. Doing this before the trip fetch ensures the slot is always
+  // returned even if the trip has been deleted or the fetch fails.
+  await admin.rpc("restore_slot", {
+    p_trip_id: booking.trip_id,
+    p_slots_requested: booking.slots,
+  });
+
   const { data: trip } = await admin
     .from("trips")
     .select("id, slug, title, date_start, organizer_id, cancellation_policy")
@@ -1081,10 +1089,6 @@ export async function cancelBooking(bookingId: number) {
     .maybeSingle();
 
   if (trip) {
-    await admin.rpc("restore_slot", {
-      p_trip_id: trip.id,
-      p_slots_requested: booking.slots,
-    });
 
     // Notify all waitlisted members that a slot has freed up.
     const { data: waitingEntries } = await admin

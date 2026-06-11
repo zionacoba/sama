@@ -34,21 +34,42 @@ Deno.serve(async (req) => {
 
   let cleaned = 0;
   for (const booking of staleBookings ?? []) {
+    // Cancel atomically — only if still payment_pending.
+    // This guards against a race where the user completes payment after the
+    // 45-min window opens but before we process the row. Without this guard
+    // we could cancel a confirmed booking AND over-restore its slot.
+    const { data: cancelledRow, error: cancelErr } = await supabase
+      .from("bookings")
+      .update({ status: "cancelled" })
+      .eq("id", booking.id)
+      .eq("status", "payment_pending")
+      .select("id")
+      .maybeSingle();
+
+    if (cancelErr) {
+      console.error(`[cleanup-abandoned-payments] cancel failed for booking ${booking.id}:`, cancelErr.message);
+      continue;
+    }
+
+    if (!cancelledRow) {
+      // Booking already transitioned out of payment_pending (user paid or already
+      // cancelled by another path) — nothing to restore.
+      console.log(`[cleanup-abandoned-payments] booking ${booking.id} no longer payment_pending, skipping`);
+      continue;
+    }
+
+    // Booking successfully cancelled — now restore the slot.
     const { error: slotErr } = await supabase.rpc("restore_slot", {
       p_trip_id: booking.trip_id,
       p_slots_requested: booking.slots,
     });
     if (slotErr) {
       console.error(`[cleanup-abandoned-payments] restore_slot failed for booking ${booking.id}:`, slotErr.message);
-      continue;
-    }
-
-    const { error: updateErr } = await supabase
-      .from("bookings")
-      .update({ status: "cancelled" })
-      .eq("id", booking.id);
-    if (updateErr) {
-      console.error(`[cleanup-abandoned-payments] status update failed for booking ${booking.id}:`, updateErr.message);
+      // Roll back the cancel so the next run can retry the full sequence.
+      await supabase
+        .from("bookings")
+        .update({ status: "payment_pending" })
+        .eq("id", booking.id);
       continue;
     }
 
