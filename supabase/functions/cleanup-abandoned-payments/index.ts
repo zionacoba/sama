@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const cutoff = new Date(Date.now() - 45 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
 
   const { data: staleBookings, error } = await supabase
     .from("bookings")
@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
   for (const booking of staleBookings ?? []) {
     // Cancel atomically — only if still payment_pending.
     // This guards against a race where the user completes payment after the
-    // 45-min window opens but before we process the row. Without this guard
+    // 15-min window opens but before we process the row. Without this guard
     // we could cancel a confirmed booking AND over-restore its slot.
     const { data: cancelledRow, error: cancelErr } = await supabase
       .from("bookings")

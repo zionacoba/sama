@@ -707,8 +707,6 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   downpaymentCutoffDays={tripData.downpayment_cutoff_days ?? 10}
                   meetingPoints={tripData.meeting_points ?? []}
                   difficulty={tripData.difficulty}
-                  cancellationPolicy={tripData.cancellation_policy ?? null}
-                  cancellationPolicyCustom={tripData.cancellation_policy_custom ?? null}
                   waiverText={tripData.waiver_text ?? null}
                   organizerName={organizerName}
                   autoOpen={book === "1"}
@@ -802,8 +800,6 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                     downpaymentCutoffDays={tripData.downpayment_cutoff_days ?? 10}
                     meetingPoints={tripData.meeting_points ?? []}
                     difficulty={tripData.difficulty}
-                    cancellationPolicy={tripData.cancellation_policy ?? null}
-                    cancellationPolicyCustom={tripData.cancellation_policy_custom ?? null}
                     waiverText={tripData.waiver_text ?? null}
                     organizerName={organizerName}
                     autoOpen={book === "1"}

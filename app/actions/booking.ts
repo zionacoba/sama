@@ -7,7 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
-import { calculateRefundAmount } from "@/lib/cancellation-policies";
+import { calculateRefundAmount, CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { processPayMongoRefund, type RefundResult } from "@/lib/paymongo-refund";
 import { createPaymentLink } from "@/lib/create-payment-link";
 
@@ -247,6 +247,15 @@ export async function createBooking(input: CreateBookingInput) {
             </ul>
             ${trip.messenger_gc_link ? `<p>Join the group chat for trip updates and coordination:<br><a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>` : ""}
             <p>You can view your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
+            ${(() => {
+              const policy = trip.cancellation_policy;
+              if (!policy) return "";
+              const meta = CANCELLATION_POLICIES[policy as keyof typeof CANCELLATION_POLICIES];
+              const policyText = meta && policy !== "custom"
+                ? `<strong>Cancellation policy (${meta.label}):</strong> ${meta.text}`
+                : `<strong>Cancellation policy:</strong> This trip has a custom cancellation policy — refer to the trip page for full details.`;
+              return `<p style="font-size:13px;color:#78716c;border-top:1px solid #e7e5e4;margin-top:16px;padding-top:12px;">${policyText}</p>`;
+            })()}
             <p>— The Sama Team</p>
           `,
         });
