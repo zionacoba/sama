@@ -86,7 +86,7 @@ export async function createTrip(
       if (!Array.isArray(parsed) || !parsed.every((mp: unknown) => typeof (mp as MeetingPoint)?.location === "string" && typeof (mp as MeetingPoint)?.time === "string")) {
         return { error: "Invalid pickup points format." };
       }
-      meeting_points = parsed;
+      meeting_points = parsed.filter((mp: MeetingPoint) => mp.location.trim() !== "");
     } catch { return { error: "Invalid meeting points data." }; }
   }
   const description = (formData.get("description") as string)?.trim();
@@ -314,7 +314,7 @@ export async function updateTrip(
       if (!Array.isArray(parsed) || !parsed.every((mp: unknown) => typeof (mp as MeetingPoint)?.location === "string" && typeof (mp as MeetingPoint)?.time === "string")) {
         return { error: "Invalid pickup points format." };
       }
-      meeting_points = parsed;
+      meeting_points = parsed.filter((mp: MeetingPoint) => mp.location.trim() !== "");
     } catch { return { error: "Invalid meeting points data." }; }
   }
   const description = (formData.get("description") as string)?.trim();
