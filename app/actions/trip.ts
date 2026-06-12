@@ -164,9 +164,6 @@ export async function createTrip(
     if (!is_template && (!date_start || isNaN(price) || isNaN(total_slots))) {
       return { error: "Please fill in all required fields." };
     }
-    if (!is_template && meeting_points.length === 0) {
-      return { error: "Please add at least one meeting point." };
-    }
     if (!is_template && payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
       return { error: "Please enter a minimum downpayment amount." };
     }
@@ -413,10 +410,6 @@ export async function updateTrip(
 
   if (!isDraft && !is_template && (!date_start || isNaN(price) || isNaN(total_slots))) {
     return { error: "Please fill in all required fields." };
-  }
-
-  if (!isDraft && !is_template && meeting_points.length === 0) {
-    return { error: "Please add at least one meeting point." };
   }
 
   if (!isDraft && !is_template && payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {

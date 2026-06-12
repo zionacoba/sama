@@ -86,7 +86,9 @@ export function BookingModal({
   const [emergencyContactName, setEmergencyContactName] = useState("");
   const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
   const [notes, setNotes] = useState("");
-  const [selectedMeetingPoint, setSelectedMeetingPoint] = useState("");
+  const [selectedMeetingPoint, setSelectedMeetingPoint] = useState(() =>
+    meetingPoints.length === 1 ? meetingPoints[0].location : ""
+  );
   const [phoneError, setPhoneError] = useState(false);
   const [samePhoneError, setSamePhoneError] = useState(false);
   const [waiverAccepted, setWaiverAccepted] = useState(false);
@@ -251,7 +253,7 @@ export function BookingModal({
     setEmergencyContactName("");
     setEmergencyContactPhone("");
     setNotes("");
-    setSelectedMeetingPoint("");
+    setSelectedMeetingPoint(meetingPoints.length === 1 ? meetingPoints[0].location : "");
     setPhoneError(false);
     setSamePhoneError(false);
     setWaiverAccepted(false);
