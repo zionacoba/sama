@@ -278,6 +278,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                     <Link
                       key={a}
                       href={filterUrl(current, "activity", a)}
+                      aria-pressed={active}
                       className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
                         active
                           ? "bg-trailhead text-white shadow-sm"
@@ -299,6 +300,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                     <Link
                       key={d}
                       href={filterUrl(current, "difficulty", d)}
+                      aria-pressed={active}
                       className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
                         active
                           ? "bg-trailhead text-white shadow-sm"
@@ -320,6 +322,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                     <Link
                       key={d}
                       href={filterUrl(current, "duration", d)}
+                      aria-pressed={active}
                       className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
                         active
                           ? "bg-trailhead text-white shadow-sm"
@@ -341,6 +344,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                     <Link
                       key={r}
                       href={filterUrl(current, "region", r)}
+                      aria-pressed={active}
                       className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
                         active
                           ? "bg-trailhead text-white shadow-sm"

@@ -138,7 +138,7 @@ function CancellationPolicyCard({ policy, custom }: { policy: string | null; cus
         </span>
       </div>
       <p className="mt-3 leading-relaxed text-stone-600">{text}</p>
-      <p className="mt-3 leading-relaxed text-stone-400">Refunds to GCash are processed automatically. QR Ph refunds may take 3–5 business days.</p>
+      <p className="mt-3 leading-relaxed text-stone-400">Refunds to GCash are processed automatically. QR Ph payments are processed manually — our team will reach out within 3–5 business days.</p>
     </div>
   );
 }
@@ -415,7 +415,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               }`}>
                 {tripData.remaining_slots === 0
                   ? "Full"
-                  : `${tripData.remaining_slots} of ${tripData.total_slots} slots left`}
+                  : `${tripData.remaining_slots} of ${tripData.total_slots} slot${tripData.total_slots !== 1 ? "s" : ""} left`}
               </span>
               <div className="hidden lg:block">
                 <ShareButton
@@ -505,8 +505,8 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                     <ul className="mt-3 space-y-1.5">
                       {includesList.map((item) => (
                         <li key={item} className="flex items-start gap-2 text-sm text-stone-600">
-                          <span className="mt-0.5 shrink-0 text-trailhead">✓</span>
-                          {item}
+                          <span className="mt-0.5 shrink-0 text-trailhead" aria-hidden="true">✓</span>
+                          <span>{item}</span>
                         </li>
                       ))}
                     </ul>
@@ -518,8 +518,8 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                     <ul className="mt-3 space-y-1.5">
                       {whatToBringList.map((item) => (
                         <li key={item} className="flex items-start gap-2 text-sm text-stone-600">
-                          <span className="mt-0.5 shrink-0 text-stone-400">•</span>
-                          {item}
+                          <span className="mt-0.5 shrink-0 text-stone-400" aria-hidden="true">•</span>
+                          <span>{item}</span>
                         </li>
                       ))}
                     </ul>
@@ -669,7 +669,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               }`}>
                 {tripData.remaining_slots === 0
                   ? "This trip is full"
-                  : `${tripData.remaining_slots} of ${tripData.total_slots} slots left`}
+                  : `${tripData.remaining_slots} of ${tripData.total_slots} slot${tripData.total_slots !== 1 ? "s" : ""} left`}
               </div>
               {isOwnTrip ? (
                 <div className="space-y-2">
@@ -767,7 +767,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               <div>
                 <p className="text-base font-bold text-trailhead">{formatPrice(tripData.price)}</p>
                 <p className="text-xs text-stone-500">
-                  {tripData.remaining_slots === 0 ? "Full" : `${tripData.remaining_slots} slots left`}
+                  {tripData.remaining_slots === 0 ? "Full" : `${tripData.remaining_slots} slot${tripData.remaining_slots !== 1 ? "s" : ""} left`}
                 </p>
               </div>
               <div className="w-44 shrink-0">

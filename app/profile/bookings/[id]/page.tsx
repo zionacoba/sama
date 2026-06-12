@@ -376,8 +376,8 @@ export default async function BookingDetailPage({ params }: PageProps) {
             <ul className="divide-y divide-stone-100 px-5 py-1">
               {parseList(trip.what_to_bring).map((item) => (
                 <li key={item} className="flex items-start gap-2 py-2.5 text-sm text-stone-700">
-                  <span className="mt-0.5 shrink-0 text-stone-400">•</span>
-                  {item}
+                  <span className="mt-0.5 shrink-0 text-stone-400" aria-hidden="true">•</span>
+                  <span>{item}</span>
                 </li>
               ))}
             </ul>
@@ -392,7 +392,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
           <div className="px-5 py-4">
             <p className="text-sm font-semibold text-stone-800">{policy.label}</p>
             <p className="mt-1 text-sm text-stone-600">{policyText}</p>
-            <p className="mt-2 text-sm text-stone-500">Refunds to GCash are processed automatically. QR Ph refunds may take 3–5 business days.</p>
+            <p className="mt-2 text-sm text-stone-500">Refunds to GCash are processed automatically. QR Ph payments are processed manually — our team will reach out within 3–5 business days.</p>
           </div>
         </section>
 
