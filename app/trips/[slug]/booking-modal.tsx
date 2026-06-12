@@ -466,9 +466,6 @@ export function BookingModal({
                       <p className="text-xs text-stone-500">
                         You&apos;ll be taken to a secure payment page.<br />Please don&apos;t close this window.
                       </p>
-                      <p className="text-xs text-stone-400">
-                        GCash refunds are processed automatically. QR Ph refunds may take 3–5 business days.
-                      </p>
                     </>
                   )}
                 </div>

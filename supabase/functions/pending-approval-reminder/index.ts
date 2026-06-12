@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
           <p><strong>${escapeHtml(booking.full_name)}</strong> booked <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} and is waiting for your approval.</p>
           <p>Please log in to your dashboard to approve or reject their booking:</p>
           <p><a href="${bookingsUrl}">${bookingsUrl}</a></p>
-          <p>— The Sama Team</p>
+          <p>— Sama</p>
         `,
       );
       await supabase

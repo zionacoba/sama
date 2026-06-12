@@ -623,7 +623,7 @@ export async function updateTrip(
                 ${changeHtml}
                 <p>Please review the updated trip details here: <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/trips/${newSlug ?? existing.slug}">${(process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph").replace("https://", "")}/trips/${newSlug ?? existing.slug}</a></p>
                 <p>If you have questions, contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
-                <p>— The Sama Team</p>
+                <p>— Sama</p>
               `,
             });
           } catch (err) {
@@ -659,7 +659,7 @@ export async function updateTrip(
             html: `
               <p>Hi ${escapeHtml(entry.full_name)},</p>
               <p>A slot just opened for <strong>${escapeHtml(title)}</strong> on ${slotTripDate}. Spots are limited and it's first come, first served, so book soon. Book now at <a href="${siteUrl}/trips/${existing.slug}">${siteUrl.replace("https://", "")}/trips/${existing.slug}</a>.</p>
-              <p>— The Sama Team</p>
+              <p>— Sama</p>
             `,
           });
         } catch (err) {
@@ -700,7 +700,7 @@ export async function updateTrip(
             Remaining balance: <strong>${fmt(balance)}</strong></p>
             <p>You can pay your balance online: <a href="${siteUrl}/profile/bookings/${booking.id}">${siteUrl.replace("https://", "")}/profile/bookings/${booking.id}</a>.</p>
             <p>If you have questions, email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
-            <p>— The Sama Team</p>
+            <p>— Sama</p>
           `,
         });
       } catch (err) {
@@ -908,7 +908,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
           <p>We're sorry to inform you that <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled by the organizer.</p>
           ${refundLine}
           <p>We hope to see you on a future trip!</p>
-          <p>— The Sama Team</p>
+          <p>— Sama</p>
         `,
       });
     } catch (err) {
@@ -927,7 +927,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
           <p>Hi ${escapeHtml(entry.full_name)},</p>
           <p><strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled by the organizer.</p>
           <p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
-          <p>— The Sama Team</p>
+          <p>— Sama</p>
         `,
       });
     } catch (err) {

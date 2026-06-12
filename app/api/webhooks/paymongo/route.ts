@@ -6,7 +6,6 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
-import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
@@ -250,16 +249,6 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
     ? `<li><strong>Meeting point:</strong> ${escapeHtml(booking.meeting_point)}</li>`
     : "";
 
-  const cancellationNote = (() => {
-    const policy = booking.cancellation_policy;
-    if (!policy) return "";
-    const meta = CANCELLATION_POLICIES[policy as keyof typeof CANCELLATION_POLICIES];
-    const policyText = meta && policy !== "custom"
-      ? `<strong>Cancellation policy (${meta.label}):</strong> ${meta.text}`
-      : `<strong>Cancellation policy:</strong> This trip has a custom cancellation policy — refer to the trip page for full details.`;
-    return `<p style="font-size:13px;color:#78716c;border-top:1px solid #e7e5e4;margin-top:16px;padding-top:12px;">${policyText}<br/>GCash refunds are processed automatically. QR Ph refunds are processed manually and may take 3–5 business days.</p>`;
-  })();
-
   // Participant confirmation email — failure triggers admin alert so no booking is silently missed.
   try {
     await resend.emails.send({
@@ -289,8 +278,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
               : ""
           }
           <p>You can view your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
-          ${cancellationNote}
-          <p>— The Sama Team</p>
+          <p>— Sama</p>
         `
         : `
           <p>Hi ${escapeHtml(booking.full_name)},</p>
@@ -305,8 +293,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
           </ul>
           ${balanceNote}
           <p>The organizer will review your request. This usually takes 24–48 hours. You can track your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
-          ${cancellationNote}
-          <p>— The Sama Team</p>
+          <p>— Sama</p>
         `,
     });
   } catch (err) {
@@ -374,7 +361,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
               }
               If this booking was made less than 7 days before the trip, remittance happens the Tuesday after the trip date instead.
             </p>
-            <p>— The Sama Team</p>
+            <p>— Sama</p>
           `,
         });
       }
@@ -454,7 +441,7 @@ async function handleBalancePayment(
         <p>Hi ${escapeHtml(booking.full_name)},</p>
         <p>Your remaining balance of <strong>${fmt(balance)}</strong> for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been received. You are all set for your trip. See you there!</p>
         <p>You can view your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
-        <p>— The Sama Team</p>
+        <p>— Sama</p>
       `,
     });
   } catch (err) {
@@ -479,7 +466,7 @@ async function handleBalancePayment(
             <p>Hi,</p>
             <p><strong>${escapeHtml(booking.full_name)}</strong> has paid their remaining balance of <strong>${fmt(balance)}</strong> for <strong>${escapeHtml(trip.title)}</strong> online through Sama.</p>
             <p>This will be remitted to you 24–48 hours after the trip date.</p>
-            <p>— The Sama Team</p>
+            <p>— Sama</p>
           `,
         });
       }

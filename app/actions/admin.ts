@@ -58,7 +58,7 @@ export async function approveOrganizer(id: string): Promise<void> {
         </ol>
         <p>Your platform fee is <strong>${commissionRate}%</strong> per booking, locked in for life as a Founding Partner. Payouts are sent every Tuesday via your preferred payout method.</p>
         <p>If you have any questions, just reply to this email.</p>
-        <p>— The Sama Team</p>
+        <p>— Sama</p>
       `,
     });
   } catch (err) {
@@ -230,7 +230,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
             <p>Your booking has been cancelled.</p>
             ${refundLine}
             <p>We apologise for the inconvenience.</p>
-            <p>— The Sama Team</p>
+            <p>— Sama</p>
           `,
         });
       } catch (err) {
@@ -257,7 +257,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
         <p>After reviewing your application, we're unable to approve it at this time.</p>
         ${tripsUnpublishedNote}
         <p>If you'd like to reapply in the future, you can do so at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/apply">sama.com.ph/apply</a>.</p>
-        <p>— The Sama Team</p>
+        <p>— Sama</p>
       `,
     });
   } catch (err) {
@@ -951,7 +951,7 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
           <p>This covers <strong>${bookingCount} booking${bookingCount !== 1 ? "s" : ""}${escapeHtml(dateRange)}</strong>.</p>
           ${notes ? `<p><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ""}
           <p>If you have any questions, please reply to this email.</p>
-          <p>— The Sama Team</p>
+          <p>— Sama</p>
         `,
       });
     } catch (err) {

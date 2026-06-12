@@ -392,6 +392,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
           <div className="px-5 py-4">
             <p className="text-sm font-semibold text-stone-800">{policy.label}</p>
             <p className="mt-1 text-sm text-stone-600">{policyText}</p>
+            <p className="mt-2 text-xs text-stone-500">Refunds to GCash are processed automatically. QR Ph refunds may take 3–5 business days.</p>
           </div>
         </section>
 

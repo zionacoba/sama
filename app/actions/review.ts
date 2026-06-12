@@ -117,7 +117,7 @@ export async function submitReview(
             <p>${escapeHtml(fullName ?? "A participant")} left a <strong>${rating}-star review</strong> ${stars} for <strong>${escapeHtml(tripForDate.title)}</strong>:</p>
             <blockquote style="border-left:3px solid #ccc;margin:0;padding:0 1em;color:#555;">${escapeHtml(excerpt)}</blockquote>
             <p>The review is pending admin approval and will go live once approved.</p>
-            <p>— The Sama Team</p>
+            <p>— Sama</p>
           `,
         });
       }

@@ -152,6 +152,7 @@ function CancellationPolicyCard({ policy, custom, daysUntilTrip }: { policy: str
           <span className="font-semibold text-stone-700">{refundTierLabel}</span>.
         </p>
       )}
+      <p className="mt-3 text-xs text-stone-400">Refunds to GCash are processed automatically. QR Ph refunds may take 3–5 business days.</p>
     </div>
   );
 }

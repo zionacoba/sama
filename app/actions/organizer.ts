@@ -109,7 +109,7 @@ export async function applyToBeOrganizer(
           <p>Hi ${escapeHtml(fullName)},</p>
           <p>Thanks for reapplying to be a Sama organizer. We'll review your application and get back to you within a few days.</p>
           <p>In the meantime, feel free to browse trips at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}">${process.env.NEXT_PUBLIC_SITE_URL?.replace("https://", "") || "sama.com.ph"}</a>.</p>
-          <p>— The Sama Team</p>
+          <p>— Sama</p>
         `,
       });
     } catch (err) {
@@ -183,7 +183,7 @@ export async function applyToBeOrganizer(
         <p>Hi ${escapeHtml(fullName)},</p>
         <p>Thanks for applying to be a Sama organizer. We'll review your application and get back to you within a few days.</p>
         <p>In the meantime, feel free to browse trips at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}">${process.env.NEXT_PUBLIC_SITE_URL?.replace("https://", "") || "sama.com.ph"}</a>.</p>
-        <p>— The Sama Team</p>
+        <p>— Sama</p>
       `,
     });
   } catch (err) {

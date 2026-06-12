@@ -7,7 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
-import { calculateRefundAmount, CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
+import { calculateRefundAmount } from "@/lib/cancellation-policies";
 import { processPayMongoRefund, type RefundResult } from "@/lib/paymongo-refund";
 import { createPaymentLink } from "@/lib/create-payment-link";
 
@@ -249,16 +249,7 @@ export async function createBooking(input: CreateBookingInput) {
             </ul>
             ${trip.messenger_gc_link ? `<p>Join the group chat for trip updates and coordination:<br><a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>` : ""}
             <p>You can view your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
-            ${(() => {
-              const policy = trip.cancellation_policy;
-              if (!policy) return "";
-              const meta = CANCELLATION_POLICIES[policy as keyof typeof CANCELLATION_POLICIES];
-              const policyText = meta && policy !== "custom"
-                ? `<strong>Cancellation policy (${meta.label}):</strong> ${meta.text}`
-                : `<strong>Cancellation policy:</strong> This trip has a custom cancellation policy — refer to the trip page for full details.`;
-              return `<p style="font-size:13px;color:#78716c;border-top:1px solid #e7e5e4;margin-top:16px;padding-top:12px;">${policyText}</p>`;
-            })()}
-            <p>— The Sama Team</p>
+            <p>— Sama</p>
           `,
         });
       } catch (err) {
@@ -421,7 +412,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
           <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
           ` : `<p>Your organizer will share group chat details with you soon.</p>`}
           <p>They will be in touch with trip details closer to the date. You can view your booking at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/profile">sama.com.ph/profile</a>.</p>
-          <p>— The Sama Team</p>
+          <p>— Sama</p>
         `,
       });
     } else if (status === "rejected") {
@@ -439,7 +430,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
           <p>Your payment of <strong>${fmtPHP(booking.amount_due)}</strong> will be refunded to your original payment method within 3–5 business days. You do not need to do anything.</p>
           <p>If you don't receive your refund after 5 business days, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${bookingRef}</strong></p>
           ` : `<p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`}
-          <p>— The Sama Team</p>
+          <p>— Sama</p>
         `,
       });
     }
@@ -515,7 +506,7 @@ export async function markBalanceCollected(bookingId: number) {
         <p>Hi ${escapeHtml(booking.full_name)},</p>
         <p>Your balance payment${balance != null ? ` of <strong>${fmt(balance)}</strong>` : ""} for <strong>${escapeHtml(trip.title)}</strong> has been recorded by your organizer. You are now fully paid up.</p>
         <p>You can view your booking at <a href="${SITE_URL}/profile">your profile</a>.</p>
-        <p>— The Sama Team</p>
+        <p>— Sama</p>
       `,
     });
   } catch (err) {
@@ -716,7 +707,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
         <p>Your booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been marked as <strong>transferred</strong> by your organizer.</p>
         <p>No refund will be processed through Sama for this booking. Please settle any payment arrangements directly with the person taking your slot.</p>
         <p>If you have any questions, please contact your organizer directly.</p>
-        <p>— The Sama Team</p>
+        <p>— Sama</p>
       `,
     });
   } catch (err) {
@@ -743,7 +734,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
           <p>Hi ${escapeHtml(org.full_name)},</p>
           <p>The booking for <strong>${escapeHtml(booking.full_name)}</strong> on <strong>${escapeHtml(trip.title)}</strong> (${tripDate}) has been marked as transferred${toNote}.</p>
           <p>The slot has been restored to the available pool.</p>
-          <p>— The Sama Team</p>
+          <p>— Sama</p>
         `,
       });
     }
@@ -961,7 +952,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
             html: `
               <p>Hi,</p>
               <p><strong>${escapeHtml(booking.full_name)}</strong> cancelled <strong>${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""}</strong> from their booking for <strong>${escapeHtml(tripDateCheck.title)}</strong> on ${tripDate}. They now have <strong>${remainingSlots} slot${remainingSlots !== 1 ? "s" : ""}</strong> remaining. The cancelled slot${slotsToCancel !== 1 ? "s" : ""} have been returned to the available pool.</p>
-              <p>— The Sama Team</p>
+              <p>— Sama</p>
             `,
           });
         } catch (err) {
@@ -989,7 +980,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
           <p>Hi ${escapeHtml(booking.full_name)},</p>
           <p>You've cancelled <strong>${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""}</strong> from your booking for <strong>${escapeHtml(tripDateCheck.title)}</strong> on ${tripDate}. Your booking now has <strong>${remainingSlots} slot${remainingSlots !== 1 ? "s" : ""}</strong>.</p>
           ${refundLine}
-          <p>— The Sama Team</p>
+          <p>— Sama</p>
         `,
       });
     } catch (err) {
@@ -1124,7 +1115,7 @@ export async function cancelBooking(bookingId: number) {
             html: `
               <p>Hi ${escapeHtml(entry.full_name)},</p>
               <p>Good news! A slot just opened for <strong>${escapeHtml(trip.title)}</strong> on ${slotTripDate}. Book now at <a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a> — it's first come, first served. Only one slot is available so act quickly.</p>
-              <p>— The Sama Team</p>
+              <p>— Sama</p>
             `,
           });
         } catch (err) {
@@ -1259,7 +1250,7 @@ export async function cancelBooking(bookingId: number) {
             html: `
               <p>Hi,</p>
               <p><strong>${escapeHtml(booking.full_name)}</strong> has cancelled their <strong>${booking.slots} slot${booking.slots !== 1 ? "s" : ""}</strong> for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}. Their slot${booking.slots !== 1 ? "s" : ""} have been returned to the available pool.</p>
-              <p>— The Sama Team</p>
+              <p>— Sama</p>
             `,
           });
         }
@@ -1274,7 +1265,7 @@ export async function cancelBooking(bookingId: number) {
           <p>Hi ${escapeHtml(booking.full_name)},</p>
           <p>Your booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled.</p>
           ${refundLine}
-          <p>— The Sama Team</p>
+          <p>— Sama</p>
         `,
       });
 
