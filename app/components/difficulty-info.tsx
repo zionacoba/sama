@@ -123,10 +123,10 @@ export function RecurringTemplateInfoButton() {
 }
 
 type DifficultyInfoProps =
-  | { variant: "organizer"; difficulty?: never }
-  | { variant: "joiner"; difficulty: string };
+  | { variant: "organizer"; difficulty?: never; compact?: boolean }
+  | { variant: "joiner"; difficulty: string; compact?: boolean };
 
-export function DifficultyInfoButton({ variant, difficulty }: DifficultyInfoProps) {
+export function DifficultyInfoButton({ variant, difficulty, compact }: DifficultyInfoProps) {
   const [open, setOpen] = useState(false);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({ left: 0 });
   const ref = useRef<HTMLDivElement>(null);
@@ -169,7 +169,7 @@ export function DifficultyInfoButton({ variant, difficulty }: DifficultyInfoProp
         type="button"
         onClick={handleToggle}
         aria-label="Difficulty level guide"
-        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-stone-400 hover:text-stone-600 transition-colors"
+        className={`inline-flex items-center justify-center text-stone-400 hover:text-stone-600 transition-colors ${compact ? "" : "min-h-[44px] min-w-[44px]"}`}
       >
         <span
           aria-hidden="true"

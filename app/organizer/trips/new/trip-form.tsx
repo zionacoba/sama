@@ -266,7 +266,7 @@ export function TripForm({
             <label htmlFor="difficulty" className={labelClass}>
               Level
             </label>
-            <DifficultyInfoButton variant="organizer" />
+            <DifficultyInfoButton variant="organizer" compact />
           </div>
           <select id="difficulty" name="difficulty" required defaultValue={defaultValues?.difficulty ?? ""} className={inputClass}>
             <option value="">Select level…</option>

@@ -295,7 +295,7 @@ export function EditTripForm({
             <label htmlFor="difficulty" className={labelClass}>
               Level
             </label>
-            <DifficultyInfoButton variant="organizer" />
+            <DifficultyInfoButton variant="organizer" compact />
           </div>
           <select
             id="difficulty"
