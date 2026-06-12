@@ -30,6 +30,7 @@ type Booking = {
   meeting_point: string | null;
   facebook_url?: string | null;
   nickname?: string | null;
+  custom_question_answers?: string[] | null;
   custom_question_answer?: string | null;
 };
 
@@ -95,6 +96,7 @@ export function BookingsListWithTabs({
   paymentType,
   minDownpayment,
   tripDateStart,
+  customQuestions,
   customQuestion,
 }: {
   bookings: Booking[];
@@ -105,6 +107,7 @@ export function BookingsListWithTabs({
   paymentType: string | null;
   minDownpayment: number | null;
   tripDateStart: string;
+  customQuestions?: string[] | null;
   customQuestion?: string | null;
 }) {
   const [tab, setTab] = useState<Tab>("confirmed");
@@ -239,12 +242,16 @@ export function BookingsListWithTabs({
                             🏥 {[b.medical_notes, b.notes].filter(Boolean).join(' · ')}
                           </p>
                         )}
-                        {customQuestion && b.custom_question_answer && (
-                          <p className="text-xs text-stone-500 mt-0.5">
-                            <span className="font-medium text-stone-600">{customQuestion}:</span>{" "}
-                            {b.custom_question_answer}
-                          </p>
-                        )}
+                        {(() => {
+                          const qs: string[] = customQuestions ?? (customQuestion ? [customQuestion] : []);
+                          const as_: string[] = (b.custom_question_answers as string[] | null) ?? (b.custom_question_answer ? [b.custom_question_answer] : []);
+                          return qs.map((q, qi) => as_[qi] ? (
+                            <p key={qi} className="text-xs text-stone-500 mt-0.5">
+                              <span className="font-medium text-stone-600">{q}:</span>{" "}
+                              {as_[qi]}
+                            </p>
+                          ) : null);
+                        })()}
                       </td>
                       <td className="px-5 py-3.5 text-stone-500">{b.email}</td>
                       <td className="px-5 py-3.5 text-stone-700">

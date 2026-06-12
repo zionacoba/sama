@@ -42,6 +42,7 @@ type TripForEdit = {
   messenger_gc_link: string | null;
   is_template: boolean | null;
   template_id: string | null;
+  custom_questions: string[] | null;
   custom_question: string | null;
 };
 
@@ -74,6 +75,8 @@ export function EditTripForm({
   const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict" | "custom">(
     (trip.cancellation_policy as "flexible" | "moderate" | "strict" | "custom") ?? "flexible",
   );
+  const initialEditQuestions = trip.custom_questions ?? (trip.custom_question ? [trip.custom_question] : []);
+  const [customQuestions, setCustomQuestions] = useState<string[]>(initialEditQuestions);
   const isUploadingPhotos = photoItems.some((i) => i.kind === "uploading");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [editedAfterSubmit, setEditedAfterSubmit] = useState(false);
@@ -703,21 +706,49 @@ export function EditTripForm({
         </p>
       </div>
 
-      {/* Custom question */}
+      {/* Custom questions */}
       <div>
-        <label htmlFor="custom_question" className={labelClass}>
-          Ask joiners a question <span className="font-normal text-stone-400">(optional)</span>
-        </label>
-        <input
-          id="custom_question"
-          name="custom_question"
-          type="text"
-          defaultValue={trip.custom_question ?? ""}
-          className={inputClass}
-          placeholder="e.g. Are you a confident swimmer? Please describe your experience."
-        />
+        <p className={labelClass}>
+          Ask joiners questions <span className="font-normal text-stone-400">(optional, up to 3)</span>
+        </p>
+        <input type="hidden" name="custom_questions" value={JSON.stringify(customQuestions.filter((q) => q.trim()))} />
+        <div className="mt-1.5 space-y-2">
+          {customQuestions.map((q, i) => (
+            <div key={i} className="flex gap-2">
+              <input
+                type="text"
+                value={q}
+                maxLength={500}
+                onChange={(e) => {
+                  const next = [...customQuestions];
+                  next[i] = e.target.value;
+                  setCustomQuestions(next);
+                }}
+                placeholder="e.g. Are you a confident swimmer?"
+                className="mt-0 flex-1 rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2"
+              />
+              <button
+                type="button"
+                onClick={() => setCustomQuestions(customQuestions.filter((_, j) => j !== i))}
+                className="mt-0 rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-500 hover:border-red-300 hover:text-red-600"
+                aria-label="Remove question"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+        {customQuestions.length < 3 && (
+          <button
+            type="button"
+            onClick={() => setCustomQuestions([...customQuestions, ""])}
+            className="mt-2 text-sm font-medium text-trailhead hover:underline"
+          >
+            + Add a question
+          </button>
+        )}
         <p className="mt-1.5 text-xs text-stone-500">
-          If set, joiners must answer this when booking.
+          If set, joiners must answer these when booking.
         </p>
       </div>
 

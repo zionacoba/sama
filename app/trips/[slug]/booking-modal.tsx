@@ -26,7 +26,7 @@ type BookingModalProps = {
   difficulty: string;
   waiverText?: string | null;
   organizerName?: string | null;
-  customQuestion?: string | null;
+  customQuestions?: string[] | null;
   autoOpen?: boolean;
   compact?: boolean;
 };
@@ -55,7 +55,7 @@ export function BookingModal({
   difficulty,
   waiverText,
   organizerName,
-  customQuestion,
+  customQuestions,
   autoOpen = false,
   compact = false,
 }: BookingModalProps) {
@@ -94,7 +94,8 @@ export function BookingModal({
   const [platformWaiverAccepted, setPlatformWaiverAccepted] = useState(false);
   const [platformWaiverError, setPlatformWaiverError] = useState(false);
   const [paymentOption, setPaymentOption] = useState<"full" | "downpayment">("full");
-  const [customQuestionAnswer, setCustomQuestionAnswer] = useState("");
+  const activeQuestions = (customQuestions ?? []).filter((q) => q.trim());
+  const [customQuestionAnswers, setCustomQuestionAnswers] = useState<string[]>(() => activeQuestions.map(() => ""));
 
   const isDemo = /^\[demo\]/i.test(tripTitle.trim());
 
@@ -261,7 +262,7 @@ export function BookingModal({
     setError(null);
     setSuccess(false);
     setPaymentOption("full");
-    setCustomQuestionAnswer("");
+    setCustomQuestionAnswers(activeQuestions.map(() => ""));
   }
 
   function handleClose() {
@@ -320,7 +321,7 @@ export function BookingModal({
         platformWaiverAgreed: platformWaiverAccepted,
         medicalNotes: notes.trim() || null,
         meetingPoint: selectedMeetingPoint || null,
-        customQuestionAnswer: customQuestion ? (customQuestionAnswer.trim() || null) : null,
+        customQuestionAnswers: activeQuestions.length > 0 ? customQuestionAnswers.map((a) => a.trim()) : null,
       });
 
       if (!result.success) {
@@ -731,24 +732,28 @@ export function BookingModal({
                     />
                   </div>
 
-                  {/* Custom question from organizer */}
-                  {customQuestion && (
-                    <div>
-                      <label htmlFor="booking-custom-question" className="block text-sm font-medium text-stone-700">
-                        {customQuestion}
+                  {/* Custom questions from organizer */}
+                  {activeQuestions.map((question, i) => (
+                    <div key={i}>
+                      <label htmlFor={`booking-custom-question-${i}`} className="block text-sm font-medium text-stone-700">
+                        {question}
                       </label>
                       <textarea
-                        id="booking-custom-question"
+                        id={`booking-custom-question-${i}`}
                         rows={2}
                         required
                         maxLength={1000}
-                        value={customQuestionAnswer}
+                        value={customQuestionAnswers[i] ?? ""}
                         disabled={loading}
-                        onChange={(e) => setCustomQuestionAnswer(e.target.value)}
+                        onChange={(e) => {
+                          const next = [...customQuestionAnswers];
+                          next[i] = e.target.value;
+                          setCustomQuestionAnswers(next);
+                        }}
                         className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                       />
                     </div>
-                  )}
+                  ))}
 
                   {/* Waivers */}
                   <div className="space-y-3">

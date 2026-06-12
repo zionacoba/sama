@@ -113,7 +113,15 @@ export async function createTrip(
     ? ((formData.get("cancellation_policy_custom") as string)?.trim() || null)
     : null;
   const waiver_text = (formData.get("waiver_text") as string)?.trim() || null;
-  const custom_question = (formData.get("custom_question") as string)?.trim() || null;
+  const custom_questions_raw = (formData.get("custom_questions") as string) || "[]";
+  let custom_questions: string[] | null = null;
+  try {
+    const parsed = JSON.parse(custom_questions_raw) as unknown;
+    const arr = Array.isArray(parsed) ? (parsed as unknown[]).map(String).filter((q) => q.trim()) : [];
+    custom_questions = arr.length > 0 ? arr.slice(0, 3) : null;
+  } catch {
+    custom_questions = null;
+  }
   const messengerRaw = (formData.get("messenger_gc_link") as string)?.trim() || null;
   let messenger_gc_link: string | null = null;
   if (messengerRaw) {
@@ -229,7 +237,7 @@ export async function createTrip(
     cancellation_policy,
     cancellation_policy_custom,
     waiver_text,
-    custom_question,
+    custom_questions,
     messenger_gc_link,
     is_template,
     template_id: template_id || null,
@@ -353,7 +361,15 @@ export async function updateTrip(
     ? ((formData.get("cancellation_policy_custom") as string)?.trim() || null)
     : null;
   const waiver_text = (formData.get("waiver_text") as string)?.trim() || null;
-  const custom_question = (formData.get("custom_question") as string)?.trim() || null;
+  const custom_questions_raw2 = (formData.get("custom_questions") as string) || "[]";
+  let custom_questions: string[] | null = null;
+  try {
+    const parsed2 = JSON.parse(custom_questions_raw2) as unknown;
+    const arr2 = Array.isArray(parsed2) ? (parsed2 as unknown[]).map(String).filter((q) => q.trim()) : [];
+    custom_questions = arr2.length > 0 ? arr2.slice(0, 3) : null;
+  } catch {
+    custom_questions = null;
+  }
   const messengerRaw = (formData.get("messenger_gc_link") as string)?.trim() || null;
   let messenger_gc_link: string | null = null;
   if (messengerRaw) {
@@ -551,7 +567,7 @@ export async function updateTrip(
       cancellation_policy,
       cancellation_policy_custom,
       waiver_text,
-      custom_question,
+      custom_questions,
       messenger_gc_link,
       is_template,
       template_id: template_id || null,

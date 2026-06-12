@@ -46,6 +46,7 @@ type Booking = {
   meeting_point: string | null;
   facebook_url?: string | null;
   nickname?: string | null;
+  custom_question_answers?: string[] | null;
   custom_question_answer?: string | null;
 };
 
@@ -120,7 +121,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
 
   const { data: trip } = await supabase
     .from("trips")
-    .select("id, title, slug, difficulty, activity_type, date_start, total_slots, remaining_slots, price, payment_type, min_downpayment, custom_question")
+    .select("id, title, slug, difficulty, activity_type, date_start, total_slots, remaining_slots, price, payment_type, min_downpayment, custom_questions, custom_question")
     .eq("slug", slug)
     .eq("organizer_id", organizer.id)
     .maybeSingle();
@@ -133,7 +134,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
     admin
       .from("bookings")
       .select(
-        "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, balance_collected, balance_payment_gateway_status, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point, custom_question_answer"
+        "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, balance_collected, balance_payment_gateway_status, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point, custom_question_answers, custom_question_answer"
       )
       .eq("trip_id", trip.id)
       .order("created_at", { ascending: false }),
@@ -295,6 +296,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
             paymentType={trip.payment_type}
             minDownpayment={trip.min_downpayment}
             tripDateStart={trip.date_start}
+            customQuestions={(trip as { custom_questions?: string[] | null }).custom_questions ?? null}
             customQuestion={(trip as { custom_question?: string | null }).custom_question ?? null}
             navLinks={
               <>
@@ -421,12 +423,16 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                   🏥 {[b.medical_notes, b.notes].filter(Boolean).join(' · ')}
                                 </p>
                               )}
-                              {(trip as { custom_question?: string | null }).custom_question && b.custom_question_answer && (
-                                <p className="text-xs text-stone-500 mt-0.5">
-                                  <span className="font-medium text-stone-600">{(trip as { custom_question?: string | null }).custom_question}:</span>{" "}
-                                  {b.custom_question_answer}
-                                </p>
-                              )}
+                              {(() => {
+                                const qs: string[] = (trip as { custom_questions?: string[] | null; custom_question?: string | null }).custom_questions ?? ((trip as { custom_question?: string | null }).custom_question ? [(trip as { custom_question?: string | null }).custom_question!] : []);
+                                const as_: string[] = (b.custom_question_answers as string[] | null) ?? (b.custom_question_answer ? [b.custom_question_answer] : []);
+                                return qs.map((q, qi) => as_[qi] ? (
+                                  <p key={qi} className="text-xs text-stone-500 mt-0.5">
+                                    <span className="font-medium text-stone-600">{q}:</span>{" "}
+                                    {as_[qi]}
+                                  </p>
+                                ) : null);
+                              })()}
                             </td>
                             <td className="px-5 py-3.5 text-center text-stone-700">
                               {b.slots}

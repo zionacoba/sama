@@ -45,6 +45,7 @@ type TripDetail = {
   meeting_points: { location: string; time: string }[] | null;
   waitlist_enabled: boolean | null;
   status: 'draft' | 'active' | 'cancelled';
+  custom_questions: string[] | null;
   custom_question: string | null;
 };
 
@@ -211,7 +212,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
   const supabase = await createSupabaseServerClient();
 
   const [{ data: trip }, { data: { user } }] = await Promise.all([
-    supabase.from("trips").select("id, title, slug, destination, region, date_start, date_end, total_slots, remaining_slots, price, payment_type, min_downpayment, downpayment_cutoff_days, difficulty, activity_type, duration, meeting_points, meeting_point, description, photos, waiver_text, cancellation_policy, cancellation_policy_custom, messenger_gc_link, organizer_id, status, is_template, template_id, includes, what_to_bring, waitlist_enabled, custom_question").eq("slug", slug).maybeSingle(),
+    supabase.from("trips").select("id, title, slug, destination, region, date_start, date_end, total_slots, remaining_slots, price, payment_type, min_downpayment, downpayment_cutoff_days, difficulty, activity_type, duration, meeting_points, meeting_point, description, photos, waiver_text, cancellation_policy, cancellation_policy_custom, messenger_gc_link, organizer_id, status, is_template, template_id, includes, what_to_bring, waitlist_enabled, custom_questions, custom_question").eq("slug", slug).maybeSingle(),
     supabase.auth.getUser(),
   ]);
 
@@ -742,7 +743,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   difficulty={tripData.difficulty}
                   waiverText={tripData.waiver_text ?? null}
                   organizerName={organizerName}
-                  customQuestion={tripData.custom_question ?? null}
+                  customQuestions={tripData.custom_questions ?? (tripData.custom_question ? [tripData.custom_question] : null)}
                   autoOpen={book === "1"}
                 />
               )}
