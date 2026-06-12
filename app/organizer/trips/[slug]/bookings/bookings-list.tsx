@@ -227,6 +227,12 @@ export function BookingsListWithTabs({
                             {b.full_name}
                           </span>
                         </div>
+                        <a
+                          href={`tel:${b.phone}`}
+                          className="text-xs text-stone-500 hover:text-trailhead hover:underline"
+                        >
+                          {b.phone}
+                        </a>
                         {b.facebook_url && (
                           <a
                             href={b.facebook_url}

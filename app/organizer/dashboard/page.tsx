@@ -33,7 +33,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
 
   const { data: organizer } = await supabase
     .from("organizers")
-    .select("id, full_name, status")
+    .select("id, full_name, status, payout_method, gcash_number, bank_account_number")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -294,6 +294,20 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+        {/* Payout setup banner */}
+        {!organizer.payout_method || (organizer.payout_method === "gcash" && !organizer.gcash_number) || (organizer.payout_method === "bank_transfer" && !organizer.bank_account_number) ? (
+          <div className="mb-6 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+            <span className="shrink-0 text-xl">⚠️</span>
+            <p className="text-sm text-amber-900">
+              <span className="font-semibold">Add your payout details to receive earnings from bookings.</span>{" "}
+              Without this, we can't remit your earnings.{" "}
+              <Link href="/organizer/profile" className="font-semibold underline underline-offset-4 hover:text-amber-700">
+                Set up payout details →
+              </Link>
+            </p>
+          </div>
+        ) : null}
+
         {/* Welcome */}
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

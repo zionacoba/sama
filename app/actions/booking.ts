@@ -228,10 +228,11 @@ export async function createBooking(input: CreateBookingInput) {
       .update({ status: autoApprove ? "confirmed" : "pending" })
       .eq("id", newBooking.id);
 
+    const tripDate = new Intl.DateTimeFormat("en-PH", {
+      weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila",
+    }).format(new Date(trip.date_start));
+
     if (autoApprove) {
-      const tripDate = new Intl.DateTimeFormat("en-PH", {
-        weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila",
-      }).format(new Date(trip.date_start));
       try {
         await resend.emails.send({
           from: FROM_ADDRESS,
@@ -255,6 +256,41 @@ export async function createBooking(input: CreateBookingInput) {
       } catch (err) {
         console.error("[email] failed to send free booking confirmation", err);
       }
+    }
+
+    // Notify organizer of new free booking.
+    try {
+      const { data: orgRow } = await admin
+        .from("organizers")
+        .select("email")
+        .eq("id", trip.organizer_id)
+        .maybeSingle();
+
+      if (orgRow?.email) {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: orgRow.email,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `New booking for ${trip.title}`,
+          html: `
+            <p>Hi,</p>
+            <p><strong>${escapeHtml(input.fullName)}</strong> (${escapeHtml(input.email)}) just booked <strong>${input.slots} slot${input.slots !== 1 ? "s" : ""}</strong> on your trip:</p>
+            <ul>
+              <li><strong>Booking ref:</strong> ${bookingRef}</li>
+              <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
+              <li><strong>Date:</strong> ${tripDate}</li>
+              <li><strong>Payment:</strong> Free trip</li>
+            </ul>
+            ${autoApprove
+              ? `<p>This booking was <strong>automatically confirmed</strong> (${trip.difficulty} trip).</p>`
+              : `<p>This booking requires your approval. Log in to your <a href="${SITE_URL}/organizer/dashboard">organizer dashboard</a> to confirm or reject.</p>`
+            }
+            <p>— Sama</p>
+          `,
+        });
+      }
+    } catch (err) {
+      console.error("[email] failed to send free booking organizer notification", err);
     }
 
     revalidatePath(`/trips/${input.tripSlug}`);

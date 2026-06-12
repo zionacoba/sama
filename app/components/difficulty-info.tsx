@@ -19,19 +19,16 @@ const ORGANIZER: Entry[] = [
     level: "Beginner",
     description:
       "No prior experience needed. Low physical demand, suitable for first-timers, typically a few hours. Bookings are auto-confirmed.",
-    examples: "Mt. Romelo, Masungi Georeserve, Mt. Tagapo",
   },
   {
     level: "Intermediate",
     description:
       "Some experience recommended. Moderate physical demand, may involve a full day or overnight. Good fitness required. Bookings are auto-confirmed.",
-    examples: "Mt. Batulao, Mt. Ulap, Osmeña Peak",
   },
   {
     level: "Advanced",
     description:
       "Prior experience required. High physical demand, may be multi-day or involve technical conditions. High fitness level needed. Each booking requires your manual approval.",
-    examples: "Mt. Pulag (Akiki trail), Mt. Apo, Mt. Halcon",
   },
 ];
 

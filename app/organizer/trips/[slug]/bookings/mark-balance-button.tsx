@@ -50,6 +50,9 @@ export function MarkBalanceButton({
               <strong>{balanceAmount} balance</strong> from{" "}
               <strong>{participantName}</strong>?
             </p>
+            <p className="mt-2 text-xs text-stone-500">
+              This records the balance as collected in cash. The corresponding payout will be included in your next scheduled remittance — it does not trigger an immediate transfer.
+            </p>
             {error && (
               <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {error}

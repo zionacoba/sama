@@ -312,7 +312,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
       </div>
 
       <div className="border-t border-stone-100 pt-5">
-        <p className={`${labelClass} mb-1`}>Payout details <span className="font-normal text-stone-400">(optional)</span></p>
+        <p className={`${labelClass} mb-1`}>Payout details (required to receive earnings)</p>
         <p className="mb-3 text-xs text-stone-500">
           Used to remit your earnings on the following schedule:
         </p>
