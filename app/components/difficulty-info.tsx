@@ -18,19 +18,19 @@ const ORGANIZER: Entry[] = [
   {
     level: "Beginner",
     description:
-      "No prior experience needed. Well-marked trails, minimal elevation gain (under 500m), 2–5 hours total. Suitable for first-timers and casual walkers. Bookings are auto-confirmed.",
+      "No prior experience needed. Low physical demand, suitable for first-timers, typically a few hours. Bookings are auto-confirmed.",
     examples: "Mt. Romelo, Masungi Georeserve, Mt. Tagapo",
   },
   {
     level: "Intermediate",
     description:
-      "Some hiking experience recommended. Moderate elevation gain (500m–1,200m), uneven terrain, 5–10 hours or multi-day with camping. Good fitness required. Bookings are auto-confirmed.",
+      "Some experience recommended. Moderate physical demand, may involve a full day or overnight. Good fitness required. Bookings are auto-confirmed.",
     examples: "Mt. Batulao, Mt. Ulap, Osmeña Peak",
   },
   {
     level: "Advanced",
     description:
-      "Prior hiking experience required. Significant elevation gain (1,200m+), technical sections, 8+ hours or multi-day. High fitness level needed. Each booking requires your manual approval.",
+      "Prior experience required. High physical demand, may be multi-day or involve technical conditions. High fitness level needed. Each booking requires your manual approval.",
     examples: "Mt. Pulag (Akiki trail), Mt. Apo, Mt. Halcon",
   },
 ];
@@ -39,17 +39,17 @@ const JOINER: Entry[] = [
   {
     level: "Beginner",
     description:
-      "Easy trails, minimal elevation, 2–5 hours. Great for first-timers. Booking is instant once you pay.",
+      "Low physical demand, typically a few hours. Great for first-timers. Booking is instant once you pay.",
   },
   {
     level: "Intermediate",
     description:
-      "Moderate climb, uneven terrain, 5–10 hours or overnight. You should be comfortable hiking with a pack. Booking is instant once you pay.",
+      "Moderate physical demand, may be a full day or overnight. You should be reasonably fit. Booking is instant once you pay.",
   },
   {
     level: "Advanced",
     description:
-      "Technical trails, significant elevation, 8+ hours or multi-day. High fitness required. Your booking will be reviewed and approved by the organizer before it's confirmed.",
+      "High physical demand, may be multi-day or involve technical conditions. High fitness required. Your booking will be reviewed and approved by the organizer before it's confirmed.",
   },
 ];
 
