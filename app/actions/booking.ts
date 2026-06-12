@@ -32,6 +32,7 @@ type CreateBookingInput = {
   platformWaiverAgreed: boolean;
   medicalNotes: string | null;
   meetingPoint: string | null;
+  customQuestionAnswer: string | null;
 };
 
 export async function createBooking(input: CreateBookingInput) {
@@ -169,6 +170,7 @@ export async function createBooking(input: CreateBookingInput) {
     p_waiver_text_snapshot: trip.waiver_text?.replace(/\[Organizer Name\]/gi, organizerName) ?? null,
     p_waiver_ip: waiverIp,
     p_platform_waiver_snapshot: "By completing this booking, I agree that Sama is a technology marketplace that connects participants with independent trip organizers. Sama is not responsible for the conduct, acts, or omissions of organizers. I voluntarily assume all risks associated with outdoor activities.",
+    p_custom_question_answer: input.customQuestionAnswer,
   });
 
   if (bookingError || newBookingId == null) {

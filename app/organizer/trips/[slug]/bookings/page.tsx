@@ -46,6 +46,7 @@ type Booking = {
   meeting_point: string | null;
   facebook_url?: string | null;
   nickname?: string | null;
+  custom_question_answer?: string | null;
 };
 
 type BookingParticipant = {
@@ -119,7 +120,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
 
   const { data: trip } = await supabase
     .from("trips")
-    .select("id, title, slug, difficulty, activity_type, date_start, total_slots, remaining_slots, price, payment_type, min_downpayment")
+    .select("id, title, slug, difficulty, activity_type, date_start, total_slots, remaining_slots, price, payment_type, min_downpayment, custom_question")
     .eq("slug", slug)
     .eq("organizer_id", organizer.id)
     .maybeSingle();
@@ -132,7 +133,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
     admin
       .from("bookings")
       .select(
-        "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, balance_collected, balance_payment_gateway_status, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point"
+        "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, balance_collected, balance_payment_gateway_status, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point, custom_question_answer"
       )
       .eq("trip_id", trip.id)
       .order("created_at", { ascending: false }),
@@ -294,6 +295,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
             paymentType={trip.payment_type}
             minDownpayment={trip.min_downpayment}
             tripDateStart={trip.date_start}
+            customQuestion={(trip as { custom_question?: string | null }).custom_question ?? null}
             navLinks={
               <>
                 <Link
@@ -417,6 +419,12 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                               {(b.medical_notes || b.notes) && (
                                 <p className="text-xs text-stone-400 mt-0.5">
                                   🏥 {[b.medical_notes, b.notes].filter(Boolean).join(' · ')}
+                                </p>
+                              )}
+                              {(trip as { custom_question?: string | null }).custom_question && b.custom_question_answer && (
+                                <p className="text-xs text-stone-500 mt-0.5">
+                                  <span className="font-medium text-stone-600">{(trip as { custom_question?: string | null }).custom_question}:</span>{" "}
+                                  {b.custom_question_answer}
                                 </p>
                               )}
                             </td>

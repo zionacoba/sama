@@ -32,6 +32,7 @@ type TripDefaults = {
   price?: number | string | null;
   waiver_text?: string | null;
   messenger_gc_link?: string | null;
+  custom_question?: string | null;
 };
 
 export function TripForm({
@@ -653,6 +654,24 @@ export function TripForm({
         />
         <p className="mt-1.5 text-xs text-stone-500">
           This waiver will be shown to each participant when they confirm their spot. You can customize it or use the default template.
+        </p>
+      </div>
+
+      {/* Custom question */}
+      <div>
+        <label htmlFor="custom_question" className={labelClass}>
+          Ask joiners a question <span className="font-normal text-stone-400">(optional)</span>
+        </label>
+        <input
+          id="custom_question"
+          name="custom_question"
+          type="text"
+          defaultValue={defaultValues?.custom_question ?? ""}
+          className={inputClass}
+          placeholder="e.g. Are you a confident swimmer? Please describe your experience."
+        />
+        <p className="mt-1.5 text-xs text-stone-500">
+          If set, joiners must answer this when booking.
         </p>
       </div>
 

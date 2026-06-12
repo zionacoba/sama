@@ -26,6 +26,7 @@ type BookingModalProps = {
   difficulty: string;
   waiverText?: string | null;
   organizerName?: string | null;
+  customQuestion?: string | null;
   autoOpen?: boolean;
   compact?: boolean;
 };
@@ -54,6 +55,7 @@ export function BookingModal({
   difficulty,
   waiverText,
   organizerName,
+  customQuestion,
   autoOpen = false,
   compact = false,
 }: BookingModalProps) {
@@ -92,6 +94,7 @@ export function BookingModal({
   const [platformWaiverAccepted, setPlatformWaiverAccepted] = useState(false);
   const [platformWaiverError, setPlatformWaiverError] = useState(false);
   const [paymentOption, setPaymentOption] = useState<"full" | "downpayment">("full");
+  const [customQuestionAnswer, setCustomQuestionAnswer] = useState("");
 
   const isDemo = /^\[demo\]/i.test(tripTitle.trim());
 
@@ -258,6 +261,7 @@ export function BookingModal({
     setError(null);
     setSuccess(false);
     setPaymentOption("full");
+    setCustomQuestionAnswer("");
   }
 
   function handleClose() {
@@ -316,6 +320,7 @@ export function BookingModal({
         platformWaiverAgreed: platformWaiverAccepted,
         medicalNotes: notes.trim() || null,
         meetingPoint: selectedMeetingPoint || null,
+        customQuestionAnswer: customQuestion ? (customQuestionAnswer.trim() || null) : null,
       });
 
       if (!result.success) {
@@ -725,6 +730,25 @@ export function BookingModal({
                       className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                     />
                   </div>
+
+                  {/* Custom question from organizer */}
+                  {customQuestion && (
+                    <div>
+                      <label htmlFor="booking-custom-question" className="block text-sm font-medium text-stone-700">
+                        {customQuestion}
+                      </label>
+                      <textarea
+                        id="booking-custom-question"
+                        rows={2}
+                        required
+                        maxLength={1000}
+                        value={customQuestionAnswer}
+                        disabled={loading}
+                        onChange={(e) => setCustomQuestionAnswer(e.target.value)}
+                        className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
+                      />
+                    </div>
+                  )}
 
                   {/* Waivers */}
                   <div className="space-y-3">
