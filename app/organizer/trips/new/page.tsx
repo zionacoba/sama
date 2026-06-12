@@ -60,7 +60,7 @@ export default async function NewTripPage({ searchParams }: PageProps) {
   const fromTemplate = templateData ?? null;
 
   return (
-    <div className="min-h-screen bg-stone-50 font-sans text-stone-900">
+    <div className="flex min-h-screen flex-col bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <Link
@@ -81,7 +81,7 @@ export default async function NewTripPage({ searchParams }: PageProps) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+      <main className="mx-auto max-w-2xl flex-1 px-4 py-10 sm:px-6">
         <TripForm
           destinations={destinations}
           templates={templates}
