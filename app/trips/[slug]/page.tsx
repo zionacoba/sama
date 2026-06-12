@@ -15,6 +15,8 @@ import { PublishedBanner } from "@/app/trips/[slug]/published-banner";
 import { DifficultyInfoButton } from "@/app/components/difficulty-info";
 import Script from "next/script";
 
+export const revalidate = 30;
+
 type TripDetail = {
   id: number;
   title: string;
@@ -57,6 +59,11 @@ type OrganizerInfo = {
   facebook_url: string | null;
   social_links: { organizer_facebook?: string | null; facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
   is_founding_partner: boolean | null;
+};
+
+type TripWithOrganizer = TripDetail & {
+  // Supabase TS inference says array for joined tables, but for a many-to-one FK the runtime value is a single object or null.
+  organizers: (OrganizerInfo & { user_id: string }) | null;
 };
 
 type Review = {
@@ -197,9 +204,10 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
   const [{ slug }, { book, published }] = await Promise.all([params, searchParams]);
 
   const supabase = await createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
 
   const [{ data: trip }, { data: { user } }] = await Promise.all([
-    supabase.from("trips").select("id, title, slug, destination, region, date_start, date_end, total_slots, remaining_slots, price, payment_type, min_downpayment, downpayment_cutoff_days, difficulty, activity_type, duration, meeting_points, meeting_point, description, photos, waiver_text, cancellation_policy, cancellation_policy_custom, messenger_gc_link, organizer_id, status, is_template, template_id, includes, what_to_bring, waitlist_enabled, custom_questions, custom_question").eq("slug", slug).maybeSingle(),
+    admin.from("trips").select("id, title, slug, destination, region, date_start, date_end, total_slots, remaining_slots, price, payment_type, min_downpayment, downpayment_cutoff_days, difficulty, activity_type, duration, meeting_points, meeting_point, description, photos, waiver_text, cancellation_policy, cancellation_policy_custom, messenger_gc_link, organizer_id, status, is_template, template_id, includes, what_to_bring, waitlist_enabled, custom_questions, custom_question, organizers!organizer_id(display_name, full_name, bio, photo_url, facebook_url, social_links, is_founding_partner, user_id)").eq("slug", slug).maybeSingle(),
     supabase.auth.getUser(),
   ]);
 
@@ -243,14 +251,13 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
     notFound();
   }
 
-  const tripData = trip as TripDetail;
+  const tripData = trip as unknown as TripWithOrganizer;
+  const organizerData = tripData.organizers ?? null;
 
   const [
     { data: reviewsData },
     reviewCountResult,
-    { data: organizerData },
     { data: siblingRunsData },
-    { data: userOrgData },
     { data: existingWaitlistEntry },
     { data: existingBooking },
   ] = await Promise.all([
@@ -270,9 +277,6 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
           .eq("organizer_id", tripData.organizer_id)
           .eq("approved", true)
       : Promise.resolve({ count: 0 }),
-    tripData.organizer_id
-      ? createSupabaseAdminClient().from("organizers").select("display_name, full_name, bio, photo_url, facebook_url, social_links, is_founding_partner").eq("id", tripData.organizer_id).maybeSingle()
-      : Promise.resolve({ data: null }),
     tripData.template_id
       ? supabase
           .from("trips")
@@ -283,21 +287,20 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
           .gt("date_start", new Date().toISOString())
           .order("date_start", { ascending: true })
       : Promise.resolve({ data: null }),
-    user
-      ? supabase.from("organizers").select("id").eq("user_id", user.id).maybeSingle()
-      : Promise.resolve({ data: null }),
     user && tripData.remaining_slots === 0
       ? supabase.from("waitlist").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).maybeSingle()
       : Promise.resolve({ data: null }),
     user
-      ? createSupabaseAdminClient().from("bookings").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).in("status", ["confirmed", "pending"]).maybeSingle()
+      ? admin.from("bookings").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).in("status", ["confirmed", "pending"]).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
+  // isOwnTrip: user.id matches the organizer's user_id (embedded in Round 1 join),
+  // avoiding a separate organizers lookup just to find the owning user.
   const isOwnTrip =
-    !!userOrgData?.id &&
-    !!tripData.organizer_id &&
-    String(userOrgData.id) === String(tripData.organizer_id);
+    !!user &&
+    !!organizerData?.user_id &&
+    user.id === organizerData.user_id;
 
   const isPast = new Date(tripData.date_start) < new Date();
 
