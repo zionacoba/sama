@@ -9,7 +9,7 @@ import { WaitlistModal } from "@/app/trips/[slug]/waitlist-modal";
 import { ShareButton } from "@/app/components/share-button";
 import { PhotoGallery } from "@/app/components/photo-gallery";
 import { Footer } from "@/app/components/footer";
-import { CANCELLATION_POLICIES, calculateRefundAmount } from "@/lib/cancellation-policies";
+import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { formatDate, formatDateShort, formatDateRange, formatReviewDate } from "@/lib/format";
 import { PublishedBanner } from "@/app/trips/[slug]/published-banner";
 import { DifficultyInfoButton } from "@/app/components/difficulty-info";
@@ -122,19 +122,11 @@ function getUnitPrice(price: string | number): number {
 
 
 
-function CancellationPolicyCard({ policy, custom, daysUntilTrip }: { policy: string | null; custom: string | null; daysUntilTrip?: number }) {
+function CancellationPolicyCard({ policy, custom }: { policy: string | null; custom: string | null }) {
   if (!policy) return null;
   const meta = CANCELLATION_POLICIES[policy as keyof typeof CANCELLATION_POLICIES] ?? CANCELLATION_POLICIES.flexible;
   const text = policy === "custom" ? (custom ?? "") : meta.text;
   if (!text) return null;
-
-  let refundTierLabel: string | null = null;
-  if (daysUntilTrip !== undefined && policy !== "custom") {
-    const tier = calculateRefundAmount(policy, 1, daysUntilTrip);
-    if (tier === 1) refundTierLabel = "full refund";
-    else if (tier === 0.5) refundTierLabel = "50% refund";
-    else if (tier === 0) refundTierLabel = "no refund";
-  }
 
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
@@ -146,13 +138,7 @@ function CancellationPolicyCard({ policy, custom, daysUntilTrip }: { policy: str
         </span>
       </div>
       <p className="mt-3 leading-relaxed text-stone-600">{text}</p>
-      {refundTierLabel && (
-        <p className="mt-3 text-sm text-stone-500">
-          If you booked and cancelled today, you would be eligible for:{" "}
-          <span className="font-semibold text-stone-700">{refundTierLabel}</span>.
-        </p>
-      )}
-      <p className="mt-3 text-xs text-stone-400">Refunds to GCash are processed automatically. QR Ph refunds may take 3–5 business days.</p>
+      <p className="mt-3 leading-relaxed text-stone-400">Refunds to GCash are processed automatically. QR Ph refunds may take 3–5 business days.</p>
     </div>
   );
 }
@@ -336,9 +322,6 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
   const includesList = parseList(tripData.includes);
   const whatToBringList = parseList(tripData.what_to_bring);
-
-  const todayManilaStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
-  const daysUntilTrip = Math.round((new Date(tripData.date_start).getTime() - new Date(todayManilaStr).getTime()) / 86_400_000);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
   const jsonLdDescription = tripData.description
@@ -583,7 +566,6 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
             <CancellationPolicyCard
               policy={tripData.cancellation_policy}
               custom={tripData.cancellation_policy_custom}
-              daysUntilTrip={daysUntilTrip}
             />
 
             {organizer && (
