@@ -5,6 +5,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const carouselRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const isOpen = lightboxIndex !== null;
 
@@ -45,41 +47,81 @@ export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string })
     dx < 0 ? next() : prev();
   }
 
+  function onCarouselScroll() {
+    const el = carouselRef.current;
+    if (!el) return;
+    setCarouselIndex(Math.round(el.scrollLeft / el.clientWidth));
+  }
+
   if (photos.length === 0) return null;
 
-  const rightPhotos = photos.slice(1, 5); // show up to 4 right-side photos
+  const rightPhotos = photos.slice(1, 5);
   const rightCount = rightPhotos.length;
   const totalCount = photos.length;
 
   const rightGridCls =
     rightCount === 1 ? "grid-cols-1" :
     rightCount === 2 ? "grid-cols-1 grid-rows-2" :
-    "grid-cols-2 grid-rows-2"; // 3 or 4
+    "grid-cols-2 grid-rows-2";
 
   return (
     <>
-      {/* Photo grid */}
-      <div className="relative h-60 sm:h-[400px] overflow-hidden rounded-2xl bg-stone-100">
+      {/* Mobile: swipeable carousel */}
+      <div className="sm:hidden relative h-60 rounded-2xl bg-stone-100 overflow-hidden">
+        {totalCount === 1 ? (
+          <button
+            type="button"
+            className="absolute inset-0"
+            onClick={() => setLightboxIndex(0)}
+            aria-label="View photo"
+          >
+            <Image src={photos[0]} alt={alt} fill className="object-cover" sizes="100vw" priority />
+          </button>
+        ) : (
+          <>
+            <div
+              ref={carouselRef}
+              className="no-scrollbar flex h-full snap-x snap-mandatory overflow-x-auto"
+              onScroll={onCarouselScroll}
+              style={{ scrollbarWidth: "none" }}
+            >
+              {photos.map((photo, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="relative h-full w-full shrink-0 snap-center"
+                  onClick={() => setLightboxIndex(i)}
+                  aria-label={`View photo ${i + 1} of ${totalCount}`}
+                >
+                  <Image
+                    src={photo}
+                    alt={`${alt} — photo ${i + 1}`}
+                    fill
+                    className="object-cover"
+                    sizes="100vw"
+                    priority={i === 0}
+                  />
+                </button>
+              ))}
+            </div>
+            {/* Dots position indicator */}
+            <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
+              {photos.map((_, i) => (
+                <span
+                  key={i}
+                  className={`block h-1.5 w-1.5 rounded-full transition-colors ${
+                    i === carouselIndex ? "bg-white" : "bg-white/50"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
-        {/* Mobile: main photo only */}
-        <button
-          type="button"
-          className="absolute inset-0 sm:hidden"
-          onClick={() => setLightboxIndex(0)}
-          aria-label="View photos"
-        >
-          <Image
-            src={photos[0]}
-            alt={alt}
-            fill
-            className="object-cover"
-            sizes="100vw"
-            priority
-          />
-        </button>
-
-        {/* Desktop: Airbnb-style grid */}
-        <div className="hidden sm:flex h-full gap-1">
+      {/* Desktop: Airbnb-style grid */}
+      <div className="relative hidden h-[400px] overflow-hidden rounded-2xl bg-stone-100 sm:block">
+        <div className="flex h-full gap-1">
           {/* Main (left) photo */}
           <button
             type="button"
@@ -103,7 +145,6 @@ export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string })
               {rightPhotos.map((photo, i) => {
                 const isLast = i === rightCount - 1;
                 const showMoreOverlay = isLast && totalCount > 5;
-                // 3-photo layout: first right photo spans both columns
                 const colSpan = rightCount === 3 && i === 0 ? "col-span-2" : "";
                 return (
                   <button
@@ -134,7 +175,7 @@ export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string })
           )}
         </div>
 
-        {/* "Show all photos" button — visible on all screen sizes */}
+        {/* "Show all photos" button */}
         {totalCount > 1 && (
           <button
             type="button"
