@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 import { processPayMongoRefund, type RefundResult } from "@/lib/paymongo-refund";
+import { amountSamaHolds } from "@/lib/booking-finance";
 
 if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
@@ -404,7 +405,7 @@ export async function getPendingPayouts(): Promise<{
   // Confirmed bookings from past trips not yet included in any payout.
   const { data: rawBookings } = await admin
     .from("bookings")
-    .select("id, full_name, total_amount, amount_due, platform_commission, payment_option, balance_collected, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
+    .select("id, full_name, total_amount, amount_due, platform_commission, payment_option, balance_collected, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
     .in("status", ["confirmed", "no_show"])
     .eq("payout_status", "unpaid") as unknown as {
       data: Array<{
@@ -415,6 +416,7 @@ export async function getPendingPayouts(): Promise<{
         platform_commission: number | null;
         payment_option: string;
         balance_collected: boolean;
+        balance_payment_gateway_status: string | null;
         trip: { title: string; date_start: string; organizer_id: string } | null;
       }> | null;
     };
@@ -487,8 +489,10 @@ export async function getPendingPayouts(): Promise<{
     }
 
     const group = grouped.get(orgId)!;
-    const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
-    const grossAmount = isDownpaymentOnly ? Number(b.amount_due ?? 0) : Number(b.total_amount);
+    // Gross is what Sama actually received online — for downpayment bookings
+    // whose balance was collected in cash, that's only the downpayment.
+    const isDownpaymentOnly = b.payment_option === "downpayment" && b.balance_payment_gateway_status !== "paid";
+    const grossAmount = amountSamaHolds(b);
     // platform_commission is the full commission, already deducted from the downpayment. No pro-rating.
     const commission = Number(b.platform_commission ?? 0);
     const net = Math.round((grossAmount - commission) * 100) / 100;
@@ -638,7 +642,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   // Compute totals server-side from the actual booking records.
   const { data: bookings } = await admin
     .from("bookings")
-    .select("id, total_amount, amount_due, platform_commission, payment_option, balance_collected")
+    .select("id, total_amount, amount_due, platform_commission, payment_option, balance_collected, balance_payment_gateway_status")
     .in("id", bookingIds)
     .eq("payout_status", "unpaid")
     .in("status", ["confirmed", "no_show"]) as unknown as {
@@ -649,15 +653,16 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
         platform_commission: number | null;
         payment_option: string;
         balance_collected: boolean;
+        balance_payment_gateway_status: string | null;
       }> | null;
     };
 
   if (!bookings || bookings.length === 0) redirect("/admin?tab=payouts&payoutError=missing");
 
-  const totalAmount = Math.round(bookings.reduce((s, b) => {
-    const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
-    return s + (isDownpaymentOnly ? Number(b.amount_due ?? 0) : Number(b.total_amount));
-  }, 0) * 100) / 100;
+  // Gross is what Sama actually received online — for downpayment bookings whose
+  // balance was collected in cash, that's only the downpayment.
+  const totalAmount = Math.round(bookings.reduce((s, b) =>
+    s + amountSamaHolds(b), 0) * 100) / 100;
 
   // platform_commission is the full commission, already deducted from the downpayment. No pro-rating.
   const totalCommission = Math.round(bookings.reduce((s, b) =>

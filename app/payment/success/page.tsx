@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Navbar } from "@/app/components/navbar";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { amountJoinerPaid } from "@/lib/booking-finance";
 import { EmergencyContactPrompt } from "./emergency-contact-prompt";
 
 export const metadata: Metadata = {
@@ -53,6 +54,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
     total_amount: number;
     amount_due: number | null;
     payment_option: string | null;
+    balance_payment_gateway_status: string | null;
     meeting_point: string | null;
     trip: {
       title: string;
@@ -71,7 +73,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
   if (bookingId) {
     const { data } = await admin
       .from("bookings")
-      .select("id, total_amount, amount_due, payment_option, meeting_point, trip:trips(title, date_start, messenger_gc_link, organizer:organizers(display_name, full_name, facebook_url, social_links))")
+      .select("id, total_amount, amount_due, payment_option, balance_payment_gateway_status, meeting_point, trip:trips(title, date_start, messenger_gc_link, organizer:organizers(display_name, full_name, facebook_url, social_links))")
       .eq("id", bookingId)
       .maybeSingle();
     booking = data as BookingSummary | null;
@@ -137,7 +139,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
                 </p>
               )}
               <p className="mt-3 text-sm font-medium text-stone-700">
-                Amount paid: <span className="text-trailhead">{formatCurrency(booking.total_amount)}</span>
+                Amount paid: <span className="text-trailhead">{formatCurrency(amountJoinerPaid(booking))}</span>
               </p>
               {bookingRef && (
                 <p className="mt-1 text-xs text-stone-400">

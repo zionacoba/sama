@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { amountSamaHolds } from "@/lib/booking-finance";
 import { DashboardFilters } from "./dashboard-filters";
 import { TripRow, TripRunRow, type OrganizerTrip, type TripCounts } from "./trip-row";
 import { RespondToReviewForm } from "@/app/organizers/[id]/respond-to-review-form";
@@ -119,7 +120,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     const [{ data: unpaidRaw }, { data: payoutsRaw }, { data: deductionsRaw }] = await Promise.all([
       admin
         .from("bookings")
-        .select("id, slots, total_amount, amount_due, platform_commission, commission_rate_used, payment_option, balance_collected, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
+        .select("id, slots, total_amount, amount_due, platform_commission, commission_rate_used, payment_option, balance_collected, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
         .eq("status", "confirmed")
         .eq("payout_status", "unpaid") as unknown as Promise<{
           data: Array<{
@@ -131,6 +132,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
             commission_rate_used: number | null;
             payment_option: string;
             balance_collected: boolean;
+            balance_payment_gateway_status: string | null;
             trip: { title: string; date_start: string; organizer_id: string } | null;
           }> | null;
         }>,
@@ -166,8 +168,9 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     );
 
     for (const b of myUnpaid) {
-      const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
-      const gross = isDownpaymentOnly ? Number(b.amount_due ?? 0) : Number(b.total_amount);
+      // Gross is what Sama actually received online — for downpayment bookings
+      // whose balance was collected in cash, that's only the downpayment.
+      const gross = amountSamaHolds(b);
       // platform_commission is the full commission, calculated on the total trip price at
       // booking time and already deducted from the downpayment. No pro-rating.
       const commission = Number(b.platform_commission ?? 0);

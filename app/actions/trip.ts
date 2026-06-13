@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 import { processPayMongoRefund, type RefundResult } from "@/lib/paymongo-refund";
+import { amountSamaHolds } from "@/lib/booking-finance";
 
 function slugify(title: string): string {
   return title
@@ -787,7 +788,7 @@ export async function getTripCancelSummary(tripSlug: string): Promise<
 
   const { data: bookings } = await admin
     .from("bookings")
-    .select("paymongo_payment_id, status, payout_status, total_amount, amount_due, payment_option, balance_collected, platform_commission")
+    .select("paymongo_payment_id, status, payout_status, total_amount, amount_due, payment_option, balance_collected, balance_payment_gateway_status, platform_commission")
     .eq("trip_id", trip.id)
     .in("status", ["pending", "confirmed", "payment_pending"]);
 
@@ -799,8 +800,9 @@ export async function getTripCancelSummary(tripSlug: string): Promise<
   let pendingEarningsNet = 0;
   for (const b of all) {
     if (b.status !== "confirmed" || b.payout_status !== "unpaid") continue;
-    const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
-    const gross = isDownpaymentOnly ? Number(b.amount_due ?? 0) : Number(b.total_amount ?? 0);
+    // Gross is what Sama actually received online — for downpayment bookings
+    // whose balance was collected in cash, that's only the downpayment.
+    const gross = amountSamaHolds(b);
     // platform_commission is the full commission, already deducted from the downpayment. No pro-rating.
     const commission = Number(b.platform_commission ?? 0);
     const net = Math.round((gross - commission) * 100) / 100;

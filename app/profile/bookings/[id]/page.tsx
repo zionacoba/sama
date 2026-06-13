@@ -8,6 +8,7 @@ import { CancelBookingButton } from "@/app/profile/cancel-booking-button";
 import { PayBalanceButton } from "./pay-balance-button";
 import { PartialCancelButton } from "./partial-cancel-button";
 import { calculateRefundAmount } from "@/lib/cancellation-policies";
+import { amountJoinerPaid } from "@/lib/booking-finance";
 import { Footer } from "@/app/components/footer";
 
 type PageProps = {
@@ -192,10 +193,10 @@ export default async function BookingDetailPage({ params }: PageProps) {
     ? Math.max(0, booking.total_amount - booking.amount_due)
     : null;
 
-  const amountPaid =
-    booking.payment_option === "downpayment" && booking.amount_due != null
-      ? booking.amount_due
-      : booking.total_amount;
+  // What the joiner actually paid online through Sama — drives the refund
+  // estimate and must match what cancelBooking processes. For downpayment
+  // bookings whose balance was paid online, that's the full total_amount.
+  const amountPaid = amountJoinerPaid(booking);
   const todayManilaStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
   const todayManila = new Date(todayManilaStr);
   const tripDay = new Date(trip.date_start);
