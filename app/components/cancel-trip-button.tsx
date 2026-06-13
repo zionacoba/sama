@@ -30,14 +30,19 @@ export function CancelTripButton({ tripSlug, tripTitle }: Props) {
     setError(null);
     setConfirmText("");
     setIsLoadingSummary(true);
-    const result = await getTripCancelSummary(tripSlug);
-    setIsLoadingSummary(false);
-    if ("error" in result) {
-      setError(result.error);
-      return;
+    try {
+      const result = await getTripCancelSummary(tripSlug);
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      setSummary(result);
+      setShowConfirm(true);
+    } catch {
+      setError("Something went wrong loading the cancellation details. Please try again.");
+    } finally {
+      setIsLoadingSummary(false);
     }
-    setSummary(result);
-    setShowConfirm(true);
   }
 
   function handleConfirm() {
