@@ -1,7 +1,14 @@
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS custom_question_answer text;
 
--- Exact same parameter list as 20260610000005 plus p_custom_question_answer at the end.
--- Using DEFAULT NULL so existing callers without the new param continue to work.
+-- Drop the old 24-parameter signature so CREATE OR REPLACE below replaces it
+-- rather than creating a second overload. PostgreSQL matches function identity
+-- on the full parameter list, so 24-param and 25-param are distinct functions.
+DROP FUNCTION IF EXISTS book_slot_and_create_booking(
+  bigint, uuid, integer, text, text, text, numeric, text, text, text,
+  numeric, jsonb, text, text, boolean, timestamptz, boolean, text, text,
+  numeric, numeric, text, text, text
+);
+
 CREATE OR REPLACE FUNCTION book_slot_and_create_booking(
   p_trip_id                  bigint,
   p_user_id                  uuid,
