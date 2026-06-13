@@ -58,6 +58,7 @@ type Booking = {
   trips: { title: string } | null;
   slots: number;
   total_amount: number;
+  platform_commission: number | null;
   status: string;
   created_at: string;
 };
@@ -345,7 +346,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
   ] = await Promise.all([
     adminClient
       .from("bookings")
-      .select("id, full_name, email, phone, trips!bookings_trip_id_fkey(title), slots, total_amount, status, created_at", { count: "exact" })
+      .select("id, full_name, email, phone, trips!bookings_trip_id_fkey(title), slots, total_amount, platform_commission, status, created_at", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(from, to),
     adminClient
@@ -505,6 +506,8 @@ export default async function AdminPage({ searchParams }: PageProps) {
                       <th className="px-4 py-3 font-semibold">Trip</th>
                       <th className="px-4 py-3 font-semibold">Slots</th>
                       <th className="px-4 py-3 font-semibold">Total amount</th>
+                      <th className="px-4 py-3 font-semibold">Commission</th>
+                      <th className="px-4 py-3 font-semibold">Net to organizer</th>
                       <th className="px-4 py-3 font-semibold">Status</th>
                       <th className="px-4 py-3 font-semibold">Date created</th>
                     </tr>
@@ -512,7 +515,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                   <tbody>
                     {bookings.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="px-4 py-12 text-center text-stone-500">
+                        <td colSpan={11} className="px-4 py-12 text-center text-stone-500">
                           No bookings yet.
                         </td>
                       </tr>
@@ -528,6 +531,12 @@ export default async function AdminPage({ searchParams }: PageProps) {
                           <td className="px-4 py-3 text-stone-900">{booking.trips?.title ?? "—"}</td>
                           <td className="px-4 py-3 text-stone-900">{booking.slots}</td>
                           <td className="px-4 py-3 font-medium text-trailhead">{formatCurrency(booking.total_amount)}</td>
+                          <td className="px-4 py-3 text-stone-600">
+                            {booking.platform_commission == null ? "--" : formatCurrency(booking.platform_commission)}
+                          </td>
+                          <td className="px-4 py-3 font-medium text-stone-900">
+                            {booking.platform_commission == null ? "--" : formatCurrency(booking.total_amount - booking.platform_commission)}
+                          </td>
                           <td className="px-4 py-3"><StatusBadge status={booking.status} /></td>
                           <td className="whitespace-nowrap px-4 py-3 text-stone-600">{formatCreatedAt(booking.created_at)}</td>
                         </tr>

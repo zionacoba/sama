@@ -801,11 +801,8 @@ export async function getTripCancelSummary(tripSlug: string): Promise<
     if (b.status !== "confirmed" || b.payout_status !== "unpaid") continue;
     const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
     const gross = isDownpaymentOnly ? Number(b.amount_due ?? 0) : Number(b.total_amount ?? 0);
-    const fullCommission = Number(b.platform_commission ?? 0);
-    const commission =
-      isDownpaymentOnly && Number(b.total_amount ?? 0) > 0
-        ? Math.round((Number(b.amount_due ?? 0) / Number(b.total_amount ?? 0)) * fullCommission * 100) / 100
-        : fullCommission;
+    // platform_commission is the full commission, already deducted from the downpayment. No pro-rating.
+    const commission = Number(b.platform_commission ?? 0);
     const net = Math.round((gross - commission) * 100) / 100;
     pendingEarningsNet = Math.round((pendingEarningsNet + net) * 100) / 100;
   }

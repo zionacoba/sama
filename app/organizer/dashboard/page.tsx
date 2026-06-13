@@ -102,8 +102,8 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
   const now = new Date().toISOString();
 
   // --- Earnings tab data (fetched only when needed) ---
-  type UnpaidBookingRow = { id: number; tripTitle: string; slots: number; netAmount: number };
-  type PayoutHistoryRow = { id: string; remittedAt: string; netAmount: number; bookingCount: number; remittanceReference: string | null };
+  type UnpaidBookingRow = { id: number; tripTitle: string; slots: number; grossAmount: number; commissionAmount: number; commissionRate: number | null; netAmount: number };
+  type PayoutHistoryRow = { id: string; remittedAt: string; grossAmount: number; commissionAmount: number; netAmount: number; bookingCount: number; remittanceReference: string | null };
   type PendingDeductionRow = { id: string; bookingId: number; amount: number; createdAt: string };
   let pendingEarningsTotal = 0;
   let unpaidBookingRows: UnpaidBookingRow[] = [];
@@ -119,7 +119,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     const [{ data: unpaidRaw }, { data: payoutsRaw }, { data: deductionsRaw }] = await Promise.all([
       admin
         .from("bookings")
-        .select("id, slots, total_amount, amount_due, platform_commission, payment_option, balance_collected, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
+        .select("id, slots, total_amount, amount_due, platform_commission, commission_rate_used, payment_option, balance_collected, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
         .eq("status", "confirmed")
         .eq("payout_status", "unpaid") as unknown as Promise<{
           data: Array<{
@@ -128,6 +128,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
             total_amount: number;
             amount_due: number | null;
             platform_commission: number | null;
+            commission_rate_used: number | null;
             payment_option: string;
             balance_collected: boolean;
             trip: { title: string; date_start: string; organizer_id: string } | null;
@@ -135,12 +136,14 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
         }>,
       admin
         .from("payouts" as "trips")
-        .select("id, net_amount, booking_ids, remitted_at, remittance_reference")
+        .select("id, total_amount, platform_commission, net_amount, booking_ids, remitted_at, remittance_reference")
         .eq("organizer_id", organizer.id)
         .eq("status", "remitted")
         .order("remitted_at", { ascending: false }) as unknown as Promise<{
           data: Array<{
             id: string;
+            total_amount: number;
+            platform_commission: number;
             net_amount: number;
             booking_ids: number[];
             remitted_at: string;
@@ -165,13 +168,20 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     for (const b of myUnpaid) {
       const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
       const gross = isDownpaymentOnly ? Number(b.amount_due ?? 0) : Number(b.total_amount);
-      const fullCommission = Number(b.platform_commission ?? 0);
-      const commission = isDownpaymentOnly && Number(b.total_amount) > 0
-        ? Math.round((Number(b.amount_due ?? 0) / Number(b.total_amount)) * fullCommission * 100) / 100
-        : fullCommission;
+      // platform_commission is the full commission, calculated on the total trip price at
+      // booking time and already deducted from the downpayment. No pro-rating.
+      const commission = Number(b.platform_commission ?? 0);
       const net = Math.round((gross - commission) * 100) / 100;
       pendingEarningsTotal = Math.round((pendingEarningsTotal + net) * 100) / 100;
-      unpaidBookingRows.push({ id: b.id, tripTitle: b.trip!.title, slots: b.slots, netAmount: net });
+      unpaidBookingRows.push({
+        id: b.id,
+        tripTitle: b.trip!.title,
+        slots: b.slots,
+        grossAmount: gross,
+        commissionAmount: commission,
+        commissionRate: b.commission_rate_used != null ? Number(b.commission_rate_used) : null,
+        netAmount: net,
+      });
     }
 
     pendingDeductionRows = (deductionsRaw ?? []).map((d) => ({
@@ -185,6 +195,8 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     payoutHistoryRows = (payoutsRaw ?? []).map((p) => ({
       id: p.id,
       remittedAt: p.remitted_at,
+      grossAmount: Number(p.total_amount),
+      commissionAmount: Number(p.platform_commission),
       netAmount: Number(p.net_amount),
       bookingCount: p.booking_ids?.length ?? 0,
       remittanceReference: p.remittance_reference,
@@ -604,6 +616,8 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                         <tr className="border-b border-stone-100 text-xs font-semibold uppercase tracking-wide text-stone-400">
                           <th className="px-5 py-2.5 text-left">Trip</th>
                           <th className="px-5 py-2.5 text-right">Slots</th>
+                          <th className="px-5 py-2.5 text-right">Gross</th>
+                          <th className="px-5 py-2.5 text-right">Commission</th>
                           <th className="px-5 py-2.5 text-right">Your earnings</th>
                         </tr>
                       </thead>
@@ -612,6 +626,15 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                           <tr key={b.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
                             <td className="px-5 py-3 text-stone-900">{b.tripTitle}</td>
                             <td className="px-5 py-3 text-right text-stone-600">{b.slots}</td>
+                            <td className="px-5 py-3 text-right text-stone-600">
+                              {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(b.grossAmount)}
+                            </td>
+                            <td className="px-5 py-3 text-right text-stone-600">
+                              <span>{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(b.commissionAmount)}</span>
+                              {b.commissionRate != null && (
+                                <span className="block text-xs text-stone-400">{Math.round(b.commissionRate * 100)}%</span>
+                              )}
+                            </td>
                             <td className="px-5 py-3 text-right font-semibold text-trailhead">
                               {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(b.netAmount)}
                             </td>

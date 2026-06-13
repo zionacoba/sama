@@ -36,7 +36,8 @@ export async function approveOrganizer(id: string): Promise<void> {
 
   await admin.from("organizers").update({ status: "approved" }).eq("id", id);
 
-  const commissionRate = organizer.commission_rate ?? 10;
+  // commission_rate is stored as a decimal (e.g. 0.05). Render it as a whole percentage.
+  const commissionRatePercent = Math.round((organizer.commission_rate ?? 0.05) * 100);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
   try {
@@ -56,7 +57,7 @@ export async function approveOrganizer(id: string): Promise<void> {
           <li>Create your first trip listing</li>
           <li>Share your trip link with your community</li>
         </ol>
-        <p>Your platform fee is <strong>${commissionRate}%</strong> per booking, locked in for life as a Founding Partner. Payouts are sent every Tuesday via your preferred payout method.</p>
+        <p>Your platform fee is <strong>${commissionRatePercent}%</strong> per booking, locked in for life as a Founding Partner. Payouts are sent every Tuesday via your preferred payout method.</p>
         <p>If you have any questions, just reply to this email.</p>
         <p>— Sama</p>
       `,
@@ -488,10 +489,8 @@ export async function getPendingPayouts(): Promise<{
     const group = grouped.get(orgId)!;
     const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
     const grossAmount = isDownpaymentOnly ? Number(b.amount_due ?? 0) : Number(b.total_amount);
-    const fullCommission = Number(b.platform_commission ?? 0);
-    const commission = isDownpaymentOnly && Number(b.total_amount) > 0
-      ? Math.round((Number(b.amount_due ?? 0) / Number(b.total_amount)) * fullCommission * 100) / 100
-      : fullCommission;
+    // platform_commission is the full commission, already deducted from the downpayment. No pro-rating.
+    const commission = Number(b.platform_commission ?? 0);
     const net = Math.round((grossAmount - commission) * 100) / 100;
 
     group.bookings.push({
@@ -660,14 +659,9 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
     return s + (isDownpaymentOnly ? Number(b.amount_due ?? 0) : Number(b.total_amount));
   }, 0) * 100) / 100;
 
-  const totalCommission = Math.round(bookings.reduce((s, b) => {
-    const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
-    const fullCommission = Number(b.platform_commission ?? 0);
-    if (isDownpaymentOnly && Number(b.total_amount) > 0) {
-      return s + (Number(b.amount_due ?? 0) / Number(b.total_amount)) * fullCommission;
-    }
-    return s + fullCommission;
-  }, 0) * 100) / 100;
+  // platform_commission is the full commission, already deducted from the downpayment. No pro-rating.
+  const totalCommission = Math.round(bookings.reduce((s, b) =>
+    s + Number(b.platform_commission ?? 0), 0) * 100) / 100;
 
   const netAmount = Math.round((totalAmount - totalCommission) * 100) / 100;
   const confirmedIds = bookings.map((b) => b.id);
