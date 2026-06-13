@@ -18,16 +18,12 @@ export const metadata: Metadata = {
 
 const terms = [
   { label: "Platform fee", value: "5% per booking, locked in for life" },
-  { label: "Future organizer rate", value: "Up to 8% (not yet finalized)" },
-  { label: "Trip listings", value: "Unlimited, no extra charges" },
   { label: "Spots available", value: "20 only" },
   { label: "Deadline", value: "July 31, 2026" },
   { label: "Lock-in", value: "None. Stop anytime." },
 ];
 
 const benefits = [
-  "5% platform fee locked in for life",
-  "Unlimited trip listings",
   "Founding Partner badge on your organizer profile, permanent, only for the first 20",
   "Direct line to Zion, your feedback shapes how Sama develops",
   "Featured visibility as Sama grows its audience",
@@ -67,15 +63,15 @@ export default function FoundingPartnersPage() {
         </section>
 
         {/* Key terms */}
-        <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+        <section className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
             Key terms
           </h2>
-          <dl className="mt-6 grid gap-3 sm:grid-cols-2">
+          <dl className="mt-6 grid grid-cols-2 gap-3">
             {terms.map((term) => (
               <div
                 key={term.label}
-                className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"
+                className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5"
               >
                 <dt className="text-xs font-semibold uppercase tracking-widest text-stone-400">
                   {term.label}
@@ -88,11 +84,11 @@ export default function FoundingPartnersPage() {
 
         {/* Benefits */}
         <section className="bg-stone-50">
-          <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
               Founding Partner benefits
             </h2>
-            <ul className="mt-6 space-y-3">
+            <ul className="mt-6 space-y-2 sm:space-y-3">
               {benefits.map((item) => (
                 <li
                   key={item}
@@ -119,7 +115,7 @@ export default function FoundingPartnersPage() {
 
         {/* A founder's note */}
         <section className="bg-trailhead/5">
-          <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
               A founder&apos;s note
             </h2>
@@ -132,7 +128,7 @@ export default function FoundingPartnersPage() {
         </section>
 
         {/* How to apply */}
-        <section className="mx-auto max-w-3xl px-4 py-16 text-center sm:py-20">
+        <section className="mx-auto max-w-3xl px-4 py-10 text-center sm:py-16">
           <h2 className="text-2xl font-bold text-stone-900 sm:text-3xl">Ready to apply?</h2>
           <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-stone-500 sm:text-lg">
             The application takes about 5 minutes. For the best experience, complete it on a desktop

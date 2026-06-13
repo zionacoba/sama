@@ -57,7 +57,7 @@ export default function OrganizersPage() {
             </svg>
           </div>
           <div className="relative">
-            <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight text-white sm:text-6xl">
+            <h1 className="mx-auto max-w-3xl text-3xl font-bold tracking-tight text-white sm:text-6xl">
               Become a Sama Organizer
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-white/80">
@@ -69,7 +69,7 @@ export default function OrganizersPage() {
         </section>
 
         {/* Who we're looking for */}
-        <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+        <section className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
             Who we&apos;re looking for
           </h2>
@@ -77,7 +77,7 @@ export default function OrganizersPage() {
             Sama is not open to everyone. We personally vet every organizer on the platform.
             We&apos;re looking for organizers who:
           </p>
-          <ul className="mt-6 space-y-3">
+          <ul className="mt-6 space-y-2 sm:space-y-3">
             {lookingFor.map((item) => (
               <li key={item} className="flex gap-3 text-base leading-relaxed text-stone-600 sm:text-lg">
                 <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-trailhead" aria-hidden />
@@ -92,11 +92,32 @@ export default function OrganizersPage() {
 
         {/* What Sama handles */}
         <section className="bg-stone-50">
-          <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
               What Sama handles for you
             </h2>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            {/* Mobile: simple checklist */}
+            <ul className="mt-6 space-y-2 sm:hidden">
+              {handles.map((item) => (
+                <li key={item} className="flex gap-3 text-base leading-relaxed text-stone-600">
+                  <svg
+                    className="mt-0.5 h-5 w-5 shrink-0 text-trailhead"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 111.42-1.42l2.79 2.79 6.79-6.79a1 1 0 011.42 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            {/* Desktop: card grid */}
+            <div className="mt-8 hidden gap-4 sm:grid sm:grid-cols-2">
               {handles.map((item) => (
                 <div
                   key={item}
@@ -122,7 +143,7 @@ export default function OrganizersPage() {
         </section>
 
         {/* What Sama stands for */}
-        <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+        <section className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
             What Sama stands for
           </h2>
@@ -135,7 +156,7 @@ export default function OrganizersPage() {
 
         {/* CTA */}
         <section className="bg-stone-50">
-          <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:py-20">
+          <div className="mx-auto max-w-3xl px-4 py-10 text-center sm:py-16">
             <h2 className="text-2xl font-bold text-stone-900 sm:text-3xl">
               Interested in becoming an organizer?
             </h2>
