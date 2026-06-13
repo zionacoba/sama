@@ -160,7 +160,7 @@ export default function OrganizersPage() {
             </div>
             <p className="mx-auto mt-8 max-w-xl text-sm leading-relaxed text-stone-400">
               Sama is a one-person operation. Every application is reviewed personally. Every message
-              gets a real reply. Zion, Founder
+              gets a real reply.
             </p>
           </div>
         </section>
