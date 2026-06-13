@@ -151,6 +151,8 @@ export default function OrganizersPage() {
               </a>
               <a
                 href={BOOKING_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex w-full items-center justify-center rounded-xl border border-stone-200 bg-white px-8 py-3 text-sm font-semibold text-stone-700 shadow-sm transition hover:border-trailhead hover:text-trailhead sm:w-auto"
               >
                 Book a call
