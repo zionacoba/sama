@@ -41,7 +41,7 @@ export default function FoundingPartnersPage() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="relative bg-trailhead px-4 pb-20 pt-32 text-center sm:pb-28 sm:pt-40">
+        <section className="relative bg-trailhead px-4 pb-24 pt-32 text-center sm:pb-32 sm:pt-40">
           {/* Dot grid texture */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
             <svg className="h-full w-full opacity-10" xmlns="http://www.w3.org/2000/svg">
@@ -57,7 +57,7 @@ export default function FoundingPartnersPage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-white/70">
               Founding Partner Invitation
             </p>
-            <h1 className="mx-auto mt-4 max-w-3xl text-3xl font-bold tracking-tight text-white sm:text-5xl">
+            <h1 className="mx-auto mt-4 max-w-3xl text-3xl font-bold tracking-tight text-white sm:text-4xl">
               You&apos;re invited to join Sama as a Founding Partner.
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/80">
@@ -67,7 +67,7 @@ export default function FoundingPartnersPage() {
         </section>
 
         {/* Key terms */}
-        <section className="mx-auto max-w-3xl px-4 py-14 sm:py-20">
+        <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
             Key terms
           </h2>
@@ -88,7 +88,7 @@ export default function FoundingPartnersPage() {
 
         {/* Benefits */}
         <section className="bg-stone-50">
-          <div className="mx-auto max-w-3xl px-4 py-14 sm:py-20">
+          <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
               Founding Partner benefits
             </h2>
@@ -117,11 +117,11 @@ export default function FoundingPartnersPage() {
           </div>
         </section>
 
-        {/* A note from Zion */}
+        {/* A founder's note */}
         <section className="bg-trailhead/5">
-          <div className="mx-auto max-w-3xl px-4 py-14 sm:py-20">
+          <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
-              A note from Zion
+              A founder&apos;s note
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-stone-700 sm:text-xl">
               I&apos;m personally inviting a small group of organizers I trust and respect to help
@@ -132,7 +132,7 @@ export default function FoundingPartnersPage() {
         </section>
 
         {/* How to apply */}
-        <section className="mx-auto max-w-3xl px-4 py-14 text-center sm:py-20">
+        <section className="mx-auto max-w-3xl px-4 py-16 text-center sm:py-20">
           <h2 className="text-2xl font-bold text-stone-900 sm:text-3xl">Ready to apply?</h2>
           <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-stone-500 sm:text-lg">
             The application takes about 5 minutes. For the best experience, complete it on a desktop
@@ -147,8 +147,8 @@ export default function FoundingPartnersPage() {
             </Link>
           </div>
           <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-stone-400">
-            You&apos;ll need to create a Sama account first if you haven&apos;t already. The
-            application is reviewed personally by Zion within a few days.
+            You&apos;ll need to create a Sama account first if you haven&apos;t already.
+            Applications are personally reviewed. You&apos;ll hear back within a few days.
           </p>
         </section>
       </main>

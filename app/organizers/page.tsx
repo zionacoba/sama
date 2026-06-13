@@ -6,18 +6,18 @@ import { Footer } from "@/app/components/footer";
 export const metadata: Metadata = {
   title: "Become an Organizer | Sama",
   description:
-    "Sama is looking for serious, accountable Philippine outdoor organizers. Learn about the Founding Partner opportunity.",
+    "Sama is looking for serious, accountable Philippine outdoor organizers who care about doing this right.",
   openGraph: {
     title: "Become an Organizer | Sama",
     description:
-      "Sama is looking for serious, accountable Philippine outdoor organizers. Learn about the Founding Partner opportunity.",
+      "Sama is looking for serious, accountable Philippine outdoor organizers who care about doing this right.",
     url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/organizers`,
     type: "website",
   },
 };
 
-// Placeholder for the "Book a call with Zion" scheduling link. Replace before launch.
-const BOOKING_LINK = "[BOOKING LINK]";
+// Scheduling link for booking a call.
+const BOOKING_LINK = "https://calendar.app.google/1dBzwm2bX957oQ8C9";
 
 const lookingFor = [
   "Have a track record of running safe, well-organized trips",
@@ -121,23 +121,6 @@ export default function OrganizersPage() {
           </div>
         </section>
 
-        {/* Founding Partner opportunity */}
-        <section className="bg-trailhead/5">
-          <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
-              Founding Partner opportunity
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-stone-600 sm:text-lg">
-              We are currently onboarding our first 20 founding organizers by personal invitation.
-              Founding partners receive a 5% platform fee locked in for life, the lowest rate Sama
-              will ever offer.
-            </p>
-            <p className="mt-4 text-sm font-medium text-stone-500">
-              Founding partner applications are open by invitation only and close on July 31, 2026.
-            </p>
-          </div>
-        </section>
-
         {/* What Sama stands for */}
         <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
@@ -157,8 +140,7 @@ export default function OrganizersPage() {
               Interested in becoming an organizer?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-stone-500 sm:text-lg">
-              We&apos;re onboarding founding partners by invitation. If you&apos;d like to be
-              considered for a future cohort or have questions, reach out directly.
+              Email us or book a call if you&apos;re interested or have questions.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
               <a
@@ -171,7 +153,7 @@ export default function OrganizersPage() {
                 href={BOOKING_LINK}
                 className="inline-flex w-full items-center justify-center rounded-xl border border-stone-200 bg-white px-8 py-3 text-sm font-semibold text-stone-700 shadow-sm transition hover:border-trailhead hover:text-trailhead sm:w-auto"
               >
-                Book a call with Zion
+                Book a call
               </a>
             </div>
             <p className="mx-auto mt-8 max-w-xl text-sm leading-relaxed text-stone-400">
