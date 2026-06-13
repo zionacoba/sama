@@ -1107,11 +1107,6 @@ export async function cancelBooking(bookingId: number) {
       .eq("id", booking.payout_id);
   }
 
-  await admin
-    .from("booking_participants")
-    .delete()
-    .eq("booking_id", bookingId);
-
   // Restore the slot unconditionally — we have everything we need from the
   // booking row. Doing this before the trip fetch ensures the slot is always
   // returned even if the trip has been deleted or the fetch fails.
