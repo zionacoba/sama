@@ -126,7 +126,6 @@ export function TripRow({ trip: initialTrip, counts }: { trip: OrganizerTrip; co
           <CancelTripButton
             tripSlug={initialTrip.slug}
             tripTitle={initialTrip.title}
-            totalBookings={totalBookings}
           />
         )}
       </div>

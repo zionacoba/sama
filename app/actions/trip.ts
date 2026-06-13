@@ -757,6 +757,62 @@ export async function publishTrip(tripSlug: string): Promise<{ error: string } |
   return { success: true };
 }
 
+export async function getTripCancelSummary(tripSlug: string): Promise<
+  | { error: string }
+  | { bookingCount: number; paymongoCount: number; manualCount: number; pendingEarningsNet: number }
+> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { data: organizer } = await supabase
+    .from("organizers")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!organizer) return { error: "Not an organizer." };
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: trip } = await admin
+    .from("trips")
+    .select("id, organizer_id")
+    .eq("slug", tripSlug)
+    .maybeSingle();
+
+  if (!trip || String(trip.organizer_id) !== String(organizer.id)) {
+    return { error: "Trip not found." };
+  }
+
+  const { data: bookings } = await admin
+    .from("bookings")
+    .select("paymongo_payment_id, status, payout_status, total_amount, amount_due, payment_option, balance_collected, platform_commission")
+    .eq("trip_id", trip.id)
+    .in("status", ["pending", "confirmed", "payment_pending"]);
+
+  const all = bookings ?? [];
+  const bookingCount = all.length;
+  const paymongoCount = all.filter((b) => !!b.paymongo_payment_id).length;
+  const manualCount = bookingCount - paymongoCount;
+
+  let pendingEarningsNet = 0;
+  for (const b of all) {
+    if (b.status !== "confirmed" || b.payout_status !== "unpaid") continue;
+    const isDownpaymentOnly = b.payment_option === "downpayment" && !b.balance_collected;
+    const gross = isDownpaymentOnly ? Number(b.amount_due ?? 0) : Number(b.total_amount ?? 0);
+    const fullCommission = Number(b.platform_commission ?? 0);
+    const commission =
+      isDownpaymentOnly && Number(b.total_amount ?? 0) > 0
+        ? Math.round((Number(b.amount_due ?? 0) / Number(b.total_amount ?? 0)) * fullCommission * 100) / 100
+        : fullCommission;
+    const net = Math.round((gross - commission) * 100) / 100;
+    pendingEarningsNet = Math.round((pendingEarningsNet + net) * 100) / 100;
+  }
+
+  return { bookingCount, paymongoCount, manualCount, pendingEarningsNet };
+}
+
 export async function cancelTrip(tripSlug: string): Promise<{ error: string } | void> {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -800,14 +856,6 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     .update({ status: "cancelled" })
     .eq("trip_id", trip.id)
     .in("status", ["pending", "confirmed", "payment_pending"]);
-
-  const cancelledBookingIds = (bookings ?? []).map((b) => b.id);
-  if (cancelledBookingIds.length > 0) {
-    await admin
-      .from("booking_participants")
-      .delete()
-      .in("booking_id", cancelledBookingIds);
-  }
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {
     weekday: "long",
