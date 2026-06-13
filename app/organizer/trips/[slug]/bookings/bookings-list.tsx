@@ -87,6 +87,162 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function BookingCard({
+  b,
+  participants,
+  needsManualApproval,
+  tripHasPassed,
+  customQuestions,
+  customQuestion,
+}: {
+  b: Booking;
+  participants: BookingParticipant[] | undefined;
+  needsManualApproval: boolean;
+  tripHasPassed: boolean;
+  customQuestions?: string[] | null;
+  customQuestion?: string | null;
+}) {
+  const qs: string[] = customQuestions ?? (customQuestion ? [customQuestion] : []);
+  const answers: string[] =
+    (b.custom_question_answers as string[] | null) ?? (b.custom_question_answer ? [b.custom_question_answer] : []);
+  const showBalance = b.payment_option === "downpayment" && b.amount_due != null;
+  const balance = showBalance ? b.total_amount - (b.amount_due as number) : 0;
+  const showActions = (b.status === "pending" && needsManualApproval) || b.status === "confirmed";
+
+  return (
+    <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          {b.nickname && <div className="font-semibold text-stone-900">{b.nickname}</div>}
+          <div className={b.nickname ? "text-sm text-stone-500" : "font-semibold text-stone-900"}>{b.full_name}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+            <a href={`tel:${b.phone}`} className="text-xs text-stone-500 hover:text-trailhead hover:underline">
+              {b.phone}
+            </a>
+            {b.facebook_url && (
+              <a
+                href={b.facebook_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-trailhead hover:underline"
+              >
+                FB Profile
+              </a>
+            )}
+          </div>
+        </div>
+        <StatusBadge status={b.status} />
+      </div>
+
+      {(b.medical_notes || b.notes) && (
+        <p className="mt-2 text-xs text-stone-400">
+          🏥 {[b.medical_notes, b.notes].filter(Boolean).join(" · ")}
+        </p>
+      )}
+      {qs.map((q, qi) =>
+        answers[qi] ? (
+          <p key={qi} className="mt-1 text-xs text-stone-500">
+            <span className="font-medium text-stone-600">{q}:</span> {answers[qi]}
+          </p>
+        ) : null,
+      )}
+
+      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-stone-100 pt-3 text-sm">
+        <div className="min-w-0">
+          <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Email</dt>
+          <dd className="mt-0.5 break-words text-stone-600">{b.email}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Emergency contact</dt>
+          <dd className="mt-0.5 text-stone-700">
+            {b.emergency_contact_name ? (
+              <>
+                <span className="font-medium">{b.emergency_contact_name}</span>
+                {b.emergency_contact_phone && (
+                  <span className="block text-stone-400">{b.emergency_contact_phone}</span>
+                )}
+              </>
+            ) : (
+              <span className="text-stone-300">—</span>
+            )}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Slots</dt>
+          <dd className="mt-0.5 text-stone-700">{b.slots}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Booked on</dt>
+          <dd className="mt-0.5 text-stone-500">{formatDateTime(b.created_at)}</dd>
+        </div>
+      </dl>
+
+      {b.slots > 1 &&
+        participants &&
+        (() => {
+          const done = participants.filter((p) => p.completed).length;
+          return (
+            <details className="mt-3">
+              <summary className="cursor-pointer list-none text-xs font-medium text-stone-400 hover:text-stone-600">
+                {done}/{b.slots} confirmed
+              </summary>
+              <ul className="mt-1 space-y-0.5 pl-0.5">
+                {participants.map((p) => (
+                  <li key={p.slot_number} className="flex items-center gap-1 text-xs">
+                    <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
+                    <span className={p.completed ? "text-stone-700" : "text-stone-400"}>
+                      {p.full_name ?? `Participant ${p.slot_number + 1}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          );
+        })()}
+
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-stone-100 pt-3">
+        <span className="text-xs font-medium uppercase tracking-wide text-stone-400">Amount</span>
+        <div className="flex flex-col items-end gap-1">
+          <span className="font-semibold text-trailhead">{formatCurrency(b.total_amount)}</span>
+          {showBalance &&
+            (b.balance_collected ? (
+              b.balance_payment_gateway_status === "paid" ? (
+                <span className="text-xs font-semibold text-emerald-600">Paid online ✓</span>
+              ) : (
+                <span className="text-xs font-semibold text-emerald-600">Collected ✓</span>
+              )
+            ) : (
+              <div className="flex flex-col items-end gap-1">
+                <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 whitespace-nowrap">
+                  Balance pending
+                </span>
+                {b.status === "confirmed" && (
+                  <MarkBalanceButton
+                    bookingId={b.id}
+                    participantName={b.full_name}
+                    balanceAmount={formatCurrency(balance)}
+                  />
+                )}
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {showActions && (
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-stone-100 pt-3">
+          {b.status === "pending" && needsManualApproval && <BookingActions bookingId={b.id} />}
+          {b.status === "confirmed" && (
+            <>
+              <MarkTransferButton bookingId={b.id} participantName={b.full_name} />
+              {tripHasPassed && <MarkNoShowButton bookingId={b.id} participantName={b.full_name} />}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function BookingsListWithTabs({
   bookings,
   participantsRecord,
@@ -197,12 +353,29 @@ export function BookingsListWithTabs({
         </div>
       )}
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-        {displayed.length === 0 ? (
+      {displayed.length === 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
           <p className="px-6 py-12 text-center text-sm text-stone-400">{emptyMessage}</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+        </div>
+      ) : (
+        <>
+          <div className="mt-4 space-y-3 lg:hidden">
+            {displayed.map((b) => (
+              <BookingCard
+                key={b.id}
+                b={b}
+                participants={participantsRecord[String(b.id)]}
+                needsManualApproval={needsManualApproval}
+                tripHasPassed={tripHasPassed}
+                customQuestions={customQuestions}
+                customQuestion={customQuestion}
+              />
+            ))}
+          </div>
+
+          <div className="mt-4 hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm lg:block">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
                   <th className="px-5 py-3">Name</th>
@@ -350,9 +523,10 @@ export function BookingsListWithTabs({
                 })}
               </tbody>
             </table>
+            </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
     </>
   );
 }
