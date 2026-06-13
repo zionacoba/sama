@@ -53,7 +53,7 @@ export default function FoundingPartnersPage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-white/70">
               Founding Partner Invitation
             </p>
-            <h1 className="mx-auto mt-4 max-w-3xl text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="mx-auto mt-4 max-w-3xl text-3xl font-bold tracking-tight text-white! sm:text-4xl">
               You&apos;re invited to join Sama as a Founding Partner.
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/80">

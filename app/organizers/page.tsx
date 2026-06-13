@@ -57,7 +57,7 @@ export default function OrganizersPage() {
             </svg>
           </div>
           <div className="relative">
-            <h1 className="mx-auto max-w-3xl text-3xl font-bold tracking-tight text-white sm:text-6xl">
+            <h1 className="mx-auto max-w-3xl text-3xl font-bold tracking-tight text-white! sm:text-6xl">
               Become a Sama Organizer
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-white/80">
