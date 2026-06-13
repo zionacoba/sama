@@ -196,7 +196,7 @@ export default function AboutPage() {
                 hello@sama.com.ph
               </a>
               <Link
-                href="/apply"
+                href="/organizers"
                 className="inline-flex items-center justify-center rounded-xl border border-stone-200 bg-white px-6 py-3 text-sm font-semibold text-stone-700 shadow-sm transition hover:border-trailhead hover:text-trailhead"
               >
                 Become an organizer
