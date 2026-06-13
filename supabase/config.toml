@@ -1,3 +1,11 @@
+[functions.cleanup-abandoned-payments]
+verify_jwt = false
+
+[functions.pre-trip-reminder]
+verify_jwt = false
+
+[functions.pending-approval-reminder]
+verify_jwt = false
+
 [functions.stale-application-reminder]
 verify_jwt = false
-schedule = "0 1 * * 1"
