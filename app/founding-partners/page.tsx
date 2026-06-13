@@ -63,7 +63,7 @@ export default function FoundingPartnersPage() {
         </section>
 
         {/* Key terms */}
-        <section className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
+        <section className="mx-auto max-w-3xl px-6 py-10 sm:px-4 sm:py-16">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
             Key terms
           </h2>
@@ -84,7 +84,7 @@ export default function FoundingPartnersPage() {
 
         {/* Benefits */}
         <section className="bg-stone-50">
-          <div className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
+          <div className="mx-auto max-w-3xl px-6 py-10 sm:px-4 sm:py-16">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
               Founding Partner benefits
             </h2>
@@ -115,7 +115,7 @@ export default function FoundingPartnersPage() {
 
         {/* A founder's note */}
         <section className="bg-trailhead/5">
-          <div className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
+          <div className="mx-auto max-w-3xl px-6 py-10 sm:px-4 sm:py-16">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
               A founder&apos;s note
             </h2>
@@ -128,7 +128,7 @@ export default function FoundingPartnersPage() {
         </section>
 
         {/* How to apply */}
-        <section className="mx-auto max-w-3xl px-4 py-10 text-center sm:py-16">
+        <section className="mx-auto max-w-3xl px-6 py-10 text-center sm:px-4 sm:py-16">
           <h2 className="text-2xl font-bold text-stone-900 sm:text-3xl">Ready to apply?</h2>
           <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-stone-500 sm:text-lg">
             The application takes about 5 minutes. For the best experience, complete it on a desktop

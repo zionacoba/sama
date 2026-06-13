@@ -69,7 +69,7 @@ export default function OrganizersPage() {
         </section>
 
         {/* Who we're looking for */}
-        <section className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
+        <section className="mx-auto max-w-3xl px-6 py-10 sm:px-4 sm:py-16">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
             Who we&apos;re looking for
           </h2>
@@ -92,7 +92,7 @@ export default function OrganizersPage() {
 
         {/* What Sama handles */}
         <section className="bg-stone-50">
-          <div className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
+          <div className="mx-auto max-w-3xl px-6 py-10 sm:px-4 sm:py-16">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
               What Sama handles for you
             </h2>
@@ -143,7 +143,7 @@ export default function OrganizersPage() {
         </section>
 
         {/* What Sama stands for */}
-        <section className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
+        <section className="mx-auto max-w-3xl px-6 py-10 sm:px-4 sm:py-16">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
             What Sama stands for
           </h2>
@@ -156,7 +156,7 @@ export default function OrganizersPage() {
 
         {/* CTA */}
         <section className="bg-stone-50">
-          <div className="mx-auto max-w-3xl px-4 py-10 text-center sm:py-16">
+          <div className="mx-auto max-w-3xl px-6 py-10 text-center sm:px-4 sm:py-16">
             <h2 className="text-2xl font-bold text-stone-900 sm:text-3xl">
               Interested in becoming an organizer?
             </h2>
