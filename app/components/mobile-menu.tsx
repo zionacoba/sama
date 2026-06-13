@@ -135,7 +135,7 @@ export function MobileMenu({ isLoggedIn, isAdmin, email, displayName, organizerS
                   <span className="px-4 py-3 text-stone-400">Application pending</span>
                 ) : (
                   <Link
-                    href="/apply"
+                    href="/organizers"
                     onClick={close}
                     className="px-4 py-3 font-medium text-stone-700 transition hover:bg-trailhead-muted hover:text-trailhead"
                   >

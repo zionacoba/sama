@@ -5,7 +5,7 @@ export function Footer() {
     <footer className="border-t border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-500">
       © {new Date().getFullYear()} Sama.
       {" · "}
-      <Link href="/apply" className="underline-offset-4 hover:text-trailhead hover:underline">
+      <Link href="/organizers" className="underline-offset-4 hover:text-trailhead hover:underline">
         Become an Organizer
       </Link>
       {" · "}
