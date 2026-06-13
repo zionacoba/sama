@@ -29,6 +29,8 @@ type BookingModalProps = {
   customQuestions?: string[] | null;
   autoOpen?: boolean;
   compact?: boolean;
+  initialName?: string;
+  initialEmail?: string;
 };
 
 function formatCurrency(amount: number) {
@@ -58,6 +60,8 @@ export function BookingModal({
   customQuestions,
   autoOpen = false,
   compact = false,
+  initialName = "",
+  initialEmail = "",
 }: BookingModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -78,8 +82,8 @@ export function BookingModal({
   const openRef = useRef(false);
   openRef.current = open;
 
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState(initialName);
+  const [email, setEmail] = useState(initialEmail);
   const [phone, setPhone] = useState("");
   const [slots, setSlots] = useState(1);
   const [participants, setParticipants] = useState<string[]>([]);
@@ -245,8 +249,8 @@ export function BookingModal({
   }, [error]);
 
   function resetForm() {
-    setFullName("");
-    setEmail("");
+    setFullName(initialName);
+    setEmail(initialEmail);
     setPhone("");
     setSlots(1);
     setParticipants([]);

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -163,14 +164,19 @@ type PageProps = {
   searchParams: Promise<{ book?: string; published?: string }>;
 };
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const supabase = await createSupabaseServerClient();
-  const { data: trip } = await supabase
+const getTripBySlug = cache(async (slug: string) => {
+  const admin = createSupabaseAdminClient();
+  const { data } = await admin
     .from("trips")
-    .select("title, description, photos, destination")
+    .select("id, title, slug, destination, region, date_start, date_end, total_slots, remaining_slots, price, payment_type, min_downpayment, downpayment_cutoff_days, difficulty, activity_type, duration, meeting_points, meeting_point, description, photos, waiver_text, cancellation_policy, cancellation_policy_custom, messenger_gc_link, organizer_id, status, is_template, template_id, includes, what_to_bring, waitlist_enabled, custom_questions, custom_question, organizers!organizer_id(display_name, full_name, bio, photo_url, facebook_url, social_links, is_founding_partner, user_id)")
     .eq("slug", slug)
     .maybeSingle();
+  return data;
+});
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const trip = await getTripBySlug(slug);
 
   if (!trip) {
     return { title: "Trip not found" };
@@ -206,8 +212,8 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
 
-  const [{ data: trip }, { data: { user } }] = await Promise.all([
-    admin.from("trips").select("id, title, slug, destination, region, date_start, date_end, total_slots, remaining_slots, price, payment_type, min_downpayment, downpayment_cutoff_days, difficulty, activity_type, duration, meeting_points, meeting_point, description, photos, waiver_text, cancellation_policy, cancellation_policy_custom, messenger_gc_link, organizer_id, status, is_template, template_id, includes, what_to_bring, waitlist_enabled, custom_questions, custom_question, organizers!organizer_id(display_name, full_name, bio, photo_url, facebook_url, social_links, is_founding_partner, user_id)").eq("slug", slug).maybeSingle(),
+  const [trip, { data: { user } }] = await Promise.all([
+    getTripBySlug(slug),
     supabase.auth.getUser(),
   ]);
 
@@ -255,8 +261,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
   const organizerData = tripData.organizers ?? null;
 
   const [
-    { data: reviewsData },
-    reviewCountResult,
+    reviewsResult,
     { data: siblingRunsData },
     { data: existingWaitlistEntry },
     { data: existingBooking },
@@ -264,19 +269,12 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
     tripData.organizer_id
       ? supabase
           .from("reviews")
-          .select("id, full_name, rating, body, created_at, organizer_response, organizer_responded_at, trips(title, date_start)")
+          .select("id, full_name, rating, body, created_at, organizer_response, organizer_responded_at, trips(title, date_start)", { count: "exact" })
           .eq("organizer_id", tripData.organizer_id)
           .eq("approved", true)
           .order("created_at", { ascending: false })
           .limit(3)
-      : Promise.resolve({ data: [] }),
-    tripData.organizer_id
-      ? supabase
-          .from("reviews")
-          .select("id", { count: "exact", head: true })
-          .eq("organizer_id", tripData.organizer_id)
-          .eq("approved", true)
-      : Promise.resolve({ count: 0 }),
+      : Promise.resolve({ data: [] as any[], count: 0 }),
     tripData.template_id
       ? supabase
           .from("trips")
@@ -304,8 +302,8 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
   const isPast = new Date(tripData.date_start) < new Date();
 
-  const reviews = (reviewsData ?? []) as unknown as Review[];
-  const totalReviewCount = reviewCountResult.count ?? reviews.length;
+  const reviews = (reviewsResult.data ?? []) as unknown as Review[];
+  const totalReviewCount = reviewsResult.count ?? reviews.length;
   const organizer = organizerData as OrganizerInfo | null;
   const organizerName = organizer?.display_name ?? organizer?.full_name ?? null;
 
@@ -731,6 +729,8 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   organizerName={organizerName}
                   customQuestions={tripData.custom_questions ?? (tripData.custom_question ? [tripData.custom_question] : null)}
                   autoOpen={book === "1"}
+                  initialName={(user?.user_metadata?.full_name as string | undefined)?.trim() ?? ""}
+                  initialEmail={user?.email ?? ""}
                 />
               )}
             </div>
@@ -824,6 +824,8 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                     waiverText={tripData.waiver_text ?? null}
                     organizerName={organizerName}
                     autoOpen={book === "1"}
+                    initialName={(user?.user_metadata?.full_name as string | undefined)?.trim() ?? ""}
+                    initialEmail={user?.email ?? ""}
                   />
                 )}
               </div>
