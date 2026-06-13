@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Navbar } from "@/app/components/navbar";
+import { Footer } from "@/app/components/footer";
 
 export const metadata: Metadata = {
   title: "About Sama",
@@ -37,7 +38,7 @@ export default function AboutPage() {
           {/* Content */}
           <div className="relative">
             <img src="/sama-mark.svg" alt="Sama" className="h-16 w-auto mx-auto mb-6 brightness-0 invert" />
-            <h1 className="mt-6 text-5xl font-bold tracking-tight text-white sm:text-7xl">
+            <h1 className="mt-6 text-3xl font-bold tracking-tight text-white! sm:text-7xl">
               Adventure, together.
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/80">
@@ -55,7 +56,7 @@ export default function AboutPage() {
         </section>
 
         {/* Our Name */}
-        <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+        <section className="mx-auto max-w-3xl px-6 py-16 sm:px-4 sm:py-20">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
             Our name
           </h2>
@@ -75,7 +76,7 @@ export default function AboutPage() {
 
         {/* Mission */}
         <section className="bg-stone-50">
-          <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-3xl px-6 py-16 sm:px-4 sm:py-20">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
               Mission
             </h2>
@@ -98,7 +99,7 @@ export default function AboutPage() {
 
         {/* Values */}
         <section className="bg-trailhead/5">
-          <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-3xl px-6 py-16 sm:px-4 sm:py-20">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
               Values
             </h2>
@@ -141,7 +142,7 @@ export default function AboutPage() {
         </section>
 
         {/* Who we are for */}
-        <section className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+        <section className="mx-auto max-w-3xl px-6 py-16 sm:px-4 sm:py-20">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
             Who we are for
           </h2>
@@ -165,7 +166,7 @@ export default function AboutPage() {
         </section>
 
         {/* Mission quote */}
-        <section className="bg-trailhead px-4 py-20 text-center sm:py-24">
+        <section className="bg-trailhead px-6 py-20 text-center sm:px-4 sm:py-24">
           <blockquote className="mx-auto max-w-2xl">
             <p className="text-2xl font-bold leading-snug text-white sm:text-3xl">
               &ldquo;The outdoors of the Philippines is one of the most extraordinary in the
@@ -177,7 +178,7 @@ export default function AboutPage() {
 
         {/* Contact */}
         <section className="bg-stone-50">
-          <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-3xl px-6 py-16 sm:px-4 sm:py-20">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-trailhead">
               Contact
             </h2>
@@ -186,7 +187,7 @@ export default function AboutPage() {
             </h3>
             <p className="mt-4 text-base leading-relaxed text-stone-500 sm:text-lg">
               Sama is built and run personally by its founder. If you have a question, an idea,
-              or just want to say hello, I'd love to hear from you.
+              or just want to say hello, I&apos;d love to hear from you.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
               <a
@@ -206,30 +207,7 @@ export default function AboutPage() {
         </section>
       </main>
 
-      <footer className="border-t border-stone-200 bg-white px-4 py-8 text-center text-sm text-stone-400">
-        <p>Sama is built for the Philippine outdoor community, by people who love it.</p>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-          <Link href="/" className="underline-offset-4 hover:text-trailhead hover:underline">
-            Home
-          </Link>
-          <span aria-hidden>·</span>
-          <Link href="/trips" className="underline-offset-4 hover:text-trailhead hover:underline">
-            Browse trips
-          </Link>
-          <span aria-hidden>·</span>
-          <Link href="/terms" className="underline-offset-4 hover:text-trailhead hover:underline">
-            Terms
-          </Link>
-          <span aria-hidden>·</span>
-          <a href="/terms#refund-policy" className="underline-offset-4 hover:text-trailhead hover:underline">
-            Refund Policy
-          </a>
-          <span aria-hidden>·</span>
-          <Link href="/privacy" className="underline-offset-4 hover:text-trailhead hover:underline">
-            Privacy
-          </Link>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
