@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       try {
         await sendEmail(
           booking.email,
-          `Your trip is in 3 days — ${trip.title}`,
+          `Your trip is in 3 days: ${trip.title}`,
           `
             <p>Hi ${escapeHtml(booking.full_name)}, your trip is coming up!</p>
             <ul>
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
             ${trip.messenger_gc_link ? `<p>Join the group chat to stay updated:<br><a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>` : ""}
             <p><a href="${bookingUrl}">View your booking details</a></p>
             <p>If you have any questions, reply to this email or contact your organizer.</p>
-            <p>— Sama</p>
+            <p>Sama</p>
           `,
         );
         await supabase

@@ -49,18 +49,18 @@ export async function approveOrganizer(id: string): Promise<void> {
       subject: "Your Sama organizer application has been approved!",
       html: `
         <p>Hi ${escapeHtml(organizer.full_name)},</p>
-        <p>Great news — your application to become a Sama organizer has been <strong>approved</strong>!</p>
+        <p>Great news, your application to become a Sama organizer has been <strong>approved</strong>!</p>
         <p>You can now log in to your organizer dashboard to create and publish trips:</p>
         <p><a href="${siteUrl}/organizer/dashboard">${siteUrl.replace("https://", "")}/organizer/dashboard</a></p>
         <p>Here's how to get started:</p>
         <ol>
-          <li>Complete your organizer profile — add a photo, bio, and payout details</li>
+          <li>Complete your organizer profile: add a photo, bio, and payout details</li>
           <li>Create your first trip listing</li>
           <li>Share your trip link with your community</li>
         </ol>
         <p>Your platform fee is <strong>${commissionRatePercent}%</strong> per booking, locked in for life as a Founding Partner. Payouts are sent every Tuesday via your preferred payout method.</p>
         <p>If you have any questions, just reply to this email.</p>
-        <p>— Sama</p>
+        <p>Sama</p>
       `,
     });
   } catch (err) {
@@ -187,17 +187,17 @@ export async function rejectOrganizer(id: string): Promise<void> {
         new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
       try {
         const rows = manualRefundList
-          .map((b) => `<li>Booking ${b.id} — ${escapeHtml(b.full_name)} (${escapeHtml(b.email)}): ${fmtCurrency(b.amount)}</li>`)
+          .map((b) => `<li>Booking ${b.id}, ${escapeHtml(b.full_name)} (${escapeHtml(b.email)}): ${fmtCurrency(b.amount)}</li>`)
           .join('\n');
         await resend.emails.send({
           from: FROM_ADDRESS,
           to: ADMIN_EMAIL,
           replyTo: REPLY_TO_ADDRESS,
-          subject: `[Admin] Manual refunds required — organizer ${escapeHtml(organizer.full_name)} rejected`,
+          subject: `[Admin] Manual refunds required: organizer ${escapeHtml(organizer.full_name)} rejected`,
           html: `
             <p>The following bookings could not be automatically refunded after organizer <strong>${escapeHtml(organizer.full_name)}</strong> was rejected (QR Ph payments or API errors). Please process these manually:</p>
             <ul>${rows}</ul>
-            <p>— Sama System</p>
+            <p>Sama System</p>
           `,
         });
       } catch (err) {
@@ -216,10 +216,10 @@ export async function rejectOrganizer(id: string): Promise<void> {
       const refundLine = !hasPaid
         ? `<p>If you have any questions, please contact us at <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`
         : (initialSucceeded && balanceSucceeded
-            ? `<p>A full refund of your payment has been processed and will reflect automatically within 3–5 business days.</p>`
+            ? `<p>A full refund of your payment has been processed and will reflect automatically within 3 to 5 business days.</p>`
             : (initialSucceeded && !balanceSucceeded
-                ? `<p>Your downpayment has been refunded. Your balance payment could not be refunded automatically — Sama will process it manually within 3–5 business days.</p>`
-                : `<p>Sama will process your refund manually within 3–5 business days. If you haven't received it after that time, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${booking.id}</strong></p>`));
+                ? `<p>Your downpayment has been refunded. Your balance payment could not be refunded automatically. Sama will process it manually within 3 to 5 business days.</p>`
+                : `<p>Sama will process your refund manually within 3 to 5 business days. If you haven't received it after that time, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${booking.id}</strong></p>`));
       try {
         await resend.emails.send({
           from: FROM_ADDRESS,
@@ -232,7 +232,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
             <p>Your booking has been cancelled.</p>
             ${refundLine}
             <p>We apologise for the inconvenience.</p>
-            <p>— Sama</p>
+            <p>Sama</p>
           `,
         });
       } catch (err) {
@@ -259,7 +259,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
         <p>After reviewing your application, we're unable to approve it at this time.</p>
         ${tripsUnpublishedNote}
         <p>If you'd like to reapply in the future, you can do so at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/apply">sama.com.ph/apply</a>.</p>
-        <p>— Sama</p>
+        <p>Sama</p>
       `,
     });
   } catch (err) {
@@ -950,7 +950,7 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
           <p>This covers <strong>${bookingCount} booking${bookingCount !== 1 ? "s" : ""}${escapeHtml(dateRange)}</strong>.</p>
           ${notes ? `<p><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ""}
           <p>If you have any questions, please reply to this email.</p>
-          <p>— Sama</p>
+          <p>Sama</p>
         `,
       });
     } catch (err) {

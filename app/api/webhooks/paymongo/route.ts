@@ -138,7 +138,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
           from: FROM_ADDRESS,
           to: ADMIN_EMAIL,
           replyTo: REPLY_TO_ADDRESS,
-          subject: "Action needed: payment received for cancelled booking — manual refund required",
+          subject: "Action needed: payment received for cancelled booking, manual refund required",
           html: `
             <p>A payment was received for a booking that was already cancelled by the cleanup job.</p>
             <p><strong>Booking ID:</strong> ${booking.id}</p>
@@ -278,7 +278,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
               : ""
           }
           <p>You can view your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
-          <p>— Sama</p>
+          <p>Sama</p>
         `
         : `
           <p>Hi ${escapeHtml(booking.full_name)},</p>
@@ -292,8 +292,8 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
             ${meetingLine}
           </ul>
           ${balanceNote}
-          <p>The organizer will review your request. This usually takes 24–48 hours. You can track your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
-          <p>— Sama</p>
+          <p>The organizer will review your request. This usually takes 24 to 48 hours. You can track your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
+          <p>Sama</p>
         `,
     });
   } catch (err) {
@@ -361,7 +361,7 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
               }
               If this booking was made less than 7 days before the trip, remittance happens the Tuesday after the trip date instead.
             </p>
-            <p>— Sama</p>
+            <p>Sama</p>
           `,
         });
       }
@@ -441,7 +441,7 @@ async function handleBalancePayment(
         <p>Hi ${escapeHtml(booking.full_name)},</p>
         <p>Your remaining balance of <strong>${fmt(balance)}</strong> for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been received. You are all set for your trip. See you there!</p>
         <p>You can view your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
-        <p>— Sama</p>
+        <p>Sama</p>
       `,
     });
   } catch (err) {
@@ -461,12 +461,12 @@ async function handleBalancePayment(
           from: FROM_ADDRESS,
           to: organizer.email,
           replyTo: REPLY_TO_ADDRESS,
-          subject: `Balance payment received: ${booking.full_name} — ${trip.title}`,
+          subject: `Balance payment received: ${booking.full_name}, ${trip.title}`,
           html: `
             <p>Hi,</p>
             <p><strong>${escapeHtml(booking.full_name)}</strong> has paid their remaining balance of <strong>${fmt(balance)}</strong> for <strong>${escapeHtml(trip.title)}</strong> online through Sama.</p>
-            <p>This will be remitted to you 24–48 hours after the trip date.</p>
-            <p>— Sama</p>
+            <p>This will be remitted to you 24 to 48 hours after the trip date.</p>
+            <p>Sama</p>
           `,
         });
       }

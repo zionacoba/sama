@@ -14,7 +14,7 @@ export async function sendWelcomeEmail(email: string, firstName: string) {
     subject: "Welcome to Sama!",
     html: `
       <p>Hi ${firstName},</p>
-      <p>You're now part of Sama — the Philippine outdoor adventure marketplace.</p>
+      <p>You're now part of Sama, the Philippine outdoor adventure marketplace.</p>
       <p>Browse upcoming trips at <a href="${SITE_URL}/trips">sama.com.ph/trips</a> and find your next adventure.</p>
       <p style="margin-top:24px;">
         <a href="${SITE_URL}/trips" style="background:#2d6a4f;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;display:inline-block;">Browse trips</a>

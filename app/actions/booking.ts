@@ -250,7 +250,7 @@ export async function createBooking(input: CreateBookingInput) {
             </ul>
             ${trip.messenger_gc_link ? `<p>Join the group chat for trip updates and coordination:<br><a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>` : ""}
             <p>You can view your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
-            <p>— Sama</p>
+            <p>Sama</p>
           `,
         });
       } catch (err) {
@@ -285,7 +285,7 @@ export async function createBooking(input: CreateBookingInput) {
               ? `<p>This booking was <strong>automatically confirmed</strong> (${trip.difficulty} trip).</p>`
               : `<p>This booking requires your approval. Log in to your <a href="${SITE_URL}/organizer/dashboard">organizer dashboard</a> to confirm or reject.</p>`
             }
-            <p>— Sama</p>
+            <p>Sama</p>
           `,
         });
       }
@@ -448,7 +448,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
           <p>This is where the organizer will share meetup details, reminders, and important updates.</p>
           ` : `<p>Your organizer will share group chat details with you soon.</p>`}
           <p>They will be in touch with trip details closer to the date. You can view your booking at <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/profile">sama.com.ph/profile</a>.</p>
-          <p>— Sama</p>
+          <p>Sama</p>
         `,
       });
     } else if (status === "rejected") {
@@ -463,10 +463,10 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
           <p>Hi ${escapeHtml(booking.full_name)},</p>
           <p>Unfortunately your booking request for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} was not approved by the organizer.</p>
           ${booking.amount_due ? `
-          <p>Your payment of <strong>${fmtPHP(booking.amount_due)}</strong> will be refunded to your original payment method within 3–5 business days. You do not need to do anything.</p>
+          <p>Your payment of <strong>${fmtPHP(booking.amount_due)}</strong> will be refunded to your original payment method within 3 to 5 business days. You do not need to do anything.</p>
           <p>If you don't receive your refund after 5 business days, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${bookingRef}</strong></p>
           ` : `<p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`}
-          <p>— Sama</p>
+          <p>Sama</p>
         `,
       });
     }
@@ -542,7 +542,7 @@ export async function markBalanceCollected(bookingId: number) {
         <p>Hi ${escapeHtml(booking.full_name)},</p>
         <p>Your balance payment${balance != null ? ` of <strong>${fmt(balance)}</strong>` : ""} for <strong>${escapeHtml(trip.title)}</strong> has been recorded by your organizer. You are now fully paid up.</p>
         <p>You can view your booking at <a href="${SITE_URL}/profile">your profile</a>.</p>
-        <p>— Sama</p>
+        <p>Sama</p>
       `,
     });
   } catch (err) {
@@ -743,7 +743,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
         <p>Your booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been marked as <strong>transferred</strong> by your organizer.</p>
         <p>No refund will be processed through Sama for this booking. Please settle any payment arrangements directly with the person taking your slot.</p>
         <p>If you have any questions, please contact your organizer directly.</p>
-        <p>— Sama</p>
+        <p>Sama</p>
       `,
     });
   } catch (err) {
@@ -765,12 +765,12 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
         from: FROM_ADDRESS,
         to: org.email,
         replyTo: REPLY_TO_ADDRESS,
-        subject: `Booking transferred: ${booking.full_name} — ${trip.title}`,
+        subject: `Booking transferred: ${booking.full_name}, ${trip.title}`,
         html: `
           <p>Hi ${escapeHtml(org.full_name)},</p>
           <p>The booking for <strong>${escapeHtml(booking.full_name)}</strong> on <strong>${escapeHtml(trip.title)}</strong> (${tripDate}) has been marked as transferred${toNote}.</p>
           <p>The slot has been restored to the available pool.</p>
-          <p>— Sama</p>
+          <p>Sama</p>
         `,
       });
     }
@@ -988,7 +988,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
             html: `
               <p>Hi,</p>
               <p><strong>${escapeHtml(booking.full_name)}</strong> cancelled <strong>${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""}</strong> from their booking for <strong>${escapeHtml(tripDateCheck.title)}</strong> on ${tripDate}. They now have <strong>${remainingSlots} slot${remainingSlots !== 1 ? "s" : ""}</strong> remaining. The cancelled slot${slotsToCancel !== 1 ? "s" : ""} have been returned to the available pool.</p>
-              <p>— Sama</p>
+              <p>Sama</p>
             `,
           });
         } catch (err) {
@@ -1003,7 +1003,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
         : refundAmount > 0
           ? (refundResult?.success
               ? `<p>Your refund of <strong>${fmtCurrency(refundAmount)}</strong> for the cancelled slot${slotsToCancel !== 1 ? "s" : ""} has been processed and will reflect within 24 hours.</p>`
-              : `<p>Your refund of <strong>${fmtCurrency(refundAmount)}</strong> will be processed. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> if you don't receive it within 5–7 business days.</p>`)
+              : `<p>Your refund of <strong>${fmtCurrency(refundAmount)}</strong> will be processed. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> if you don't receive it within 5 to 7 business days.</p>`)
           : `<p>Based on our cancellation policy, this cancellation is not eligible for a refund.</p>`;
 
     try {
@@ -1016,7 +1016,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
           <p>Hi ${escapeHtml(booking.full_name)},</p>
           <p>You've cancelled <strong>${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""}</strong> from your booking for <strong>${escapeHtml(tripDateCheck.title)}</strong> on ${tripDate}. Your booking now has <strong>${remainingSlots} slot${remainingSlots !== 1 ? "s" : ""}</strong>.</p>
           ${refundLine}
-          <p>— Sama</p>
+          <p>Sama</p>
         `,
       });
     } catch (err) {
@@ -1030,13 +1030,13 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
       try {
         const isQrPh = refundResult?.requiresManualProcessing || balanceRefundResult?.requiresManualProcessing;
         const refundNote = isQrPh
-          ? "Payment method is QR Ph — must be refunded manually."
+          ? "Payment method is QR Ph, must be refunded manually."
           : `Automatic refund failed: ${refundResult?.error ?? balanceRefundResult?.error ?? "Unknown error"}`;
         await resend.emails.send({
           from: FROM_ADDRESS,
           to: ADMIN_EMAIL,
           replyTo: REPLY_TO_ADDRESS,
-          subject: `[Admin] Manual refund required (partial cancel): ${escapeHtml(booking.full_name)} — ${tripDateCheck.title}`,
+          subject: `[Admin] Manual refund required (partial cancel): ${escapeHtml(booking.full_name)}, ${tripDateCheck.title}`,
           html: `
             <p>A partial cancellation refund could not be automatically processed.</p>
             <p><strong>Booking ID:</strong> ${bookingId}</p>
@@ -1145,8 +1145,8 @@ export async function cancelBooking(bookingId: number) {
             subject: `A slot just opened for ${trip.title}`,
             html: `
               <p>Hi ${escapeHtml(entry.full_name)},</p>
-              <p>Good news! A slot just opened for <strong>${escapeHtml(trip.title)}</strong> on ${slotTripDate}. Book now at <a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a> — it's first come, first served. Only one slot is available so act quickly.</p>
-              <p>— Sama</p>
+              <p>Good news! A slot just opened for <strong>${escapeHtml(trip.title)}</strong> on ${slotTripDate}. Book now at <a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a>. It's first come, first served. Only one slot is available so act quickly.</p>
+              <p>Sama</p>
             `,
           });
         } catch (err) {
@@ -1250,10 +1250,10 @@ export async function cancelBooking(bookingId: number) {
         ? `<p>If you are eligible for a refund, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking details and we'll process it for you.</p>`
         : refundAmount > 0
           ? (refundResult?.success && balanceRefundFailed
-              ? `<p>Based on our cancellation policy, your downpayment refund of <strong>${fmtCurrency(downpaymentRefundAmount!)}</strong> has been processed and will reflect within 24 hours. Your balance refund of <strong>${fmtCurrency(balanceRefundAmount)}</strong> is being processed manually — we'll email you once it's done.</p>`
+              ? `<p>Based on our cancellation policy, your downpayment refund of <strong>${fmtCurrency(downpaymentRefundAmount!)}</strong> has been processed and will reflect within 24 hours. Your balance refund of <strong>${fmtCurrency(balanceRefundAmount)}</strong> is being processed manually. We'll email you once it's done.</p>`
               : refundResult?.success
                 ? `<p>Based on our cancellation policy, your refund of <strong>${fmtCurrency(refundAmount)}</strong> has been processed and will reflect within 24 hours.</p>`
-                : `<p>Based on our cancellation policy, your refund will be <strong>${fmtCurrency(refundAmount)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process it within 5–7 business days.</p>`)
+                : `<p>Based on our cancellation policy, your refund will be <strong>${fmtCurrency(refundAmount)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process it within 5 to 7 business days.</p>`)
           : `<p>Based on our cancellation policy, this cancellation is not eligible for a refund.</p>`;
 
     try {
@@ -1281,7 +1281,7 @@ export async function cancelBooking(bookingId: number) {
             html: `
               <p>Hi,</p>
               <p><strong>${escapeHtml(booking.full_name)}</strong> has cancelled their <strong>${booking.slots} slot${booking.slots !== 1 ? "s" : ""}</strong> for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}. Their slot${booking.slots !== 1 ? "s" : ""} have been returned to the available pool.</p>
-              <p>— Sama</p>
+              <p>Sama</p>
             `,
           });
         }
@@ -1296,7 +1296,7 @@ export async function cancelBooking(bookingId: number) {
           <p>Hi ${escapeHtml(booking.full_name)},</p>
           <p>Your booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled.</p>
           ${refundLine}
-          <p>— Sama</p>
+          <p>Sama</p>
         `,
       });
 
@@ -1305,10 +1305,10 @@ export async function cancelBooking(bookingId: number) {
           from: FROM_ADDRESS,
           to: ADMIN_EMAIL,
           replyTo: REPLY_TO_ADDRESS,
-          subject: `[Admin] Booking cancelled: ${escapeHtml(booking.full_name)} — ${trip.title}`,
+          subject: `[Admin] Booking cancelled: ${escapeHtml(booking.full_name)}, ${trip.title}`,
           html: `
             <p><strong>${escapeHtml(booking.full_name)}</strong> cancelled their booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}.</p>
-            <p>Refund: ${refundAmount === null ? "Custom policy — manual review needed." : refundAmount > 0 ? fmtCurrency(refundAmount) : "Not eligible."}</p>
+            <p>Refund: ${refundAmount === null ? "Custom policy, manual review needed." : refundAmount > 0 ? fmtCurrency(refundAmount) : "Not eligible."}</p>
             <p>Reply to the participant at <a href="mailto:${escapeHtml(booking.email)}">${escapeHtml(booking.email)}</a>.</p>
           `,
         });
@@ -1323,13 +1323,13 @@ export async function cancelBooking(bookingId: number) {
         try {
           const isQrPh = refundResult?.requiresManualProcessing || balanceRefundResult?.requiresManualProcessing;
           const refundNote = isQrPh
-            ? 'Payment method is QR Ph — must be refunded manually.'
+            ? 'Payment method is QR Ph, must be refunded manually.'
             : `Automatic refund failed: ${refundResult?.error ?? balanceRefundResult?.error ?? 'Unknown error'}`;
           await resend.emails.send({
             from: FROM_ADDRESS,
             to: ADMIN_EMAIL,
             replyTo: REPLY_TO_ADDRESS,
-            subject: `[Admin] Manual refund required: ${escapeHtml(booking.full_name)} — ${trip.title}`,
+            subject: `[Admin] Manual refund required: ${escapeHtml(booking.full_name)}, ${trip.title}`,
             html: `
               <p>A refund could not be automatically processed.</p>
               <p><strong>Booking ID:</strong> ${bookingId}</p>
@@ -1365,7 +1365,7 @@ export async function cancelBooking(bookingId: number) {
           from: FROM_ADDRESS,
           to: ADMIN_EMAIL,
           replyTo: REPLY_TO_ADDRESS,
-          subject: `[Admin] Booking cancelled after payout created — review before remitting`,
+          subject: `[Admin] Booking cancelled after payout created: review before remitting`,
           html: `
             <p>A booking was cancelled after its payout record was created but before remittance. <strong>Do not remit this payout until you have adjusted the amounts.</strong></p>
             <p><strong>Booking ID:</strong> ${bookingId}</p>

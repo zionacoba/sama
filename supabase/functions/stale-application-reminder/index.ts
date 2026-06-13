@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       <tbody>${rows}</tbody>
     </table>
     <p>Review them in the <a href="https://sama.com.ph/admin?tab=organizers&orgFilter=pending">admin organizers panel</a>.</p>
-    <p>— Sama System</p>
+    <p>Sama System</p>
   `;
 
   try {

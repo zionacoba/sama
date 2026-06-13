@@ -117,7 +117,7 @@ export async function submitReview(
             <p>${escapeHtml(fullName ?? "A participant")} left a <strong>${rating}-star review</strong> ${stars} for <strong>${escapeHtml(tripForDate.title)}</strong>:</p>
             <blockquote style="border-left:3px solid #ccc;margin:0;padding:0 1em;color:#555;">${escapeHtml(excerpt)}</blockquote>
             <p>The review is pending admin approval and will go live once approved.</p>
-            <p>— Sama</p>
+            <p>Sama</p>
           `,
         });
       }
@@ -136,12 +136,12 @@ export async function submitReview(
         from: FROM_ADDRESS,
         to: ADMIN_EMAIL,
         replyTo: REPLY_TO_ADDRESS,
-        subject: `[Admin] New review pending approval — ${tripForDate.title}`,
+        subject: `[Admin] New review pending approval: ${tripForDate.title}`,
         html: `
           <p><strong>${escapeHtml(fullName ?? "A participant")}</strong> submitted a <strong>${rating}-star review</strong> ${stars} for <strong>${escapeHtml(tripForDate.title)}</strong>:</p>
           <blockquote style="border-left:3px solid #ccc;margin:0;padding:0 1em;color:#555;">${escapeHtml(body.length > 400 ? body.slice(0, 397) + "…" : body)}</blockquote>
           <p>Approve it from the <a href="${siteUrl}/admin?tab=reviews">admin Reviews tab</a>.</p>
-          <p>— Sama System</p>
+          <p>Sama System</p>
         `,
       });
     } catch (adminEmailErr) {

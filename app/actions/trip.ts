@@ -591,15 +591,15 @@ export async function updateTrip(
 
         const changeLines: string[] = [];
         if (dateChanged) {
-          const oldRange = existing.date_end ? `${fmt(existing.date_start)} – ${fmt(existing.date_end)}` : fmt(existing.date_start);
-          const newRange = date_end ? `${fmt(date_start)} – ${fmt(date_end)}` : fmt(date_start);
+          const oldRange = existing.date_end ? `${fmt(existing.date_start)} to ${fmt(existing.date_end)}` : fmt(existing.date_start);
+          const newRange = date_end ? `${fmt(date_start)} to ${fmt(date_end)}` : fmt(date_start);
           changeLines.push(`<li><strong>Date:</strong> ${oldRange} → ${newRange}</li>`);
         }
         if (priceChanged) {
           changeLines.push(`<li><strong>Price:</strong> ₱${Number(existing.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} → ₱${price.toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</li>`);
         }
         if (mpChanged) {
-          changeLines.push(`<li><strong>Meeting point:</strong> updated — check the trip page for details</li>`);
+          changeLines.push(`<li><strong>Meeting point:</strong> updated. Check the trip page for details</li>`);
         }
 
         const changeHtml = `<ul>${changeLines.join("")}</ul>`;
@@ -617,7 +617,7 @@ export async function updateTrip(
                 ${changeHtml}
                 <p>Please review the updated trip details here: <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/trips/${newSlug ?? existing.slug}">${(process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph").replace("https://", "")}/trips/${newSlug ?? existing.slug}</a></p>
                 <p>If you have questions, contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
-                <p>— Sama</p>
+                <p>Sama</p>
               `,
             });
           } catch (err) {
@@ -653,7 +653,7 @@ export async function updateTrip(
             html: `
               <p>Hi ${escapeHtml(entry.full_name)},</p>
               <p>A slot just opened for <strong>${escapeHtml(title)}</strong> on ${slotTripDate}. Spots are limited and it's first come, first served, so book soon. Book now at <a href="${siteUrl}/trips/${existing.slug}">${siteUrl.replace("https://", "")}/trips/${existing.slug}</a>.</p>
-              <p>— Sama</p>
+              <p>Sama</p>
             `,
           });
         } catch (err) {
@@ -694,7 +694,7 @@ export async function updateTrip(
             Remaining balance: <strong>${fmt(balance)}</strong></p>
             <p>You can pay your balance online: <a href="${siteUrl}/profile/bookings/${booking.id}">${siteUrl.replace("https://", "")}/profile/bookings/${booking.id}</a>.</p>
             <p>If you have questions, email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
-            <p>— Sama</p>
+            <p>Sama</p>
           `,
         });
       } catch (err) {
@@ -935,20 +935,20 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
       amountPaid > 0
         ? (refundSucceeded
             ? `<p>A full refund of <strong>${fmtCurrency(amountPaid)}</strong> has been processed and will reflect within 24 hours.</p>`
-            : `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process your refund within 3–5 business days.</p>`)
+            : `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process your refund within 3 to 5 business days.</p>`)
         : `<p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`;
     try {
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: booking.email,
         replyTo: REPLY_TO_ADDRESS,
-        subject: `Trip cancelled — ${trip.title}`,
+        subject: `Trip cancelled: ${trip.title}`,
         html: `
           <p>Hi ${escapeHtml(booking.full_name)},</p>
           <p>We're sorry to inform you that <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled by the organizer.</p>
           ${refundLine}
           <p>We hope to see you on a future trip!</p>
-          <p>— Sama</p>
+          <p>Sama</p>
         `,
       });
     } catch (err) {
@@ -967,7 +967,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
           <p>Hi ${escapeHtml(entry.full_name)},</p>
           <p><strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been cancelled by the organizer.</p>
           <p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
-          <p>— Sama</p>
+          <p>Sama</p>
         `,
       });
     } catch (err) {
@@ -981,17 +981,17 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     if (adminEmail) {
       try {
         const rows = manualRefundList
-          .map((b) => `<li>Booking ${b.id} — ${escapeHtml(b.full_name)} (${escapeHtml(b.email)}): ${fmtCurrency(b.amount)}</li>`)
+          .map((b) => `<li>Booking ${b.id}, ${escapeHtml(b.full_name)} (${escapeHtml(b.email)}): ${fmtCurrency(b.amount)}</li>`)
           .join('\n');
         await resend.emails.send({
           from: FROM_ADDRESS,
           to: adminEmail,
           replyTo: REPLY_TO_ADDRESS,
-          subject: `[Admin] Manual refunds required — ${escapeHtml(trip.title)}`,
+          subject: `[Admin] Manual refunds required: ${escapeHtml(trip.title)}`,
           html: `
             <p>The following bookings for <strong>${escapeHtml(trip.title)}</strong> could not be automatically refunded (QR Ph payments or API errors). Please process these manually:</p>
             <ul>${rows}</ul>
-            <p>— Sama System</p>
+            <p>Sama System</p>
           `,
         });
       } catch (err) {
@@ -1012,7 +1012,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
         html: `
           <p>Organizer <strong>${escapeHtml(organizer.full_name ?? user.email ?? "Unknown")}</strong> cancelled <strong>${escapeHtml(trip.title)}</strong> scheduled for ${tripDate}.</p>
           <p>${(bookings ?? []).length} participant${(bookings ?? []).length !== 1 ? "s were" : " was"} affected and notified.</p>
-          <p>— Sama System</p>
+          <p>Sama System</p>
         `,
       });
     } catch (err) {

@@ -99,7 +99,7 @@ export async function joinWaitlist(
           html: `
             <p>Hi,</p>
             <p><strong>${escapeHtml(input.fullName)}</strong> has joined the waitlist for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}. They'll be notified automatically if you add more slots.</p>
-            <p>— Sama</p>
+            <p>Sama</p>
           `,
         });
       }
@@ -158,7 +158,7 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
       html: `
         <p>Hi ${escapeHtml(entry.full_name)},</p>
         <p>A slot just opened for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}. Spots are limited and it's first come, first served, so book soon. Book now at <a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a>.</p>
-        <p>— Sama</p>
+        <p>Sama</p>
       `,
     });
   } catch (err) {
