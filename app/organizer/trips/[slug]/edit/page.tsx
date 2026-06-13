@@ -58,6 +58,20 @@ export default async function EditTripPage({ params }: PageProps) {
 
   const templates = (templatesData ?? []) as { id: string | number; title: string }[];
 
+  // For active trips (not draft, not template), count bookings that would be
+  // notified by email if date/price/meeting points change. Matches the
+  // notification-trigger status set in app/actions/trip.ts.
+  const isActiveTrip = trip.status !== "draft" && !trip.is_template;
+  let activeBookingCount = 0;
+  if (isActiveTrip) {
+    const { count } = await supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("trip_id", trip.id)
+      .in("status", ["confirmed", "pending"]);
+    activeBookingCount = count ?? 0;
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
@@ -81,7 +95,7 @@ export default async function EditTripPage({ params }: PageProps) {
       </header>
 
       <main className="mx-auto max-w-2xl flex-1 px-4 py-10 sm:px-6">
-        <EditTripForm slug={slug} trip={trip} destinations={destinations} templates={templates} />
+        <EditTripForm slug={slug} trip={trip} destinations={destinations} templates={templates} activeBookingCount={activeBookingCount} />
       </main>
 
       <footer className="border-t border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-500">

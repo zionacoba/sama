@@ -51,11 +51,13 @@ export function EditTripForm({
   trip,
   destinations = [],
   templates = [],
+  activeBookingCount = 0,
 }: {
   slug: string;
   trip: TripForEdit;
   destinations?: string[];
   templates?: { id: string | number; title: string }[];
+  activeBookingCount?: number;
 }) {
   const [state, action] = useActionState(updateTrip, null);
   const [isPending, startTransition] = useTransition();
@@ -80,10 +82,19 @@ export function EditTripForm({
   const isUploadingPhotos = photoItems.some((i) => i.kind === "uploading");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [editedAfterSubmit, setEditedAfterSubmit] = useState(false);
+  const [showBookingWarning, setShowBookingWarning] = useState(false);
+  const [changedFields, setChangedFields] = useState<string[]>([]);
+  const pendingFormDataRef = useRef<FormData | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const photosJsonRef = useRef<HTMLInputElement>(null);
   const meetingPointsJsonRef = useRef<HTMLInputElement>(null);
   const submitIntentRef = useRef<"active" | "draft">(trip.status === "draft" ? "draft" : "active");
+
+  function submitFormData(formData: FormData) {
+    startTransition(async () => {
+      await action(formData);
+    });
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -98,9 +109,54 @@ export function EditTripForm({
     const formData = new FormData(formRef.current);
     formData.set("status", submitIntentRef.current);
 
-    startTransition(async () => {
-      await action(formData);
-    });
+    // For active trips with existing bookers, warn before saving changes to
+    // date, price, or meeting points — these trigger the booker notification
+    // email sent server-side. Matches the trigger logic in app/actions/trip.ts.
+    const isActiveTrip = trip.status !== "draft" && !isTemplate;
+    if (activeBookingCount > 0 && isActiveTrip) {
+      const changed: string[] = [];
+
+      const oldDateStart = (trip.date_start ?? "").slice(0, 10);
+      const newDateStart = String(formData.get("date_start") ?? "").slice(0, 10);
+      const oldDateEnd = (trip.date_end ?? "").slice(0, 10);
+      const newDateEnd = String(formData.get("date_end") ?? "").slice(0, 10);
+      if (oldDateStart !== newDateStart || oldDateEnd !== newDateEnd) {
+        changed.push("Date");
+      }
+
+      if (Number(trip.price) !== Number(formData.get("price"))) {
+        changed.push("Price");
+      }
+
+      const filterMps = (mps: MeetingPoint[]) => mps.filter((m) => m.location.trim() !== "");
+      const oldMps = filterMps(trip.meeting_points ?? []);
+      const newMps = filterMps(meetingPoints);
+      if (JSON.stringify(oldMps) !== JSON.stringify(newMps)) {
+        changed.push("Meeting points");
+      }
+
+      if (changed.length > 0) {
+        pendingFormDataRef.current = formData;
+        setChangedFields(changed);
+        setShowBookingWarning(true);
+        return;
+      }
+    }
+
+    submitFormData(formData);
+  }
+
+  function handleConfirmBookingWarning() {
+    setShowBookingWarning(false);
+    if (pendingFormDataRef.current) {
+      submitFormData(pendingFormDataRef.current);
+      pendingFormDataRef.current = null;
+    }
+  }
+
+  function handleCancelBookingWarning() {
+    setShowBookingWarning(false);
+    pendingFormDataRef.current = null;
   }
 
   const errorMessage = hasSubmitted && !editedAfterSubmit && !isPending ? state?.error : null;
@@ -796,6 +852,47 @@ export function EditTripForm({
         )}
       </div>
     </form>
+
+    {showBookingWarning && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 shadow-xl">
+          <h2 className="text-base font-bold text-stone-900">Save changes to a booked trip?</h2>
+          <div className="mt-3 space-y-3 text-sm text-stone-600">
+            <p>
+              This trip has{" "}
+              <strong className="text-stone-800">
+                {activeBookingCount} active booking{activeBookingCount !== 1 ? "s" : ""}
+              </strong>
+              . You&apos;re changing:
+            </p>
+            <ul className="ml-4 list-disc space-y-1">
+              {changedFields.map((field) => (
+                <li key={field}>
+                  <strong className="text-stone-800">{field}</strong>
+                </li>
+              ))}
+            </ul>
+            <p>Affected bookers will be notified by email automatically.</p>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={handleCancelBookingWarning}
+              className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50"
+            >
+              Go back
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmBookingWarning}
+              className="rounded-lg bg-trailhead px-4 py-2 text-sm font-semibold text-white transition hover:bg-trailhead-dark"
+            >
+              Save changes
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   );
 }
