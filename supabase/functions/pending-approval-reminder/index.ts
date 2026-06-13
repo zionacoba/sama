@@ -19,7 +19,7 @@ async function sendEmail(to: string, subject: string, html: string) {
       Authorization: `Bearer ${RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: FROM_ADDRESS, to, subject, html }),
+    body: JSON.stringify({ from: FROM_ADDRESS, to, subject, html, reply_to: "hello@sama.com.ph" }),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -27,10 +27,21 @@ async function sendEmail(to: string, subject: string, html: string) {
   }
 }
 
+function constantTimeEqual(a: string, b: string): boolean {
+  const aBytes = new TextEncoder().encode(a);
+  const bBytes = new TextEncoder().encode(b);
+  if (aBytes.length !== bBytes.length) return false;
+  let diff = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    diff |= aBytes[i] ^ bBytes[i];
+  }
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   const cronSecret = Deno.env.get("CRON_SECRET");
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!cronSecret || token !== cronSecret) {
+  if (!cronSecret || !token || !constantTimeEqual(token, cronSecret)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },

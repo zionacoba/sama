@@ -3,6 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const FROM_ADDRESS = Deno.env.get("RESEND_FROM_EMAIL") ?? "Sama <hello@sama.com.ph>";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL")!;
+const SITE_URL = Deno.env.get("NEXT_PUBLIC_SITE_URL") ?? "https://sama.com.ph";
 
 function escapeHtml(str: string): string {
   return str
@@ -28,7 +29,7 @@ async function sendEmail(to: string, subject: string, html: string) {
       Authorization: `Bearer ${RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: FROM_ADDRESS, to, subject, html }),
+    body: JSON.stringify({ from: FROM_ADDRESS, to, subject, html, reply_to: "hello@sama.com.ph" }),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -36,10 +37,21 @@ async function sendEmail(to: string, subject: string, html: string) {
   }
 }
 
+function constantTimeEqual(a: string, b: string): boolean {
+  const aBytes = new TextEncoder().encode(a);
+  const bBytes = new TextEncoder().encode(b);
+  if (aBytes.length !== bBytes.length) return false;
+  let diff = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    diff |= aBytes[i] ^ bBytes[i];
+  }
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   const cronSecret = Deno.env.get("CRON_SECRET");
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!cronSecret || token !== cronSecret) {
+  if (!cronSecret || !token || !constantTimeEqual(token, cronSecret)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
@@ -97,7 +109,7 @@ Deno.serve(async (req) => {
     .join("");
 
   const html = `
-    <p>Hi Zion,</p>
+    <p>Hi,</p>
     <p>The following organizer applications have been pending for over 30 days. Please review and decide whether to approve or reject each one.</p>
     <table style="border-collapse:collapse;width:100%;font-size:14px;">
       <thead>
@@ -110,7 +122,7 @@ Deno.serve(async (req) => {
       </thead>
       <tbody>${rows}</tbody>
     </table>
-    <p>Review them in the <a href="https://sama.com.ph/admin?tab=organizers&orgFilter=pending">admin organizers panel</a>.</p>
+    <p>Review them in the <a href="${SITE_URL}/admin?tab=organizers&orgFilter=pending">admin organizers panel</a>.</p>
     <p>Sama System</p>
   `;
 

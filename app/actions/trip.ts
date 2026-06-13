@@ -837,7 +837,8 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   if (String(trip.organizer_id) !== String(organizer.id)) return { error: "You don't have permission to cancel this trip." };
   if (trip.status === "cancelled") return { error: "This trip is already cancelled." };
   if (trip.status !== "active") return { error: "Only active trips can be cancelled." };
-  if (new Date(trip.date_start) < new Date()) return { error: "This trip has already taken place and cannot be cancelled." };
+  const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  if (trip.date_start < todayPH) return { error: "This trip has already taken place and cannot be cancelled." };
 
   const { data: bookings } = await admin
     .from("bookings")
