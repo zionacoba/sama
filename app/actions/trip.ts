@@ -662,7 +662,10 @@ export async function updateTrip(
         month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Manila",
       }).format(new Date(safeDateStart));
 
-      await Promise.allSettled(waitlistEntries.map(async (entry) => {
+      // Only mark a member notified if their email actually sent. A failed send
+      // must NOT stamp notified/notified_at, otherwise the 12-hour debounce would
+      // make them miss this opening — they stay eligible for the next notification.
+      const results = await Promise.allSettled(waitlistEntries.map(async (entry) => {
         try {
           await resend.emails.send({
             from: FROM_ADDRESS,
@@ -677,13 +680,19 @@ export async function updateTrip(
           });
         } catch (err) {
           console.error("[email] failed to notify waitlist slot available", entry.id, err);
+          throw err;
         }
+        return entry.id;
       }));
 
-      await admin
-        .from("waitlist")
-        .update({ notified: true, notified_at: new Date().toISOString() })
-        .in("id", waitlistEntries.map((e) => e.id));
+      const sentIds = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+
+      if (sentIds.length > 0) {
+        await admin
+          .from("waitlist")
+          .update({ notified: true, notified_at: new Date().toISOString() })
+          .in("id", sentIds);
+      }
     }
   }
 

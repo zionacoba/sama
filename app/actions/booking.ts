@@ -242,16 +242,41 @@ export async function createBooking(input: CreateBookingInput) {
     completed: i === 0,
   }));
 
-  await admin.from("booking_participants").insert(participantRows);
+  // Critical write: without participant rows the booker has no waiver record and
+  // no join tokens, so the booking would break after payment. This runs BEFORE
+  // any payment (the PayMongo link path is below), so on failure we roll back the
+  // slot and delete the booking exactly like the payment-link-failure path does —
+  // no money is involved yet.
+  const { error: participantsError } = await admin
+    .from("booking_participants")
+    .insert(participantRows);
+  if (participantsError) {
+    console.error("[createBooking] participant insert failed, rolling back booking:", participantsError);
+    await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+    await admin.from("bookings").delete().eq("id", newBooking.id);
+    return { error: "Booking failed. Please try again or contact support." };
+  }
 
   // Remove any waitlist entry for this user+trip now that they have a booking.
-  await admin.from("waitlist").delete().eq("trip_id", trip.id).eq("user_id", user.id);
+  // Non-fatal: a stale waitlist row is low-severity and must not block the booking.
+  const { error: waitlistDeleteError } = await admin
+    .from("waitlist")
+    .delete()
+    .eq("trip_id", trip.id)
+    .eq("user_id", user.id);
+  if (waitlistDeleteError) {
+    console.error("[createBooking] failed to remove waitlist entry after booking:", waitlistDeleteError);
+  }
 
   // Snapshot the cancellation policy at booking time so later trip changes don't affect this booking.
-  await admin
+  // Non-fatal: a missing policy snapshot is low-severity and must not block the booking.
+  const { error: policyUpdateError } = await admin
     .from("bookings")
     .update({ cancellation_policy: trip.cancellation_policy ?? null })
     .eq("id", newBooking.id);
+  if (policyUpdateError) {
+    console.error("[createBooking] failed to snapshot cancellation policy:", policyUpdateError);
+  }
 
   const participantTokens =
     input.slots > 1
@@ -324,6 +349,26 @@ export async function createBooking(input: CreateBookingInput) {
         });
       } catch (err) {
         console.error("[email] failed to send participant join links to booker", err);
+        if (ADMIN_EMAIL) {
+          try {
+            await resend.emails.send({
+              from: FROM_ADDRESS,
+              to: ADMIN_EMAIL,
+              replyTo: REPLY_TO_ADDRESS,
+              subject: "Action needed: participant join links failed to send",
+              html: `
+                <p>The participant join-links email failed to send. The booker did not receive the links, so additional participants cannot complete their waivers.</p>
+                <p><strong>Booking ID:</strong> ${newBooking.id}</p>
+                <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
+                <p><strong>Booker email:</strong> ${escapeHtml(input.email)}</p>
+                <p><strong>Error:</strong> ${escapeHtml(String(err))}</p>
+                <p>Please resend the join links to the booker manually.</p>
+              `,
+            });
+          } catch (alertErr) {
+            console.error("[email] failed to send join-links failure alert", alertErr);
+          }
+        }
       }
     }
 
@@ -1243,7 +1288,10 @@ export async function cancelBooking(bookingId: number) {
         month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Manila",
       }).format(new Date(trip.date_start));
 
-      await Promise.allSettled(waitingEntries.map(async (entry) => {
+      // Only mark a member notified if their email actually sent. A failed send
+      // must NOT stamp notified/notified_at, otherwise the 12-hour debounce would
+      // make them miss this opening — they stay eligible for the next notification.
+      const results = await Promise.allSettled(waitingEntries.map(async (entry) => {
         try {
           await resend.emails.send({
             from: FROM_ADDRESS,
@@ -1258,13 +1306,19 @@ export async function cancelBooking(bookingId: number) {
           });
         } catch (err) {
           console.error("[email] failed to notify waitlist after cancellation", entry.id, err);
+          throw err;
         }
+        return entry.id;
       }));
 
-      await admin
-        .from("waitlist")
-        .update({ notified: true, notified_at: new Date().toISOString() })
-        .in("id", waitingEntries.map((e) => e.id));
+      const sentIds = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+
+      if (sentIds.length > 0) {
+        await admin
+          .from("waitlist")
+          .update({ notified: true, notified_at: new Date().toISOString() })
+          .in("id", sentIds);
+      }
     }
 
     // Calculate refund based on cancellation policy.

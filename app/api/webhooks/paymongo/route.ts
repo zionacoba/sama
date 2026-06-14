@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 60;
 import { confirmPaidBooking, confirmPaidBalance, extractPaymentDetails } from "@/lib/confirm-paid-booking";
+import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { escapeHtml } from "@/lib/escape-html";
 
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
 
 function verifySignature(rawBody: string, sigHeader: string, secret: string): boolean {
@@ -67,6 +70,30 @@ export async function POST(req: NextRequest) {
     await handleLinkPaymentPaid(attrs!);
   } catch (err) {
     console.error("[webhook] handler error for link.payment.paid:", err);
+    // A paid event was dropped (money was taken but the booking is unconfirmed).
+    // Alert an operator so they can look up the PayMongo link and confirm manually.
+    // This covers both the initial-payment and balance-payment paths, which share
+    // this single handler and catch.
+    if (ADMIN_EMAIL) {
+      const linkData = attrs!.data as Record<string, unknown> | undefined;
+      const linkId = (linkData?.id as string | undefined) ?? "unknown";
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: ADMIN_EMAIL,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: "Action needed: PayMongo paid webhook dropped, booking unconfirmed",
+          html: `
+            <p>A PayMongo <strong>link.payment.paid</strong> webhook failed to process. Payment was taken but the booking was not confirmed, and PayMongo will not retry.</p>
+            <p><strong>PayMongo link ID:</strong> ${escapeHtml(linkId)}</p>
+            <p><strong>Error:</strong> ${escapeHtml(String(err))}</p>
+            <p>Look up the link in the PayMongo dashboard and confirm the booking manually.</p>
+          `,
+        });
+      } catch (alertErr) {
+        console.error("[webhook] failed to send dropped-webhook alert", alertErr);
+      }
+    }
     // Return 200 to prevent PayMongo retries — this needs manual review.
     return NextResponse.json({ received: true, warning: "handler error" });
   }

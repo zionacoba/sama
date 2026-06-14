@@ -404,6 +404,26 @@ export async function confirmPaidBooking(
     }
   } catch (err) {
     console.error("[confirm-paid-booking] failed to send participant join links to booker", err);
+    if (ADMIN_EMAIL) {
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: ADMIN_EMAIL,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: "Action needed: participant join links failed to send",
+          html: `
+            <p>The participant join-links email failed to send. The booker did not receive the links, so additional participants cannot complete their waivers.</p>
+            <p><strong>Booking ID:</strong> ${booking.id}</p>
+            <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
+            <p><strong>Booker email:</strong> ${escapeHtml(booking.email)}</p>
+            <p><strong>Error:</strong> ${escapeHtml(String(err))}</p>
+            <p>Please resend the join links to the booker manually.</p>
+          `,
+        });
+      } catch (alertErr) {
+        console.error("[confirm-paid-booking] failed to send join-links failure alert", alertErr);
+      }
+    }
   }
 
   // revalidatePath throws if called during a server-component render (the
