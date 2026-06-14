@@ -540,7 +540,7 @@ export function EditTripForm({
                 type="number"
                 min="0"
                 step="1"
-                defaultValue={trip.downpayment_cutoff_days ?? 10}
+                defaultValue={trip.downpayment_cutoff_days ?? 3}
                 className={inputClass}
                 placeholder="e.g. 10"
               />
