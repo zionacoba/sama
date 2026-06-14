@@ -209,7 +209,11 @@ export async function createTrip(
 
   const slug = await makeUniqueSlug(buildBaseSlug(title, safeDateStart), supabase);
 
-  const { data: insertedRow, error } = await supabase.from("trips").insert({
+  // Write through the admin client. Authorization is enforced in code above:
+  // the organizer row is looked up by the current user's id and must be
+  // approved, and organizer_id below is that exact row.
+  const adminForInsert = createSupabaseAdminClient();
+  const { data: insertedRow, error } = await adminForInsert.from("trips").insert({
     title,
     slug,
     activity_type: activity_type || null,
@@ -534,7 +538,11 @@ export async function updateTrip(
     );
   }
 
-  const { error } = await supabase
+  // Write through the admin client. Authorization is enforced in code above:
+  // the organizer is looked up by the current user's id and must be approved,
+  // and the trip's organizer_id is verified to match that org before this point.
+  const adminForUpdate = createSupabaseAdminClient();
+  const { error } = await adminForUpdate
     .from("trips")
     .update({
       title,
@@ -758,7 +766,12 @@ export async function publishTrip(tripSlug: string): Promise<{ error: string } |
     return { error: "Please add your payout details (GCash or bank account) in your organizer profile before publishing." };
   }
 
-  const { error } = await supabase
+  // Write through the admin client. Authorization is enforced in code: the
+  // organizer is looked up by the current user's id and must be approved, and
+  // the update itself is scoped to that org's id so it can only ever touch the
+  // current user's own draft trip.
+  const adminForPublish = createSupabaseAdminClient();
+  const { error } = await adminForPublish
     .from("trips")
     .update({ status: "active" })
     .eq("slug", tripSlug)
