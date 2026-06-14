@@ -258,6 +258,35 @@ export async function createBooking(input: CreateBookingInput) {
       }
     }
 
+    // Email the booker the join links for their additional participants so they
+    // can forward them. Only when there is at least one incomplete slot (slots 2..n).
+    if (participantTokens.length > 0) {
+      try {
+        const joinLinks = participantTokens
+          .map(
+            (p) =>
+              `<li>Participant ${p.slotIndex + 1}: <a href="${SITE_URL}/join/${p.token}">${SITE_URL}/join/${p.token}</a></li>`,
+          )
+          .join("");
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: input.email,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `Action needed: participant details for ${trip.title}`,
+          html: `
+            <p>Hi ${escapeHtml(input.fullName)},</p>
+            <p>You booked <strong>${input.slots} slots</strong> for <strong>${escapeHtml(trip.title)}</strong>. Each of your additional participants needs to complete their own details and sign the waiver before the trip.</p>
+            <p>Please forward the right link below to each person so they can fill in their name, emergency contact, and sign the waiver:</p>
+            <ul>${joinLinks}</ul>
+            <p>Each link is unique to one participant, so make sure the right person gets the right link.</p>
+            <p>Sama</p>
+          `,
+        });
+      } catch (err) {
+        console.error("[email] failed to send participant join links to booker", err);
+      }
+    }
+
     // Notify organizer of new free booking.
     try {
       const { data: orgRow } = await admin

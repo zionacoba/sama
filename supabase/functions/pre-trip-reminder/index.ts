@@ -119,6 +119,33 @@ Deno.serve(async (req) => {
 
       const bookingUrl = `${SITE_URL}/profile/bookings/${booking.id}`;
 
+      // For multi-slot bookings, surface any participants who still need to
+      // complete their details and sign the waiver, with their join links.
+      const { data: incompleteParticipants, error: participantsError } = await supabase
+        .from("booking_participants")
+        .select("slot_number, token")
+        .eq("booking_id", booking.id)
+        .eq("completed", false)
+        .order("slot_number", { ascending: true });
+
+      if (participantsError) {
+        console.error(`[pre-trip-reminder] participants fetch error for booking ${booking.id}:`, participantsError.message);
+      }
+
+      const incompleteSection =
+        incompleteParticipants && incompleteParticipants.length > 0
+          ? `
+            <p><strong>Some participants still need to complete their details and sign their waiver before the trip.</strong></p>
+            <p>Please forward the right link below to each person as soon as possible:</p>
+            <ul>${incompleteParticipants
+              .map(
+                (p) =>
+                  `<li>Participant ${p.slot_number + 1}: <a href="${SITE_URL}/join/${p.token}">${SITE_URL}/join/${p.token}</a></li>`,
+              )
+              .join("")}</ul>
+          `
+          : "";
+
       try {
         await sendEmail(
           booking.email,
@@ -132,6 +159,7 @@ Deno.serve(async (req) => {
               ${amountPaid != null ? `<li><strong>Amount paid:</strong> ${fmtPHP(amountPaid)}</li>` : ""}
               ${balance != null ? `<li><strong>Remaining balance:</strong> ${fmtPHP(balance)}</li>` : ""}
             </ul>
+            ${incompleteSection}
             ${trip.messenger_gc_link ? `<p>Join the group chat to stay updated:<br><a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>` : ""}
             <p><a href="${bookingUrl}">View your booking details</a></p>
             <p>If you have any questions, reply to this email or contact your organizer.</p>
