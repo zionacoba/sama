@@ -990,10 +990,11 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     .update(updatePayload)
     .eq("id", bookingId)
     .eq("slots", originalSlots)
+    .in("status", ["confirmed", "pending"])
     .select("id");
 
   if (updateError) return { error: updateError.message };
-  if (!updatedRows || updatedRows.length === 0) return { error: "Your booking was modified by another request. Please refresh and try again." };
+  if (!updatedRows || updatedRows.length === 0) return { error: "This booking is no longer in a cancellable state. It may have been cancelled or modified by another request. Please refresh and try again." };
 
   await admin.rpc("restore_slot", {
     p_trip_id: booking.trip_id,

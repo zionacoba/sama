@@ -866,22 +866,21 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
   if (trip.date_start < todayPH) return { error: "This trip has already taken place and cannot be cancelled." };
 
-  const { data: bookings } = await admin
-    .from("bookings")
-    .select("id, full_name, email, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status")
-    .eq("trip_id", trip.id)
-    .in("status", ["pending", "confirmed", "payment_pending"]);
-
   await admin
     .from("trips")
     .update({ status: "cancelled", remaining_slots: trip.total_slots })
     .eq("id", trip.id);
 
-  await admin
+  // Only refund/notify bookings THIS call actually transitioned. The status-guarded
+  // update returns exactly the rows still cancellable at update time, so a booking
+  // already cancelled by a concurrent path (partialCancelBooking/cancelBooking) is
+  // excluded and never receives a second refund.
+  const { data: bookings } = await admin
     .from("bookings")
     .update({ status: "cancelled" })
     .eq("trip_id", trip.id)
-    .in("status", ["pending", "confirmed", "payment_pending"]);
+    .in("status", ["pending", "confirmed", "payment_pending"])
+    .select("id, full_name, email, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status");
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {
     weekday: "long",
