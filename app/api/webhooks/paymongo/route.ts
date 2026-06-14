@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 
 export const maxDuration = 60;
 import { confirmPaidBooking, confirmPaidBalance, extractPaymentDetails } from "@/lib/confirm-paid-booking";
@@ -70,6 +71,13 @@ export async function POST(req: NextRequest) {
     await handleLinkPaymentPaid(attrs!);
   } catch (err) {
     console.error("[webhook] handler error for link.payment.paid:", err);
+    const droppedLinkData = attrs!.data as Record<string, unknown> | undefined;
+    Sentry.captureException(err, {
+      extra: {
+        context: "paymongo-webhook-dropped",
+        linkId: (droppedLinkData?.id as string | undefined) ?? "unknown",
+      },
+    });
     // A paid event was dropped (money was taken but the booking is unconfirmed).
     // Alert an operator so they can look up the PayMongo link and confirm manually.
     // This covers both the initial-payment and balance-payment paths, which share

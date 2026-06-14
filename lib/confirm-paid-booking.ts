@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
@@ -141,6 +142,10 @@ export async function confirmPaidBooking(
         console.error("[confirm-paid-booking] failed to send cancelled-booking payment alert:", alertErr);
       }
       console.warn(`[confirm-paid-booking] booking ${booking.id} has status 'cancelled' with no gateway status — refund alert sent`);
+      Sentry.captureException(
+        new Error(`Payment received for cancelled booking ${booking.id} — manual refund required`),
+        { extra: { context: "paid-but-cancelled", bookingId: booking.id, linkId, amount: booking.total_amount } },
+      );
       return { outcome: "cancelled_needs_refund" };
     }
     console.warn(`[confirm-paid-booking] booking ${booking.id} has status '${booking.status}' — skipping paid event`);
@@ -176,6 +181,9 @@ export async function confirmPaidBooking(
 
   if (updateError) {
     console.error(`[confirm-paid-booking] DB update failed for booking ${booking.id}:`, updateError);
+    Sentry.captureException(updateError, {
+      extra: { context: "confirm-paid-db-update-failed", bookingId: booking.id, linkId, amount: booking.total_amount },
+    });
     if (ADMIN_EMAIL) {
       const fmt = (n: number) =>
         new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
@@ -290,6 +298,9 @@ export async function confirmPaidBooking(
     });
   } catch (err) {
     console.error("[confirm-paid-booking] booking confirmation email failed:", err);
+    Sentry.captureException(err, {
+      extra: { context: "confirm-paid-confirmation-email-failed", bookingId: booking.id, email: booking.email },
+    });
     if (ADMIN_EMAIL) {
       try {
         await resend.emails.send({
@@ -404,6 +415,9 @@ export async function confirmPaidBooking(
     }
   } catch (err) {
     console.error("[confirm-paid-booking] failed to send participant join links to booker", err);
+    Sentry.captureException(err, {
+      extra: { context: "confirm-paid-join-links-email-failed", bookingId: booking.id, email: booking.email },
+    });
     if (ADMIN_EMAIL) {
       try {
         await resend.emails.send({

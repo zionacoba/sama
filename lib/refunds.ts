@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import * as Sentry from "@sentry/nextjs";
 import { processPayMongoRefund, type RefundResult } from "@/lib/paymongo-refund";
 
 export type RefundSource = "downpayment" | "balance";
@@ -91,6 +92,9 @@ export async function issueAndRecordRefund({
       source,
       insertError.message,
     );
+    Sentry.captureException(insertError, {
+      extra: { context: "refund-record-failed", bookingId, source, paymentId, amountPesos },
+    });
     return await processPayMongoRefund({ paymentId, paymentMethod, amountPesos, reason, notes });
   }
 
@@ -126,6 +130,9 @@ export async function issueAndRecordRefund({
           attempts: 1,
         })
         .eq("id", refundRowId);
+      Sentry.captureException(new Error(`Refund issuance failed: ${result.error ?? "Unknown error"}`), {
+        extra: { context: "refund-issuance-failed", bookingId, source, paymentId, amountPesos, refundRowId },
+      });
     }
   }
 

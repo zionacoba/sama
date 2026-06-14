@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 
 export const maxDuration = 60;
 
@@ -104,6 +105,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ confirmed: false, paid: false });
     } catch (err) {
       console.error("[reconcile-booking] balance PayMongo check failed:", err);
+      Sentry.captureException(err, {
+        extra: { context: "reconcile-balance-failed", bookingId, linkId: balBooking.balance_payment_id },
+      });
       // Fail safe: never mark a balance paid we could not verify.
       return NextResponse.json({ confirmed: false }, { status: 502 });
     }
@@ -151,6 +155,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ canCancel: true, paid: false });
   } catch (err) {
     console.error("[reconcile-booking] PayMongo check failed:", err);
+    Sentry.captureException(err, {
+      extra: { context: "reconcile-initial-failed", bookingId, linkId: booking.payment_id },
+    });
     // Fail safe: do NOT cancel a booking we could not verify.
     return NextResponse.json({ canCancel: false }, { status: 502 });
   }

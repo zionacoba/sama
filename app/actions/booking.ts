@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
@@ -252,6 +253,9 @@ export async function createBooking(input: CreateBookingInput) {
     .insert(participantRows);
   if (participantsError) {
     console.error("[createBooking] participant insert failed, rolling back booking:", participantsError);
+    Sentry.captureException(participantsError, {
+      extra: { context: "createBooking-participant-insert-rollback", bookingId: newBooking.id, tripId: trip.id, slots: input.slots },
+    });
     const { error: delErr } = await admin.from("bookings").delete().eq("id", newBooking.id);
     if (delErr) {
       console.error("[createBooking] rollback delete failed; leaving for cleanup:", delErr);
@@ -435,6 +439,9 @@ export async function createBooking(input: CreateBookingInput) {
 
     if ("error" in linkResult) {
       console.error("[createBooking] payment link creation failed:", linkResult.error);
+      Sentry.captureException(new Error(`Payment link creation failed: ${linkResult.error}`), {
+        extra: { context: "createBooking-payment-link-rollback", bookingId: newBooking.id, tripId: trip.id, slots: input.slots },
+      });
       const { error: delErr } = await admin.from("bookings").delete().eq("id", newBooking.id);
       if (delErr) {
         console.error("[createBooking] rollback delete failed; leaving for cleanup:", delErr);
@@ -452,6 +459,9 @@ export async function createBooking(input: CreateBookingInput) {
       .eq("id", newBooking.id);
   } catch (err) {
     console.error("[createBooking] payment link error:", err);
+    Sentry.captureException(err, {
+      extra: { context: "createBooking-payment-link-error-rollback", bookingId: newBooking.id, tripId: trip.id, slots: input.slots },
+    });
     const { error: delErr } = await admin.from("bookings").delete().eq("id", newBooking.id);
     if (delErr) {
       console.error("[createBooking] rollback delete failed; leaving for cleanup:", delErr);
@@ -464,6 +474,9 @@ export async function createBooking(input: CreateBookingInput) {
 
   if (!checkoutUrl) {
     console.error("[createBooking] payment link created but checkoutUrl missing, rolling back slot");
+    Sentry.captureException(new Error("Payment link created but checkoutUrl missing"), {
+      extra: { context: "createBooking-checkout-url-missing-rollback", bookingId: newBooking.id, tripId: trip.id, slots: input.slots },
+    });
     const { error: delErr } = await admin.from("bookings").delete().eq("id", newBooking.id);
     if (delErr) {
       console.error("[createBooking] rollback delete failed; leaving for cleanup:", delErr);
@@ -1108,6 +1121,9 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     });
     if (refundResult && !refundResult.success && !refundResult.requiresManualProcessing) {
       console.error("[refund] partialCancelBooking refund failed", bookingId, refundResult.error);
+      Sentry.captureException(new Error(`partialCancelBooking refund failed: ${refundResult.error ?? "Unknown error"}`), {
+        extra: { context: "partialCancel-downpayment-refund-failed", bookingId, source: "downpayment", amount: downpaymentRefundAmount },
+      });
     }
   }
 
@@ -1123,6 +1139,9 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     });
     if (balanceRefundResult && !balanceRefundResult.success && !balanceRefundResult.requiresManualProcessing) {
       console.error("[refund] partialCancelBooking balance refund failed", bookingId, balanceRefundResult.error);
+      Sentry.captureException(new Error(`partialCancelBooking balance refund failed: ${balanceRefundResult.error ?? "Unknown error"}`), {
+        extra: { context: "partialCancel-balance-refund-failed", bookingId, source: "balance", amount: partialBalanceRefundAmount },
+      });
     }
   }
 
@@ -1409,6 +1428,9 @@ export async function cancelBooking(bookingId: number) {
       });
       if (refundResult && !refundResult.success && !refundResult.requiresManualProcessing) {
         console.error('[refund] cancelBooking initial refund failed', bookingId, refundResult.error);
+        Sentry.captureException(new Error(`cancelBooking initial refund failed: ${refundResult.error ?? "Unknown error"}`), {
+          extra: { context: "cancelBooking-downpayment-refund-failed", bookingId, source: "downpayment", amount: downpaymentRefundAmount },
+        });
       }
     }
 
@@ -1424,6 +1446,9 @@ export async function cancelBooking(bookingId: number) {
       });
       if (balanceRefundResult && !balanceRefundResult.success && !balanceRefundResult.requiresManualProcessing) {
         console.error('[refund] cancelBooking balance refund failed', bookingId, balanceRefundResult.error);
+        Sentry.captureException(new Error(`cancelBooking balance refund failed: ${balanceRefundResult.error ?? "Unknown error"}`), {
+          extra: { context: "cancelBooking-balance-refund-failed", bookingId, source: "balance", amount: balanceRefundAmount },
+        });
       }
     }
 
