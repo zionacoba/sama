@@ -8,7 +8,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 import { calculateRefundAmount } from "@/lib/cancellation-policies";
-import { processPayMongoRefund, type RefundResult } from "@/lib/paymongo-refund";
+import { type RefundResult } from "@/lib/paymongo-refund";
+import { issueAndRecordRefund } from "@/lib/refunds";
 import { createPaymentLink } from "@/lib/create-payment-link";
 
 if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
@@ -1031,25 +1032,31 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   let balanceRefundResult: RefundResult | null = null;
 
   if (downpaymentRefundAmount !== null && downpaymentRefundAmount > 0) {
-    refundResult = await processPayMongoRefund({
+    refundResult = await issueAndRecordRefund({
+      admin,
+      bookingId,
+      source: "downpayment",
       paymentId: booking.paymongo_payment_id,
       paymentMethod: booking.payment_method,
       amountPesos: downpaymentRefundAmount,
       notes: `Partial cancellation: ${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""} cancelled`,
     });
-    if (!refundResult.success && !refundResult.requiresManualProcessing) {
+    if (refundResult && !refundResult.success && !refundResult.requiresManualProcessing) {
       console.error("[refund] partialCancelBooking refund failed", bookingId, refundResult.error);
     }
   }
 
   if (partialBalanceRefundAmount > 0 && booking.balance_paymongo_payment_id) {
-    balanceRefundResult = await processPayMongoRefund({
+    balanceRefundResult = await issueAndRecordRefund({
+      admin,
+      bookingId,
+      source: "balance",
       paymentId: booking.balance_paymongo_payment_id,
       paymentMethod: booking.payment_method,
       amountPesos: partialBalanceRefundAmount,
       notes: `Partial cancellation: ${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""} cancelled - balance refund`,
     });
-    if (!balanceRefundResult.success && !balanceRefundResult.requiresManualProcessing) {
+    if (balanceRefundResult && !balanceRefundResult.success && !balanceRefundResult.requiresManualProcessing) {
       console.error("[refund] partialCancelBooking balance refund failed", bookingId, balanceRefundResult.error);
     }
   }
@@ -1317,25 +1324,31 @@ export async function cancelBooking(bookingId: number) {
     let balanceRefundResult: RefundResult | null = null;
 
     if (downpaymentRefundAmount !== null && downpaymentRefundAmount > 0) {
-      refundResult = await processPayMongoRefund({
+      refundResult = await issueAndRecordRefund({
+        admin,
+        bookingId,
+        source: "downpayment",
         paymentId: booking.paymongo_payment_id,
         paymentMethod: booking.payment_method,
         amountPesos: downpaymentRefundAmount,
         notes: 'Joiner cancelled booking',
       });
-      if (!refundResult.success && !refundResult.requiresManualProcessing) {
+      if (refundResult && !refundResult.success && !refundResult.requiresManualProcessing) {
         console.error('[refund] cancelBooking initial refund failed', bookingId, refundResult.error);
       }
     }
 
     if (balanceRefundAmount > 0 && booking.balance_paymongo_payment_id) {
-      balanceRefundResult = await processPayMongoRefund({
+      balanceRefundResult = await issueAndRecordRefund({
+        admin,
+        bookingId,
+        source: "balance",
         paymentId: booking.balance_paymongo_payment_id,
         paymentMethod: booking.payment_method,
         amountPesos: balanceRefundAmount,
         notes: 'Joiner cancelled booking - balance refund',
       });
-      if (!balanceRefundResult.success && !balanceRefundResult.requiresManualProcessing) {
+      if (balanceRefundResult && !balanceRefundResult.success && !balanceRefundResult.requiresManualProcessing) {
         console.error('[refund] cancelBooking balance refund failed', bookingId, balanceRefundResult.error);
       }
     }

@@ -6,7 +6,8 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
-import { processPayMongoRefund, type RefundResult } from "@/lib/paymongo-refund";
+import { type RefundResult } from "@/lib/paymongo-refund";
+import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountSamaHolds } from "@/lib/booking-finance";
 
 function slugify(title: string): string {
@@ -914,13 +915,16 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     let balanceResult: RefundResult | null = null;
 
     if (booking.paymongo_payment_id) {
-      initialResult = await processPayMongoRefund({
+      initialResult = await issueAndRecordRefund({
+        admin,
+        bookingId: booking.id,
+        source: "downpayment",
         paymentId: booking.paymongo_payment_id,
         paymentMethod: booking.payment_method,
         amountPesos: amountPaid,
         notes: 'Organizer cancelled trip',
       });
-      if (!initialResult.success) {
+      if (initialResult && !initialResult.success) {
         if (!initialResult.requiresManualProcessing) {
           console.error('[refund] cancelTrip initial refund failed', booking.id, initialResult.error);
         }
@@ -931,13 +935,16 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     if (booking.balance_paymongo_payment_id && booking.balance_payment_gateway_status === 'paid') {
       const balanceAmount = (booking.total_amount ?? 0) - (booking.amount_due ?? 0);
       if (balanceAmount > 0) {
-        balanceResult = await processPayMongoRefund({
+        balanceResult = await issueAndRecordRefund({
+          admin,
+          bookingId: booking.id,
+          source: "balance",
           paymentId: booking.balance_paymongo_payment_id,
           paymentMethod: booking.payment_method,
           amountPesos: balanceAmount,
           notes: 'Organizer cancelled trip - balance refund',
         });
-        if (!balanceResult.success) {
+        if (balanceResult && !balanceResult.success) {
           if (!balanceResult.requiresManualProcessing) {
             console.error('[refund] cancelTrip balance refund failed', booking.id, balanceResult.error);
           }

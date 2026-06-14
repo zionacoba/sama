@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.stale-application-reminder]
 verify_jwt = false
+
+[functions.retry-failed-refunds]
+verify_jwt = false
