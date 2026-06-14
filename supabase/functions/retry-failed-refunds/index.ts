@@ -3,6 +3,33 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const MAX_ATTEMPTS = 5;
 const BATCH_LIMIT = 50;
 
+const FROM_ADDRESS = Deno.env.get("RESEND_FROM_EMAIL") ?? "Sama <hello@sama.com.ph>";
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
+const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function sendEmail(to: string, subject: string, html: string) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from: FROM_ADDRESS, to, subject, html, reply_to: "hello@sama.com.ph" }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Resend error ${res.status}: ${text}`);
+  }
+}
+
 function constantTimeEqual(a: string, b: string): boolean {
   const aBytes = new TextEncoder().encode(a);
   const bBytes = new TextEncoder().encode(b);
@@ -24,6 +51,58 @@ type RefundRow = {
   reason: string | null;
   attempts: number | null;
 };
+
+// Record a failed attempt. Computes the next attempt count and decides the
+// failure status: at MAX_ATTEMPTS the row lands in the final 'exhausted' state
+// (queryable, excluded from future retries) rather than dropping silently out
+// of the select. When a row crosses into 'exhausted' we fire an admin alert so
+// an operator can process the refund manually in the PayMongo dashboard.
+// Sentry is not available in the Deno edge runtime, so the admin email +
+// console.error is the alert channel here. Returns true if the row became
+// exhausted on this attempt.
+async function recordFailure(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  row: RefundRow,
+  lastError: string,
+): Promise<boolean> {
+  const nextAttempts = (row.attempts ?? 0) + 1;
+  const exhausted = nextAttempts >= MAX_ATTEMPTS;
+  const status = exhausted ? "exhausted" : "failed";
+
+  await supabase
+    .from("refunds")
+    .update({ status, attempts: nextAttempts, last_error: lastError })
+    .eq("id", row.id);
+
+  if (exhausted) {
+    console.error(
+      `[retry-failed-refunds] refund ${row.id} exhausted after ${nextAttempts} attempts, manual action needed: ${lastError}`,
+    );
+    if (ADMIN_EMAIL) {
+      try {
+        await sendEmail(
+          ADMIN_EMAIL,
+          "Refund exhausted after max attempts, manual action needed",
+          `
+            <p>A refund failed ${nextAttempts} times and has been marked <strong>exhausted</strong>. It will not be retried again. Please process it manually in the PayMongo dashboard.</p>
+            <p><strong>Refund ID:</strong> ${row.id}</p>
+            <p><strong>Booking ID:</strong> ${row.booking_id}</p>
+            <p><strong>Source:</strong> ${escapeHtml(row.source)}</p>
+            <p><strong>Payment ID:</strong> ${escapeHtml(row.payment_id ?? "(none)")}</p>
+            <p><strong>Amount:</strong> ${row.amount}</p>
+            <p><strong>Attempts:</strong> ${nextAttempts}</p>
+            <p><strong>Last error:</strong> ${escapeHtml(lastError)}</p>
+          `,
+        );
+      } catch (alertErr) {
+        console.error(`[retry-failed-refunds] failed to send exhausted alert for refund ${row.id}:`, alertErr);
+      }
+    }
+  }
+
+  return exhausted;
+}
 
 Deno.serve(async (req) => {
   const cronSecret = Deno.env.get("CRON_SECRET");
@@ -70,19 +149,13 @@ Deno.serve(async (req) => {
   let reconciled = 0;
   let issued = 0;
   let failed = 0;
+  let exhausted = 0;
 
   for (const row of (rows ?? []) as RefundRow[]) {
     try {
       if (!row.payment_id) {
-        await supabase
-          .from("refunds")
-          .update({
-            status: "failed",
-            attempts: (row.attempts ?? 0) + 1,
-            last_error: "No payment_id on refund row",
-          })
-          .eq("id", row.id);
-        failed++;
+        if (await recordFailure(supabase, row, "No payment_id on refund row")) exhausted++;
+        else failed++;
         continue;
       }
 
@@ -100,15 +173,14 @@ Deno.serve(async (req) => {
         // Could not verify. FAIL SAFE: do not issue (risk of double refund).
         // Record the attempt and leave the row for the next run.
         const detail = await paymentRes.text();
-        await supabase
-          .from("refunds")
-          .update({
-            status: "failed",
-            attempts: (row.attempts ?? 0) + 1,
-            last_error: `Verify failed: HTTP ${paymentRes.status} ${detail.slice(0, 200)}`,
-          })
-          .eq("id", row.id);
-        failed++;
+        if (
+          await recordFailure(
+            supabase,
+            row,
+            `Verify failed: HTTP ${paymentRes.status} ${detail.slice(0, 200)}`,
+          )
+        ) exhausted++;
+        else failed++;
         continue;
       }
 
@@ -156,15 +228,14 @@ Deno.serve(async (req) => {
       const issueData = await issueRes.json();
 
       if (!issueRes.ok) {
-        await supabase
-          .from("refunds")
-          .update({
-            status: "failed",
-            attempts: (row.attempts ?? 0) + 1,
-            last_error: issueData?.errors?.[0]?.detail ?? `Refund failed: HTTP ${issueRes.status}`,
-          })
-          .eq("id", row.id);
-        failed++;
+        if (
+          await recordFailure(
+            supabase,
+            row,
+            issueData?.errors?.[0]?.detail ?? `Refund failed: HTTP ${issueRes.status}`,
+          )
+        ) exhausted++;
+        else failed++;
         continue;
       }
 
@@ -181,28 +252,22 @@ Deno.serve(async (req) => {
       // One row's failure must not abort the batch.
       console.error(`[retry-failed-refunds] error processing refund ${row.id}:`, err);
       try {
-        await supabase
-          .from("refunds")
-          .update({
-            status: "failed",
-            attempts: (row.attempts ?? 0) + 1,
-            last_error: err instanceof Error ? err.message : "Unknown error",
-          })
-          .eq("id", row.id);
+        if (await recordFailure(supabase, row, err instanceof Error ? err.message : "Unknown error")) exhausted++;
+        else failed++;
       } catch (updateErr) {
         console.error(`[retry-failed-refunds] failed to record error for refund ${row.id}:`, updateErr);
+        failed++;
       }
-      failed++;
     }
   }
 
   const total = (rows ?? []).length;
   console.log(
-    `[retry-failed-refunds] processed ${total}: reconciled ${reconciled}, issued ${issued}, failed ${failed}`,
+    `[retry-failed-refunds] processed ${total}: reconciled ${reconciled}, issued ${issued}, failed ${failed}, exhausted ${exhausted}`,
   );
 
   return new Response(
-    JSON.stringify({ total, reconciled, issued, failed }),
+    JSON.stringify({ total, reconciled, issued, failed, exhausted }),
     { headers: { "Content-Type": "application/json" } },
   );
 });

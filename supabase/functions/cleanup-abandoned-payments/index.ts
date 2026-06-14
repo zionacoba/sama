@@ -62,7 +62,9 @@ Deno.serve(async (req) => {
     .select("id, trip_id, slots")
     .eq("status", "payment_pending")
     .is("payment_gateway_status", null)
-    .lt("created_at", cutoff);
+    .lt("created_at", cutoff)
+    .order("created_at", { ascending: true })
+    .limit(100);
 
   if (error) {
     console.error("[cleanup-abandoned-payments] fetch error:", error.message);
@@ -175,7 +177,9 @@ Deno.serve(async (req) => {
     .select("id")
     .eq("status", "confirmed")
     .not("balance_payment_id", "is", null)
-    .is("balance_payment_gateway_status", null);
+    .is("balance_payment_gateway_status", null)
+    .order("created_at", { ascending: true })
+    .limit(100);
 
   if (balanceError) {
     console.error("[cleanup-abandoned-payments] balance candidate fetch error:", balanceError.message);

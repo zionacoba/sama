@@ -121,30 +121,72 @@ export async function confirmPaidBooking(
   ) {
     // A cancelled booking with no gateway status was cancelled by the cleanup job, not the user.
     // The payment still went through — a manual refund is required.
-    if (booking.status === "cancelled" && booking.payment_gateway_status === null && ADMIN_EMAIL) {
-      const fmt = (n: number) =>
-        new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+    if (booking.status === "cancelled" && booking.payment_gateway_status === null) {
+      // Record a durable 'manual' refund row for reconciliation. We deliberately
+      // do NOT auto-issue a refund for a cancelled booking — a human reviews and
+      // processes it in the PayMongo dashboard (the retry cron skips 'manual').
+      // payment_id is the PayMongo transaction id (not the link id) because the
+      // retry cron queries GET /v1/payments/{payment_id}. amount is amount_due
+      // (what the customer actually paid on the initial link), not total_amount
+      // which overstates it for downpayment bookings.
       try {
-        await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: ADMIN_EMAIL,
-          replyTo: REPLY_TO_ADDRESS,
-          subject: "Action needed: payment received for cancelled booking, manual refund required",
-          html: `
-            <p>A payment was received for a booking that was already cancelled by the cleanup job.</p>
-            <p><strong>Booking ID:</strong> ${booking.id}</p>
-            <p><strong>Amount:</strong> ${fmt(booking.total_amount ?? 0)}</p>
-            <p><strong>Participant email:</strong> ${escapeHtml(booking.email)}</p>
-            <p>Please issue a manual refund via the PayMongo dashboard.</p>
-          `,
-        });
-      } catch (alertErr) {
-        console.error("[confirm-paid-booking] failed to send cancelled-booking payment alert:", alertErr);
+        // Lightweight duplicate guard: the partial unique index only covers
+        // processing/done, not manual, and both the webhook and reconcile paths
+        // can reach this branch. Pre-check for an existing manual row. Not fully
+        // race-proof; a rare duplicate is acceptable and an admin will see it.
+        let existingQuery = admin
+          .from("refunds")
+          .select("id")
+          .eq("booking_id", booking.id)
+          .eq("source", "downpayment");
+        existingQuery = paymentTransactionId
+          ? existingQuery.eq("payment_id", paymentTransactionId)
+          : existingQuery.is("payment_id", null);
+        const { data: existingRefund } = await existingQuery.maybeSingle();
+
+        if (!existingRefund) {
+          const { error: refundInsertError } = await admin.from("refunds").insert({
+            booking_id: booking.id,
+            source: "downpayment",
+            payment_id: paymentTransactionId,
+            amount: booking.amount_due,
+            status: "manual",
+            reason: "others",
+            last_error: "Payment received for booking already cancelled by cleanup job",
+          });
+          if (refundInsertError) {
+            console.error(`[confirm-paid-booking] failed to record manual refund row for booking ${booking.id}:`, refundInsertError.message);
+          }
+        }
+      } catch (refundErr) {
+        console.error(`[confirm-paid-booking] error recording manual refund row for booking ${booking.id}:`, refundErr);
       }
-      console.warn(`[confirm-paid-booking] booking ${booking.id} has status 'cancelled' with no gateway status — refund alert sent`);
+
+      if (ADMIN_EMAIL) {
+        const fmt = (n: number) =>
+          new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+        try {
+          await resend.emails.send({
+            from: FROM_ADDRESS,
+            to: ADMIN_EMAIL,
+            replyTo: REPLY_TO_ADDRESS,
+            subject: "Action needed: payment received for cancelled booking, manual refund required",
+            html: `
+              <p>A payment was received for a booking that was already cancelled by the cleanup job.</p>
+              <p><strong>Booking ID:</strong> ${booking.id}</p>
+              <p><strong>Amount:</strong> ${fmt(booking.amount_due ?? 0)}</p>
+              <p><strong>Participant email:</strong> ${escapeHtml(booking.email)}</p>
+              <p>Please issue a manual refund via the PayMongo dashboard.</p>
+            `,
+          });
+        } catch (alertErr) {
+          console.error("[confirm-paid-booking] failed to send cancelled-booking payment alert:", alertErr);
+        }
+      }
+      console.warn(`[confirm-paid-booking] booking ${booking.id} has status 'cancelled' with no gateway status — manual refund recorded`);
       Sentry.captureException(
         new Error(`Payment received for cancelled booking ${booking.id} — manual refund required`),
-        { extra: { context: "paid-but-cancelled", bookingId: booking.id, linkId, amount: booking.total_amount } },
+        { extra: { context: "paid-but-cancelled", bookingId: booking.id, linkId, amount: booking.amount_due } },
       );
       return { outcome: "cancelled_needs_refund" };
     }
