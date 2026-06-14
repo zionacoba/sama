@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { Navbar } from "@/app/components/navbar";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
@@ -52,6 +53,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
 
   type BookingSummary = {
     id: number;
+    user_id: string;
     total_amount: number;
     amount_due: number | null;
     payment_option: string | null;
@@ -77,7 +79,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
   if (bookingId) {
     const { data } = await admin
       .from("bookings")
-      .select("id, total_amount, amount_due, payment_option, status, payment_id, payment_gateway_status, balance_payment_gateway_status, meeting_point, trip:trips(title, date_start, messenger_gc_link, organizer:organizers(display_name, full_name, facebook_url, social_links))")
+      .select("id, user_id, total_amount, amount_due, payment_option, status, payment_id, payment_gateway_status, balance_payment_gateway_status, meeting_point, trip:trips(title, date_start, messenger_gc_link, organizer:organizers(display_name, full_name, facebook_url, social_links))")
       .eq("id", bookingId)
       .maybeSingle();
     booking = data as BookingSummary | null;
@@ -111,6 +113,22 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
       }
     } catch (err) {
       console.error("[payment-success] reconciliation failed:", err);
+    }
+  }
+
+  // Ownership gate. The reconciliation above runs ungated on the server-held
+  // payment_id so a paid booking is always confirmed, but the sensitive details
+  // below (Messenger GC link, amounts, meeting point, organizer contact) may
+  // only be shown to the booking's owner. Booking IDs are sequential, so without
+  // this gate anyone could iterate ?bookingId=N to harvest private data. The
+  // legitimate post-payment flow is unaffected: PayMongo redirects the paying
+  // user back with their session intact, so they are the owner.
+  if (bookingId) {
+    if (!user) {
+      redirect(`/login?redirectTo=${encodeURIComponent(`/payment/success?bookingId=${bookingId}`)}`);
+    }
+    if (!booking || booking.user_id !== user.id) {
+      redirect("/profile");
     }
   }
 

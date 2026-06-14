@@ -60,7 +60,7 @@ export async function submitReview(
   if (bookingId) {
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, status, user_id")
+      .select("id, status, user_id, trip_id")
       .eq("id", bookingId)
       .maybeSingle();
 
@@ -68,6 +68,9 @@ export async function submitReview(
     if (booking.status !== "confirmed") return { error: "You can only review confirmed bookings." };
     if (booking.user_id !== user.id) {
       return { error: "You don't have permission to review this booking." };
+    }
+    if (booking.trip_id !== tripId) {
+      return { error: "This booking is not for the trip you're reviewing." };
     }
   }
 
