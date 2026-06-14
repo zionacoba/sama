@@ -11,6 +11,7 @@ import {
   createPayoutAction,
   getPendingReviews,
   approveReview,
+  markRefundResolved,
   type PendingPayoutOrganizer,
   type PayoutHistoryEntry,
   type PendingReview,
@@ -27,7 +28,7 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 const PAGE_SIZE = 20;
 
 type PageProps = {
-  searchParams: Promise<{ tab?: string; page?: string; commissionError?: string; payoutError?: string; orgFilter?: string; reviewError?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string; commissionError?: string; payoutError?: string; orgFilter?: string; reviewError?: string; opsError?: string }>;
 };
 
 type OrganizerApplication = {
@@ -64,6 +65,41 @@ type Booking = {
   created_at: string;
 };
 
+type OutstandingRefund = {
+  id: number;
+  booking_id: number;
+  source: string;
+  payment_id: string | null;
+  paymongo_refund_id: string | null;
+  amount: number;
+  status: string;
+  attempts: number | null;
+  last_error: string | null;
+  created_at: string;
+  bookings: { full_name: string | null; email: string | null } | null;
+};
+
+type StuckPendingBooking = {
+  id: string | number;
+  full_name: string;
+  email: string;
+  slots: number;
+  amount_due: number | null;
+  total_amount: number;
+  created_at: string;
+  trips: { title: string } | null;
+};
+
+type UnconfirmedBalanceBooking = {
+  id: string | number;
+  full_name: string;
+  email: string;
+  amount_due: number | null;
+  total_amount: number;
+  created_at: string;
+  trips: { title: string } | null;
+};
+
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
@@ -90,6 +126,34 @@ function formatDateShort(date: string) {
     year: "numeric",
     timeZone: "Asia/Manila",
   }).format(new Date(date));
+}
+
+function formatAge(date: string) {
+  const ms = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+// owed/failed/processing are in the automated pipeline (amber); manual/exhausted
+// have fallen out of it and need a human in the PayMongo dashboard (red).
+function RefundStatusBadge({ status }: { status: string }) {
+  const normalized = status.toLowerCase();
+  const styles =
+    normalized === "manual" || normalized === "exhausted"
+      ? "bg-red-100 text-red-800"
+      : normalized === "done"
+        ? "bg-emerald-100 text-emerald-800"
+        : "bg-amber-100 text-amber-900";
+  return (
+    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${styles}`}>
+      {status}
+    </span>
+  );
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -280,8 +344,8 @@ function PayoutHistoryTable({ history }: { history: PayoutHistoryEntry[] }) {
 }
 
 export default async function AdminPage({ searchParams }: PageProps) {
-  const { tab = "summary", page: pageParam, commissionError, payoutError, orgFilter = "pending", reviewError } = await searchParams;
-  const activeTab = tab === "bookings" ? "bookings" : tab === "organizers" ? "organizers" : tab === "payouts" ? "payouts" : tab === "reviews" ? "reviews" : "summary";
+  const { tab = "summary", page: pageParam, commissionError, payoutError, orgFilter = "pending", reviewError, opsError } = await searchParams;
+  const activeTab = tab === "bookings" ? "bookings" : tab === "organizers" ? "organizers" : tab === "payouts" ? "payouts" : tab === "reviews" ? "reviews" : tab === "operations" ? "operations" : "summary";
   const page = Math.max(1, Number(pageParam) || 1);
 
   const authClient = await createSupabaseServerClient();
@@ -364,6 +428,40 @@ export default async function AdminPage({ searchParams }: PageProps) {
   // Reviews data fetched only when on that tab.
   const pendingReviews: PendingReview[] = activeTab === "reviews" ? await getPendingReviews() : [];
 
+  // Operations data fetched only when on that tab (same gating as payouts above),
+  // so these reconciliation queries never run on other tabs. All three mirror the
+  // cron filters exactly so the admin view and the daily digest agree.
+  const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const [outstandingRefundsRes, stuckPendingRes, unconfirmedBalancesRes] = activeTab === "operations"
+    ? await Promise.all([
+        adminClient
+          .from("refunds")
+          .select("id, booking_id, source, payment_id, paymongo_refund_id, amount, status, attempts, last_error, created_at, bookings!refunds_booking_id_fkey(full_name, email)")
+          .in("status", ["owed", "failed", "manual", "exhausted"])
+          .order("created_at", { ascending: true }),
+        adminClient
+          .from("bookings")
+          .select("id, full_name, email, slots, amount_due, total_amount, created_at, trips!bookings_trip_id_fkey(title)")
+          .eq("status", "payment_pending")
+          .is("payment_gateway_status", null)
+          .lt("created_at", thirtyMinAgo)
+          .order("created_at", { ascending: true }),
+        adminClient
+          .from("bookings")
+          .select("id, full_name, email, amount_due, total_amount, created_at, trips!bookings_trip_id_fkey(title)")
+          .eq("status", "confirmed")
+          .not("balance_payment_id", "is", null)
+          .is("balance_payment_gateway_status", null)
+          .order("created_at", { ascending: true }),
+      ])
+    : [null, null, null];
+
+  const outstandingRefunds = (outstandingRefundsRes?.data ?? []) as unknown as OutstandingRefund[];
+  const stuckPending = (stuckPendingRes?.data ?? []) as unknown as StuckPendingBooking[];
+  const unconfirmedBalances = (unconfirmedBalancesRes?.data ?? []) as unknown as UnconfirmedBalanceBooking[];
+  const operationsCount = outstandingRefunds.length + stuckPending.length + unconfirmedBalances.length;
+  const operationsHasError = !!(outstandingRefundsRes?.error || stuckPendingRes?.error || unconfirmedBalancesRes?.error);
+
   const bookings = (bookingData ?? []) as unknown as Booking[];
   const totalBookings = bookingCount ?? 0;
   const totalPages = Math.ceil(totalBookings / PAGE_SIZE);
@@ -442,6 +540,14 @@ export default async function AdminPage({ searchParams }: PageProps) {
           </Link>
           <Link href="/admin?tab=reviews" className={tabClass("reviews")}>
             Reviews
+          </Link>
+          <Link href="/admin?tab=operations" className={tabClass("operations")}>
+            Operations
+            {operationsCount > 0 && (
+              <span className="ml-1.5 inline-flex items-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
+                {operationsCount}
+              </span>
+            )}
           </Link>
         </div>
 
@@ -889,6 +995,195 @@ export default async function AdminPage({ searchParams }: PageProps) {
                 <ExportPayoutCsvButton />
               </div>
               <PayoutHistoryTable history={payoutHistory ?? []} />
+            </div>
+          </section>
+        )}
+
+        {/* ── Operations tab ── */}
+        {activeTab === "operations" && (
+          <section className="mt-8 space-y-10">
+            {operationsHasError && (
+              <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Some operations data could not be loaded. Refresh to try again.
+              </p>
+            )}
+            {opsError && (
+              <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {opsError === "notresolvable"
+                  ? "This refund is no longer in a resolvable state."
+                  : opsError === "missing"
+                    ? "Missing refund reference. Please try again."
+                    : "Failed to update the refund. Please try again."}
+              </p>
+            )}
+
+            {/* Outstanding refunds */}
+            <div>
+              <div className="mb-4">
+                <h2 className="text-xl font-bold text-stone-900">Outstanding refunds</h2>
+                <p className="mt-0.5 text-sm text-stone-500">
+                  Refunds not yet settled. Owed/failed are auto-retried every 30 minutes; manual/exhausted need to be processed by hand in PayMongo, then marked resolved here.
+                </p>
+              </div>
+              {outstandingRefunds.length === 0 ? (
+                <div className="rounded-2xl border border-stone-200 bg-white px-6 py-12 text-center shadow-sm">
+                  <p className="text-sm font-medium text-emerald-700">Nothing here, all clear.</p>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[960px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-trailhead/20 bg-trailhead text-white">
+                          <th className="px-4 py-3 font-semibold">Customer</th>
+                          <th className="px-4 py-3 font-semibold">Amount</th>
+                          <th className="px-4 py-3 font-semibold">Source</th>
+                          <th className="px-4 py-3 font-semibold">Status</th>
+                          <th className="px-4 py-3 font-semibold">Attempts</th>
+                          <th className="px-4 py-3 font-semibold">Last error</th>
+                          <th className="px-4 py-3 font-semibold">Age</th>
+                          <th className="px-4 py-3 font-semibold">PayMongo refs</th>
+                          <th className="px-4 py-3 font-semibold">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {outstandingRefunds.map((r) => {
+                          const resolvable = r.status === "manual" || r.status === "exhausted";
+                          return (
+                            <tr key={r.id} className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30">
+                              <td className="px-4 py-3">
+                                <div className="font-medium text-stone-900">{r.bookings?.full_name ?? `Booking ${r.booking_id}`}</div>
+                                <div className="text-xs text-stone-500">{r.bookings?.email ?? ""}</div>
+                              </td>
+                              <td className="px-4 py-3 font-medium text-trailhead">{formatCurrency(Number(r.amount))}</td>
+                              <td className="px-4 py-3 capitalize text-stone-600">{r.source}</td>
+                              <td className="px-4 py-3"><RefundStatusBadge status={r.status} /></td>
+                              <td className="px-4 py-3 text-stone-600">{r.attempts ?? 0}</td>
+                              <td className="max-w-[220px] truncate px-4 py-3 text-xs text-stone-500" title={r.last_error ?? ""}>
+                                {r.last_error ?? "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-stone-600" title={formatCreatedAt(r.created_at)}>
+                                {formatAge(r.created_at)}
+                              </td>
+                              <td className="px-4 py-3 font-mono text-xs text-stone-500">
+                                <div title="payment_id">{r.payment_id ?? "—"}</div>
+                                <div title="paymongo_refund_id">{r.paymongo_refund_id ?? "—"}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                {resolvable ? (
+                                  <form action={markRefundResolved}>
+                                    <input type="hidden" name="refundId" value={r.id} />
+                                    <button
+                                      type="submit"
+                                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                                    >
+                                      Mark resolved
+                                    </button>
+                                  </form>
+                                ) : (
+                                  <span className="text-xs text-stone-400">Auto-retrying</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Stuck pending payments */}
+            <div>
+              <div className="mb-4">
+                <h2 className="text-xl font-bold text-stone-900">Stuck pending payments</h2>
+                <p className="mt-0.5 text-sm text-stone-500">
+                  Bookings stuck in payment_pending for over 30 minutes with no gateway confirmation. The cleanup cron reconciles or cancels these automatically; shown here for visibility.
+                </p>
+              </div>
+              {stuckPending.length === 0 ? (
+                <div className="rounded-2xl border border-stone-200 bg-white px-6 py-12 text-center shadow-sm">
+                  <p className="text-sm font-medium text-emerald-700">Nothing here, all clear.</p>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[720px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-trailhead/20 bg-trailhead text-white">
+                          <th className="px-4 py-3 font-semibold">Customer</th>
+                          <th className="px-4 py-3 font-semibold">Trip</th>
+                          <th className="px-4 py-3 font-semibold">Slots</th>
+                          <th className="px-4 py-3 font-semibold">Amount</th>
+                          <th className="px-4 py-3 font-semibold">Age</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stuckPending.map((b) => (
+                          <tr key={b.id} className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30">
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-stone-900">{b.full_name}</div>
+                              <div className="text-xs text-stone-500">{b.email}</div>
+                            </td>
+                            <td className="px-4 py-3 text-stone-900">{b.trips?.title ?? "—"}</td>
+                            <td className="px-4 py-3 text-stone-700">{b.slots}</td>
+                            <td className="px-4 py-3 font-medium text-trailhead">{formatCurrency(Number(b.amount_due ?? b.total_amount ?? 0))}</td>
+                            <td className="whitespace-nowrap px-4 py-3 text-stone-600" title={formatCreatedAt(b.created_at)}>
+                              {formatAge(b.created_at)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Unconfirmed balances */}
+            <div>
+              <div className="mb-4">
+                <h2 className="text-xl font-bold text-stone-900">Unconfirmed balances</h2>
+                <p className="mt-0.5 text-sm text-stone-500">
+                  Confirmed bookings with a balance payment link that never received a gateway confirmation. The balance reconciliation sweep handles these automatically; shown here for visibility.
+                </p>
+              </div>
+              {unconfirmedBalances.length === 0 ? (
+                <div className="rounded-2xl border border-stone-200 bg-white px-6 py-12 text-center shadow-sm">
+                  <p className="text-sm font-medium text-emerald-700">Nothing here, all clear.</p>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[640px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-trailhead/20 bg-trailhead text-white">
+                          <th className="px-4 py-3 font-semibold">Customer</th>
+                          <th className="px-4 py-3 font-semibold">Trip</th>
+                          <th className="px-4 py-3 font-semibold">Balance</th>
+                          <th className="px-4 py-3 font-semibold">Age</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {unconfirmedBalances.map((b) => (
+                          <tr key={b.id} className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30">
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-stone-900">{b.full_name}</div>
+                              <div className="text-xs text-stone-500">{b.email}</div>
+                            </td>
+                            <td className="px-4 py-3 text-stone-900">{b.trips?.title ?? "—"}</td>
+                            <td className="px-4 py-3 font-medium text-trailhead">{formatCurrency(Number(b.total_amount ?? 0) - Number(b.amount_due ?? 0))}</td>
+                            <td className="whitespace-nowrap px-4 py-3 text-stone-600" title={formatCreatedAt(b.created_at)}>
+                              {formatAge(b.created_at)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         )}

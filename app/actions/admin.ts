@@ -893,6 +893,39 @@ export async function approveReview(formData: FormData): Promise<void> {
   redirect("/admin?tab=reviews");
 }
 
+// ─── OPERATIONS / RECONCILIATION ACTIONS ─────────────────────────────────────
+
+// Mark a manual/exhausted refund as resolved after the admin has processed it
+// by hand in the PayMongo dashboard. The status guard means we can never flip an
+// in-flight (owed/processing) row to done by mistake; if zero rows match, the row
+// is no longer in a resolvable state and we surface that back to the operator.
+export async function markRefundResolved(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const admin = createSupabaseAdminClient();
+
+  const refundId = formData.get("refundId") as string;
+  if (!refundId) redirect("/admin?tab=operations&opsError=missing");
+
+  const { data, error } = await admin
+    .from("refunds")
+    .update({ status: "done", completed_at: new Date().toISOString() })
+    .eq("id", refundId)
+    .in("status", ["manual", "exhausted"])
+    .select("id");
+
+  if (error) {
+    console.error("[markRefundResolved] update failed:", error.message);
+    redirect("/admin?tab=operations&opsError=update");
+  }
+
+  if (!data || data.length !== 1) {
+    redirect("/admin?tab=operations&opsError=notresolvable");
+  }
+
+  revalidatePath("/admin");
+  redirect("/admin?tab=operations");
+}
+
 export async function markPayoutRemittedAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const admin = createSupabaseAdminClient();

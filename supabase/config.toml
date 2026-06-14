@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.retry-failed-refunds]
 verify_jwt = false
+
+[functions.reconciliation-digest]
+verify_jwt = false
