@@ -639,24 +639,21 @@ export async function updateTrip(
   // Notify all waitlisted members when the organizer increases slots on a previously full trip
   if (existing.remaining_slots === 0 && remaining_slots > 0) {
     const admin = createSupabaseAdminClient();
-    // This slot increase is a new opening, so reset the notified flag for
-    // everyone still on the waitlist before selecting who to email, allowing
-    // members notified on a previous opening to be notified again for this one.
-    // Joiners who booked have their waitlist row deleted on booking, so this
-    // never emails someone who already has a spot. The reset runs once here,
-    // before the single select/email/mark sequence below, so there are no
-    // duplicate sends within this opening.
-    await admin
-      .from("waitlist")
-      .update({ notified: false })
-      .eq("trip_id", tripId)
-      .eq("notified", true);
+    // This slot increase is a genuine opening, so we still notify everyone on
+    // the waitlist — but to close the cancel/rebook email-spam loop we debounce
+    // per member: only those never notified, or last notified more than 12 hours
+    // ago, are emailed. The debounce is driven entirely by notified_at (not a
+    // notified=false reset), so notifying twice within 12 hours can never
+    // double-blast the same person. Joiners who booked have their waitlist row
+    // deleted on booking, so this never emails someone who already has a spot.
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
     const { data: waitlistEntries } = await admin
       .from("waitlist")
       .select("id, full_name, email")
       .eq("trip_id", tripId)
-      .eq("notified", false);
+      .or(`notified_at.is.null,notified_at.lt.${twelveHoursAgo}`)
+      .order("created_at", { ascending: true });
 
     if (waitlistEntries && waitlistEntries.length > 0) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
@@ -682,7 +679,10 @@ export async function updateTrip(
         }
       }));
 
-      await admin.from("waitlist").update({ notified: true }).in("id", waitlistEntries.map((e) => e.id));
+      await admin
+        .from("waitlist")
+        .update({ notified: true, notified_at: new Date().toISOString() })
+        .in("id", waitlistEntries.map((e) => e.id));
     }
   }
 

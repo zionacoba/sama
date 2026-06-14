@@ -1189,24 +1189,20 @@ export async function cancelBooking(bookingId: number) {
   if (trip) {
 
     // Notify all waitlisted members that a slot has freed up. This cancellation
-    // is a new opening, so reset the notified flag for everyone still on the
-    // waitlist before selecting who to email — this lets members who were
-    // already notified on a previous opening be notified again for this one.
-    // Joiners who booked have their waitlist row deleted on booking, so the
-    // reset can never email someone who already has a spot. The reset happens
-    // once here, before the single select/email/mark sequence below, so there
-    // are no duplicate sends within this opening.
-    await admin
-      .from("waitlist")
-      .update({ notified: false })
-      .eq("trip_id", trip.id)
-      .eq("notified", true);
+    // is a genuine opening, so we still notify everyone on the waitlist — but to
+    // close the cancel/rebook email-spam loop we debounce per member: only those
+    // never notified, or last notified more than 12 hours ago, are emailed. The
+    // debounce is driven entirely by notified_at (not a notified=false reset),
+    // so notifying twice within 12 hours can never double-blast the same person.
+    // Joiners who booked have their waitlist row deleted on booking, so this
+    // never emails someone who already has a spot.
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
     const { data: waitingEntries } = await admin
       .from("waitlist")
       .select("id, full_name, email")
       .eq("trip_id", trip.id)
-      .eq("notified", false)
+      .or(`notified_at.is.null,notified_at.lt.${twelveHoursAgo}`)
       .order("created_at", { ascending: true });
 
     if (waitingEntries && waitingEntries.length > 0) {
@@ -1232,7 +1228,10 @@ export async function cancelBooking(bookingId: number) {
         }
       }));
 
-      await admin.from("waitlist").update({ notified: true }).in("id", waitingEntries.map((e) => e.id));
+      await admin
+        .from("waitlist")
+        .update({ notified: true, notified_at: new Date().toISOString() })
+        .in("id", waitingEntries.map((e) => e.id));
     }
 
     // Calculate refund based on cancellation policy.

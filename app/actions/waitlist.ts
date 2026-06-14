@@ -165,7 +165,12 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
     console.error("[email] failed to notify waitlist entry of open slot", err);
   }
 
-  await admin.from("waitlist").update({ notified: true }).eq("id", id);
+  // Stamp notified_at so this manual notify counts toward the 12-hour debounce
+  // used by the automatic paths and isn't immediately re-sent by them.
+  await admin
+    .from("waitlist")
+    .update({ notified: true, notified_at: new Date().toISOString() })
+    .eq("id", id);
 
   revalidatePath(`/organizer/trips/${trip.slug}/bookings`);
 }
