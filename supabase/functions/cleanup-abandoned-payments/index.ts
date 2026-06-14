@@ -1,5 +1,32 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+const FROM_ADDRESS = Deno.env.get("RESEND_FROM_EMAIL") ?? "Sama <hello@sama.com.ph>";
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
+const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function sendEmail(to: string, subject: string, html: string) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from: FROM_ADDRESS, to, subject, html, reply_to: "hello@sama.com.ph" }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Resend error ${res.status}: ${text}`);
+  }
+}
+
 function constantTimeEqual(a: string, b: string): boolean {
   const aBytes = new TextEncoder().encode(a);
   const bBytes = new TextEncoder().encode(b);
@@ -86,45 +113,48 @@ Deno.serve(async (req) => {
       continue;
     }
 
-    // Cancel atomically — only if still payment_pending.
-    // This guards against a race where the user completes payment after the
-    // 15-min window opens but before we process the row. Without this guard
-    // we could cancel a confirmed booking AND over-restore its slot.
-    const { data: cancelledRow, error: cancelErr } = await supabase
-      .from("bookings")
-      .update({ status: "cancelled" })
-      .eq("id", booking.id)
-      .eq("status", "payment_pending")
-      .select("id")
-      .maybeSingle();
+    // Cancel and restore the slot atomically — only if still payment_pending.
+    // The RPC flips status to cancelled and restores the slot in one transaction,
+    // returning true if it cancelled+restored and false if the booking was no
+    // longer payment_pending. This guards against a race where the user completes
+    // payment after the 15-min window opens but before we process the row, and
+    // removes any rollback-of-rollback (on error, nothing changed).
+    const { data: didCancel, error: rpcErr } = await supabase.rpc("cancel_and_restore_slot", {
+      p_booking_id: booking.id,
+      p_trip_id: booking.trip_id,
+      p_slots_requested: booking.slots,
+    });
 
-    if (cancelErr) {
-      console.error(`[cleanup-abandoned-payments] cancel failed for booking ${booking.id}:`, cancelErr.message);
+    if (rpcErr) {
+      // Atomic, so nothing changed: the booking stays payment_pending and will
+      // retry next run. Alert the operator so this does not go unnoticed.
+      console.error(`[cleanup-abandoned-payments] cancel_and_restore_slot failed for booking ${booking.id}:`, rpcErr.message);
+      if (ADMIN_EMAIL) {
+        try {
+          await sendEmail(
+            ADMIN_EMAIL,
+            "Action needed: cleanup-abandoned-payments cancel/restore failed",
+            `
+              <p>The atomic cancel + slot restore failed for an abandoned-payment booking. Nothing changed (the booking is still payment_pending and will be retried next run), but please verify.</p>
+              <p><strong>Booking ID:</strong> ${booking.id}</p>
+              <p><strong>Error:</strong> ${escapeHtml(rpcErr.message)}</p>
+            `,
+          );
+        } catch (alertErr) {
+          console.error(`[cleanup-abandoned-payments] failed to send admin alert for booking ${booking.id}:`, alertErr);
+        }
+      }
       continue;
     }
 
-    if (!cancelledRow) {
+    if (didCancel === false) {
       // Booking already transitioned out of payment_pending (user paid or already
-      // cancelled by another path) — nothing to restore.
+      // cancelled by another path) — nothing to do.
       console.log(`[cleanup-abandoned-payments] booking ${booking.id} no longer payment_pending, skipping`);
       continue;
     }
 
-    // Booking successfully cancelled — now restore the slot.
-    const { error: slotErr } = await supabase.rpc("restore_slot", {
-      p_trip_id: booking.trip_id,
-      p_slots_requested: booking.slots,
-    });
-    if (slotErr) {
-      console.error(`[cleanup-abandoned-payments] restore_slot failed for booking ${booking.id}:`, slotErr.message);
-      // Roll back the cancel so the next run can retry the full sequence.
-      await supabase
-        .from("bookings")
-        .update({ status: "payment_pending" })
-        .eq("id", booking.id);
-      continue;
-    }
-
+    // Cancelled and slot restored atomically — clean up participants.
     await supabase.from("booking_participants").delete().eq("booking_id", booking.id);
 
     cleaned++;

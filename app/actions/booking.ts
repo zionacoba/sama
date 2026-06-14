@@ -252,8 +252,13 @@ export async function createBooking(input: CreateBookingInput) {
     .insert(participantRows);
   if (participantsError) {
     console.error("[createBooking] participant insert failed, rolling back booking:", participantsError);
-    await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
-    await admin.from("bookings").delete().eq("id", newBooking.id);
+    const { error: delErr } = await admin.from("bookings").delete().eq("id", newBooking.id);
+    if (delErr) {
+      console.error("[createBooking] rollback delete failed; leaving for cleanup:", delErr);
+      // Do NOT restore the slot; cleanup-abandoned-payments owns slot restore for surviving payment_pending rows.
+    } else {
+      await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+    }
     return { error: "Booking failed. Please try again or contact support." };
   }
 
@@ -430,8 +435,13 @@ export async function createBooking(input: CreateBookingInput) {
 
     if ("error" in linkResult) {
       console.error("[createBooking] payment link creation failed:", linkResult.error);
-      await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
-      await admin.from("bookings").delete().eq("id", newBooking.id);
+      const { error: delErr } = await admin.from("bookings").delete().eq("id", newBooking.id);
+      if (delErr) {
+        console.error("[createBooking] rollback delete failed; leaving for cleanup:", delErr);
+        // Do NOT restore the slot; cleanup-abandoned-payments owns slot restore for surviving payment_pending rows.
+      } else {
+        await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+      }
       return { error: "We could not create your payment link. Please try again." };
     }
 
@@ -442,15 +452,25 @@ export async function createBooking(input: CreateBookingInput) {
       .eq("id", newBooking.id);
   } catch (err) {
     console.error("[createBooking] payment link error:", err);
-    await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
-    await admin.from("bookings").delete().eq("id", newBooking.id);
+    const { error: delErr } = await admin.from("bookings").delete().eq("id", newBooking.id);
+    if (delErr) {
+      console.error("[createBooking] rollback delete failed; leaving for cleanup:", delErr);
+      // Do NOT restore the slot; cleanup-abandoned-payments owns slot restore for surviving payment_pending rows.
+    } else {
+      await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+    }
     return { error: "We could not create your payment link. Please try again." };
   }
 
   if (!checkoutUrl) {
     console.error("[createBooking] payment link created but checkoutUrl missing, rolling back slot");
-    await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
-    await admin.from("bookings").delete().eq("id", newBooking.id);
+    const { error: delErr } = await admin.from("bookings").delete().eq("id", newBooking.id);
+    if (delErr) {
+      console.error("[createBooking] rollback delete failed; leaving for cleanup:", delErr);
+      // Do NOT restore the slot; cleanup-abandoned-payments owns slot restore for surviving payment_pending rows.
+    } else {
+      await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+    }
     return { error: "We could not create your payment link. Please try again." };
   }
 

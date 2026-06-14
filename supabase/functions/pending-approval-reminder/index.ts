@@ -102,6 +102,19 @@ Deno.serve(async (req) => {
 
     const bookingsUrl = `${SITE_URL}/organizer/trips/${trip.slug}/bookings`;
 
+    // Atomic claim before send: stamp the sent_at column guarded by .is(null)
+    // so only one of two concurrent runs wins the row. If we did not claim it,
+    // another run already sent (or is sending) — skip. On send failure we
+    // un-stamp so a genuine failure retries next run.
+    const { data: claimed } = await supabase
+      .from("bookings")
+      .update({ reminder_sent_at: new Date().toISOString() })
+      .eq("id", booking.id)
+      .is("reminder_sent_at", null)
+      .select("id")
+      .maybeSingle();
+    if (!claimed) continue;
+
     try {
       await sendEmail(
         organizer.email,
@@ -114,12 +127,13 @@ Deno.serve(async (req) => {
           <p>Sama</p>
         `,
       );
-      await supabase
-        .from("bookings")
-        .update({ reminder_sent_at: new Date().toISOString() })
-        .eq("id", booking.id);
       sent++;
     } catch (err) {
+      // Un-stamp so a real send failure retries next run.
+      await supabase
+        .from("bookings")
+        .update({ reminder_sent_at: null })
+        .eq("id", booking.id);
       console.error(`[pending-approval-reminder] failed for booking ${booking.id}:`, err);
       failed++;
     }
