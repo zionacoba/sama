@@ -8,7 +8,9 @@ import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
-import { amountSamaHolds } from "@/lib/booking-finance";
+import { amountSamaHolds, amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
+import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
+import { organizerOwns } from "@/lib/authz";
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
 import { formatPeso } from "@/lib/format";
@@ -297,7 +299,7 @@ export async function updateTrip(
     return { error: "Trip not found or you don't have permission to edit it." };
   }
 
-  if (existing.organizer_id?.toString().trim() !== organizer.id?.toString().trim()) {
+  if (!organizerOwns(existing.organizer_id, organizer.id)) {
     return { error: "Trip not found or you don't have permission to edit it." };
   }
 
@@ -466,7 +468,7 @@ export async function updateTrip(
       .from("bookings")
       .select("slots, amount_due, total_amount")
       .eq("trip_id", tripId)
-      .in("status", ["confirmed", "pending", "payment_pending"]);
+      .in("status", [...ACTIVE_BOOKING_STATUSES]);
     bookedSlots = (activeBookings ?? []).reduce((sum, b) => sum + (b.slots ?? 0), 0);
     activeBookingCount = activeBookings?.length ?? 0;
     pendingBalanceCount = (activeBookings ?? []).filter(
@@ -594,7 +596,7 @@ export async function updateTrip(
         .from("bookings")
         .select("id, full_name, email")
         .eq("trip_id", tripId)
-        .in("status", ["confirmed", "pending"]);
+        .in("status", [...SLOT_HOLDING_STATUSES]);
 
       if (affectedBookings && affectedBookings.length > 0) {
         const fmt = (d: string) => new Intl.DateTimeFormat("en-PH", {
@@ -659,7 +661,7 @@ export async function updateTrip(
       .from("bookings")
       .select("id, full_name, email, total_amount, amount_due")
       .eq("trip_id", tripId)
-      .in("status", ["confirmed", "pending"]);
+      .in("status", [...SLOT_HOLDING_STATUSES]);
 
     const fmt = (n: number) => formatPeso(n);
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
@@ -774,7 +776,7 @@ export async function getTripCancelSummary(tripSlug: string): Promise<
     .eq("slug", tripSlug)
     .maybeSingle();
 
-  if (!trip || String(trip.organizer_id) !== String(organizer.id)) {
+  if (!trip || !organizerOwns(trip.organizer_id, organizer.id)) {
     return { error: "Trip not found." };
   }
 
@@ -782,7 +784,7 @@ export async function getTripCancelSummary(tripSlug: string): Promise<
     .from("bookings")
     .select("paymongo_payment_id, status, payout_status, total_amount, amount_due, payment_option, balance_collected, balance_payment_gateway_status, platform_commission")
     .eq("trip_id", trip.id)
-    .in("status", ["pending", "confirmed", "payment_pending"]);
+    .in("status", [...ACTIVE_BOOKING_STATUSES]);
 
   const all = bookings ?? [];
   const bookingCount = all.length;
@@ -826,7 +828,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     .maybeSingle();
 
   if (!trip) return { error: "Trip not found." };
-  if (String(trip.organizer_id) !== String(organizer.id)) return { error: "You don't have permission to cancel this trip." };
+  if (!organizerOwns(trip.organizer_id, organizer.id)) return { error: "You don't have permission to cancel this trip." };
   if (trip.status === "cancelled") return { error: "This trip is already cancelled." };
   if (trip.status !== "active") return { error: "Only active trips can be cancelled." };
   const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
@@ -845,7 +847,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     .from("bookings")
     .update({ status: "cancelled" })
     .eq("trip_id", trip.id)
-    .in("status", ["pending", "confirmed", "payment_pending"])
+    .in("status", [...ACTIVE_BOOKING_STATUSES])
     .select("id, full_name, email, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status");
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {
@@ -871,10 +873,13 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   const manualRefundList: Array<{ id: number, full_name: string, email: string, amount: number }> = [];
 
   await Promise.allSettled((bookings ?? []).map(async (booking) => {
-    const amountPaid =
-      booking.payment_option === "downpayment" && booking.amount_due != null
-        ? booking.amount_due
-        : (booking.total_amount ?? 0);
+    // Organizer cancellation is a full (100%) refund of what the joiner paid
+    // online, split across the downpayment and balance payment sources. Using
+    // amountJoinerPaid here (rather than a raw amount_due fallback) is what keeps
+    // a downpayment booking whose balance was paid online from being undercounted.
+    const refundAmount = amountJoinerPaid(booking);
+    const { downpaymentRefund, balanceRefund } = computeRefundSplit(booking, refundAmount);
+    const downpaymentRefundAmount = downpaymentRefund ?? 0;
 
     let initialResult: RefundResult | null = null;
     let balanceResult: RefundResult | null = null;
@@ -886,36 +891,33 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
         source: "downpayment",
         paymentId: booking.paymongo_payment_id,
         paymentMethod: booking.payment_method,
-        amountPesos: amountPaid,
+        amountPesos: downpaymentRefundAmount,
         notes: 'Organizer cancelled trip',
       });
       if (initialResult && !initialResult.success) {
         if (!initialResult.requiresManualProcessing) {
           console.error('[refund] cancelTrip initial refund failed', booking.id, initialResult.error);
         }
-        manualRefundList.push({ id: booking.id, full_name: booking.full_name, email: booking.email, amount: amountPaid });
+        manualRefundList.push({ id: booking.id, full_name: booking.full_name, email: booking.email, amount: downpaymentRefundAmount });
       }
     }
 
-    if (booking.balance_paymongo_payment_id && booking.balance_payment_gateway_status === 'paid') {
-      const balanceAmount = (booking.total_amount ?? 0) - (booking.amount_due ?? 0);
-      if (balanceAmount > 0) {
-        balanceResult = await issueAndRecordRefund({
-          admin,
-          bookingId: booking.id,
-          source: "balance",
-          paymentId: booking.balance_paymongo_payment_id,
-          paymentMethod: booking.payment_method,
-          amountPesos: balanceAmount,
-          notes: 'Organizer cancelled trip - balance refund',
-        });
-        if (balanceResult && !balanceResult.success) {
-          if (!balanceResult.requiresManualProcessing) {
-            console.error('[refund] cancelTrip balance refund failed', booking.id, balanceResult.error);
-          }
-          if (!manualRefundList.some((b) => b.id === booking.id)) {
-            manualRefundList.push({ id: booking.id, full_name: booking.full_name, email: booking.email, amount: balanceAmount });
-          }
+    if (balanceRefund > 0 && booking.balance_paymongo_payment_id) {
+      balanceResult = await issueAndRecordRefund({
+        admin,
+        bookingId: booking.id,
+        source: "balance",
+        paymentId: booking.balance_paymongo_payment_id,
+        paymentMethod: booking.payment_method,
+        amountPesos: balanceRefund,
+        notes: 'Organizer cancelled trip - balance refund',
+      });
+      if (balanceResult && !balanceResult.success) {
+        if (!balanceResult.requiresManualProcessing) {
+          console.error('[refund] cancelTrip balance refund failed', booking.id, balanceResult.error);
+        }
+        if (!manualRefundList.some((b) => b.id === booking.id)) {
+          manualRefundList.push({ id: booking.id, full_name: booking.full_name, email: booking.email, amount: balanceRefund });
         }
       }
     }
@@ -924,10 +926,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   }));
 
   await sendInChunks(bookings ?? [], async (booking) => {
-    const amountPaid =
-      booking.payment_option === "downpayment" && booking.amount_due != null
-        ? booking.amount_due
-        : (booking.total_amount ?? 0);
+    const amountPaid = amountJoinerPaid(booking);
     const refundSucceeded = refundResultMap.get(booking.id)?.initial?.success === true;
     const refundLine =
       amountPaid > 0

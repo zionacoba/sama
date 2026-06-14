@@ -40,3 +40,36 @@ export function amountJoinerPaid(booking: SamaHoldsFields): number {
   const isDownpaymentOnly = booking.payment_option === "downpayment" && !balancePaidOnline;
   return isDownpaymentOnly ? Number(booking.amount_due ?? 0) : Number(booking.total_amount ?? 0);
 }
+
+type RefundSplitFields = SamaHoldsFields & {
+  balance_paymongo_payment_id: string | null;
+};
+
+// Splits a final refund amount across the two payment sources Sama can refund
+// against: the downpayment (paymongo_payment_id) and the online balance
+// (balance_paymongo_payment_id). The split is proportional to how much of what
+// the joiner paid online came from each source.
+//
+// `refundAmount` is the already-final total refund for this action. Callers that
+// refund only part of a booking (e.g. a partial cancellation) must scale it
+// before passing it in; this helper does not know about slots or policy.
+//
+// The balance portion is only ever refunded when the balance was actually paid
+// online (gateway status "paid") and a balance payment id exists, so cash-
+// collected balances are never refunded by Sama. The `amountPaid > 0` guard
+// avoids a divide-by-zero when there is nothing to split.
+export function computeRefundSplit(
+  booking: RefundSplitFields,
+  refundAmount: number | null,
+): { downpaymentRefund: number | null; balanceRefund: number } {
+  const amountPaid = amountJoinerPaid(booking);
+  const balanceAmount = Number(booking.total_amount ?? 0) - Number(booking.amount_due ?? 0);
+  const balancePaidOnline = booking.balance_payment_gateway_status === "paid";
+  const balanceRefund =
+    balancePaidOnline && booking.balance_paymongo_payment_id && balanceAmount > 0 && amountPaid > 0 && refundAmount !== null
+      ? Math.round(refundAmount * (balanceAmount / amountPaid) * 100) / 100
+      : 0;
+  const downpaymentRefund =
+    refundAmount !== null ? Math.round((refundAmount - balanceRefund) * 100) / 100 : null;
+  return { downpaymentRefund, balanceRefund };
+}

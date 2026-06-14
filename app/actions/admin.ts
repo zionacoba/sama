@@ -9,6 +9,7 @@ import { escapeHtml } from "@/lib/escape-html";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountSamaHolds } from "@/lib/booking-finance";
+import { ACTIVE_BOOKING_STATUSES, ATTENDED_STATUSES } from "@/lib/booking-status";
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { formatPeso } from "@/lib/format";
 
@@ -111,7 +112,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
       .from("bookings")
       .update({ status: "cancelled" })
       .in("trip_id", tripIds)
-      .in("status", ["confirmed", "pending", "payment_pending"])
+      .in("status", [...ACTIVE_BOOKING_STATUSES])
       .select("id, email, full_name, trip_id, slots, payment_option, amount_due, total_amount, paymongo_payment_id, payment_method, balance_paymongo_payment_id, balance_payment_gateway_status");
 
     if ((affectedBookings ?? []).length > 0) {
@@ -413,7 +414,7 @@ export async function getPendingPayouts(): Promise<{
   const { data: rawBookings } = await admin
     .from("bookings")
     .select("id, full_name, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
-    .in("status", ["confirmed", "no_show"])
+    .in("status", [...ATTENDED_STATUSES])
     .eq("payout_status", "unpaid") as unknown as {
       data: Array<{
         id: number;
@@ -655,7 +656,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
     .select("id, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(date_start)")
     .in("id", bookingIds)
     .eq("payout_status", "unpaid")
-    .in("status", ["confirmed", "no_show"]) as unknown as {
+    .in("status", [...ATTENDED_STATUSES]) as unknown as {
       data: Array<{
         id: number;
         total_amount: number;

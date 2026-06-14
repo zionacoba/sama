@@ -6,6 +6,7 @@ import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { organizerOwns } from "@/lib/authz";
 
 type ReviewState = { success: true } | { error: string } | null;
 
@@ -194,7 +195,7 @@ export async function respondToReview(
     .maybeSingle();
 
   if (!review) return { error: "Review not found." };
-  if (String(review.organizer_id) !== String(organizer.id)) {
+  if (!organizerOwns(review.organizer_id, organizer.id)) {
     return { error: "You can only respond to reviews on your own trips." };
   }
 

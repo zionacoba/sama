@@ -5,6 +5,8 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
+import { ACTIVE_BOOKING_STATUSES } from "@/lib/booking-status";
+import { organizerOwns } from "@/lib/authz";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
@@ -33,7 +35,7 @@ export async function joinWaitlist(
     .select("id")
     .eq("trip_id", input.tripId)
     .eq("user_id", user.id)
-    .in("status", ["confirmed", "pending", "payment_pending"])
+    .in("status", [...ACTIVE_BOOKING_STATUSES])
     .maybeSingle();
 
   if (existingBooking) {
@@ -143,7 +145,7 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
 
   type TripRef = { title: string; slug: string; organizer_id: string; date_start: string };
   const trip = entry.trips as unknown as TripRef | null;
-  if (!trip || String(trip.organizer_id) !== String(organizer.id)) return;
+  if (!trip || !organizerOwns(trip.organizer_id, organizer.id)) return;
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {
     month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Manila",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
 import { EditTripForm } from "./edit-form";
 
 type PageProps = {
@@ -68,7 +69,7 @@ export default async function EditTripPage({ params }: PageProps) {
       .from("bookings")
       .select("id", { count: "exact", head: true })
       .eq("trip_id", trip.id)
-      .in("status", ["confirmed", "pending"]);
+      .in("status", [...SLOT_HOLDING_STATUSES]);
     activeBookingCount = count ?? 0;
   }
 

@@ -9,6 +9,9 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
 import { calculateRefundAmount } from "@/lib/cancellation-policies";
+import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
+import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
+import { organizerOwns } from "@/lib/authz";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { createPaymentLink } from "@/lib/create-payment-link";
@@ -538,7 +541,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     .eq("id", booking.trip_id)
     .maybeSingle();
 
-  if (!trip || trip.organizer_id?.toString().trim() !== organizer.id?.toString().trim()) {
+  if (!trip || !organizerOwns(trip.organizer_id, organizer.id)) {
     return { error: "You don't have permission to manage this booking." };
   }
 
@@ -669,7 +672,7 @@ export async function markBalanceCollected(bookingId: number) {
     .eq("id", booking.trip_id)
     .maybeSingle();
 
-  if (!trip || trip.organizer_id?.toString() !== organizer.id?.toString()) {
+  if (!trip || !organizerOwns(trip.organizer_id, organizer.id)) {
     return { error: "You don't have permission to update this booking." };
   }
 
@@ -839,7 +842,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
     .eq("id", booking.trip_id)
     .maybeSingle();
 
-  if (!trip || trip.organizer_id?.toString() !== organizer.id?.toString()) {
+  if (!trip || !organizerOwns(trip.organizer_id, organizer.id)) {
     return { error: "You don't have permission to manage this booking." };
   }
 
@@ -985,7 +988,7 @@ export async function markAsNoShow(bookingId: number) {
     .eq("id", booking.trip_id)
     .maybeSingle();
 
-  if (!trip || trip.organizer_id?.toString() !== organizer.id?.toString()) {
+  if (!trip || !organizerOwns(trip.organizer_id, organizer.id)) {
     return { error: "You don't have permission to manage this booking." };
   }
 
@@ -1046,12 +1049,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   const originalSlots = booking.slots;
   const remainingSlots = originalSlots - slotsToCancel;
 
-  const amountPaid =
-    booking.balance_payment_gateway_status === 'paid'
-      ? (booking.total_amount ?? 0)
-      : booking.payment_option === "downpayment" && booking.amount_due != null
-        ? booking.amount_due
-        : (booking.total_amount ?? 0);
+  const amountPaid = amountJoinerPaid(booking);
 
   const todayManilaStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
   const todayManila = new Date(todayManilaStr);
@@ -1064,18 +1062,14 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     daysUntilTrip,
   );
 
+  // Scale the policy refund down to just the cancelled slots before splitting it.
   const refundAmount = fullRefundableAmount !== null
     ? Math.round((slotsToCancel / originalSlots) * fullRefundableAmount * 100) / 100
     : null;
 
   // Split refund proportionally between downpayment and balance payment sources
-  const partialBalanceAmount = (booking.total_amount ?? 0) - (booking.amount_due ?? 0);
-  const partialBalanceRefundAmount =
-    booking.balance_payment_gateway_status === 'paid' && booking.balance_paymongo_payment_id && partialBalanceAmount > 0 && refundAmount !== null
-      ? Math.round(refundAmount * (partialBalanceAmount / amountPaid) * 100) / 100
-      : 0;
-  const downpaymentRefundAmount =
-    refundAmount !== null ? Math.round((refundAmount - partialBalanceRefundAmount) * 100) / 100 : null;
+  const { downpaymentRefund: downpaymentRefundAmount, balanceRefund: partialBalanceRefundAmount } =
+    computeRefundSplit(booking, refundAmount);
 
   const newTotalAmount = Math.round((booking.total_amount ?? 0) * (remainingSlots / originalSlots) * 100) / 100;
   const newAmountDue = booking.amount_due != null
@@ -1097,7 +1091,11 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     .update(updatePayload)
     .eq("id", bookingId)
     .eq("slots", originalSlots)
-    .in("status", ["confirmed", "pending"])
+    // SLOT_HOLDING only (excludes payment_pending) on purpose: you cannot partially
+    // refund a booking nobody has paid for yet, so a partial cancel must not act on
+    // a payment_pending hold. This is deliberately narrower than the full-cancel
+    // guard below (ACTIVE_BOOKING_STATUSES) - do not widen it to match.
+    .in("status", [...SLOT_HOLDING_STATUSES])
     .select("id");
 
   if (updateError) return { error: updateError.message };
@@ -1274,7 +1272,9 @@ export async function cancelBooking(bookingId: number) {
     .from("bookings")
     .update({ status: "cancelled" })
     .eq("id", bookingId)
-    .in("status", ["confirmed", "pending", "payment_pending"])
+    // ACTIVE_BOOKING_STATUSES (includes payment_pending) on purpose: a full cancel
+    // must free the slot of an unpaid/mid-payment booking too.
+    .in("status", [...ACTIVE_BOOKING_STATUSES])
     .select()
     .single();
 
@@ -1324,12 +1324,7 @@ export async function cancelBooking(bookingId: number) {
     const todayManila = new Date(todayManilaStr);
     const tripDay = new Date(trip.date_start);
     const daysUntilTrip = Math.round((tripDay.getTime() - todayManila.getTime()) / 86_400_000);
-    const amountPaid =
-      booking.balance_payment_gateway_status === 'paid'
-        ? (booking.total_amount ?? 0)
-        : booking.payment_option === "downpayment" && booking.amount_due != null
-          ? booking.amount_due
-          : (booking.total_amount ?? 0);
+    const amountPaid = amountJoinerPaid(booking);
     const refundAmount = calculateRefundAmount(
       booking.cancellation_policy ?? trip.cancellation_policy ?? "flexible",
       amountPaid,
@@ -1337,14 +1332,8 @@ export async function cancelBooking(bookingId: number) {
     );
 
     // Split refund proportionally between downpayment and balance payment sources
-    const balanceAmount = (booking.total_amount ?? 0) - (booking.amount_due ?? 0);
-    const refundPercentage = amountPaid > 0 && refundAmount !== null ? refundAmount / amountPaid : 0;
-    const balanceRefundAmount =
-      booking.balance_payment_gateway_status === 'paid' && booking.balance_paymongo_payment_id && balanceAmount > 0
-        ? Math.round(refundPercentage * balanceAmount * 100) / 100
-        : 0;
-    const downpaymentRefundAmount =
-      refundAmount !== null ? Math.round((refundAmount - balanceRefundAmount) * 100) / 100 : null;
+    const { downpaymentRefund: downpaymentRefundAmount, balanceRefund: balanceRefundAmount } =
+      computeRefundSplit(booking, refundAmount);
 
     if (refundAmount !== null) {
       await admin

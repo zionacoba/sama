@@ -12,6 +12,7 @@ import { ShareButton } from "@/app/components/share-button";
 import { PhotoGallery } from "@/app/components/photo-gallery";
 import { Footer } from "@/app/components/footer";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
+import { SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
 import { formatDate, formatDateShort, formatDateRange, formatReviewDate, formatPeso } from "@/lib/format";
 import { PublishedBanner } from "@/app/trips/[slug]/published-banner";
 import { DifficultyInfoButton } from "@/app/components/difficulty-info";
@@ -286,7 +287,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
       ? supabase.from("waitlist").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).maybeSingle()
       : Promise.resolve({ data: null }),
     user
-      ? admin.from("bookings").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).in("status", ["confirmed", "pending"]).maybeSingle()
+      ? admin.from("bookings").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).in("status", [...SLOT_HOLDING_STATUSES]).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
