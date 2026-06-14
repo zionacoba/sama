@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS refunds (
 -- Idempotency backstop: at most one settled/in-flight refund per
 -- (booking, source, payment). Owed/failed rows are intentionally excluded so a
 -- retry can keep working a row until it settles.
-CREATE UNIQUE INDEX IF NOT EXISTS refunds_settled_unique
+CREATE UNIQUE INDEX IF NOT EXISTS refunds_one_settled
   ON refunds (booking_id, source, payment_id)
   WHERE status IN ('processing', 'done');
 
