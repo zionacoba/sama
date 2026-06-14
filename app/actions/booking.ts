@@ -45,7 +45,11 @@ export async function createBooking(input: CreateBookingInput) {
   // writes, and RETURNING clauses always get back the new row's id.
   const admin = createSupabaseAdminClient();
 
-  if (!input.slots || input.slots < 1) {
+  if (!input.slots || !Number.isInteger(input.slots)) {
+    return { error: "Please select a valid number of slots." };
+  }
+
+  if (input.slots < 1) {
     return { error: "Please select at least 1 slot." };
   }
 
@@ -563,11 +567,14 @@ export async function markBalanceCollected(bookingId: number) {
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, full_name, email, total_amount, amount_due, payment_option, balance_collected")
+    .select("id, trip_id, full_name, email, total_amount, amount_due, payment_option, balance_collected, status")
     .eq("id", bookingId)
     .maybeSingle();
 
   if (!booking) return { error: "Booking not found." };
+  if (booking.status !== "confirmed") {
+    return { error: "Balance can only be collected on a confirmed booking." };
+  }
   if (booking.payment_option !== "downpayment") {
     return { error: "Balance collection is only applicable to downpayment bookings." };
   }
@@ -585,12 +592,17 @@ export async function markBalanceCollected(bookingId: number) {
     return { error: "You don't have permission to update this booking." };
   }
 
-  const { error } = await admin
+  const { data: updated, error } = await admin
     .from("bookings")
     .update({ balance_collected: true })
-    .eq("id", bookingId);
+    .eq("id", bookingId)
+    .eq("status", "confirmed")
+    .select("id");
 
   if (error) return { error: error.message };
+  if (!updated || updated.length !== 1) {
+    return { error: "Balance can only be collected on a confirmed booking." };
+  }
 
   try {
     const fmt = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
