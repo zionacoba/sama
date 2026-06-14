@@ -121,27 +121,34 @@ WITH CHECK (auth.uid() = user_id);
 -- TRIPS POLICIES
 -- ========================
 
-CREATE POLICY "Approved organizers can create trips"
-ON public.trips FOR INSERT
-TO public
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM organizers
-    WHERE organizers.id = trips.organizer_id
-    AND organizers.user_id = auth.uid()
-    AND organizers.status = 'approved'
-  )
-);
-
-CREATE POLICY "Organizers can update their own trips"
-ON public.trips FOR UPDATE
-TO public
-USING (
-  organizer_id IN (
-    SELECT organizers.id FROM organizers
-    WHERE organizers.user_id = auth.uid()
-  )
-);
+-- INTENTIONALLY REMOVED: the trips INSERT and UPDATE direct-write policies below
+-- are commented out. Trips writes now go through the admin/service-role client
+-- with explicit in-code authorization (createTrip / updateTrip / publishTrip), so
+-- these direct-PostgREST write policies must not exist. They are dropped by the
+-- trailing migration 20260613000001_drop_trips_direct_write_policies.sql, and are
+-- commented out here so a full `db reset` does not recreate them.
+--
+-- CREATE POLICY "Approved organizers can create trips"
+-- ON public.trips FOR INSERT
+-- TO public
+-- WITH CHECK (
+--   EXISTS (
+--     SELECT 1 FROM organizers
+--     WHERE organizers.id = trips.organizer_id
+--     AND organizers.user_id = auth.uid()
+--     AND organizers.status = 'approved'
+--   )
+-- );
+--
+-- CREATE POLICY "Organizers can update their own trips"
+-- ON public.trips FOR UPDATE
+-- TO public
+-- USING (
+--   organizer_id IN (
+--     SELECT organizers.id FROM organizers
+--     WHERE organizers.user_id = auth.uid()
+--   )
+-- );
 
 CREATE POLICY "Organizers can view their own trips"
 ON public.trips FOR SELECT
