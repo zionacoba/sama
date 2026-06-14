@@ -9,7 +9,7 @@
 
 CREATE TABLE IF NOT EXISTS refunds (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  booking_id bigint NOT NULL,
+  booking_id bigint NOT NULL REFERENCES bookings(id),
   source text NOT NULL CHECK (source IN ('downpayment', 'balance')),
   payment_id text,
   amount numeric NOT NULL,
