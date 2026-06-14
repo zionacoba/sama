@@ -59,9 +59,18 @@ export async function createBooking(input: CreateBookingInput) {
     return { error: "Emergency contact phone must be different from your own phone number." };
   }
 
+  // Identity/format validations — mirror the client. No DB dependency, so fail fast.
+  if (!input.fullName?.trim()) return { error: "Full name is required." };
+  if (!input.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())) {
+    return { error: "A valid email address is required." };
+  }
+  if (!/^(\+63|0)\d{9,10}$/.test((input.phone ?? "").replace(/\s/g, ""))) {
+    return { error: "Please enter a valid Philippine phone number (09XX or +63)." };
+  }
+
   const { data: trip, error: tripFetchError } = await admin
     .from("trips")
-    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, downpayment_cutoff_days, messenger_gc_link, waiver_text, cancellation_policy")
+    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, downpayment_cutoff_days, messenger_gc_link, waiver_text, cancellation_policy, meeting_points, custom_questions, custom_question")
     .eq("slug", input.tripSlug)
     .maybeSingle();
 
@@ -119,6 +128,32 @@ export async function createBooking(input: CreateBookingInput) {
 
   if ((recentCount ?? 0) >= 3) {
     return { error: "Too many booking attempts. Please wait a moment and try again." };
+  }
+
+  // Meeting-point validation — only enforce when the trip actually has pickup points.
+  // The client auto-selects the sole point when there is exactly one, so a presence
+  // plus membership check never breaks legitimate single-point bookings.
+  const tripMeetingPoints = (trip.meeting_points ?? []) as { location: string; time: string }[];
+  if (tripMeetingPoints.length > 0) {
+    const selected = input.meetingPoint?.trim();
+    if (!selected || !tripMeetingPoints.some((mp) => mp.location === selected)) {
+      return { error: "Please select a valid pickup point." };
+    }
+  }
+
+  // Custom-questions validation — reconstruct active questions the same way the
+  // client and trip detail page do, including the legacy single-question fallback.
+  const activeQuestions = (trip.custom_questions ?? (trip.custom_question ? [trip.custom_question] : []))
+    .filter((q: string) => q.trim());
+  if (activeQuestions.length > 0) {
+    const answers = input.customQuestionAnswers;
+    if (
+      !Array.isArray(answers) ||
+      answers.length !== activeQuestions.length ||
+      answers.some((a) => !a?.trim())
+    ) {
+      return { error: "Please answer all of the organizer's questions." };
+    }
   }
 
   // Compute amounts server-side — never trust client-provided values.
