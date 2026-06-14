@@ -81,19 +81,74 @@ Deno.serve(async (req) => {
   let sent = 0;
   let failed = 0;
 
+  const fmtPHP = (n: number) =>
+    new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+      maximumFractionDigits: 0,
+    }).format(n);
+
+  // Collect candidate bookings across all target trips, bounded to 100 total so
+  // a single run can never do unbounded work. Each candidate carries its trip so
+  // we can format per-trip details without a second lookup.
+  const MAX_BOOKINGS_PER_RUN = 100;
+  type TripRow = NonNullable<typeof trips>[number];
+  type BookingRow = {
+    id: string;
+    full_name: string;
+    email: string;
+    total_amount: number | null;
+    amount_due: number | null;
+    meeting_point: string | null;
+  };
+  const candidates: Array<{ trip: TripRow; booking: BookingRow }> = [];
+
   for (const trip of trips ?? []) {
+    if (candidates.length >= MAX_BOOKINGS_PER_RUN) break;
+    const remaining = MAX_BOOKINGS_PER_RUN - candidates.length;
     const { data: bookings, error: bookingsError } = await supabase
       .from("bookings")
       .select("id, full_name, email, total_amount, amount_due, meeting_point")
       .eq("trip_id", trip.id)
       .eq("status", "confirmed")
-      .is("pre_trip_reminder_sent_at", null);
+      .is("pre_trip_reminder_sent_at", null)
+      .order("created_at", { ascending: true })
+      .limit(remaining);
 
     if (bookingsError) {
       console.error(`[pre-trip-reminder] bookings fetch error for trip ${trip.id}:`, bookingsError.message);
       continue;
     }
 
+    for (const booking of bookings ?? []) {
+      candidates.push({ trip, booking: booking as BookingRow });
+    }
+  }
+
+  // Batch the incomplete-participant lookups: one query for all candidate
+  // bookings instead of one per booking, keyed by booking_id into a Map.
+  const candidateBookingIds = candidates.map((c) => c.booking.id);
+  const participantsMap = new Map<string, Array<{ slot_number: number; token: string }>>();
+  if (candidateBookingIds.length > 0) {
+    const { data: participants, error: participantsError } = await supabase
+      .from("booking_participants")
+      .select("booking_id, slot_number, token")
+      .in("booking_id", candidateBookingIds)
+      .eq("completed", false)
+      .order("slot_number", { ascending: true });
+
+    if (participantsError) {
+      console.error(`[pre-trip-reminder] participants fetch error:`, participantsError.message);
+    }
+
+    for (const p of participants ?? []) {
+      const list = participantsMap.get(p.booking_id) ?? [];
+      list.push({ slot_number: p.slot_number, token: p.token });
+      participantsMap.set(p.booking_id, list);
+    }
+  }
+
+  for (const { trip, booking } of candidates) {
     const tripDate = new Intl.DateTimeFormat("en-PH", {
       weekday: "long",
       year: "numeric",
@@ -102,93 +157,76 @@ Deno.serve(async (req) => {
       timeZone: "Asia/Manila",
     }).format(new Date(trip.date_start));
 
-    const fmtPHP = (n: number) =>
-      new Intl.NumberFormat("en-PH", {
-        style: "currency",
-        currency: "PHP",
-        maximumFractionDigits: 0,
-      }).format(n);
+    const amountPaid =
+      booking.total_amount != null && booking.amount_due != null
+        ? booking.total_amount - booking.amount_due
+        : booking.total_amount;
+    const balance =
+      booking.amount_due != null && booking.amount_due > 0 ? booking.amount_due : null;
 
-    for (const booking of bookings ?? []) {
-      const amountPaid =
-        booking.total_amount != null && booking.amount_due != null
-          ? booking.total_amount - booking.amount_due
-          : booking.total_amount;
-      const balance =
-        booking.amount_due != null && booking.amount_due > 0 ? booking.amount_due : null;
+    const bookingUrl = `${SITE_URL}/profile/bookings/${booking.id}`;
 
-      const bookingUrl = `${SITE_URL}/profile/bookings/${booking.id}`;
+    // For multi-slot bookings, surface any participants who still need to
+    // complete their details and sign the waiver, with their join links.
+    // Read from the batched participants Map instead of querying per booking.
+    const incompleteParticipants = participantsMap.get(booking.id);
 
-      // For multi-slot bookings, surface any participants who still need to
-      // complete their details and sign the waiver, with their join links.
-      const { data: incompleteParticipants, error: participantsError } = await supabase
-        .from("booking_participants")
-        .select("slot_number, token")
-        .eq("booking_id", booking.id)
-        .eq("completed", false)
-        .order("slot_number", { ascending: true });
+    const incompleteSection =
+      incompleteParticipants && incompleteParticipants.length > 0
+        ? `
+          <p><strong>Some participants still need to complete their details and sign their waiver before the trip.</strong></p>
+          <p>Please forward the right link below to each person as soon as possible:</p>
+          <ul>${incompleteParticipants
+            .map(
+              (p) =>
+                `<li>Participant ${p.slot_number + 1}: <a href="${SITE_URL}/join/${p.token}">${SITE_URL}/join/${p.token}</a></li>`,
+            )
+            .join("")}</ul>
+        `
+        : "";
 
-      if (participantsError) {
-        console.error(`[pre-trip-reminder] participants fetch error for booking ${booking.id}:`, participantsError.message);
-      }
+    // Atomic claim before send: stamp the sent_at column guarded by .is(null)
+    // so only one of two concurrent runs wins the row. If we did not claim it,
+    // another run already sent (or is sending), so skip. On send failure we
+    // un-stamp so a genuine failure retries next run.
+    const { data: claimed } = await supabase
+      .from("bookings")
+      .update({ pre_trip_reminder_sent_at: new Date().toISOString() })
+      .eq("id", booking.id)
+      .is("pre_trip_reminder_sent_at", null)
+      .select("id")
+      .maybeSingle();
+    if (!claimed) continue;
 
-      const incompleteSection =
-        incompleteParticipants && incompleteParticipants.length > 0
-          ? `
-            <p><strong>Some participants still need to complete their details and sign their waiver before the trip.</strong></p>
-            <p>Please forward the right link below to each person as soon as possible:</p>
-            <ul>${incompleteParticipants
-              .map(
-                (p) =>
-                  `<li>Participant ${p.slot_number + 1}: <a href="${SITE_URL}/join/${p.token}">${SITE_URL}/join/${p.token}</a></li>`,
-              )
-              .join("")}</ul>
-          `
-          : "";
-
-      // Atomic claim before send: stamp the sent_at column guarded by .is(null)
-      // so only one of two concurrent runs wins the row. If we did not claim it,
-      // another run already sent (or is sending) — skip. On send failure we
-      // un-stamp so a genuine failure retries next run.
-      const { data: claimed } = await supabase
+    try {
+      await sendEmail(
+        booking.email,
+        `Your trip is in 3 days: ${trip.title}`,
+        `
+          <p>Hi ${escapeHtml(booking.full_name)}, your trip is coming up!</p>
+          <ul>
+            <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
+            <li><strong>Date:</strong> ${tripDate}</li>
+            ${booking.meeting_point ? `<li><strong>Meeting point:</strong> ${escapeHtml(booking.meeting_point)}</li>` : ""}
+            ${amountPaid != null ? `<li><strong>Amount paid:</strong> ${fmtPHP(amountPaid)}</li>` : ""}
+            ${balance != null ? `<li><strong>Remaining balance:</strong> ${fmtPHP(balance)}</li>` : ""}
+          </ul>
+          ${incompleteSection}
+          ${trip.messenger_gc_link ? `<p>Join the group chat to stay updated:<br><a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>` : ""}
+          <p><a href="${bookingUrl}">View your booking details</a></p>
+          <p>If you have any questions, reply to this email or contact your organizer.</p>
+          <p>Sama</p>
+        `,
+      );
+      sent++;
+    } catch (err) {
+      // Un-stamp so a real send failure retries next run.
+      await supabase
         .from("bookings")
-        .update({ pre_trip_reminder_sent_at: new Date().toISOString() })
-        .eq("id", booking.id)
-        .is("pre_trip_reminder_sent_at", null)
-        .select("id")
-        .maybeSingle();
-      if (!claimed) continue;
-
-      try {
-        await sendEmail(
-          booking.email,
-          `Your trip is in 3 days: ${trip.title}`,
-          `
-            <p>Hi ${escapeHtml(booking.full_name)}, your trip is coming up!</p>
-            <ul>
-              <li><strong>Trip:</strong> ${escapeHtml(trip.title)}</li>
-              <li><strong>Date:</strong> ${tripDate}</li>
-              ${booking.meeting_point ? `<li><strong>Meeting point:</strong> ${escapeHtml(booking.meeting_point)}</li>` : ""}
-              ${amountPaid != null ? `<li><strong>Amount paid:</strong> ${fmtPHP(amountPaid)}</li>` : ""}
-              ${balance != null ? `<li><strong>Remaining balance:</strong> ${fmtPHP(balance)}</li>` : ""}
-            </ul>
-            ${incompleteSection}
-            ${trip.messenger_gc_link ? `<p>Join the group chat to stay updated:<br><a href="${escapeHtml(trip.messenger_gc_link)}">${escapeHtml(trip.messenger_gc_link)}</a></p>` : ""}
-            <p><a href="${bookingUrl}">View your booking details</a></p>
-            <p>If you have any questions, reply to this email or contact your organizer.</p>
-            <p>Sama</p>
-          `,
-        );
-        sent++;
-      } catch (err) {
-        // Un-stamp so a real send failure retries next run.
-        await supabase
-          .from("bookings")
-          .update({ pre_trip_reminder_sent_at: null })
-          .eq("id", booking.id);
-        console.error(`[pre-trip-reminder] failed for booking ${booking.id}:`, err);
-        failed++;
-      }
+        .update({ pre_trip_reminder_sent_at: null })
+        .eq("id", booking.id);
+      console.error(`[pre-trip-reminder] failed for booking ${booking.id}:`, err);
+      failed++;
     }
   }
 

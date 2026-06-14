@@ -9,6 +9,7 @@ import { escapeHtml } from "@/lib/escape-html";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountSamaHolds } from "@/lib/booking-finance";
+import { sendInChunks } from "@/lib/send-in-chunks";
 
 function slugify(title: string): string {
   return title
@@ -613,7 +614,7 @@ export async function updateTrip(
 
         const changeHtml = `<ul>${changeLines.join("")}</ul>`;
 
-        for (const booking of affectedBookings) {
+        await sendInChunks(affectedBookings, async (booking) => {
           try {
             await resend.emails.send({
               from: FROM_ADDRESS,
@@ -632,7 +633,7 @@ export async function updateTrip(
           } catch (err) {
             console.error("[email] failed to notify booking change", booking.id, err);
           }
-        }
+        });
       }
     }
   }
@@ -665,7 +666,7 @@ export async function updateTrip(
       // Only mark a member notified if their email actually sent. A failed send
       // must NOT stamp notified/notified_at, otherwise the 12-hour debounce would
       // make them miss this opening — they stay eligible for the next notification.
-      const results = await Promise.allSettled(waitlistEntries.map(async (entry) => {
+      const results = await sendInChunks(waitlistEntries, async (entry) => {
         try {
           await resend.emails.send({
             from: FROM_ADDRESS,
@@ -683,7 +684,7 @@ export async function updateTrip(
           throw err;
         }
         return entry.id;
-      }));
+      });
 
       const sentIds = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
 
@@ -967,7 +968,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     refundResultMap.set(booking.id, { initial: initialResult, balance: balanceResult });
   }));
 
-  await Promise.allSettled((bookings ?? []).map(async (booking) => {
+  await sendInChunks(bookings ?? [], async (booking) => {
     const amountPaid =
       booking.payment_option === "downpayment" && booking.amount_due != null
         ? booking.amount_due
@@ -996,9 +997,9 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     } catch (err) {
       console.error("[email] failed to notify booking cancellation", booking.id, err);
     }
-  }));
+  });
 
-  await Promise.allSettled((waitlistEntries ?? []).map(async (entry) => {
+  await sendInChunks(waitlistEntries ?? [], async (entry) => {
     try {
       await resend.emails.send({
         from: FROM_ADDRESS,
@@ -1015,7 +1016,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     } catch (err) {
       console.error("[email] failed to notify waitlist cancellation", entry.id, err);
     }
-  }));
+  });
 
   // Send consolidated manual refund alert if any bookings couldn't be automatically refunded.
   if (manualRefundList.length > 0) {

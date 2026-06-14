@@ -9,6 +9,7 @@ import { escapeHtml } from "@/lib/escape-html";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountSamaHolds } from "@/lib/booking-finance";
+import { sendInChunks } from "@/lib/send-in-chunks";
 
 if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
@@ -211,9 +212,9 @@ export async function rejectOrganizer(id: string): Promise<void> {
     }
 
     // Notify participants — copy reflects whether the refund was automatic or manual.
-    for (const booking of affectedBookings ?? []) {
+    await sendInChunks(affectedBookings ?? [], async (booking) => {
       const trip = tripMap.get(booking.trip_id);
-      if (!trip) continue;
+      if (!trip) return;
       const refundResult = refundResultMap.get(booking.id);
       const initialSucceeded = refundResult?.initial?.success === true;
       const balanceSucceeded = refundResult?.balance?.success === true || !refundResult?.balance;
@@ -243,7 +244,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
       } catch (err) {
         console.error("[email] failed to send trip cancellation notice to participant", err);
       }
-    }
+    });
   }
 
   // Notify the organizer their account has been rejected and trips unpublished.
