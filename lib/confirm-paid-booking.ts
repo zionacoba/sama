@@ -358,6 +358,50 @@ export async function confirmPaidBooking(
     }
   }
 
+  // Email the booker the join links for any additional participants who still
+  // need to complete their own details and sign the waiver. This runs for both
+  // confirmed and pending outcomes, matching the free path in createBooking.
+  // It sits inside the once-only confirmation block (guarded by the
+  // payment_gateway_status null check on the UPDATE above), so it can send at
+  // most once per booking even if the webhook and reconcile paths race.
+  try {
+    const { data: incompleteParticipants, error: participantsError } = await admin
+      .from("booking_participants")
+      .select("slot_number, token")
+      .eq("booking_id", booking.id)
+      .eq("completed", false)
+      .order("slot_number", { ascending: true });
+
+    if (participantsError) {
+      console.error(`[confirm-paid-booking] participants fetch error for booking ${booking.id}:`, participantsError.message);
+    }
+
+    if (incompleteParticipants && incompleteParticipants.length > 0) {
+      const joinLinks = incompleteParticipants
+        .map(
+          (p) =>
+            `<li>Participant ${p.slot_number + 1}: <a href="${SITE_URL}/join/${p.token}">${SITE_URL}/join/${p.token}</a></li>`,
+        )
+        .join("");
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: booking.email,
+        replyTo: REPLY_TO_ADDRESS,
+        subject: `Action needed: participant details for ${trip.title}`,
+        html: `
+          <p>Hi ${escapeHtml(booking.full_name)},</p>
+          <p>You booked <strong>${booking.slots} slots</strong> for <strong>${escapeHtml(trip.title)}</strong>. Each of your additional participants needs to complete their own details and sign the waiver before the trip.</p>
+          <p>Please forward the right link below to each person so they can fill in their name, emergency contact, and sign the waiver:</p>
+          <ul>${joinLinks}</ul>
+          <p>Each link is unique to one participant, so make sure the right person gets the right link.</p>
+          <p>Sama</p>
+        `,
+      });
+    }
+  } catch (err) {
+    console.error("[confirm-paid-booking] failed to send participant join links to booker", err);
+  }
+
   // revalidatePath throws if called during a server-component render (the
   // success page reconcile path). Guard it so confirmation never fails for a
   // caller that has already committed the DB update and sent the emails.
