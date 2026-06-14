@@ -4,6 +4,7 @@ import { Navbar } from "@/app/components/navbar";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { amountJoinerPaid } from "@/lib/booking-finance";
+import { confirmPaidBooking, fetchPaymongoLinkPayment } from "@/lib/confirm-paid-booking";
 import { EmergencyContactPrompt } from "./emergency-contact-prompt";
 
 export const metadata: Metadata = {
@@ -54,6 +55,9 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
     total_amount: number;
     amount_due: number | null;
     payment_option: string | null;
+    status: string | null;
+    payment_id: string | null;
+    payment_gateway_status: string | null;
     balance_payment_gateway_status: string | null;
     meeting_point: string | null;
     trip: {
@@ -73,10 +77,41 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
   if (bookingId) {
     const { data } = await admin
       .from("bookings")
-      .select("id, total_amount, amount_due, payment_option, balance_payment_gateway_status, meeting_point, trip:trips(title, date_start, messenger_gc_link, organizer:organizers(display_name, full_name, facebook_url, social_links))")
+      .select("id, total_amount, amount_due, payment_option, status, payment_id, payment_gateway_status, balance_payment_gateway_status, meeting_point, trip:trips(title, date_start, messenger_gc_link, organizer:organizers(display_name, full_name, facebook_url, social_links))")
       .eq("id", bookingId)
       .maybeSingle();
     booking = data as BookingSummary | null;
+  }
+
+  // Webhook-independent reconciliation. If a PayMongo webhook was missed, the
+  // booking will still be sitting in payment_pending with no gateway status.
+  // Ask PayMongo directly whether the link was paid and, if so, confirm via the
+  // shared idempotent helper. We trust ONLY PayMongo's reported paid status on
+  // the server-held link id (payment_id), never the guessable bookingId URL
+  // param. Any error falls back to the existing informational UI — we never
+  // surface a failure or suggest the payment did not go through.
+  let paymentConfirmed = booking?.payment_gateway_status === "paid";
+  if (
+    booking &&
+    booking.status === "payment_pending" &&
+    booking.payment_gateway_status === null &&
+    booking.payment_id
+  ) {
+    try {
+      const linkPayment = await fetchPaymongoLinkPayment(booking.payment_id);
+      if (linkPayment.status === "paid") {
+        const result = await confirmPaidBooking(
+          booking.payment_id,
+          linkPayment.paymentMethod,
+          linkPayment.paymentTransactionId,
+        );
+        if (result.outcome === "confirmed" || result.outcome === "already_paid") {
+          paymentConfirmed = true;
+        }
+      }
+    } catch (err) {
+      console.error("[payment-success] reconciliation failed:", err);
+    }
   }
 
   const bookingRef = bookingId
@@ -126,7 +161,9 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
           <h1 className="text-2xl font-bold text-stone-900">Payment received!</h1>
 
           <p className="mt-3 text-sm text-stone-600">
-            We&apos;re confirming your booking — you&apos;ll receive an email shortly with your booking details.
+            {paymentConfirmed
+              ? "We've received your payment. Check your email for your booking details and next steps."
+              : "We're confirming your booking. You'll receive an email shortly with your booking details."}
           </p>
 
           {booking?.trip ? (

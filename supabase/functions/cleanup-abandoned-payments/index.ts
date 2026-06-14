@@ -26,6 +26,8 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  const siteUrl = Deno.env.get("NEXT_PUBLIC_SITE_URL") || "https://sama.com.ph";
+
   const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
 
   const { data: staleBookings, error } = await supabase
@@ -44,7 +46,46 @@ Deno.serve(async (req) => {
   }
 
   let cleaned = 0;
+  let skippedPaid = 0;
   for (const booking of staleBookings ?? []) {
+    // Webhook-independent reconciliation. Before cancelling, ask the app to
+    // check PayMongo directly for this booking's payment. If the payment went
+    // through but the webhook was missed, the route confirms the booking and
+    // tells us NOT to cancel. If the route call fails or times out, we FAIL
+    // SAFE and leave the booking payment_pending for a future run rather than
+    // risk cancelling a paid booking.
+    let canCancel = false;
+    try {
+      const reconcileRes = await fetch(`${siteUrl}/api/internal/reconcile-booking`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${cronSecret}`,
+        },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
+
+      if (reconcileRes.ok) {
+        const result = await reconcileRes.json();
+        canCancel = result?.canCancel === true;
+        if (!canCancel) {
+          skippedPaid++;
+          console.log(`[cleanup-abandoned-payments] booking ${booking.id} reconciled as paid/uncertain, skipping cancellation`);
+        }
+      } else {
+        // Non-2xx (including the route's fail-safe 502) — do not cancel.
+        console.warn(`[cleanup-abandoned-payments] reconcile route returned ${reconcileRes.status} for booking ${booking.id}, leaving pending`);
+      }
+    } catch (reconcileErr) {
+      console.error(`[cleanup-abandoned-payments] reconcile call failed for booking ${booking.id}, leaving pending:`, reconcileErr);
+    }
+
+    if (!canCancel) {
+      // Either the booking is now paid/confirmed, or we could not verify it.
+      // Leave it untouched: do not change status, restore slot, or delete participants.
+      continue;
+    }
+
     // Cancel atomically — only if still payment_pending.
     // This guards against a race where the user completes payment after the
     // 15-min window opens but before we process the row. Without this guard
@@ -89,9 +130,9 @@ Deno.serve(async (req) => {
     cleaned++;
   }
 
-  console.log(`[cleanup-abandoned-payments] cleaned ${cleaned} of ${(staleBookings ?? []).length} stale bookings`);
+  console.log(`[cleanup-abandoned-payments] cleaned ${cleaned} of ${(staleBookings ?? []).length} stale bookings (skipped ${skippedPaid} paid/unverified)`);
 
-  return new Response(JSON.stringify({ cleaned, total: (staleBookings ?? []).length }), {
+  return new Response(JSON.stringify({ cleaned, skippedPaid, total: (staleBookings ?? []).length }), {
     headers: { "Content-Type": "application/json" },
   });
 });
