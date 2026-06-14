@@ -5,6 +5,7 @@ import { Navbar } from "@/app/components/navbar";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { amountJoinerPaid } from "@/lib/booking-finance";
+import { safeExternalUrl } from "@/lib/safe-url";
 import { confirmPaidBooking, fetchPaymongoLinkPayment } from "@/lib/confirm-paid-booking";
 import { EmergencyContactPrompt } from "./emergency-contact-prompt";
 
@@ -141,7 +142,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
     booking.amount_due != null &&
     booking.amount_due < booking.total_amount;
 
-  const messengerLink = booking?.trip?.messenger_gc_link ?? null;
+  const messengerLink = safeExternalUrl(booking?.trip?.messenger_gc_link ?? null);
 
   const organizerContactUrl = (() => {
     const org = booking?.trip?.organizer;
@@ -154,8 +155,8 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
             catch { return null; }
           })()
         : (rawLinks as { organizer_facebook?: string; facebook?: string } | null);
-    return (
-      (sl?.organizer_facebook?.trim() || sl?.facebook?.trim() || org.facebook_url?.trim()) ?? null
+    return safeExternalUrl(
+      (sl?.organizer_facebook?.trim() || sl?.facebook?.trim() || org.facebook_url?.trim()) ?? null,
     );
   })();
 

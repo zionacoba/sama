@@ -5,6 +5,7 @@ import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { safeExternalUrl } from "@/lib/safe-url";
 import { BookingModal } from "@/app/trips/[slug]/booking-modal";
 import { WaitlistModal } from "@/app/trips/[slug]/waitlist-modal";
 import { ShareButton } from "@/app/components/share-button";
@@ -313,7 +314,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
     const sl = typeof rawLinks === "string"
       ? (() => { try { return JSON.parse(rawLinks) as OrganizerInfo["social_links"]; } catch { return null; } })()
       : organizer.social_links;
-    return sl?.organizer_facebook?.trim() || sl?.facebook?.trim() || organizer.facebook_url?.trim() || null;
+    return safeExternalUrl(sl?.organizer_facebook?.trim() || sl?.facebook?.trim() || organizer.facebook_url?.trim() || null);
   })();
 
   const avgRating =

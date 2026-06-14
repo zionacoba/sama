@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
+import { safeExternalUrl } from "@/lib/safe-url";
 
 if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
@@ -49,6 +50,13 @@ export async function applyToBeOrganizer(
     return { error: "Please enter your years of experience." };
   }
 
+  const validPersonalFacebookUrl = safeExternalUrl(personalFacebookUrl);
+  const validOrganizerFacebookUrl = safeExternalUrl(organizerFacebookUrl);
+  const validInstagram = instagram ? safeExternalUrl(instagram) : null;
+  if (!validPersonalFacebookUrl || !validOrganizerFacebookUrl || (instagram && !validInstagram)) {
+    return { error: "Please enter a valid Facebook or Instagram link starting with http:// or https://" };
+  }
+
   const { data: takenName } = await supabase
     .from("organizers")
     .select("id")
@@ -80,8 +88,8 @@ export async function applyToBeOrganizer(
         full_name: fullName,
         bio,
         phone,
-        facebook_url: personalFacebookUrl,
-        social_links: { facebook: organizerFacebookUrl || null, instagram: instagram || null },
+        facebook_url: validPersonalFacebookUrl,
+        social_links: { facebook: validOrganizerFacebookUrl, instagram: validInstagram },
         activity_types: activityTypes,
         years_experience: yearsOfExperience,
         emergency_certified: emergencyCertified,
@@ -148,8 +156,8 @@ export async function applyToBeOrganizer(
       full_name: fullName,
       bio,
       phone,
-      facebook_url: personalFacebookUrl,
-      social_links: { facebook: organizerFacebookUrl || null, instagram: instagram || null },
+      facebook_url: validPersonalFacebookUrl,
+      social_links: { facebook: validOrganizerFacebookUrl, instagram: validInstagram },
       activity_types: activityTypes,
       years_experience: yearsOfExperience,
       emergency_certified: emergencyCertified,
@@ -256,9 +264,17 @@ export async function updateOrganizerProfile(
     return { error: "Bio must be 1000 characters or fewer." };
   }
 
-  const urlFields = [social_links.facebook, social_links.instagram, social_links.tiktok];
-  if (urlFields.some((u) => u && !u.startsWith("https://"))) {
-    return { error: "Social links must start with https://" };
+  const validatedSocialLinks = {
+    facebook: social_links.facebook ? safeExternalUrl(social_links.facebook) : null,
+    instagram: social_links.instagram ? safeExternalUrl(social_links.instagram) : null,
+    tiktok: social_links.tiktok ? safeExternalUrl(social_links.tiktok) : null,
+  };
+  if (
+    (social_links.facebook && !validatedSocialLinks.facebook) ||
+    (social_links.instagram && !validatedSocialLinks.instagram) ||
+    (social_links.tiktok && !validatedSocialLinks.tiktok)
+  ) {
+    return { error: "Social links must be valid links starting with http:// or https://" };
   }
 
   const admin = createSupabaseAdminClient();
@@ -320,7 +336,8 @@ export async function updateOrganizerProfile(
   const { error } = await admin
     .from("organizers")
     .update({
-      display_name, full_name, phone, bio, photo_url, cover_image_url, social_links,
+      display_name, full_name, phone, bio, photo_url, cover_image_url,
+      social_links: validatedSocialLinks,
       payout_method, gcash_number, gcash_name,
       bank_name, bank_account_number, bank_account_name,
     })

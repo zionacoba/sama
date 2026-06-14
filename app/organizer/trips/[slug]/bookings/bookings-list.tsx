@@ -6,6 +6,7 @@ import { BookingActions } from "@/app/organizer/dashboard/booking-actions";
 import { MarkBalanceButton } from "./mark-balance-button";
 import { MarkTransferButton } from "./mark-transfer-button";
 import { MarkNoShowButton } from "./mark-no-show-button";
+import { safeExternalUrl } from "@/lib/safe-url";
 
 type Booking = {
   id: number;
@@ -119,9 +120,9 @@ function BookingCard({
             <a href={`tel:${b.phone}`} className="text-xs text-stone-500 hover:text-trailhead hover:underline">
               {b.phone}
             </a>
-            {b.facebook_url && (
+            {safeExternalUrl(b.facebook_url) && (
               <a
-                href={b.facebook_url}
+                href={safeExternalUrl(b.facebook_url)!}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-trailhead hover:underline"
@@ -406,9 +407,9 @@ export function BookingsListWithTabs({
                         >
                           {b.phone}
                         </a>
-                        {b.facebook_url && (
+                        {safeExternalUrl(b.facebook_url) && (
                           <a
-                            href={b.facebook_url}
+                            href={safeExternalUrl(b.facebook_url)!}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="ml-0 text-xs text-trailhead hover:underline"

@@ -21,6 +21,7 @@ import { OrganizerApproveButton } from "./organizer-approve-button";
 import { EditRemittanceReferenceButton } from "./edit-remittance-reference-button";
 import { ExportPayoutCsvButton } from "./export-payout-csv-button";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { safeExternalUrl } from "@/lib/safe-url";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 const PAGE_SIZE = 20;
@@ -631,7 +632,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
                   const sl = typeof rawSl === "string"
                     ? (() => { try { return JSON.parse(rawSl); } catch { return null; } })()
                     : rawSl;
-                  const organizerFbUrl = sl?.organizer_facebook ?? sl?.facebook ?? null;
+                  const personalFbUrl = safeExternalUrl(app.facebook_url);
+                  const organizerFbUrl = safeExternalUrl(sl?.organizer_facebook ?? sl?.facebook ?? null);
+                  const instagramUrl = safeExternalUrl(sl?.instagram);
                   return (
                     <details key={app.id} className="group overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
                       <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 hover:bg-stone-50">
@@ -689,8 +692,8 @@ export default async function AdminPage({ searchParams }: PageProps) {
                           <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Personal Facebook</dt>
                             <dd className="mt-0.5">
-                              {app.facebook_url
-                                ? <a href={app.facebook_url} target="_blank" rel="noopener noreferrer" className="text-trailhead underline-offset-2 hover:underline">View ↗</a>
+                              {personalFbUrl
+                                ? <a href={personalFbUrl} target="_blank" rel="noopener noreferrer" className="text-trailhead underline-offset-2 hover:underline">View ↗</a>
                                 : <span className="text-stone-300">—</span>}
                             </dd>
                           </div>
@@ -705,8 +708,8 @@ export default async function AdminPage({ searchParams }: PageProps) {
                           <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Instagram</dt>
                             <dd className="mt-0.5">
-                              {sl?.instagram
-                                ? <a href={sl.instagram} target="_blank" rel="noopener noreferrer" className="text-trailhead underline-offset-2 hover:underline">View ↗</a>
+                              {instagramUrl
+                                ? <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="text-trailhead underline-offset-2 hover:underline">View ↗</a>
                                 : <span className="text-stone-300">—</span>}
                             </dd>
                           </div>

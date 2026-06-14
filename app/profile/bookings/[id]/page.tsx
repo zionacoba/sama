@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
+import { safeExternalUrl } from "@/lib/safe-url";
 import { CancelBookingButton } from "@/app/profile/cancel-booking-button";
 import { PayBalanceButton } from "./pay-balance-button";
 import { PartialCancelButton } from "./partial-cancel-button";
@@ -166,7 +167,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
   const isActive = booking.status === "confirmed" || booking.status === "pending";
   const isFuture = trip.date_start >= new Date().toISOString().split("T")[0];
 
-  const safeGcLink = trip.messenger_gc_link?.startsWith("http") ? trip.messenger_gc_link : null;
+  const safeGcLink = safeExternalUrl(trip.messenger_gc_link);
 
   let organizerFacebook: string | null = null;
   let organizerDisplayName: string | null = null;
@@ -182,11 +183,12 @@ export default async function BookingDetailPage({ params }: PageProps) {
       const sl = typeof rawSl === "string"
         ? (() => { try { return JSON.parse(rawSl) as { organizer_facebook?: string; facebook?: string }; } catch { return null; } })()
         : (rawSl as { organizer_facebook?: string; facebook?: string } | null);
-      organizerFacebook =
+      organizerFacebook = safeExternalUrl(
         sl?.organizer_facebook ||
         sl?.facebook ||
         orgData.facebook_url ||
-        null;
+        null,
+      );
     }
   }
 
