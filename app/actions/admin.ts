@@ -10,6 +10,7 @@ import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountSamaHolds } from "@/lib/booking-finance";
 import { sendInChunks } from "@/lib/send-in-chunks";
+import { formatPeso } from "@/lib/format";
 
 if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
@@ -190,7 +191,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
     // Alert admin to any bookings that couldn't be automatically refunded.
     if (manualRefundList.length > 0 && ADMIN_EMAIL) {
       const fmtCurrency = (n: number) =>
-        new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+        formatPeso(n);
       try {
         const rows = manualRefundList
           .map((b) => `<li>Booking ${b.id}, ${escapeHtml(b.full_name)} (${escapeHtml(b.email)}): ${fmtCurrency(b.amount)}</li>`)
@@ -980,7 +981,7 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
     .sort();
 
   const fmt = (n: number) =>
-    new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+    formatPeso(n);
   const fmtDate = (d: string) =>
     new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(d));
 

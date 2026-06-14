@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Navbar } from "@/app/components/navbar";
+import { formatBookingRef } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Payment not completed | Sama",
@@ -41,7 +42,7 @@ export default async function PaymentFailedPage({ searchParams }: PageProps) {
             <p className="mt-2 text-xs text-stone-400">
               Booking reference:{" "}
               <span className="font-mono font-medium text-stone-600">
-                {parseInt(bookingId, 10).toString(16).toUpperCase().slice(-8).padStart(8, "0")}
+                {formatBookingRef(parseInt(bookingId, 10))}
               </span>
             </p>
           )}

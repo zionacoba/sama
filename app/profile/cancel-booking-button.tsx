@@ -2,14 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { cancelBooking } from "@/app/actions/booking";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatPeso } from "@/lib/format";
 
 export function CancelBookingButton({
   bookingId,
@@ -61,7 +54,7 @@ export function CancelBookingButton({
             </p>
             <p className="mt-3 text-sm text-stone-600">
               {refundAmount != null && refundAmount > 0
-                ? <>You will receive a <strong>{formatCurrency(refundAmount)}</strong> refund within 3–5 business days.</>
+                ? <>You will receive a <strong>{formatPeso(refundAmount)}</strong> refund within 3–5 business days.</>
                 : "No refund is available based on the cancellation policy."
               }
             </p>

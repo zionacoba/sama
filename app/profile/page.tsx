@@ -10,6 +10,7 @@ import { ProfileForm as SafetyForm } from "@/app/dashboard/profile/profile-form"
 import { ProfileForm } from "./profile-form";
 import { DeleteAccountButton } from "@/app/components/delete-account-button";
 import { ParticipantShareLinks } from "./participant-share-links";
+import { formatPeso, formatBookingRef } from "@/lib/format";
 import { removeWaitlistEntry } from "@/app/actions/waitlist";
 import { Footer } from "@/app/components/footer";
 
@@ -45,14 +46,6 @@ type Booking = {
     waiver_text: string | null;
   };
 };
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("en-PH", {
@@ -177,14 +170,14 @@ function BookingCard({
         <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-stone-500">
           <span>{formatDate(trip.date_start)}{trip.duration && ` · ${trip.duration}`}</span>
           <span>{booking.slots} slot{booking.slots !== 1 ? "s" : ""}</span>
-          <span>{formatCurrency(booking.total_amount)}</span>
-          <span className="font-mono text-stone-400">#{booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0")}</span>
+          <span>{formatPeso(booking.total_amount)}</span>
+          <span className="font-mono text-stone-400">#{formatBookingRef(booking.id)}</span>
           {booking.payment_option === "downpayment" && booking.amount_due != null && (
             booking.balance_collected ? (
               <span className="font-semibold text-emerald-600">Fully paid</span>
             ) : Math.max(0, booking.total_amount - booking.amount_due) > 0 ? (
               <span className="font-semibold text-amber-600">
-                {formatCurrency(Math.max(0, booking.total_amount - booking.amount_due))} balance pending
+                {formatPeso(Math.max(0, booking.total_amount - booking.amount_due))} balance pending
               </span>
             ) : null
           )}
@@ -220,7 +213,7 @@ function BookingCard({
                 href={`/profile/bookings/${booking.id}`}
                 className="self-start text-xs font-semibold text-amber-700 underline-offset-2 hover:text-amber-900 hover:underline"
               >
-                Pay remaining balance ({formatCurrency(Math.max(0, booking.total_amount - booking.amount_due))}) →
+                Pay remaining balance ({formatPeso(Math.max(0, booking.total_amount - booking.amount_due))}) →
               </Link>
               <p className="text-xs text-stone-400">
                 Pay online before the trip, or directly to your organizer on the day.

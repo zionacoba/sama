@@ -8,6 +8,7 @@ import { amountJoinerPaid } from "@/lib/booking-finance";
 import { safeExternalUrl } from "@/lib/safe-url";
 import { confirmPaidBooking, confirmPaidBalance, fetchPaymongoLinkPayment } from "@/lib/confirm-paid-booking";
 import { EmergencyContactPrompt } from "./emergency-contact-prompt";
+import { formatPeso, formatBookingRef } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Payment received | Sama",
@@ -17,14 +18,6 @@ export const metadata: Metadata = {
 type PageProps = {
   searchParams: Promise<{ bookingId?: string }>;
 };
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-PH", {
@@ -160,7 +153,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
   }
 
   const bookingRef = bookingId
-    ? parseInt(bookingId, 10).toString(16).toUpperCase().slice(-8).padStart(8, "0")
+    ? formatBookingRef(parseInt(bookingId, 10))
     : null;
 
   const hasRemainingBalance =
@@ -221,7 +214,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
                 </p>
               )}
               <p className="mt-3 text-sm font-medium text-stone-700">
-                Amount paid: <span className="text-trailhead">{formatCurrency(amountJoinerPaid(booking))}</span>
+                Amount paid: <span className="text-trailhead">{formatPeso(amountJoinerPaid(booking))}</span>
               </p>
               {bookingRef && (
                 <p className="mt-1 text-xs text-stone-400">
@@ -258,7 +251,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
                     <span className="mt-0.5 shrink-0">💳</span>
                     <span>
                       Your remaining balance of{" "}
-                      <strong className="text-stone-700">{formatCurrency(booking.total_amount - (booking.amount_due ?? 0))}</strong>{" "}
+                      <strong className="text-stone-700">{formatPeso(booking.total_amount - (booking.amount_due ?? 0))}</strong>{" "}
                       can be paid online before the trip or in cash directly to the organizer on the day.
                     </span>
                   </li>

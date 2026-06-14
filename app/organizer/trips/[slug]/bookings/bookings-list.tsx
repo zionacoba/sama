@@ -7,6 +7,7 @@ import { MarkBalanceButton } from "./mark-balance-button";
 import { MarkTransferButton } from "./mark-transfer-button";
 import { MarkNoShowButton } from "./mark-no-show-button";
 import { safeExternalUrl } from "@/lib/safe-url";
+import { formatPeso } from "@/lib/format";
 
 type Booking = {
   id: number;
@@ -43,14 +44,6 @@ type BookingParticipant = {
 };
 
 type Tab = "confirmed" | "pending" | "awaiting_payment" | "all" | "cancelled";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 function formatDateTime(date: string) {
   return new Intl.DateTimeFormat("en-PH", {
@@ -204,7 +197,7 @@ function BookingCard({
       <div className="mt-3 flex items-center justify-between gap-3 border-t border-stone-100 pt-3">
         <span className="text-xs font-medium uppercase tracking-wide text-stone-400">Amount</span>
         <div className="flex flex-col items-end gap-1">
-          <span className="font-semibold text-trailhead">{formatCurrency(b.total_amount)}</span>
+          <span className="font-semibold text-trailhead">{formatPeso(b.total_amount)}</span>
           {showBalance &&
             (b.balance_collected ? (
               b.balance_payment_gateway_status === "paid" ? (
@@ -221,7 +214,7 @@ function BookingCard({
                   <MarkBalanceButton
                     bookingId={b.id}
                     participantName={b.full_name}
-                    balanceAmount={formatCurrency(balance)}
+                    balanceAmount={formatPeso(balance)}
                   />
                 )}
               </div>
@@ -346,11 +339,11 @@ export function BookingsListWithTabs({
 
       {paymentType === "downpayment" && minDownpayment != null ? (
         <div className="text-sm text-stone-500 mb-3">
-          Trip price: {formatCurrency(price)} · Downpayment: {formatCurrency(minDownpayment)} · Balance due: {formatCurrency(price - minDownpayment)}
+          Trip price: {formatPeso(price)} · Downpayment: {formatPeso(minDownpayment)} · Balance due: {formatPeso(price - minDownpayment)}
         </div>
       ) : (
         <div className="text-sm text-stone-500 mb-3">
-          Trip price: {formatCurrency(price)} · Full payment
+          Trip price: {formatPeso(price)} · Full payment
         </div>
       )}
 
@@ -473,7 +466,7 @@ export function BookingsListWithTabs({
                         })()}
                       </td>
                       <td className="px-5 py-3.5 text-right font-semibold text-trailhead">
-                        {formatCurrency(b.total_amount)}
+                        {formatPeso(b.total_amount)}
                         {b.payment_option === "downpayment" && b.amount_due != null && (() => {
                           const balance = b.total_amount - b.amount_due;
                           return (
@@ -493,7 +486,7 @@ export function BookingsListWithTabs({
                                     <MarkBalanceButton
                                       bookingId={b.id}
                                       participantName={b.full_name}
-                                      balanceAmount={formatCurrency(balance)}
+                                      balanceAmount={formatPeso(balance)}
                                     />
                                   )}
                                 </>

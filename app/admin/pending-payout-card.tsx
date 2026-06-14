@@ -2,14 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { markPayoutRemittedAction, type PendingPayout } from "@/app/actions/admin";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatPeso } from "@/lib/format";
 
 function formatCreatedAt(date: string) {
   return new Intl.DateTimeFormat("en-PH", {
@@ -71,9 +64,9 @@ export function PendingPayoutCard({ payout }: { payout: PendingPayout }) {
           <p className="mt-1 text-xs text-stone-400">Created {formatCreatedAt(payout.createdAt)}</p>
         </div>
         <div className="text-right">
-          <p className="text-xl font-bold text-trailhead">{formatCurrency(payout.netAmount)}</p>
+          <p className="text-xl font-bold text-trailhead">{formatPeso(payout.netAmount)}</p>
           <p className="text-xs text-stone-500">
-            {payout.bookingCount} booking{payout.bookingCount !== 1 ? "s" : ""} · {formatCurrency(payout.totalAmount)} gross · {formatCurrency(payout.platformCommission)} commission
+            {payout.bookingCount} booking{payout.bookingCount !== 1 ? "s" : ""} · {formatPeso(payout.totalAmount)} gross · {formatPeso(payout.platformCommission)} commission
           </p>
         </div>
       </div>
@@ -115,7 +108,7 @@ export function PendingPayoutCard({ payout }: { payout: PendingPayout }) {
           <div className="w-full rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
             <p className="font-semibold text-stone-900">Mark as remitted?</p>
             <p className="mt-1 text-sm text-stone-600">
-              Confirm you have sent {formatCurrency(payout.netAmount)} to {payout.organizerName}{destLine ? ` via ${destLine}` : ""}. This cannot be undone.
+              Confirm you have sent {formatPeso(payout.netAmount)} to {payout.organizerName}{destLine ? ` via ${destLine}` : ""}. This cannot be undone.
             </p>
             <div className="mt-3 flex gap-2">
               <button

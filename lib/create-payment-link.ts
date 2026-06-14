@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { formatBookingRef } from "@/lib/format";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
@@ -35,7 +36,7 @@ export async function createPaymentLink({
   }
 
   const centavos = Math.round(amount * 100);
-  const ref = bookingId.toString(16).toUpperCase().slice(-8).padStart(8, "0");
+  const ref = formatBookingRef(bookingId);
   const auth = "Basic " + Buffer.from(`${secretKey}:`).toString("base64");
 
   const pmRes = await fetch("https://api.paymongo.com/v1/links", {

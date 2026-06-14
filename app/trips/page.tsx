@@ -6,6 +6,7 @@ import { Navbar } from "@/app/components/navbar";
 import { Footer } from "@/app/components/footer";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { TripFilters } from "./trip-filters";
+import { formatPeso } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Browse trips",
@@ -63,11 +64,7 @@ type PageProps = {
 
 function formatPrice(price: string | number) {
   if (typeof price === "string") return price;
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(price);
+  return formatPeso(price);
 }
 
 function formatDate(date: string) {

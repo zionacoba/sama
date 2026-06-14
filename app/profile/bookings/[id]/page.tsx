@@ -10,6 +10,7 @@ import { PayBalanceButton } from "./pay-balance-button";
 import { PartialCancelButton } from "./partial-cancel-button";
 import { calculateRefundAmount } from "@/lib/cancellation-policies";
 import { amountJoinerPaid } from "@/lib/booking-finance";
+import { formatPeso, formatBookingRef } from "@/lib/format";
 import { Footer } from "@/app/components/footer";
 
 type PageProps = {
@@ -61,14 +62,6 @@ type BookingDetail = {
     custom_question: string | null;
   };
 };
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("en-PH", {
@@ -164,7 +157,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
   const booking = data as unknown as BookingDetail;
   const { trip } = booking;
 
-  const bookingRef = booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
+  const bookingRef = formatBookingRef(booking.id);
   const isActive = booking.status === "confirmed" || booking.status === "pending";
   const isFuture = trip.date_start >= new Date().toISOString().split("T")[0];
 
@@ -327,10 +320,10 @@ export default async function BookingDetailPage({ params }: PageProps) {
           </div>
           <dl className="divide-y divide-stone-100 px-5">
             <DetailRow label="Slots booked">{booking.slots} slot{booking.slots !== 1 ? "s" : ""}</DetailRow>
-            <DetailRow label="Total amount">{formatCurrency(booking.total_amount)}</DetailRow>
+            <DetailRow label="Total amount">{formatPeso(booking.total_amount)}</DetailRow>
             {booking.payment_option === "downpayment" && booking.amount_due != null && (
               <>
-                <DetailRow label="Amount paid">{formatCurrency(booking.amount_due)}</DetailRow>
+                <DetailRow label="Amount paid">{formatPeso(booking.amount_due)}</DetailRow>
                 <DetailRow label="Balance">
                   {booking.balance_collected ? (
                     <span className="font-semibold text-emerald-600">
@@ -338,7 +331,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
                     </span>
                   ) : (
                     <span>
-                      <span className="font-semibold text-amber-700">{formatCurrency(balance ?? 0)} outstanding</span>
+                      <span className="font-semibold text-amber-700">{formatPeso(balance ?? 0)} outstanding</span>
                       <span className="mt-1 block text-xs text-stone-500">
                         You can pay this online before the trip, or directly to your organizer on the day.
                       </span>
@@ -467,7 +460,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
             isFuture &&
             balance != null &&
             balance > 0 && (
-              <PayBalanceButton bookingId={booking.id} balanceAmount={formatCurrency(balance)} />
+              <PayBalanceButton bookingId={booking.id} balanceAmount={formatPeso(balance)} />
             )}
           {isActive && isFuture && booking.slots > 1 && (
             <PartialCancelButton

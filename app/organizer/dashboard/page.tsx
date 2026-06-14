@@ -8,6 +8,7 @@ import { DashboardFilters } from "./dashboard-filters";
 import { TripRow, TripRunRow, type OrganizerTrip, type TripCounts } from "./trip-row";
 import { RespondToReviewForm } from "@/app/organizers/[id]/respond-to-review-form";
 import { ExportEarningsCsvButton } from "./export-earnings-csv-button";
+import { formatPeso } from "@/lib/format";
 
 export const maxDuration = 60;
 
@@ -594,7 +595,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-100 bg-stone-50 px-5 py-4">
                     <div>
                       <p className="text-2xl font-bold text-trailhead">
-                        {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(pendingEarningsTotal)}
+                        {formatPeso(pendingEarningsTotal)}
                       </p>
                       <p className="text-sm text-stone-500">pending payout</p>
                     </div>
@@ -630,16 +631,16 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                             <td className="px-5 py-3 text-stone-900">{b.tripTitle}</td>
                             <td className="px-5 py-3 text-right text-stone-600">{b.slots}</td>
                             <td className="px-5 py-3 text-right text-stone-600">
-                              {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(b.grossAmount)}
+                              {formatPeso(b.grossAmount)}
                             </td>
                             <td className="px-5 py-3 text-right text-stone-600">
-                              <span>{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(b.commissionAmount)}</span>
+                              <span>{formatPeso(b.commissionAmount)}</span>
                               {b.commissionRate != null && (
                                 <span className="block text-xs text-stone-400">{Math.round(b.commissionRate * 100)}%</span>
                               )}
                             </td>
                             <td className="px-5 py-3 text-right font-semibold text-trailhead">
-                              {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(b.netAmount)}
+                              {formatPeso(b.netAmount)}
                             </td>
                           </tr>
                         ))}
@@ -657,7 +658,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                     <p className="mt-1 text-sm text-amber-800">
                       A deduction of{" "}
                       <span className="font-semibold">
-                        {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(totalPendingDeductions)}
+                        {formatPeso(totalPendingDeductions)}
                       </span>{" "}
                       will be applied to your next payout for a refund issued after a previous payout was sent. This keeps your account balanced without requiring a manual transfer back.
                     </p>
@@ -678,7 +679,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                           </td>
                           <td className="px-5 py-3 text-stone-700">#{d.bookingId}</td>
                           <td className="px-5 py-3 text-right font-semibold text-red-700">
-                            −{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(d.amount)}
+                            −{formatPeso(d.amount)}
                           </td>
                         </tr>
                       ))}
@@ -695,7 +696,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                     <p className="text-sm text-stone-500">
                       Lifetime earnings:{" "}
                       <span className="font-semibold text-stone-900">
-                        {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(lifetimeEarnings)}
+                        {formatPeso(lifetimeEarnings)}
                       </span>
                     </p>
                   </div>
@@ -721,7 +722,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                               {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(p.remittedAt))}
                             </td>
                             <td className="px-5 py-3 text-right font-semibold text-trailhead">
-                              {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(p.netAmount)}
+                              {formatPeso(p.netAmount)}
                             </td>
                             <td className="px-5 py-3 text-right text-stone-600">{p.bookingCount}</td>
                             <td className="px-5 py-3 font-mono text-xs text-stone-700">{p.remittanceReference ?? "—"}</td>

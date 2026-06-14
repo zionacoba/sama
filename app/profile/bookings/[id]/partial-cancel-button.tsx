@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { partialCancelBooking } from "@/app/actions/booking";
+import { formatPeso } from "@/lib/format";
 
 export function PartialCancelButton({
   bookingId,
@@ -19,12 +20,7 @@ export function PartialCancelButton({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const fmt = (n: number) =>
-    new Intl.NumberFormat("en-PH", {
-      style: "currency",
-      currency: "PHP",
-      maximumFractionDigits: 0,
-    }).format(n);
+  const fmt = (n: number) => formatPeso(n);
 
   const refundPreview =
     refundRatio !== null

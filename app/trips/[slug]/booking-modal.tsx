@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { createBooking } from "@/app/actions/booking";
-import { formatDateRange } from "@/lib/format";
+import { formatDateRange, formatPeso } from "@/lib/format";
 import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
 
 type MeetingPoint = { location: string; time: string };
@@ -32,14 +32,6 @@ type BookingModalProps = {
   initialName?: string;
   initialEmail?: string;
 };
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 
 export function BookingModal({
@@ -479,10 +471,10 @@ export function BookingModal({
                 <form id="booking-form" ref={formRef} onSubmit={handleSubmit} className="space-y-4">
                   {/* Compact price line */}
                   <p className="text-sm text-stone-500">
-                    {tripTitle} · {formatCurrency(unitPrice)} × {slots} slot{slots !== 1 ? "s" : ""} ={" "}
-                    <span className="font-semibold text-stone-800">{formatCurrency(totalAmount)}</span>
+                    {tripTitle} · {formatPeso(unitPrice)} × {slots} slot{slots !== 1 ? "s" : ""} ={" "}
+                    <span className="font-semibold text-stone-800">{formatPeso(totalAmount)}</span>
                     {paymentOption === "downpayment" && canUseDownpayment && (
-                      <> · <span className="font-semibold text-trailhead">Due now: {formatCurrency(amountDue)}</span></>
+                      <> · <span className="font-semibold text-trailhead">Due now: {formatPeso(amountDue)}</span></>
                     )}
                   </p>
                   <div ref={errorSummaryRef} aria-live="polite" aria-atomic="true">
@@ -693,7 +685,7 @@ export function BookingModal({
                           }`}
                         >
                           <span className="block font-medium">Pay in full</span>
-                          <span className="block text-xs opacity-75">{formatCurrency(totalAmount)}</span>
+                          <span className="block text-xs opacity-75">{formatPeso(totalAmount)}</span>
                         </button>
                         <button
                           type="button"
@@ -706,7 +698,7 @@ export function BookingModal({
                           }`}
                         >
                           <span className="block font-medium">Pay downpayment</span>
-                          <span className="block text-xs opacity-75">{formatCurrency(downpaymentAmount)} deposit</span>
+                          <span className="block text-xs opacity-75">{formatPeso(downpaymentAmount)} deposit</span>
                         </button>
                       </div>
                     </div>
@@ -714,7 +706,7 @@ export function BookingModal({
 
                   {paymentOption === "downpayment" && canUseDownpayment && (
                     <p className="text-xs text-stone-500 -mt-1">
-                      Your remaining balance of {formatCurrency(totalAmount - downpaymentAmount)} can be paid online before the trip, or directly to your organizer on the day.
+                      Your remaining balance of {formatPeso(totalAmount - downpaymentAmount)} can be paid online before the trip, or directly to your organizer on the day.
                     </p>
                   )}
 

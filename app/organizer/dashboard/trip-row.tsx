@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { publishTrip } from "@/app/actions/trip";
 import { ShareButton } from "@/app/components/share-button";
 import { CancelTripButton } from "@/app/components/cancel-trip-button";
+import { formatPeso } from "@/lib/format";
 
 export type OrganizerTrip = {
   id: string | number;
@@ -34,11 +35,7 @@ export function formatDate(date: string) {
 }
 
 export function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(price);
+  return formatPeso(price);
 }
 
 export function tripBadge(status: string, dateStart: string, remainingSlots: number) {

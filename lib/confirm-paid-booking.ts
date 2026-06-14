@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
+import { formatPeso, formatBookingRef } from "@/lib/format";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
@@ -164,7 +165,7 @@ export async function confirmPaidBooking(
 
       if (ADMIN_EMAIL) {
         const fmt = (n: number) =>
-          new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+          formatPeso(n);
         try {
           await resend.emails.send({
             from: FROM_ADDRESS,
@@ -228,7 +229,7 @@ export async function confirmPaidBooking(
     });
     if (ADMIN_EMAIL) {
       const fmt = (n: number) =>
-        new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+        formatPeso(n);
       try {
         await resend.emails.send({
           from: FROM_ADDRESS,
@@ -265,13 +266,8 @@ export async function confirmPaidBooking(
     timeZone: "Asia/Manila",
   }).format(new Date(trip.date_start));
 
-  const bookingRef = booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
-  const fmt = (n: number) =>
-    new Intl.NumberFormat("en-PH", {
-      style: "currency",
-      currency: "PHP",
-      maximumFractionDigits: 0,
-    }).format(n);
+  const bookingRef = formatBookingRef(booking.id);
+  const fmt = (n: number) => formatPeso(n);
 
   const isDownpay =
     booking.payment_option === "downpayment" &&
@@ -573,7 +569,7 @@ export async function confirmPaidBalance(
 
   const balance = Math.round(((booking.total_amount ?? 0) - (booking.amount_due ?? 0)) * 100) / 100;
   const fmt = (n: number) =>
-    new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+    formatPeso(n);
   const tripDate = new Intl.DateTimeFormat("en-PH", {
     weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila",
   }).format(new Date(trip.date_start));

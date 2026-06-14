@@ -12,7 +12,7 @@ import { ShareButton } from "@/app/components/share-button";
 import { PhotoGallery } from "@/app/components/photo-gallery";
 import { Footer } from "@/app/components/footer";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
-import { formatDate, formatDateShort, formatDateRange, formatReviewDate } from "@/lib/format";
+import { formatDate, formatDateShort, formatDateRange, formatReviewDate, formatPeso } from "@/lib/format";
 import { PublishedBanner } from "@/app/trips/[slug]/published-banner";
 import { DifficultyInfoButton } from "@/app/components/difficulty-info";
 import Script from "next/script";
@@ -116,11 +116,7 @@ function ActivityBadge({ type }: { type: string }) {
 
 function formatPrice(price: string | number) {
   if (typeof price === "string") return price;
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(price);
+  return formatPeso(price);
 }
 
 function getUnitPrice(price: string | number): number {

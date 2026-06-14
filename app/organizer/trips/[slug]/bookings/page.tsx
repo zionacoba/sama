@@ -7,6 +7,7 @@ import { notifyWaitlistEntry } from "@/app/actions/waitlist";
 import { ExportCsvButton } from "./export-csv-button";
 import { MarkBalanceButton } from "./mark-balance-button";
 import { BookingsListWithTabs } from "./bookings-list";
+import { formatPeso } from "@/lib/format";
 
 type WaitlistEntry = {
   id: string;
@@ -56,14 +57,6 @@ type BookingParticipant = {
   full_name: string | null;
   completed: boolean;
 };
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("en-PH", {
@@ -361,11 +354,11 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
           <div className="mt-4 space-y-4">
             {trip.payment_type === "downpayment" && trip.min_downpayment != null ? (
               <div className="text-sm text-stone-500 mb-3">
-                Trip price: {formatCurrency(trip.price)} · Downpayment: {formatCurrency(trip.min_downpayment)} · Balance due: {formatCurrency(trip.price - trip.min_downpayment)}
+                Trip price: {formatPeso(trip.price)} · Downpayment: {formatPeso(trip.min_downpayment)} · Balance due: {formatPeso(trip.price - trip.min_downpayment)}
               </div>
             ) : (
               <div className="text-sm text-stone-500 mb-3">
-                Trip price: {formatCurrency(trip.price)} · Full payment
+                Trip price: {formatPeso(trip.price)} · Full payment
               </div>
             )}
             {activeBookings.length === 0 && (
@@ -473,7 +466,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                         <MarkBalanceButton
                                           bookingId={b.id}
                                           participantName={b.full_name}
-                                          balanceAmount={formatCurrency(b.total_amount - b.amount_due)}
+                                          balanceAmount={formatPeso(b.total_amount - b.amount_due)}
                                         />
                                         <span className="text-xs text-stone-400">Participant can pay balance online or directly to you. Mark as collected once received. Balance payments made online are remitted 24-48 hours after the trip date.</span>
                                       </>

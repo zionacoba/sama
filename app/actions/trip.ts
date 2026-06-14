@@ -10,6 +10,8 @@ import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountSamaHolds } from "@/lib/booking-finance";
 import { sendInChunks } from "@/lib/send-in-chunks";
+import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
+import { formatPeso } from "@/lib/format";
 
 function slugify(title: string): string {
   return title
@@ -606,7 +608,7 @@ export async function updateTrip(
           changeLines.push(`<li><strong>Date:</strong> ${oldRange} → ${newRange}</li>`);
         }
         if (priceChanged) {
-          changeLines.push(`<li><strong>Price:</strong> ₱${Number(existing.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} → ₱${price.toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</li>`);
+          changeLines.push(`<li><strong>Price:</strong> ${formatPeso(Number(existing.price))} → ${formatPeso(price)}</li>`);
         }
         if (mpChanged) {
           changeLines.push(`<li><strong>Meeting point:</strong> updated. Check the trip page for details</li>`);
@@ -638,63 +640,16 @@ export async function updateTrip(
     }
   }
 
-  // Notify all waitlisted members when the organizer increases slots on a previously full trip
+  // Notify all waitlisted members when the organizer increases slots on a
+  // previously full trip. This slot increase is a genuine opening, so the
+  // shared helper handles the 12-hour debounce, rate-limit-safe sending, and
+  // success-only stamping.
   if (existing.remaining_slots === 0 && remaining_slots > 0) {
-    const admin = createSupabaseAdminClient();
-    // This slot increase is a genuine opening, so we still notify everyone on
-    // the waitlist — but to close the cancel/rebook email-spam loop we debounce
-    // per member: only those never notified, or last notified more than 12 hours
-    // ago, are emailed. The debounce is driven entirely by notified_at (not a
-    // notified=false reset), so notifying twice within 12 hours can never
-    // double-blast the same person. Joiners who booked have their waitlist row
-    // deleted on booking, so this never emails someone who already has a spot.
-    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
-
-    const { data: waitlistEntries } = await admin
-      .from("waitlist")
-      .select("id, full_name, email")
-      .eq("trip_id", tripId)
-      .or(`notified_at.is.null,notified_at.lt.${twelveHoursAgo}`)
-      .order("created_at", { ascending: true });
-
-    if (waitlistEntries && waitlistEntries.length > 0) {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
-      const slotTripDate = new Intl.DateTimeFormat("en-PH", {
-        month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Manila",
-      }).format(new Date(safeDateStart));
-
-      // Only mark a member notified if their email actually sent. A failed send
-      // must NOT stamp notified/notified_at, otherwise the 12-hour debounce would
-      // make them miss this opening — they stay eligible for the next notification.
-      const results = await sendInChunks(waitlistEntries, async (entry) => {
-        try {
-          await resend.emails.send({
-            from: FROM_ADDRESS,
-            to: entry.email,
-            replyTo: REPLY_TO_ADDRESS,
-            subject: `A slot just opened for ${title}`,
-            html: `
-              <p>Hi ${escapeHtml(entry.full_name)},</p>
-              <p>A slot just opened for <strong>${escapeHtml(title)}</strong> on ${slotTripDate}. Spots are limited and it's first come, first served, so book soon. Book now at <a href="${siteUrl}/trips/${existing.slug}">${siteUrl.replace("https://", "")}/trips/${existing.slug}</a>.</p>
-              <p>Sama</p>
-            `,
-          });
-        } catch (err) {
-          console.error("[email] failed to notify waitlist slot available", entry.id, err);
-          throw err;
-        }
-        return entry.id;
-      });
-
-      const sentIds = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
-
-      if (sentIds.length > 0) {
-        await admin
-          .from("waitlist")
-          .update({ notified: true, notified_at: new Date().toISOString() })
-          .in("id", sentIds);
-      }
-    }
+    await notifyWaitlistSlotOpened(tripId, {
+      title,
+      slug: existing.slug,
+      dateStart: safeDateStart,
+    });
   }
 
   // Notify participants with outstanding balances when payment type switches to full.
@@ -706,7 +661,7 @@ export async function updateTrip(
       .eq("trip_id", tripId)
       .in("status", ["confirmed", "pending"]);
 
-    const fmt = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+    const fmt = (n: number) => formatPeso(n);
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
     for (const booking of balanceBookings ?? []) {
@@ -909,7 +864,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   await admin.from("waitlist").delete().eq("trip_id", trip.id);
 
   const fmtCurrency = (n: number) =>
-    new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+    formatPeso(n);
 
   // Process refunds — a failed refund never blocks cancellation emails or flow.
   const refundResultMap = new Map<number, { initial: RefundResult | null, balance: RefundResult | null }>();

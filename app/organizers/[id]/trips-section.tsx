@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { formatPeso } from "@/lib/format";
 
 type Trip = {
   id: number;
@@ -19,11 +20,7 @@ type Trip = {
 };
 
 function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(price);
+  return formatPeso(price);
 }
 
 function formatDate(date: string) {

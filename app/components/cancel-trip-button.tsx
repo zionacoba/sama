@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { cancelTrip, getTripCancelSummary } from "@/app/actions/trip";
+import { formatPeso } from "@/lib/format";
 
 type CancelSummary = {
   bookingCount: number;
@@ -15,8 +16,7 @@ type Props = {
   tripTitle: string;
 };
 
-const fmtPHP = (n: number) =>
-  new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+const fmtPHP = (n: number) => formatPeso(n);
 
 export function CancelTripButton({ tripSlug, tripTitle }: Props) {
   const [summary, setSummary] = useState<CancelSummary | null>(null);

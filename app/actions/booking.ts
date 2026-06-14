@@ -12,6 +12,8 @@ import { calculateRefundAmount } from "@/lib/cancellation-policies";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { createPaymentLink } from "@/lib/create-payment-link";
+import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
+import { formatPeso, formatBookingRef } from "@/lib/format";
 
 if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
@@ -292,7 +294,7 @@ export async function createBooking(input: CreateBookingInput) {
       ? participantRows.slice(1).map((p) => ({ slotIndex: p.slot_number, token: p.token }))
       : [];
 
-  const bookingRef = newBooking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
+  const bookingRef = formatBookingRef(newBooking.id);
 
   // Free trips: skip PayMongo and confirm immediately.
   if (computedAmountDue === 0) {
@@ -599,8 +601,8 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
         `,
       });
     } else if (status === "rejected") {
-      const bookingRef = booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
-      const fmtPHP = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+      const bookingRef = formatBookingRef(booking.id);
+      const fmtPHP = (n: number) => formatPeso(n);
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: booking.email,
@@ -684,7 +686,7 @@ export async function markBalanceCollected(bookingId: number) {
   }
 
   try {
-    const fmt = (n: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+    const fmt = (n: number) => formatPeso(n);
     const balance = booking.total_amount != null && booking.amount_due != null
       ? booking.total_amount - booking.amount_due
       : null;
@@ -898,7 +900,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
     timeZone: "Asia/Manila",
   }).format(new Date(trip.date_start));
 
-  const bookingRef = booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
+  const bookingRef = formatBookingRef(booking.id);
 
   try {
     await resend.emails.send({
@@ -1146,7 +1148,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   }
 
   const fmtCurrency = (n: number) =>
-    new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+    formatPeso(n);
 
   if (tripDateCheck) {
     const tripDate = new Intl.DateTimeFormat("en-PH", {
@@ -1305,60 +1307,15 @@ export async function cancelBooking(bookingId: number) {
 
   if (trip) {
 
-    // Notify all waitlisted members that a slot has freed up. This cancellation
-    // is a genuine opening, so we still notify everyone on the waitlist — but to
-    // close the cancel/rebook email-spam loop we debounce per member: only those
-    // never notified, or last notified more than 12 hours ago, are emailed. The
-    // debounce is driven entirely by notified_at (not a notified=false reset),
-    // so notifying twice within 12 hours can never double-blast the same person.
-    // Joiners who booked have their waitlist row deleted on booking, so this
-    // never emails someone who already has a spot.
-    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
-
-    const { data: waitingEntries } = await admin
-      .from("waitlist")
-      .select("id, full_name, email")
-      .eq("trip_id", trip.id)
-      .or(`notified_at.is.null,notified_at.lt.${twelveHoursAgo}`)
-      .order("created_at", { ascending: true });
-
-    if (waitingEntries && waitingEntries.length > 0) {
-      const slotTripDate = new Intl.DateTimeFormat("en-PH", {
-        month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Manila",
-      }).format(new Date(trip.date_start));
-
-      // Only mark a member notified if their email actually sent. A failed send
-      // must NOT stamp notified/notified_at, otherwise the 12-hour debounce would
-      // make them miss this opening — they stay eligible for the next notification.
-      const results = await Promise.allSettled(waitingEntries.map(async (entry) => {
-        try {
-          await resend.emails.send({
-            from: FROM_ADDRESS,
-            to: entry.email,
-            replyTo: REPLY_TO_ADDRESS,
-            subject: `A slot just opened for ${trip.title}`,
-            html: `
-              <p>Hi ${escapeHtml(entry.full_name)},</p>
-              <p>Good news! A spot has opened up for <strong>${escapeHtml(trip.title)}</strong> on ${slotTripDate}. Book now at <a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a>. Spots are limited and it's first come, first served, so book soon.</p>
-              <p>Sama</p>
-            `,
-          });
-        } catch (err) {
-          console.error("[email] failed to notify waitlist after cancellation", entry.id, err);
-          throw err;
-        }
-        return entry.id;
-      }));
-
-      const sentIds = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
-
-      if (sentIds.length > 0) {
-        await admin
-          .from("waitlist")
-          .update({ notified: true, notified_at: new Date().toISOString() })
-          .in("id", sentIds);
-      }
-    }
+    // Notify all waitlisted members that a slot has freed up. The slot was
+    // already restored above (restore_slot), so this is a genuine opening. The
+    // shared helper handles the 12-hour debounce, rate-limit-safe sending via
+    // sendInChunks, and success-only stamping.
+    await notifyWaitlistSlotOpened(trip.id, {
+      title: trip.title,
+      slug: trip.slug,
+      dateStart: trip.date_start,
+    });
 
     // Calculate refund based on cancellation policy.
     // Compare calendar dates in Philippine time so boundary days (e.g. cancelling
@@ -1452,12 +1409,7 @@ export async function cancelBooking(bookingId: number) {
       }
     }
 
-    const fmtCurrency = (n: number) =>
-      new Intl.NumberFormat("en-PH", {
-        style: "currency",
-        currency: "PHP",
-        maximumFractionDigits: 0,
-      }).format(n);
+    const fmtCurrency = (n: number) => formatPeso(n);
 
     const balanceRefundFailed = balanceRefundAmount > 0 && balanceRefundResult != null && !balanceRefundResult.success;
     const refundLine =

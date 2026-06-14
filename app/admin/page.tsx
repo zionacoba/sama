@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { toggleFoundingPartner } from "@/app/actions/organizer";
+import { formatPeso, formatBookingRef } from "@/lib/format";
 import {
   approveOrganizer,
   rejectOrganizer,
@@ -99,14 +100,6 @@ type UnconfirmedBalanceBooking = {
   created_at: string;
   trips: { title: string } | null;
 };
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 function formatCreatedAt(date: string) {
   return new Intl.DateTimeFormat("en-PH", {
@@ -220,9 +213,9 @@ function OrganizerPayoutCard({ org }: { org: PendingPayoutOrganizer }) {
                     </span>
                   )}
                 </td>
-                <td className="px-5 py-3 text-right text-stone-700">{formatCurrency(b.totalAmount)}</td>
-                <td className="px-5 py-3 text-right text-stone-400">−{formatCurrency(b.platformCommission)}</td>
-                <td className="px-5 py-3 text-right font-semibold text-trailhead">{formatCurrency(b.netAmount)}</td>
+                <td className="px-5 py-3 text-right text-stone-700">{formatPeso(b.totalAmount)}</td>
+                <td className="px-5 py-3 text-right text-stone-400">−{formatPeso(b.platformCommission)}</td>
+                <td className="px-5 py-3 text-right font-semibold text-trailhead">{formatPeso(b.netAmount)}</td>
               </tr>
             ))}
           </tbody>
@@ -231,9 +224,9 @@ function OrganizerPayoutCard({ org }: { org: PendingPayoutOrganizer }) {
               <td colSpan={3} className="px-5 py-3 text-stone-700">
                 Total — {org.bookings.length} booking{org.bookings.length !== 1 ? "s" : ""}
               </td>
-              <td className="px-5 py-3 text-right text-stone-700">{formatCurrency(org.totalAmount)}</td>
-              <td className="px-5 py-3 text-right text-stone-400">−{formatCurrency(org.totalCommission)}</td>
-              <td className="px-5 py-3 text-right font-bold text-trailhead">{formatCurrency(org.totalNet)}</td>
+              <td className="px-5 py-3 text-right text-stone-700">{formatPeso(org.totalAmount)}</td>
+              <td className="px-5 py-3 text-right text-stone-400">−{formatPeso(org.totalCommission)}</td>
+              <td className="px-5 py-3 text-right font-bold text-trailhead">{formatPeso(org.totalNet)}</td>
             </tr>
           </tfoot>
         </table>
@@ -252,18 +245,18 @@ function OrganizerPayoutCard({ org }: { org: PendingPayoutOrganizer }) {
                     {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(d.createdAt))}
                     {" · Booking #"}{d.bookingId}
                   </td>
-                  <td className="py-1 text-right font-medium text-red-700">−{formatCurrency(d.amount)}</td>
+                  <td className="py-1 text-right font-medium text-red-700">−{formatPeso(d.amount)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td className="pt-2 font-semibold text-amber-900">Total deductions</td>
-                <td className="pt-2 text-right font-bold text-red-700">−{formatCurrency(org.totalDeductions)}</td>
+                <td className="pt-2 text-right font-bold text-red-700">−{formatPeso(org.totalDeductions)}</td>
               </tr>
               <tr>
                 <td className="font-semibold text-amber-900">Adjusted net payout</td>
-                <td className="text-right font-bold text-trailhead">{formatCurrency(org.adjustedNet)}</td>
+                <td className="text-right font-bold text-trailhead">{formatPeso(org.adjustedNet)}</td>
               </tr>
             </tfoot>
           </table>
@@ -278,8 +271,8 @@ function OrganizerPayoutCard({ org }: { org: PendingPayoutOrganizer }) {
             type="submit"
             className="rounded-xl bg-trailhead px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-trailhead-dark"
           >
-            Create Payout — {formatCurrency(org.adjustedNet)} net
-            {org.pendingDeductions.length > 0 && ` (after ${formatCurrency(org.totalDeductions)} deduction${org.pendingDeductions.length !== 1 ? "s" : ""})`}
+            Create Payout — {formatPeso(org.adjustedNet)} net
+            {org.pendingDeductions.length > 0 && ` (after ${formatPeso(org.totalDeductions)} deduction${org.pendingDeductions.length !== 1 ? "s" : ""})`}
           </button>
         </form>
       </div>
@@ -316,8 +309,8 @@ function PayoutHistoryTable({ history }: { history: PayoutHistoryEntry[] }) {
                 <>
                   <tr key={p.id} className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30">
                     <td className="px-4 py-3 font-medium text-stone-900">{p.organizerName}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-trailhead">{formatCurrency(p.netAmount)}</td>
-                    <td className="px-4 py-3 text-right text-stone-500">{formatCurrency(p.platformCommission)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-trailhead">{formatPeso(p.netAmount)}</td>
+                    <td className="px-4 py-3 text-right text-stone-500">{formatPeso(p.platformCommission)}</td>
                     <td className="px-4 py-3 font-mono text-xs text-stone-700">
                       {p.remittanceReference ?? "—"}
                       <EditRemittanceReferenceButton payoutId={p.id} currentReference={p.remittanceReference} />
@@ -566,11 +559,11 @@ export default async function AdminPage({ searchParams }: PageProps) {
               />
               <StatCard
                 label="Total GMV"
-                value={summaryGmvRows?.error ? "—" : formatCurrency(summaryGmv)}
+                value={summaryGmvRows?.error ? "—" : formatPeso(summaryGmv)}
               />
               <StatCard
                 label="Sama revenue"
-                value={summaryGmvRows?.error ? "—" : formatCurrency(summarySamaRevenue)}
+                value={summaryGmvRows?.error ? "—" : formatPeso(summarySamaRevenue)}
               />
               <StatCard
                 label="Active organizers"
@@ -630,19 +623,19 @@ export default async function AdminPage({ searchParams }: PageProps) {
                       bookings.map((booking) => (
                         <tr key={booking.id} className="border-b border-stone-100 last:border-0 hover:bg-trailhead-muted/30">
                           <td className="px-4 py-3 font-mono text-xs text-stone-600">
-                            {Number(booking.id).toString(16).toUpperCase().slice(-8).padStart(8, "0")}
+                            {formatBookingRef(Number(booking.id))}
                           </td>
                           <td className="px-4 py-3 font-medium text-stone-900">{booking.full_name}</td>
                           <td className="px-4 py-3 text-stone-600">{booking.email}</td>
                           <td className="px-4 py-3 text-stone-600">{booking.phone}</td>
                           <td className="px-4 py-3 text-stone-900">{booking.trips?.title ?? "—"}</td>
                           <td className="px-4 py-3 text-stone-900">{booking.slots}</td>
-                          <td className="px-4 py-3 font-medium text-trailhead">{formatCurrency(booking.total_amount)}</td>
+                          <td className="px-4 py-3 font-medium text-trailhead">{formatPeso(booking.total_amount)}</td>
                           <td className="px-4 py-3 text-stone-600">
-                            {booking.platform_commission == null ? "--" : formatCurrency(booking.platform_commission)}
+                            {booking.platform_commission == null ? "--" : formatPeso(booking.platform_commission)}
                           </td>
                           <td className="px-4 py-3 font-medium text-stone-900">
-                            {booking.platform_commission == null ? "--" : formatCurrency(booking.total_amount - booking.platform_commission)}
+                            {booking.platform_commission == null ? "--" : formatPeso(booking.total_amount - booking.platform_commission)}
                           </td>
                           <td className="px-4 py-3"><StatusBadge status={booking.status} /></td>
                           <td className="whitespace-nowrap px-4 py-3 text-stone-600">{formatCreatedAt(booking.created_at)}</td>
@@ -1055,7 +1048,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                                 <div className="font-medium text-stone-900">{r.bookings?.full_name ?? `Booking ${r.booking_id}`}</div>
                                 <div className="text-xs text-stone-500">{r.bookings?.email ?? ""}</div>
                               </td>
-                              <td className="px-4 py-3 font-medium text-trailhead">{formatCurrency(Number(r.amount))}</td>
+                              <td className="px-4 py-3 font-medium text-trailhead">{formatPeso(Number(r.amount))}</td>
                               <td className="px-4 py-3 capitalize text-stone-600">{r.source}</td>
                               <td className="px-4 py-3"><RefundStatusBadge status={r.status} /></td>
                               <td className="px-4 py-3 text-stone-600">{r.attempts ?? 0}</td>
@@ -1128,7 +1121,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                             </td>
                             <td className="px-4 py-3 text-stone-900">{b.trips?.title ?? "—"}</td>
                             <td className="px-4 py-3 text-stone-700">{b.slots}</td>
-                            <td className="px-4 py-3 font-medium text-trailhead">{formatCurrency(Number(b.amount_due ?? b.total_amount ?? 0))}</td>
+                            <td className="px-4 py-3 font-medium text-trailhead">{formatPeso(Number(b.amount_due ?? b.total_amount ?? 0))}</td>
                             <td className="whitespace-nowrap px-4 py-3 text-stone-600" title={formatCreatedAt(b.created_at)}>
                               {formatAge(b.created_at)}
                             </td>
@@ -1173,7 +1166,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                               <div className="text-xs text-stone-500">{b.email}</div>
                             </td>
                             <td className="px-4 py-3 text-stone-900">{b.trips?.title ?? "—"}</td>
-                            <td className="px-4 py-3 font-medium text-trailhead">{formatCurrency(Number(b.total_amount ?? 0) - Number(b.amount_due ?? 0))}</td>
+                            <td className="px-4 py-3 font-medium text-trailhead">{formatPeso(Number(b.total_amount ?? 0) - Number(b.amount_due ?? 0))}</td>
                             <td className="whitespace-nowrap px-4 py-3 text-stone-600" title={formatCreatedAt(b.created_at)}>
                               {formatAge(b.created_at)}
                             </td>

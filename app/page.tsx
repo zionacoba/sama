@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Navbar } from "@/app/components/navbar";
 import { Footer } from "@/app/components/footer";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { formatPeso } from "@/lib/format";
 
 export const revalidate = 300;
 
@@ -46,11 +47,7 @@ type Trip = {
 
 function formatPrice(price: string | number) {
   if (typeof price === "string") return price;
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(price);
+  return formatPeso(price);
 }
 
 function formatDate(date: string) {
