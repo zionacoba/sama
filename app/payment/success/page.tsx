@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { amountJoinerPaid } from "@/lib/booking-finance";
 import { safeExternalUrl } from "@/lib/safe-url";
-import { confirmPaidBooking, fetchPaymongoLinkPayment } from "@/lib/confirm-paid-booking";
+import { confirmPaidBooking, confirmPaidBalance, fetchPaymongoLinkPayment } from "@/lib/confirm-paid-booking";
 import { EmergencyContactPrompt } from "./emergency-contact-prompt";
 
 export const metadata: Metadata = {
@@ -61,6 +61,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
     status: string | null;
     payment_id: string | null;
     payment_gateway_status: string | null;
+    balance_payment_id: string | null;
     balance_payment_gateway_status: string | null;
     meeting_point: string | null;
     trip: {
@@ -80,7 +81,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
   if (bookingId) {
     const { data } = await admin
       .from("bookings")
-      .select("id, user_id, total_amount, amount_due, payment_option, status, payment_id, payment_gateway_status, balance_payment_gateway_status, meeting_point, trip:trips(title, date_start, messenger_gc_link, organizer:organizers(display_name, full_name, facebook_url, social_links))")
+      .select("id, user_id, total_amount, amount_due, payment_option, status, payment_id, payment_gateway_status, balance_payment_id, balance_payment_gateway_status, meeting_point, trip:trips(title, date_start, messenger_gc_link, organizer:organizers(display_name, full_name, facebook_url, social_links))")
       .eq("id", bookingId)
       .maybeSingle();
     booking = data as BookingSummary | null;
@@ -114,6 +115,31 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
       }
     } catch (err) {
       console.error("[payment-success] reconciliation failed:", err);
+    }
+  }
+
+  // Webhook-independent reconciliation for the BALANCE payment. A balance
+  // payment redirects to this same success page, so if its webhook was missed
+  // the booking is confirmed but still has balance_payment_gateway_status NULL.
+  // Same trust model as above: we act ONLY on the server-held balance_payment_id
+  // and only when PayMongo reports the balance link as paid. This does not touch
+  // the initial-payment reconciliation; it runs alongside it. Any error falls
+  // back gracefully and never blocks the page.
+  if (
+    booking &&
+    booking.balance_payment_id &&
+    booking.balance_payment_gateway_status === null
+  ) {
+    try {
+      const linkPayment = await fetchPaymongoLinkPayment(booking.balance_payment_id);
+      if (linkPayment.status === "paid") {
+        await confirmPaidBalance(
+          booking.balance_payment_id,
+          linkPayment.paymentTransactionId,
+        );
+      }
+    } catch (err) {
+      console.error("[payment-success] balance reconciliation failed:", err);
     }
   }
 

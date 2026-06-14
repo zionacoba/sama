@@ -15,6 +15,10 @@ export type ConfirmOutcome =
 
 export type ConfirmResult = { outcome: ConfirmOutcome };
 
+export type ConfirmBalanceOutcome = "confirmed" | "already_paid" | "not_found";
+
+export type ConfirmBalanceResult = { outcome: ConfirmBalanceOutcome };
+
 /**
  * Extract the payment method and PayMongo payment transaction id from the
  * `payments` array on a PayMongo link resource. PayMongo may wrap each payment
@@ -412,6 +416,145 @@ export async function confirmPaidBooking(
     revalidatePath(`/organizer/trips/${trip.slug}/bookings`);
   } catch (revalErr) {
     console.warn("[confirm-paid-booking] revalidatePath skipped:", revalErr);
+  }
+
+  return { outcome: "confirmed" };
+}
+
+/**
+ * Confirm a booking whose BALANCE payment link has been paid.
+ *
+ * This is the single source of truth for balance confirmation, mirroring
+ * confirmPaidBooking for the initial payment. It is called by the PayMongo
+ * webhook, the payment success page, and the cleanup reconcile route. It is
+ * idempotent and race-safe: the UPDATE keeps the
+ * `.is("balance_payment_gateway_status", null)` guard so concurrent callers can
+ * never double-confirm or double-email.
+ *
+ * Behavior matches the webhook's previous inline handler exactly: it does not
+ * gate on booking status (a balance link only exists on a confirmed booking),
+ * it sets the three balance columns, sends the participant + organizer balance
+ * emails, and revalidates the profile / organizer paths.
+ *
+ * @param linkId The PayMongo link id stored as `bookings.balance_payment_id`.
+ * @param paymentTransactionId The PayMongo payment transaction id (when known).
+ * @param admin Optional shared admin client; one is created if not supplied.
+ */
+export async function confirmPaidBalance(
+  linkId: string,
+  paymentTransactionId: string | null,
+  admin: ReturnType<typeof createSupabaseAdminClient> = createSupabaseAdminClient(),
+): Promise<ConfirmBalanceResult> {
+  const { data: booking } = await admin
+    .from("bookings")
+    .select("id, trip_id, full_name, email, total_amount, amount_due, balance_payment_gateway_status")
+    .eq("balance_payment_id", linkId)
+    .maybeSingle();
+
+  if (!booking) {
+    // No booking matches this balance link.
+    return { outcome: "not_found" };
+  }
+
+  // Idempotency: skip if already processed.
+  if (booking.balance_payment_gateway_status === "paid") {
+    return { outcome: "already_paid" };
+  }
+
+  const { data: trip } = await admin
+    .from("trips")
+    .select("id, slug, title, date_start, organizer_id")
+    .eq("id", booking.trip_id)
+    .maybeSingle();
+
+  if (!trip) {
+    console.error("[confirm-paid-balance] trip not found for balance booking:", booking.id);
+    return { outcome: "not_found" };
+  }
+
+  const { data: updatedBooking, error: updateError } = await admin
+    .from("bookings")
+    .update({
+      balance_collected: true,
+      balance_payment_gateway_status: "paid",
+      ...(paymentTransactionId ? { balance_paymongo_payment_id: paymentTransactionId } : {}),
+    })
+    .eq("id", booking.id)
+    .is("balance_payment_gateway_status", null)
+    .select()
+    .maybeSingle();
+
+  if (updateError) {
+    console.error(`[confirm-paid-balance] balance payment DB update failed for booking ${booking.id}:`, updateError);
+    // Could not act — report not_found so callers do not treat this as confirmed.
+    return { outcome: "not_found" };
+  }
+  if (!updatedBooking) {
+    // Idempotency: another path confirmed between our read and write.
+    console.log(`[confirm-paid-balance] Duplicate balance confirmation for booking ${booking.id} — skipping`);
+    return { outcome: "already_paid" };
+  }
+
+  const balance = Math.round(((booking.total_amount ?? 0) - (booking.amount_due ?? 0)) * 100) / 100;
+  const fmt = (n: number) =>
+    new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(n);
+  const tripDate = new Intl.DateTimeFormat("en-PH", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila",
+  }).format(new Date(trip.date_start));
+
+  try {
+    await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: booking.email,
+      replyTo: REPLY_TO_ADDRESS,
+      subject: `Balance payment received for ${trip.title}`,
+      html: `
+        <p>Hi ${escapeHtml(booking.full_name)},</p>
+        <p>Your remaining balance of <strong>${fmt(balance)}</strong> for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been received. You are all set for your trip. See you there!</p>
+        <p>You can view your booking at <a href="${SITE_URL}/profile">sama.com.ph/profile</a>.</p>
+        <p>Sama</p>
+      `,
+    });
+  } catch (err) {
+    console.error("[confirm-paid-balance] failed to send balance payment confirmation to participant", err);
+  }
+
+  if (trip.organizer_id) {
+    try {
+      const { data: organizer } = await admin
+        .from("organizers")
+        .select("email")
+        .eq("id", trip.organizer_id)
+        .maybeSingle();
+
+      if (organizer?.email) {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: organizer.email,
+          replyTo: REPLY_TO_ADDRESS,
+          subject: `Balance payment received: ${booking.full_name}, ${trip.title}`,
+          html: `
+            <p>Hi,</p>
+            <p><strong>${escapeHtml(booking.full_name)}</strong> has paid their remaining balance of <strong>${fmt(balance)}</strong> for <strong>${escapeHtml(trip.title)}</strong> online through Sama.</p>
+            <p>This will be remitted to you 24 to 48 hours after the trip date.</p>
+            <p>Sama</p>
+          `,
+        });
+      }
+    } catch (err) {
+      console.error("[confirm-paid-balance] failed to send balance payment notification to organizer", err);
+    }
+  }
+
+  // revalidatePath throws if called during a server-component render (the
+  // success page reconcile path). Guard it so confirmation never fails for a
+  // caller that has already committed the DB update and sent the emails.
+  try {
+    revalidatePath("/profile");
+    revalidatePath("/organizer/dashboard");
+    revalidatePath(`/organizer/trips/${trip.slug}/bookings`);
+  } catch (revalErr) {
+    console.warn("[confirm-paid-balance] revalidatePath skipped:", revalErr);
   }
 
   return { outcome: "confirmed" };

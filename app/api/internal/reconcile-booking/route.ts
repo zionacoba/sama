@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const maxDuration = 60;
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { confirmPaidBooking, fetchPaymongoLinkPayment } from "@/lib/confirm-paid-booking";
+import { confirmPaidBooking, confirmPaidBalance, fetchPaymongoLinkPayment } from "@/lib/confirm-paid-booking";
 
 function constantTimeEqual(a: string, b: string): boolean {
   const aBuf = Buffer.from(a);
@@ -33,6 +33,14 @@ function constantTimeEqual(a: string, b: string): boolean {
  *   { canCancel: false }               -> uncertain / fail-safe, do NOT cancel
  * On PayMongo API error the route returns HTTP 502 with canCancel=false so a
  * caller that only inspects res.ok also fails safe.
+ *
+ * When called with { bookingId, mode: "balance" } it instead reconciles the
+ * BALANCE payment of a confirmed booking: if PayMongo reports the balance link
+ * as paid it confirms via confirmPaidBalance. It never cancels in this mode.
+ * Response contract for balance mode (HTTP 200 unless auth/lookup fails):
+ *   { confirmed: true }                 -> balance now confirmed (or already)
+ *   { confirmed: false, paid: false }   -> balance genuinely unpaid
+ *   { confirmed: false }                -> nothing to do / uncertain (502 on API error)
  */
 export async function POST(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -41,7 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { bookingId?: number | string };
+  let body: { bookingId?: number | string; mode?: string };
   try {
     body = await req.json();
   } catch {
@@ -54,6 +62,52 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createSupabaseAdminClient();
+
+  // Balance reconciliation. For a confirmed booking with an unconfirmed balance
+  // payment, ask PayMongo directly whether the balance link was paid and, if so,
+  // confirm it via the shared idempotent helper. Fail-safe: on any uncertainty
+  // (booking missing, PayMongo error) we never mark the balance paid; we leave
+  // it for a future cycle. This branch never cancels anything.
+  if (body.mode === "balance") {
+    const { data: balBooking, error: balError } = await admin
+      .from("bookings")
+      .select("id, balance_payment_id, balance_payment_gateway_status")
+      .eq("id", bookingId)
+      .maybeSingle();
+
+    if (balError) {
+      console.error("[reconcile-booking] balance booking lookup failed:", balError.message);
+      return NextResponse.json({ confirmed: false }, { status: 502 });
+    }
+    if (!balBooking) {
+      return NextResponse.json({ confirmed: false });
+    }
+    if (balBooking.balance_payment_gateway_status === "paid") {
+      return NextResponse.json({ confirmed: true, alreadyPaid: true });
+    }
+    if (!balBooking.balance_payment_id) {
+      // No balance link was ever created — nothing to reconcile.
+      return NextResponse.json({ confirmed: false });
+    }
+
+    try {
+      const linkPayment = await fetchPaymongoLinkPayment(balBooking.balance_payment_id);
+      if (linkPayment.status === "paid") {
+        const result = await confirmPaidBalance(
+          balBooking.balance_payment_id,
+          linkPayment.paymentTransactionId,
+          admin,
+        );
+        return NextResponse.json({ confirmed: true, outcome: result.outcome });
+      }
+      // PayMongo reports a definitive non-paid status — balance genuinely unpaid.
+      return NextResponse.json({ confirmed: false, paid: false });
+    } catch (err) {
+      console.error("[reconcile-booking] balance PayMongo check failed:", err);
+      // Fail safe: never mark a balance paid we could not verify.
+      return NextResponse.json({ confirmed: false }, { status: 502 });
+    }
+  }
 
   const { data: booking, error } = await admin
     .from("bookings")

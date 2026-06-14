@@ -132,7 +132,60 @@ Deno.serve(async (req) => {
 
   console.log(`[cleanup-abandoned-payments] cleaned ${cleaned} of ${(staleBookings ?? []).length} stale bookings (skipped ${skippedPaid} paid/unverified)`);
 
-  return new Response(JSON.stringify({ cleaned, skippedPaid, total: (staleBookings ?? []).length }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  // Balance reconciliation sweep. A balance payment is confirmed only by its
+  // own webhook; if that webhook is dropped the booking stays confirmed but the
+  // balance is never marked collected. For each confirmed booking that has a
+  // balance link but no balance gateway status, ask the app to check PayMongo
+  // directly (mode: "balance"). The route confirms it if PayMongo reports paid,
+  // and the confirmPaidBalance guard makes this idempotent. Fail-safe: on any
+  // error we leave the balance unconfirmed for the next run, never mark it paid.
+  let balanceConfirmed = 0;
+  const { data: balanceCandidates, error: balanceError } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("status", "confirmed")
+    .not("balance_payment_id", "is", null)
+    .is("balance_payment_gateway_status", null);
+
+  if (balanceError) {
+    console.error("[cleanup-abandoned-payments] balance candidate fetch error:", balanceError.message);
+  }
+
+  for (const booking of balanceCandidates ?? []) {
+    try {
+      const reconcileRes = await fetch(`${siteUrl}/api/internal/reconcile-booking`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${cronSecret}`,
+        },
+        body: JSON.stringify({ bookingId: booking.id, mode: "balance" }),
+      });
+
+      if (reconcileRes.ok) {
+        const result = await reconcileRes.json();
+        if (result?.confirmed === true && !result?.alreadyPaid) {
+          balanceConfirmed++;
+          console.log(`[cleanup-abandoned-payments] balance for booking ${booking.id} reconciled as paid`);
+        }
+      } else {
+        console.warn(`[cleanup-abandoned-payments] balance reconcile route returned ${reconcileRes.status} for booking ${booking.id}, leaving unconfirmed`);
+      }
+    } catch (reconcileErr) {
+      console.error(`[cleanup-abandoned-payments] balance reconcile call failed for booking ${booking.id}, leaving unconfirmed:`, reconcileErr);
+    }
+  }
+
+  console.log(`[cleanup-abandoned-payments] balance sweep: confirmed ${balanceConfirmed} of ${(balanceCandidates ?? []).length} candidate balances`);
+
+  return new Response(
+    JSON.stringify({
+      cleaned,
+      skippedPaid,
+      total: (staleBookings ?? []).length,
+      balanceConfirmed,
+      balanceCandidates: (balanceCandidates ?? []).length,
+    }),
+    { headers: { "Content-Type": "application/json" } },
+  );
 });
