@@ -42,6 +42,7 @@ export function formatPrice(price: number) {
 }
 
 export function tripBadge(status: string, dateStart: string, remainingSlots: number) {
+  if (status === "cancelled") return { label: "Cancelled", cls: "bg-red-100 text-red-700" };
   if (status === "draft") return { label: "Draft", cls: "bg-stone-100 text-stone-500" };
   const now = new Date().toISOString().slice(0, 10);
   if (dateStart < now) return { label: "Past", cls: "bg-stone-100 text-stone-500" };
@@ -61,6 +62,7 @@ export function TripRow({ trip: initialTrip, counts }: { trip: OrganizerTrip; co
   const canCancel = status === "active" && initialTrip.date_start >= today;
   const totalBookings = counts.pending + counts.confirmed;
   const isDraft = status === "draft";
+  const isCancelled = status === "cancelled";
 
   function handlePublish() {
     setError(null);
@@ -111,17 +113,21 @@ export function TripRow({ trip: initialTrip, counts }: { trip: OrganizerTrip; co
             View bookings
           </Link>
         )}
-        <Link
-          href={`/organizer/trips/${initialTrip.slug}/edit`}
-          className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
-        >
-          Edit
-        </Link>
-        <ShareButton
-          url={`/trips/${initialTrip.slug}`}
-          title={initialTrip.title}
-          className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
-        />
+        {!isCancelled && (
+          <Link
+            href={`/organizer/trips/${initialTrip.slug}/edit`}
+            className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
+          >
+            Edit
+          </Link>
+        )}
+        {!isCancelled && (
+          <ShareButton
+            url={`/trips/${initialTrip.slug}`}
+            title={initialTrip.title}
+            className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-stone-300 hover:text-stone-900"
+          />
+        )}
         {canCancel && (
           <CancelTripButton
             tripSlug={initialTrip.slug}
