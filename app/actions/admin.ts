@@ -101,20 +101,18 @@ export async function rejectOrganizer(id: string): Promise<void> {
       .update({ status: "draft" })
       .in("id", tripIds);
 
-    // Fetch and cancel all confirmed/pending/payment_pending bookings for affected trips.
+    // Cancel all confirmed/pending/payment_pending bookings for affected trips.
+    // The status-guarded update returns exactly the rows THIS call transitioned, so a
+    // booking already cancelled by a concurrent path (cancelBooking/partialCancelBooking)
+    // is excluded and never gets a double slot-restore, redundant refund, or duplicate email.
     const { data: affectedBookings } = await admin
       .from("bookings")
-      .select("id, email, full_name, trip_id, slots, payment_option, amount_due, total_amount, paymongo_payment_id, payment_method, balance_paymongo_payment_id, balance_payment_gateway_status")
+      .update({ status: "cancelled" })
       .in("trip_id", tripIds)
-      .in("status", ["confirmed", "pending", "payment_pending"]);
+      .in("status", ["confirmed", "pending", "payment_pending"])
+      .select("id, email, full_name, trip_id, slots, payment_option, amount_due, total_amount, paymongo_payment_id, payment_method, balance_paymongo_payment_id, balance_payment_gateway_status");
 
     if ((affectedBookings ?? []).length > 0) {
-      await admin
-        .from("bookings")
-        .update({ status: "cancelled" })
-        .in("trip_id", tripIds)
-        .in("status", ["confirmed", "pending", "payment_pending"]);
-
       // Restore slots for each cancelled booking.
       for (const booking of affectedBookings ?? []) {
         const { error: slotErr } = await admin.rpc("restore_slot", {
