@@ -750,15 +750,26 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
     return { error: "You don't have permission to manage this booking." };
   }
 
-  const { error } = await admin
+  // Guard on the current status and verify exactly one row changed before
+  // restoring the slot or sending emails. This closes a double-restore race:
+  // if a concurrent action already moved the booking off "confirmed", zero
+  // rows update and we abort without touching slots or notifying anyone.
+  const { data: updated, error } = await admin
     .from("bookings")
     .update({
       status: "transferred",
       transferred_to_email: transferredToEmail.trim() || null,
+      transferred_at: new Date().toISOString(),
+      transferred_by: user.id,
     })
-    .eq("id", bookingId);
+    .eq("id", bookingId)
+    .eq("status", "confirmed")
+    .select("id");
 
   if (error) return { error: error.message };
+  if (!updated || updated.length !== 1) {
+    return { error: "This booking is no longer confirmed and could not be transferred." };
+  }
 
   const { error: slotErr } = await admin.rpc("restore_slot", {
     p_trip_id: trip.id,
@@ -768,7 +779,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
     console.error(`[markAsTransferred] restore_slot failed for booking ${bookingId}:`, slotErr.message);
     await admin
       .from("bookings")
-      .update({ status: "confirmed", transferred_to_email: null })
+      .update({ status: "confirmed", transferred_to_email: null, transferred_at: null, transferred_by: null })
       .eq("id", bookingId);
     try {
       await resend.emails.send({
@@ -796,6 +807,8 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
     timeZone: "Asia/Manila",
   }).format(new Date(trip.date_start));
 
+  const bookingRef = booking.id.toString(16).toUpperCase().slice(-8).padStart(8, "0");
+
   try {
     await resend.emails.send({
       from: FROM_ADDRESS,
@@ -807,6 +820,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
         <p>Your booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been marked as <strong>transferred</strong> by your organizer.</p>
         <p>No refund will be processed through Sama for this booking. Please settle any payment arrangements directly with the person taking your slot.</p>
         <p>If you have any questions, please contact your organizer directly.</p>
+        <p>If you did not arrange this transfer, contact us at <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with booking #${bookingRef}.</p>
         <p>Sama</p>
       `,
     });

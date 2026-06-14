@@ -26,6 +26,7 @@ type Booking = {
   payment_option: string;
   balance_collected: boolean;
   balance_payment_gateway_status: string | null;
+  payment_gateway_status: string | null;
   status: string;
   waiver_agreed: boolean;
   waiver_agreed_at: string | null;
@@ -61,6 +62,17 @@ function formatDate(date: string) {
     day: "numeric",
     timeZone: "Asia/Manila",
   }).format(new Date(date));
+}
+
+// A booking is review-eligible when it represents a paid attendee of a trip
+// that ran. Mirrors the server-side rule in submitReview: no_show does not
+// change payment fields, so an organizer cannot strip review eligibility by
+// marking a real attendee as a no-show.
+function isPaidAttendee(booking: Booking) {
+  return (
+    (booking.status === "confirmed" || booking.status === "no_show") &&
+    (booking.payment_gateway_status === "paid" || booking.total_amount === 0)
+  );
 }
 
 function DifficultyBadge({ level }: { level: string }) {
@@ -185,7 +197,7 @@ function BookingCard({
           <ParticipantShareLinks participants={incompleteParticipants} />
         )}
 
-        {past && booking.status === "confirmed" && !reviewed && (
+        {past && isPaidAttendee(booking) && !reviewed && (
           <BookingReviewForm
             tripId={trip.id}
             tripSlug={trip.slug}
@@ -193,7 +205,7 @@ function BookingCard({
           />
         )}
 
-        {past && booking.status === "confirmed" && reviewed && (
+        {past && isPaidAttendee(booking) && reviewed && (
           <p className="text-xs text-stone-400">Review submitted ✓</p>
         )}
 
@@ -249,6 +261,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
         payment_option,
         balance_collected,
         balance_payment_gateway_status,
+        payment_gateway_status,
         status,
         waiver_agreed,
         waiver_agreed_at,
@@ -274,7 +287,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
   const now = new Date().toISOString();
 
   const pastConfirmedBookingIds = bookings
-    .filter((b) => b.trip.date_start <= now && b.status === "confirmed")
+    .filter((b) => b.trip.date_start <= now && isPaidAttendee(b))
     .map((b) => b.id);
 
   let reviewedBookingIds = new Set<number>();

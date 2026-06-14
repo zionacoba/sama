@@ -29,6 +29,7 @@ type BookingDetail = {
   balance_collected: boolean;
   balance_payment_gateway_status: string | null;
   status: string;
+  transferred_at: string | null;
   created_at: string;
   waiver_agreed: boolean;
   waiver_agreed_at: string | null;
@@ -145,7 +146,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
     .from("bookings")
     .select(`
       id, user_id, full_name, email, phone, slots, total_amount, amount_due,
-      payment_option, balance_collected, balance_payment_gateway_status, status, created_at, waiver_agreed,
+      payment_option, balance_collected, balance_payment_gateway_status, status, transferred_at, created_at, waiver_agreed,
       waiver_agreed_at, waiver_text_snapshot, platform_waiver_snapshot,
       custom_question_answers, custom_question_answer, notes, medical_notes, meeting_point,
       emergency_contact_name, emergency_contact_phone,
@@ -247,6 +248,20 @@ export default async function BookingDetailPage({ params }: PageProps) {
         </div>
 
         <p className="mt-1 font-mono text-sm text-stone-400">#{bookingRef}</p>
+
+        {booking.status === "transferred" && (
+          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+            <p className="text-sm text-amber-900">
+              This booking was marked as transferred
+              {booking.transferred_at && <> on {formatDate(booking.transferred_at)}</>}. No refund was
+              processed through Sama. If you did not arrange this transfer, contact{" "}
+              <a href="mailto:hello@sama.com.ph" className="font-semibold underline underline-offset-2 hover:text-amber-950">
+                hello@sama.com.ph
+              </a>{" "}
+              with booking #{bookingRef}.
+            </p>
+          </div>
+        )}
 
         {/* Trip details */}
         <section className="mt-8 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">

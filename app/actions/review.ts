@@ -56,16 +56,23 @@ export async function submitReview(
     .maybeSingle();
   if (organizer) return { error: "Organizers cannot review their own trips." };
 
-  // If a booking_id is provided, verify it's confirmed and belongs to this user
+  // If a booking_id is provided, verify it represents a paid attendee of a
+  // trip that ran, and that it belongs to this user. Eligibility follows
+  // "paid for a trip that happened" (the same predicate as payout
+  // eligibility), so an organizer marking an attendee as no_show cannot
+  // strip their ability to review.
   if (bookingId) {
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, status, user_id, trip_id")
+      .select("id, status, user_id, trip_id, payment_gateway_status, total_amount")
       .eq("id", bookingId)
       .maybeSingle();
 
     if (!booking) return { error: "Booking not found." };
-    if (booking.status !== "confirmed") return { error: "You can only review confirmed bookings." };
+    const isPaidAttendee =
+      (booking.status === "confirmed" || booking.status === "no_show") &&
+      (booking.payment_gateway_status === "paid" || booking.total_amount === 0);
+    if (!isPaidAttendee) return { error: "You can only review trips you paid for and attended." };
     if (booking.user_id !== user.id) {
       return { error: "You don't have permission to review this booking." };
     }
