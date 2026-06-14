@@ -110,7 +110,7 @@ export function EditTripForm({
     formData.set("status", submitIntentRef.current);
 
     // For active trips with existing bookers, warn before saving changes to
-    // date, price, or meeting points — these trigger the booker notification
+    // date, price, or meeting points, these trigger the booker notification
     // email sent server-side. Matches the trigger logic in app/actions/trip.ts.
     const isActiveTrip = trip.status !== "draft" && !isTemplate;
     if (activeBookingCount > 0 && isActiveTrip) {
@@ -272,26 +272,6 @@ export function EditTripForm({
         </p>
       )}
 
-      {/* Template toggle */}
-      <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
-        <label className="flex cursor-pointer items-center gap-3">
-          <input
-            type="checkbox"
-            checked={isTemplate}
-            onChange={(e) => setIsTemplate(e.target.checked)}
-            className="h-4 w-4 rounded border-stone-300 text-trailhead accent-trailhead"
-          />
-          <input type="hidden" name="is_template" value={isTemplate.toString()} />
-          <span className="flex items-center gap-1.5 text-sm font-medium text-stone-700">
-            This is a recurring trip template
-            <RecurringTemplateInfoButton />
-          </span>
-        </label>
-        <p className="ml-7 mt-0.5 text-xs text-stone-500">
-          Templates hold the trip details. You&apos;ll create separate dated runs linked to this template.
-        </p>
-      </div>
-
       {/* Template link (only for non-templates when templates exist) */}
       {!isTemplate && templates.length > 0 && (
         <div>
@@ -304,7 +284,7 @@ export function EditTripForm({
             defaultValue={trip.template_id ?? ""}
             className={inputClass}
           >
-            <option value="">No template — standalone trip</option>
+            <option value="">No template, standalone trip</option>
             {templates.map((t) => (
               <option key={t.id} value={String(t.id)}>
                 {t.title}
@@ -441,8 +421,8 @@ export function EditTripForm({
       {!isTemplate && (
         <>
           <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <label htmlFor="date_start" className={labelClass}>
+            <div className="flex flex-col">
+              <label htmlFor="date_start" className={`${labelClass} flex-1`}>
                 Start date
               </label>
               <input
@@ -456,10 +436,10 @@ export function EditTripForm({
                 className={inputClass}
               />
             </div>
-            <div>
-              <label htmlFor="date_end" className={labelClass}>
+            <div className="flex flex-col">
+              <label htmlFor="date_end" className={`${labelClass} flex-1`}>
                 End date{duration === "" || duration === "Day tour" ? (
-                  <span className="font-normal text-stone-400"> (optional — for overnight/multi-day trips)</span>
+                  <span className="font-normal text-stone-400"> (optional, for overnight or multi-day trips)</span>
                 ) : null}
               </label>
               <input
@@ -543,7 +523,7 @@ export function EditTripForm({
                   {price > 0 ? `Minimum ₱${Math.round(price * 0.10).toLocaleString()} (10% of trip price)` : 'Set trip price first'}
                 </p>
                 <p className="mt-1 text-xs text-stone-500">
-                  This is the amount participants pay to reserve their slot. They can choose to pay in full or this downpayment amount. You set this — participants cannot change it.
+                  This is the amount participants pay to reserve their slot. They can choose to pay in full or this downpayment amount. You set this, participants cannot change it.
                 </p>
               </div>
             )}
@@ -581,10 +561,10 @@ export function EditTripForm({
               onChange={(e) => setCancellationPolicy(e.target.value as typeof cancellationPolicy)}
               className={inputClass}
             >
-              <option value="flexible">{CANCELLATION_POLICIES.flexible.label} — {CANCELLATION_POLICIES.flexible.short}</option>
-              <option value="moderate">{CANCELLATION_POLICIES.moderate.label} — {CANCELLATION_POLICIES.moderate.short}</option>
-              <option value="strict">{CANCELLATION_POLICIES.strict.label} — {CANCELLATION_POLICIES.strict.short}</option>
-              <option value="custom">{CANCELLATION_POLICIES.custom.label} — {CANCELLATION_POLICIES.custom.short}</option>
+              <option value="flexible">{CANCELLATION_POLICIES.flexible.label}: {CANCELLATION_POLICIES.flexible.short}</option>
+              <option value="moderate">{CANCELLATION_POLICIES.moderate.label}: {CANCELLATION_POLICIES.moderate.short}</option>
+              <option value="strict">{CANCELLATION_POLICIES.strict.label}: {CANCELLATION_POLICIES.strict.short}</option>
+              <option value="custom">{CANCELLATION_POLICIES.custom.label}: {CANCELLATION_POLICIES.custom.short}</option>
             </select>
             {cancellationPolicy !== "custom" && (
               <p className="mt-1.5 text-xs text-stone-500">
@@ -734,7 +714,7 @@ export function EditTripForm({
       <div>
         <p className={labelClass}>
           Photos{" "}
-          <span className="font-normal text-stone-400">(up to 5 — first is cover)</span>
+          <span className="font-normal text-stone-400">(up to 5, first is cover)</span>
         </p>
         <div className="mt-1.5">
           <PhotoUploader
@@ -805,6 +785,26 @@ export function EditTripForm({
         )}
         <p className="mt-1.5 text-xs text-stone-500">
           If set, joiners must answer these when booking.
+        </p>
+      </div>
+
+      {/* Template toggle, advanced option, shown at bottom */}
+      <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
+        <label className="flex cursor-pointer items-center gap-3">
+          <input
+            type="checkbox"
+            checked={isTemplate}
+            onChange={(e) => setIsTemplate(e.target.checked)}
+            className="h-4 w-4 rounded border-stone-300 text-trailhead accent-trailhead"
+          />
+          <input type="hidden" name="is_template" value={isTemplate.toString()} />
+          <span className="flex items-center gap-1.5 text-sm font-medium text-stone-700">
+            This is a recurring trip template
+            <RecurringTemplateInfoButton />
+          </span>
+        </label>
+        <p className="ml-7 mt-0.5 text-xs text-stone-500">
+          Templates hold the trip details. You&apos;ll create separate dated runs linked to this template.
         </p>
       </div>
 

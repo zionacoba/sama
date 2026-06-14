@@ -225,7 +225,7 @@ export function TripForm({
             Link to template <span className="font-normal text-stone-400">(optional)</span>
           </label>
           <select id="template_id" name="template_id" defaultValue={preselectedTemplateId ?? ""} className={inputClass}>
-            <option value="">No template — standalone trip</option>
+            <option value="">No template, standalone trip</option>
             {templates.map((t) => (
               <option key={t.id} value={String(t.id)}>
                 {t.title}
@@ -343,8 +343,8 @@ export function TripForm({
       {!isTemplate && (
         <>
           <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <label htmlFor="date_start" className={labelClass}>
+            <div className="flex flex-col">
+              <label htmlFor="date_start" className={`${labelClass} flex-1`}>
                 Start date
               </label>
               <input
@@ -358,10 +358,10 @@ export function TripForm({
                 className={inputClass}
               />
             </div>
-            <div>
-              <label htmlFor="date_end" className={labelClass}>
+            <div className="flex flex-col">
+              <label htmlFor="date_end" className={`${labelClass} flex-1`}>
                 End date{duration === "" || duration === "Day tour" ? (
-                  <span className="font-normal text-stone-400"> (optional — for overnight/multi-day trips)</span>
+                  <span className="font-normal text-stone-400"> (optional, for overnight or multi-day trips)</span>
                 ) : null}
               </label>
               <input
@@ -444,7 +444,7 @@ export function TripForm({
                   {price > 0 ? `Minimum ₱${Math.round(price * 0.10).toLocaleString()} (10% of trip price)` : 'Set trip price first'}
                 </p>
                 <p className="mt-1 text-xs text-stone-500">
-                  This is the amount participants pay to reserve their slot. They can choose to pay in full or this downpayment amount. You set this — participants cannot change it.
+                  This is the amount participants pay to reserve their slot. They can choose to pay in full or this downpayment amount. You set this, participants cannot change it.
                 </p>
               </div>
             )}
@@ -461,7 +461,7 @@ export function TripForm({
                 type="number"
                 min="0"
                 step="1"
-                defaultValue={defaultValues?.downpayment_cutoff_days ?? 10}
+                defaultValue={defaultValues?.downpayment_cutoff_days ?? 3}
                 className={inputClass}
                 placeholder="e.g. 10"
               />
@@ -482,10 +482,10 @@ export function TripForm({
               onChange={(e) => setCancellationPolicy(e.target.value as typeof cancellationPolicy)}
               className={inputClass}
             >
-              <option value="flexible">{CANCELLATION_POLICIES.flexible.label} — {CANCELLATION_POLICIES.flexible.short}</option>
-              <option value="moderate">{CANCELLATION_POLICIES.moderate.label} — {CANCELLATION_POLICIES.moderate.short}</option>
-              <option value="strict">{CANCELLATION_POLICIES.strict.label} — {CANCELLATION_POLICIES.strict.short}</option>
-              <option value="custom">{CANCELLATION_POLICIES.custom.label} — {CANCELLATION_POLICIES.custom.short}</option>
+              <option value="flexible">{CANCELLATION_POLICIES.flexible.label}: {CANCELLATION_POLICIES.flexible.short}</option>
+              <option value="moderate">{CANCELLATION_POLICIES.moderate.label}: {CANCELLATION_POLICIES.moderate.short}</option>
+              <option value="strict">{CANCELLATION_POLICIES.strict.label}: {CANCELLATION_POLICIES.strict.short}</option>
+              <option value="custom">{CANCELLATION_POLICIES.custom.label}: {CANCELLATION_POLICIES.custom.short}</option>
             </select>
             {cancellationPolicy !== "custom" && (
               <p className="mt-1.5 text-xs text-stone-500">
@@ -635,7 +635,7 @@ export function TripForm({
       <div>
         <p className={labelClass}>
           Photos{" "}
-          <span className="font-normal text-stone-400">(up to 5 — first is cover)</span>
+          <span className="font-normal text-stone-400">(up to 5, first is cover)</span>
         </p>
         <div className="mt-1.5">
           <PhotoUploader initial={defaultValues?.photos ?? []} onChange={setPhotoItems} />
@@ -706,7 +706,7 @@ export function TripForm({
         </p>
       </div>
 
-      {/* Template toggle — advanced option, shown at bottom */}
+      {/* Template toggle, advanced option, shown at bottom */}
       <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
         <label className="flex cursor-pointer items-center gap-3">
           <input
@@ -722,7 +722,7 @@ export function TripForm({
           </span>
         </label>
         <p className="ml-7 mt-0.5 text-xs text-stone-500">
-          Most organizers skip this — only check if you run this exact trip regularly on different dates.
+          Most organizers skip this, only check if you run this exact trip regularly on different dates.
         </p>
       </div>
 
