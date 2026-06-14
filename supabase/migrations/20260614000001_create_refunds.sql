@@ -35,3 +35,10 @@ CREATE INDEX IF NOT EXISTS refunds_status_idx ON refunds (status);
 
 -- Deny-by-default: no policies. All access goes through the service-role client.
 ALTER TABLE refunds ENABLE ROW LEVEL SECURITY;
+
+-- Table-level grants. service_role bypasses RLS but still needs table
+-- privileges; without these the retry edge function fails with
+-- "permission denied for table refunds". anon/authenticated are intentionally
+-- left with no access so the table stays locked to direct PostgREST traffic.
+-- GRANT is idempotent, so this stays safe to replay.
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE refunds TO service_role;
