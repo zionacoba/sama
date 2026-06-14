@@ -31,6 +31,10 @@ type BookingDetail = {
   created_at: string;
   waiver_agreed: boolean;
   waiver_agreed_at: string | null;
+  waiver_text_snapshot: string | null;
+  platform_waiver_snapshot: string | null;
+  custom_question_answers: string[] | null;
+  custom_question_answer: string | null;
   notes: string | null;
   medical_notes: string | null;
   meeting_point: string | null;
@@ -51,6 +55,8 @@ type BookingDetail = {
     messenger_gc_link: string | null;
     organizer_id: string | null;
     what_to_bring: string | null;
+    custom_questions: string[] | null;
+    custom_question: string | null;
   };
 };
 
@@ -139,12 +145,13 @@ export default async function BookingDetailPage({ params }: PageProps) {
     .select(`
       id, user_id, full_name, email, phone, slots, total_amount, amount_due,
       payment_option, balance_collected, balance_payment_gateway_status, status, created_at, waiver_agreed,
-      waiver_agreed_at, notes, medical_notes, meeting_point,
+      waiver_agreed_at, waiver_text_snapshot, platform_waiver_snapshot,
+      custom_question_answers, custom_question_answer, notes, medical_notes, meeting_point,
       emergency_contact_name, emergency_contact_phone,
       trip:trips!bookings_trip_id_fkey(
         title, slug, date_start, date_end, destination, region, difficulty,
         activity_type, duration, cancellation_policy, cancellation_policy_custom,
-        messenger_gc_link, organizer_id, what_to_bring
+        messenger_gc_link, organizer_id, what_to_bring, custom_questions, custom_question
       )
     `)
     .eq("id", bookingId)
@@ -335,6 +342,29 @@ export default async function BookingDetailPage({ params }: PageProps) {
                 <span className="text-stone-500">{formatDateTime(booking.waiver_agreed_at)}</span>
               </DetailRow>
             )}
+            {(booking.waiver_text_snapshot || booking.platform_waiver_snapshot) && (
+              <DetailRow label="Waiver">
+                <details className="text-sm text-stone-700">
+                  <summary className="cursor-pointer font-medium text-trailhead hover:underline">
+                    View the waiver you agreed to
+                  </summary>
+                  <div className="mt-3 space-y-4">
+                    {booking.waiver_text_snapshot && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Trip waiver</p>
+                        <p className="mt-1 whitespace-pre-wrap text-stone-600">{booking.waiver_text_snapshot}</p>
+                      </div>
+                    )}
+                    {booking.platform_waiver_snapshot && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Sama platform waiver</p>
+                        <p className="mt-1 whitespace-pre-wrap text-stone-600">{booking.platform_waiver_snapshot}</p>
+                      </div>
+                    )}
+                  </div>
+                </details>
+              </DetailRow>
+            )}
           </dl>
         </section>
 
@@ -365,6 +395,15 @@ export default async function BookingDetailPage({ params }: PageProps) {
                 <span className="text-stone-700">{booking.notes}</span>
               </DetailRow>
             )}
+            {(() => {
+              const questions = trip.custom_questions ?? (trip.custom_question ? [trip.custom_question] : []);
+              const answers = booking.custom_question_answers ?? (booking.custom_question_answer ? [booking.custom_question_answer] : []);
+              return questions.map((q, i) => answers[i] ? (
+                <DetailRow key={i} label={q}>
+                  <span className="text-stone-700">{answers[i]}</span>
+                </DetailRow>
+              ) : null);
+            })()}
           </dl>
         </section>
 

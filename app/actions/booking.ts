@@ -1123,7 +1123,20 @@ export async function cancelBooking(bookingId: number) {
 
   if (trip) {
 
-    // Notify all waitlisted members that a slot has freed up.
+    // Notify all waitlisted members that a slot has freed up. This cancellation
+    // is a new opening, so reset the notified flag for everyone still on the
+    // waitlist before selecting who to email — this lets members who were
+    // already notified on a previous opening be notified again for this one.
+    // Joiners who booked have their waitlist row deleted on booking, so the
+    // reset can never email someone who already has a spot. The reset happens
+    // once here, before the single select/email/mark sequence below, so there
+    // are no duplicate sends within this opening.
+    await admin
+      .from("waitlist")
+      .update({ notified: false })
+      .eq("trip_id", trip.id)
+      .eq("notified", true);
+
     const { data: waitingEntries } = await admin
       .from("waitlist")
       .select("id, full_name, email")
@@ -1145,7 +1158,7 @@ export async function cancelBooking(bookingId: number) {
             subject: `A slot just opened for ${trip.title}`,
             html: `
               <p>Hi ${escapeHtml(entry.full_name)},</p>
-              <p>Good news! A slot just opened for <strong>${escapeHtml(trip.title)}</strong> on ${slotTripDate}. Book now at <a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a>. It's first come, first served. Only one slot is available so act quickly.</p>
+              <p>Good news! A spot has opened up for <strong>${escapeHtml(trip.title)}</strong> on ${slotTripDate}. Book now at <a href="${SITE_URL}/trips/${trip.slug}">${SITE_URL.replace("https://", "")}/trips/${trip.slug}</a>. Spots are limited and it's first come, first served, so book soon.</p>
               <p>Sama</p>
             `,
           });

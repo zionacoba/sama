@@ -839,7 +839,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
                     ? "Failed to create payout record. Please try again."
                     : payoutError === "notfound"
                       ? "Payout not found or already remitted."
-                      : "An error occurred. Please try again."}
+                      : payoutError === "ineligible"
+                        ? "Your selection contained bookings that are no longer eligible for payout (the trip has not yet taken place, payment was not received, or they were already paid out). The list may be out of date. Please refresh and try again."
+                        : "An error occurred. Please try again."}
               </p>
             )}
 

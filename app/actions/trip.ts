@@ -631,6 +631,19 @@ export async function updateTrip(
   // Notify all waitlisted members when the organizer increases slots on a previously full trip
   if (existing.remaining_slots === 0 && remaining_slots > 0) {
     const admin = createSupabaseAdminClient();
+    // This slot increase is a new opening, so reset the notified flag for
+    // everyone still on the waitlist before selecting who to email, allowing
+    // members notified on a previous opening to be notified again for this one.
+    // Joiners who booked have their waitlist row deleted on booking, so this
+    // never emails someone who already has a spot. The reset runs once here,
+    // before the single select/email/mark sequence below, so there are no
+    // duplicate sends within this opening.
+    await admin
+      .from("waitlist")
+      .update({ notified: false })
+      .eq("trip_id", tripId)
+      .eq("notified", true);
+
     const { data: waitlistEntries } = await admin
       .from("waitlist")
       .select("id, full_name, email")

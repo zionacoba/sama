@@ -405,7 +405,7 @@ export async function getPendingPayouts(): Promise<{
   // Confirmed bookings from past trips not yet included in any payout.
   const { data: rawBookings } = await admin
     .from("bookings")
-    .select("id, full_name, total_amount, amount_due, platform_commission, payment_option, balance_collected, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
+    .select("id, full_name, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
     .in("status", ["confirmed", "no_show"])
     .eq("payout_status", "unpaid") as unknown as {
       data: Array<{
@@ -416,15 +416,18 @@ export async function getPendingPayouts(): Promise<{
         platform_commission: number | null;
         payment_option: string;
         balance_collected: boolean;
+        payment_gateway_status: string | null;
         balance_payment_gateway_status: string | null;
         trip: { title: string; date_start: string; organizer_id: string } | null;
       }> | null;
     };
 
   // Include fully-paid bookings and downpayment bookings (even without balance collected)
-  // from trips that have already taken place.
+  // from trips that have already taken place, and only where payment was actually
+  // received online (free trips are confirmed without a gateway status).
   const eligible = (rawBookings ?? []).filter((b) => {
     if (!b.trip?.date_start || b.trip.date_start >= today) return false;
+    if (!(b.payment_gateway_status === "paid" || Number(b.total_amount) === 0)) return false;
     return b.payment_option === "full" || b.payment_option === "downpayment";
   });
 
@@ -642,7 +645,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   // Compute totals server-side from the actual booking records.
   const { data: bookings } = await admin
     .from("bookings")
-    .select("id, total_amount, amount_due, platform_commission, payment_option, balance_collected, balance_payment_gateway_status")
+    .select("id, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(date_start)")
     .in("id", bookingIds)
     .eq("payout_status", "unpaid")
     .in("status", ["confirmed", "no_show"]) as unknown as {
@@ -653,23 +656,42 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
         platform_commission: number | null;
         payment_option: string;
         balance_collected: boolean;
+        payment_gateway_status: string | null;
         balance_payment_gateway_status: string | null;
+        trip: { date_start: string } | null;
       }> | null;
     };
 
   if (!bookings || bookings.length === 0) redirect("/admin?tab=payouts&payoutError=missing");
 
+  // Only pay out bookings whose trip has already taken place and whose payment
+  // was actually received online (free trips are confirmed without a gateway
+  // status). Mirrors the guards getPendingPayouts uses.
+  const today = new Date().toISOString().split("T")[0];
+  const eligible = bookings.filter((b) =>
+    b.trip?.date_start != null &&
+    b.trip.date_start < today &&
+    (b.payment_gateway_status === "paid" || Number(b.total_amount) === 0)
+  );
+
+  // If any submitted booking is missing or fails the eligibility guards (future
+  // trip, payment not received, already paid out, or no longer confirmed), the
+  // selection is stale. Reject the whole batch rather than paying out a subset.
+  if (eligible.length !== bookingIds.length) {
+    redirect("/admin?tab=payouts&payoutError=ineligible");
+  }
+
   // Gross is what Sama actually received online — for downpayment bookings whose
   // balance was collected in cash, that's only the downpayment.
-  const totalAmount = Math.round(bookings.reduce((s, b) =>
+  const totalAmount = Math.round(eligible.reduce((s, b) =>
     s + amountSamaHolds(b), 0) * 100) / 100;
 
   // platform_commission is the full commission, already deducted from the downpayment. No pro-rating.
-  const totalCommission = Math.round(bookings.reduce((s, b) =>
+  const totalCommission = Math.round(eligible.reduce((s, b) =>
     s + Number(b.platform_commission ?? 0), 0) * 100) / 100;
 
   const netAmount = Math.round((totalAmount - totalCommission) * 100) / 100;
-  const confirmedIds = bookings.map((b) => b.id);
+  const confirmedIds = eligible.map((b) => b.id);
 
   // Fetch pending deductions and subtract from net amount before remitting.
   const { data: pendingDeductionsRaw } = await (admin
