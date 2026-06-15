@@ -325,6 +325,13 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
     !!organizerData?.user_id &&
     user.id === organizerData.user_id;
 
+  // Draft (unpublished) trips are private previews: only the owning organizer
+  // may view them via direct slug. Anyone else gets a 404 so an in-progress
+  // trip is not disclosed before it is published.
+  if (tripData.status === "draft" && !isOwnTrip) {
+    notFound();
+  }
+
   const isPast = new Date(tripData.date_start) < new Date();
 
   const reviews = (reviewsResult.data ?? []) as unknown as Review[];
