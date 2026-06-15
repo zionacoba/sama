@@ -461,12 +461,14 @@ export default async function TripsPage({ searchParams }: PageProps) {
                         <DifficultyBadge level={trip.difficulty} />
                       </div>
                       {isGrouped ? (
-                        <Link
-                          href={`/trips/${trip.slug}`}
-                          className="font-bold text-stone-900 underline-offset-2 hover:text-trailhead hover:underline"
-                        >
-                          {trip.title}
-                        </Link>
+                        <h3>
+                          <Link
+                            href={`/trips/${trip.slug}`}
+                            className="font-bold text-stone-900 underline-offset-2 hover:text-trailhead hover:underline"
+                          >
+                            {trip.title}
+                          </Link>
+                        </h3>
                       ) : (
                         <h3 className="font-bold text-stone-900">{trip.title}</h3>
                       )}

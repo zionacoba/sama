@@ -54,7 +54,15 @@ export default function RootLayout({
       className={`${dmSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-          {children}
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-trailhead focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg focus:ring-2 focus:ring-trailhead/40"
+          >
+            Skip to main content
+          </a>
+          <div id="main-content" tabIndex={-1} className="flex flex-1 flex-col focus:outline-none">
+            {children}
+          </div>
           <CookieConsent />
           <Analytics />
         </body>

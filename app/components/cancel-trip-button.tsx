@@ -127,14 +127,19 @@ export function CancelTripButton({ tripSlug, tripTitle }: Props) {
               </p>
             )}
 
-            <p className="mt-4 text-sm text-stone-600">
+            <p id="cancel-trip-instruction" className="mt-4 text-sm text-stone-600">
               Type <strong className="text-stone-800 select-none">CANCEL</strong> to confirm.
             </p>
+            <label htmlFor="cancel-trip-confirm" className="sr-only">
+              Type CANCEL to confirm
+            </label>
             <input
+              id="cancel-trip-confirm"
               type="text"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               placeholder="Type CANCEL to confirm"
+              aria-describedby="cancel-trip-instruction"
               className="mt-2 block w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
             />
             <div className="mt-5 flex justify-end gap-2">
