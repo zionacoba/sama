@@ -724,13 +724,23 @@ export async function publishTrip(tripSlug: string): Promise<{ error: string } |
 
   const { data: tripData } = await supabase
     .from("trips")
-    .select("is_template")
+    .select("is_template, date_start")
     .eq("slug", tripSlug)
     .eq("organizer_id", organizer.id)
     .maybeSingle();
 
   if (tripData?.is_template) {
     return { error: "Templates can't be published directly. Go to your dashboard and create a run from this template to list a specific date." };
+  }
+
+  // Re-check the start date before publishing. A draft saved earlier with a
+  // future date may have since passed; publishing it would create an active but
+  // already-past trip whose bookings fail the same date gate. Mirror the Manila
+  // (Asia/Manila) past-date comparison used by the booking and cancel gates so a
+  // past date is rejected uniformly.
+  const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  if (tripData?.date_start && tripData.date_start < todayPH) {
+    return { error: "This trip's start date has already passed. Please update the date before publishing." };
   }
 
   const hasGcash = organizer.payout_method === "gcash" && !!organizer.gcash_number;
