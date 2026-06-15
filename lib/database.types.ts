@@ -50,6 +50,8 @@ export type Database = {
           token: string
           waiver_accepted: boolean | null
           waiver_accepted_at: string | null
+          waiver_ip: string | null
+          waiver_text_snapshot: string | null
         }
         Insert: {
           booking_id?: number | null
@@ -65,6 +67,8 @@ export type Database = {
           token?: string
           waiver_accepted?: boolean | null
           waiver_accepted_at?: string | null
+          waiver_ip?: string | null
+          waiver_text_snapshot?: string | null
         }
         Update: {
           booking_id?: number | null
@@ -80,6 +84,8 @@ export type Database = {
           token?: string
           waiver_accepted?: boolean | null
           waiver_accepted_at?: string | null
+          waiver_ip?: string | null
+          waiver_text_snapshot?: string | null
         }
         Relationships: [
           {
