@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { cache } from "react";
@@ -143,9 +144,35 @@ function CancellationPolicyCard({ policy, custom }: { policy: string | null; cus
           {meta.label}
         </span>
       </div>
-      <p className="mt-3 leading-relaxed text-stone-600">{text}</p>
-      <p className="mt-3 leading-relaxed text-stone-500">Refunds to GCash are processed automatically. QR Ph payments are processed manually, and our team will reach out within 3–5 business days.</p>
+      <p className="mt-2 text-sm leading-relaxed text-stone-500">{text}</p>
+      <p className="mt-2 text-sm leading-relaxed text-stone-500">Refunds to GCash are processed automatically. QR Ph payments are processed manually, and our team will reach out within 3–5 business days.</p>
     </div>
+  );
+}
+
+// Reusable collapsible section built on native <details>/<summary>: SSR-friendly,
+// keyboard-accessible by default, with a chevron that rotates via group-open.
+function CollapsibleSection({
+  title,
+  defaultOpen = false,
+  className,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  className: string;
+  children: ReactNode;
+}) {
+  return (
+    <details open={defaultOpen} className={`group ${className}`}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+        <h2 className="text-lg font-bold text-stone-900">{title}</h2>
+        <svg className="h-5 w-5 shrink-0 text-stone-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </summary>
+      {children}
+    </details>
   );
 }
 
@@ -455,8 +482,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
             </div>
 
             {tripData.meeting_points && tripData.meeting_points.length > 0 ? (
-              <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-                <h2 className="text-lg font-bold text-stone-900">Meeting points</h2>
+              <CollapsibleSection title="Meeting points" className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
                 <ul className="mt-2 space-y-1">
                   {tripData.meeting_points.map((mp, idx) => (
                     <li key={idx} className="text-stone-700">
@@ -465,12 +491,11 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                     </li>
                   ))}
                 </ul>
-              </div>
+              </CollapsibleSection>
             ) : tripData.meeting_point ? (
-              <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-                <h2 className="text-lg font-bold text-stone-900">Meeting point</h2>
+              <CollapsibleSection title="Meeting point" className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
                 <p className="mt-1.5 font-medium text-stone-900">{tripData.meeting_point}</p>
-              </div>
+              </CollapsibleSection>
             ) : null}
 
             {siblingRunsData && siblingRunsData.length > 0 && (
@@ -497,10 +522,9 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
             )}
 
             {(includesList.length > 0 || whatToBringList.length > 0) && (
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid items-start gap-4 sm:grid-cols-2">
                 {includesList.length > 0 && (
-                  <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-                    <h2 className="text-lg font-bold text-stone-900">What&apos;s included</h2>
+                  <CollapsibleSection title="What's included" defaultOpen className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
                     <ul className="mt-3 space-y-1.5">
                       {includesList.map((item) => (
                         <li key={item} className="flex items-start gap-2 text-sm text-stone-600">
@@ -509,11 +533,10 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                         </li>
                       ))}
                     </ul>
-                  </div>
+                  </CollapsibleSection>
                 )}
                 {whatToBringList.length > 0 && (
-                  <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-                    <h2 className="text-lg font-bold text-stone-900">What to bring</h2>
+                  <CollapsibleSection title="What to bring" className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
                     <ul className="mt-3 space-y-1.5">
                       {whatToBringList.map((item) => (
                         <li key={item} className="flex items-start gap-2 text-sm text-stone-600">
@@ -522,10 +545,15 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                         </li>
                       ))}
                     </ul>
-                  </div>
+                  </CollapsibleSection>
                 )}
               </div>
             )}
+
+            <CancellationPolicyCard
+              policy={tripData.cancellation_policy}
+              custom={tripData.cancellation_policy_custom}
+            />
 
             {organizer && (
               <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
@@ -561,11 +589,6 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                 </Link>
               </div>
             )}
-
-            <CancellationPolicyCard
-              policy={tripData.cancellation_policy}
-              custom={tripData.cancellation_policy_custom}
-            />
 
             {organizer && (
               <div id="reviews">
