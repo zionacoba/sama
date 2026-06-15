@@ -894,6 +894,9 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
   // snapshotted so it cannot drift if the trip waiver is edited later.
   // Best-effort: the transfer already succeeded and the slot stays filled, so a
   // failure here never rolls back the transfer. We log it and alert an admin.
+  // On success we keep the token in scope so the emails below can carry a
+  // working /join link; if prep failed it stays null and we send no link.
+  let replacementToken: string | null = null;
   try {
     const resolvedWaiverText = (trip.waiver_text ?? DEFAULT_WAIVER_TEXT).replace(/\[Organizer Name\]/gi, organizerName);
     const newToken = randomUUID();
@@ -937,6 +940,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
         });
       if (prepError) throw prepError;
     }
+    replacementToken = newToken;
   } catch (err) {
     console.error("[markAsTransferred] failed to prepare replacement slot-0 participant row", err);
     Sentry.captureException(err, {
@@ -961,23 +965,54 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
     timeZone: "Asia/Manila",
   }).format(new Date(trip.date_start));
 
+  // Only build and send the link when the slot-0 token prep succeeded. If it
+  // failed, replacementToken is null and we send no link: the admin alert above
+  // already covers that case, and we never want to mail a broken link.
+  const replacementLink = replacementToken ? `${SITE_URL}/join/${replacementToken}` : null;
+
   try {
     await resend.emails.send({
       from: FROM_ADDRESS,
       to: booking.email,
       replyTo: REPLY_TO_ADDRESS,
-      subject: `Your booking for ${trip.title} has been marked as transferred`,
+      subject: `Your booking for ${trip.title} has been transferred`,
       html: `
         <p>Hi ${escapeHtml(booking.full_name)},</p>
         <p>Your booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} has been marked as <strong>transferred</strong> by your organizer.</p>
-        <p>No refund will be processed through Sama for this booking. Please settle any payment arrangements directly with the person taking your slot.</p>
-        <p>If you have any questions, please contact your organizer directly.</p>
+        ${replacementLink ? `
+        <p>The person taking your slot must add their own details and sign the waiver before the trip. Please forward this link to them:</p>
+        <p><a href="${replacementLink}">${replacementLink}</a></p>
+        ` : ""}
+        <p>Please settle any payment directly between the two of you. No refund is processed through Sama for this booking.</p>
         <p>If you did not arrange this transfer, contact us at <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with booking #${bookingRef}.</p>
         <p>Sama</p>
       `,
     });
   } catch (err) {
     console.error("[email] failed to send transfer notice to participant", err);
+  }
+
+  // If the organizer supplied the replacement's email and we have a working
+  // link, send it to them directly too so they do not depend on the forward.
+  if (replacementLink && transferredToEmail.trim()) {
+    try {
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: transferredToEmail.trim(),
+        replyTo: REPLY_TO_ADDRESS,
+        subject: `Complete your details for ${trip.title}`,
+        html: `
+          <p>Hi,</p>
+          <p>You are taking a slot on <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}. Before the trip, please add your own details and sign the waiver using this link:</p>
+          <p><a href="${replacementLink}">${replacementLink}</a></p>
+          <p>Please settle any payment directly with the person handing over their slot. No refund is processed through Sama.</p>
+          <p>If you did not arrange this, contact us at <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>
+          <p>Sama</p>
+        `,
+      });
+    } catch (err) {
+      console.error("[email] failed to send transfer link to replacement", err);
+    }
   }
 
   try {
@@ -993,6 +1028,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
         html: `
           <p>Hi ${escapeHtml(org.full_name)},</p>
           <p>The booking for <strong>${escapeHtml(booking.full_name)}</strong> on <strong>${escapeHtml(trip.title)}</strong> (${tripDate}) has been marked as transferred${toNote}.</p>
+          <p>The replacement has been sent a link to add their details and sign the waiver. You will see their status update once they complete it.</p>
           <p>The slot remains assigned to the replacement. Any payment should be settled directly between the two participants.</p>
           <p>Sama</p>
         `,

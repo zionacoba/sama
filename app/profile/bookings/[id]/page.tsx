@@ -8,6 +8,7 @@ import { safeExternalUrl } from "@/lib/safe-url";
 import { CancelBookingButton } from "@/app/profile/cancel-booking-button";
 import { PayBalanceButton } from "./pay-balance-button";
 import { PartialCancelButton } from "./partial-cancel-button";
+import { CopyLinkButton } from "./copy-link-button";
 import { calculateRefundAmount } from "@/lib/cancellation-policies";
 import { amountJoinerPaid } from "@/lib/booking-finance";
 import { formatPeso, formatBookingRef } from "@/lib/format";
@@ -188,6 +189,24 @@ export default async function BookingDetailPage({ params }: PageProps) {
     }
   }
 
+  // For a transferred booking, load the repurposed slot-0 participant row so we
+  // can surface the replacement's completion link and status. Pre-Phase-2
+  // transfers have no such row; we fall back gracefully in the render.
+  let replacement: { token: string | null; completed: boolean; full_name: string | null } | null = null;
+  if (booking.status === "transferred") {
+    const { data: slotZero } = await admin
+      .from("booking_participants")
+      .select("token, completed, full_name")
+      .eq("booking_id", booking.id)
+      .eq("slot_number", 0)
+      .maybeSingle();
+    if (slotZero) {
+      replacement = slotZero as { token: string | null; completed: boolean; full_name: string | null };
+    }
+  }
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
+  const replacementLink = replacement?.token ? `${SITE_URL}/join/${replacement.token}` : null;
+
   const policyKey = (trip.cancellation_policy ?? "flexible") as keyof typeof CANCELLATION_POLICIES;
   const policy = CANCELLATION_POLICIES[policyKey] ?? CANCELLATION_POLICIES.flexible;
   const policyText = policyKey === "custom"
@@ -255,6 +274,38 @@ export default async function BookingDetailPage({ params }: PageProps) {
               </a>{" "}
               with booking #{bookingRef}.
             </p>
+          </div>
+        )}
+
+        {booking.status === "transferred" && (
+          <div className="mt-3 rounded-2xl border border-amber-200 bg-white px-5 py-4">
+            {replacement && replacement.completed ? (
+              <p className="text-sm text-stone-700">
+                Replacement completed by{" "}
+                <strong>{replacement.full_name || "the new participant"}</strong>.
+              </p>
+            ) : replacementLink ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-stone-700">
+                  The person taking your slot still needs to complete their details and sign the
+                  waiver. Forward this link to them:
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 break-all rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 font-mono text-xs text-stone-700">
+                    {replacementLink}
+                  </span>
+                  <CopyLinkButton link={replacementLink} />
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-stone-700">
+                Contact support to arrange the replacement&apos;s details at{" "}
+                <a href="mailto:hello@sama.com.ph" className="font-semibold underline underline-offset-2 hover:text-stone-900">
+                  hello@sama.com.ph
+                </a>
+                .
+              </p>
+            )}
           </div>
         )}
 
