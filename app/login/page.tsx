@@ -21,6 +21,8 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showResend, setShowResend] = useState(false);
+  const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   const rawRedirectTo = searchParams.get("redirectTo");
   const redirectTo = getSafeRedirect(rawRedirectTo);
@@ -34,6 +36,8 @@ function LoginForm() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setShowResend(false);
+    setResendState("idle");
     setLoading(true);
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -44,12 +48,28 @@ function LoginForm() {
     setLoading(false);
 
     if (signInError) {
-      setError(signInError.message);
+      const message = (signInError.message ?? "").toLowerCase();
+      if (message.includes("invalid login credentials")) {
+        // Keep this generic on purpose: do not reveal which field was wrong.
+        setError("The email or password is incorrect. Please try again.");
+      } else if (message.includes("not confirmed")) {
+        setError("Your email address hasn't been confirmed yet. Please check your inbox for the confirmation link.");
+        setShowResend(true);
+      } else {
+        setError("Something went wrong signing in. Please try again.");
+      }
       return;
     }
 
     router.push(redirectTo);
     router.refresh();
+  }
+
+  async function handleResend() {
+    if (!email) return;
+    setResendState("sending");
+    const { error: resendError } = await supabase.auth.resend({ type: "signup", email });
+    setResendState(resendError ? "error" : "sent");
   }
 
   return (
@@ -85,12 +105,33 @@ function LoginForm() {
                 </p>
               )}
               {error && (
-                <p
+                <div
                   role="alert"
                   className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
                 >
-                  {error}
-                </p>
+                  <p>{error}</p>
+                  {showResend && (
+                    <p className="mt-2">
+                      {resendState === "sent" ? (
+                        <span className="font-medium text-red-900">Confirmation email sent. Please check your inbox.</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleResend}
+                          disabled={resendState === "sending"}
+                          className="font-semibold text-red-900 underline underline-offset-2 hover:text-red-950 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {resendState === "sending" ? "Sending…" : "Resend confirmation email"}
+                        </button>
+                      )}
+                      {resendState === "error" && (
+                        <span className="mt-1 block text-xs text-red-700">
+                          We couldn&apos;t resend it just now. Please try again in a moment.
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
               )}
 
               <div>

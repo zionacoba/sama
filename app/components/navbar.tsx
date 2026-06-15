@@ -53,7 +53,7 @@ function AuthLinks({ email, displayName, organizerStatus, organizerId, className
           Dashboard
         </Link>
       ) : organizerStatus === "pending" ? (
-        <span className="shrink-0 text-sm text-stone-400">Application pending</span>
+        <span className="shrink-0 text-sm text-stone-500">Application pending</span>
       ) : null}
       <form action={signOut}>
         <button

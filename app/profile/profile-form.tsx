@@ -61,7 +61,7 @@ export function ProfileForm({ firstName, lastName, nickname, pronouns, address, 
 
       <div>
         <label htmlFor="nickname" className="block text-sm font-medium text-stone-700">
-          Nickname / preferred name <span className="font-normal text-stone-400">(optional)</span>
+          Nickname / preferred name <span className="font-normal text-stone-500">(optional)</span>
         </label>
         <input
           id="nickname"
@@ -70,12 +70,12 @@ export function ProfileForm({ firstName, lastName, nickname, pronouns, address, 
           defaultValue={nickname ?? ""}
           className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
-        <p className="mt-1 text-xs text-stone-400">This is what organizers and the community will call you.</p>
+        <p className="mt-1 text-xs text-stone-500">This is what organizers and the community will call you.</p>
       </div>
 
       <div>
         <label htmlFor="pronouns" className="block text-sm font-medium text-stone-700">
-          Pronouns <span className="font-normal text-stone-400">(optional)</span>
+          Pronouns <span className="font-normal text-stone-500">(optional)</span>
         </label>
         <input
           id="pronouns"
@@ -85,7 +85,7 @@ export function ProfileForm({ firstName, lastName, nickname, pronouns, address, 
           placeholder="e.g. she/her, he/him, they/them"
           className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
-        <p className="mt-1 text-xs text-stone-400">Optional. Only visible to organizers.</p>
+        <p className="mt-1 text-xs text-stone-500">Optional. Only visible to organizers.</p>
       </div>
 
       <div>
@@ -117,7 +117,7 @@ export function ProfileForm({ firstName, lastName, nickname, pronouns, address, 
 
       <div>
         <label htmlFor="address" className="block text-sm font-medium text-stone-700">
-          Address <span className="font-normal text-stone-400">(optional)</span>
+          Address <span className="font-normal text-stone-500">(optional)</span>
         </label>
         <input
           id="address"
@@ -127,12 +127,12 @@ export function ProfileForm({ firstName, lastName, nickname, pronouns, address, 
           placeholder="City, Province"
           className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
-        <p className="mt-1 text-xs text-stone-400">Optional. Used for trip coordination.</p>
+        <p className="mt-1 text-xs text-stone-500">Optional. Used for trip coordination.</p>
       </div>
 
       <div>
         <label htmlFor="facebook_url" className="block text-sm font-medium text-stone-700">
-          Facebook profile URL <span className="font-normal text-stone-400">(optional)</span>
+          Facebook profile URL <span className="font-normal text-stone-500">(optional)</span>
         </label>
         <input
           id="facebook_url"

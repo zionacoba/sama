@@ -558,7 +558,7 @@ export function BookingModal({
                       }
                       className="mt-1.5 w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                     />
-                    <p className="text-xs text-stone-400 mt-1">Maximum 10 slots per booking.</p>
+                    <p className="text-xs text-stone-500 mt-1">Maximum 10 slots per booking.</p>
                     {slotsExceedsAvailable && (
                       <p role="alert" className="mt-1.5 text-xs text-red-600">
                         Only {remainingSlots} slot{remainingSlots === 1 ? "" : "s"} available for this trip.
@@ -713,7 +713,7 @@ export function BookingModal({
                   {/* Medical / dietary notes */}
                   <div>
                     <label htmlFor="booking-notes" className="block text-sm font-medium text-stone-700">
-                      Medical / dietary notes <span className="text-stone-400">(optional)</span>
+                      Medical / dietary notes <span className="text-stone-500">(optional)</span>
                     </label>
                     <textarea
                       id="booking-notes"
@@ -831,13 +831,13 @@ export function BookingModal({
 
             {!success && (
               <div className="shrink-0 border-t border-stone-100 px-6 py-3">
-                <p className="mb-2 text-center text-xs text-stone-400">
+                <p className="mb-2 text-center text-xs text-stone-500">
                   Need help?{" "}
                   <a href="mailto:hello@sama.com.ph" className="underline hover:text-stone-600">
                     hello@sama.com.ph
                   </a>
                 </p>
-                <p className="mb-2 flex items-center justify-center gap-1 text-xs text-stone-400">
+                <p className="mb-2 flex items-center justify-center gap-1 text-xs text-stone-500">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
                     <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
                   </svg>

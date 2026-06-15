@@ -95,6 +95,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   const labels: Record<string, string> = {
     payment_pending: "Awaiting payment",
+    pending: "Awaiting organizer approval",
     transferred: "Transferred",
   };
   const label = labels[status] ?? (status.charAt(0).toUpperCase() + status.slice(1));

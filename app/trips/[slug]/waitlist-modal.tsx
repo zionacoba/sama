@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { joinWaitlist } from "@/app/actions/waitlist";
 
 type Props = {
@@ -35,6 +35,15 @@ export function WaitlistModal({
   const [email, setEmail] = useState(defaultEmail);
   const [phone, setPhone] = useState("");
   const [slots, setSlots] = useState(1);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -95,11 +104,20 @@ export function WaitlistModal({
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-6 shadow-xl">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-6 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="waitlist-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-bold text-stone-900">Join the waitlist</h2>
+                <h2 id="waitlist-modal-title" className="text-lg font-bold text-stone-900">Join the waitlist</h2>
                 <p className="mt-0.5 text-sm text-stone-500">{tripTitle}</p>
               </div>
               <button
@@ -128,8 +146,9 @@ export function WaitlistModal({
               )}
 
               <div>
-                <label className="block text-sm font-medium text-stone-700">Full name</label>
+                <label htmlFor="waitlist-full-name" className="block text-sm font-medium text-stone-700">Full name</label>
                 <input
+                  id="waitlist-full-name"
                   type="text"
                   required
                   value={fullName}
@@ -139,8 +158,9 @@ export function WaitlistModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-stone-700">Email</label>
+                <label htmlFor="waitlist-email" className="block text-sm font-medium text-stone-700">Email</label>
                 <input
+                  id="waitlist-email"
                   type="email"
                   required
                   value={email}
@@ -150,10 +170,11 @@ export function WaitlistModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-stone-700">
-                  Phone <span className="font-normal text-stone-400">(optional)</span>
+                <label htmlFor="waitlist-phone" className="block text-sm font-medium text-stone-700">
+                  Phone <span className="font-normal text-stone-500">(optional)</span>
                 </label>
                 <input
+                  id="waitlist-phone"
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -163,8 +184,9 @@ export function WaitlistModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-stone-700">Slots needed</label>
+                <label htmlFor="waitlist-slots" className="block text-sm font-medium text-stone-700">Slots needed</label>
                 <input
+                  id="waitlist-slots"
                   type="number"
                   min={1}
                   max={10}

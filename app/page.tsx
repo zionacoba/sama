@@ -209,14 +209,14 @@ export default async function Home() {
                     </div>
                     <h3 className="font-bold text-stone-900">{trip.title}</h3>
                     <p className="text-sm text-stone-500">{trip.destination}</p>
-                    <p className="text-xs text-stone-400">
+                    <p className="text-xs text-stone-500">
                       {formatDate(trip.date_start)}{trip.duration && ` · ${trip.duration}`}
                     </p>
                     <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-3">
                       <p className="text-lg font-bold text-trailhead">
                         {formatPrice(trip.price)}
                       </p>
-                      <span className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-400"}`}>
+                      <span className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-500"}`}>
                         {trip.remaining_slots} slot{trip.remaining_slots !== 1 ? "s" : ""} left
                       </span>
                     </div>

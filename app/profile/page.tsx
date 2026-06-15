@@ -107,7 +107,9 @@ function StatusBadge({ status }: { status: string }) {
   const label =
     status === "payment_pending"
       ? "Awaiting payment"
-      : status.charAt(0).toUpperCase() + status.slice(1);
+      : status === "pending"
+        ? "Awaiting organizer approval"
+        : status.charAt(0).toUpperCase() + status.slice(1);
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${styles}`}>
       {label}
@@ -171,7 +173,7 @@ function BookingCard({
           <span>{formatDate(trip.date_start)}{trip.duration && ` · ${trip.duration}`}</span>
           <span>{booking.slots} slot{booking.slots !== 1 ? "s" : ""}</span>
           <span>{formatPeso(booking.total_amount)}</span>
-          <span className="font-mono text-stone-400">#{formatBookingRef(booking.id)}</span>
+          <span className="font-mono text-stone-500">#{formatBookingRef(booking.id)}</span>
           {booking.payment_option === "downpayment" && booking.amount_due != null && (
             booking.balance_collected ? (
               <span className="font-semibold text-emerald-600">Fully paid</span>
@@ -182,7 +184,7 @@ function BookingCard({
             ) : null
           )}
           {!past && trip.meeting_point && (
-            <span className="w-full text-stone-400">Meet: {trip.meeting_point}</span>
+            <span className="w-full text-stone-500">Meet: {trip.meeting_point}</span>
           )}
         </div>
 
@@ -199,7 +201,7 @@ function BookingCard({
         )}
 
         {past && isPaidAttendee(booking) && reviewed && (
-          <p className="text-xs text-stone-400">Review submitted ✓</p>
+          <p className="text-xs text-stone-500">Review submitted ✓</p>
         )}
 
         {booking.status === "confirmed" &&
@@ -215,7 +217,7 @@ function BookingCard({
               >
                 Pay remaining balance ({formatPeso(Math.max(0, booking.total_amount - booking.amount_due))}) →
               </Link>
-              <p className="text-xs text-stone-400">
+              <p className="text-xs text-stone-500">
                 Pay online before the trip, or directly to your organizer on the day.
               </p>
             </>
@@ -398,7 +400,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
               <section className="mt-8">
                 <h2 className="text-lg font-bold text-stone-900">
                   Upcoming
-                  <span className="ml-2 text-base font-normal text-stone-400">({upcoming.length})</span>
+                  <span className="ml-2 text-base font-normal text-stone-500">({upcoming.length})</span>
                 </h2>
                 <ul className="mt-4 space-y-4">
                   {upcoming.map((b) => (
@@ -420,7 +422,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
               <section className="mt-8">
                 <h2 className="text-lg font-bold text-stone-900">
                   Past trips
-                  <span className="ml-2 text-base font-normal text-stone-400">({past.length})</span>
+                  <span className="ml-2 text-base font-normal text-stone-500">({past.length})</span>
                 </h2>
                 <ul className="mt-4 space-y-4">
                   {past.map((b) => (
@@ -442,7 +444,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
               <section className="mt-8">
                 <h2 className="text-lg font-bold text-stone-900">
                   Cancelled / Rejected / Transferred
-                  <span className="ml-2 text-base font-normal text-stone-400">({cancelled.length})</span>
+                  <span className="ml-2 text-base font-normal text-stone-500">({cancelled.length})</span>
                 </h2>
                 <ul className="mt-4 space-y-4">
                   {cancelled.map((b) => (
@@ -464,7 +466,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
               <section className="mt-8">
                 <h2 className="text-lg font-bold text-stone-900">
                   Waitlist
-                  <span className="ml-2 text-base font-normal text-stone-400">({waitlistEntries.length})</span>
+                  <span className="ml-2 text-base font-normal text-stone-500">({waitlistEntries.length})</span>
                 </h2>
                 <ul className="mt-4 space-y-3">
                   {waitlistEntries.map((entry) => (

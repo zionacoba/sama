@@ -43,6 +43,17 @@ export function MobileMenu({ isLoggedIn, isAdmin, email, displayName, organizerS
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    // Move focus to the first menu item when the menu opens
+    dropdownRef.current?.querySelector<HTMLElement>("a, button")?.focus();
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
+
   function handleToggle() {
     if (!open && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
@@ -63,6 +74,7 @@ export function MobileMenu({ isLoggedIn, isAdmin, email, displayName, organizerS
         onClick={handleToggle}
         aria-label={open ? "Close menu" : "Open menu"}
         aria-expanded={open}
+        aria-controls="mobile-menu-dropdown"
         className="flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 text-stone-600 transition hover:bg-stone-100"
       >
         {open ? (
@@ -79,6 +91,7 @@ export function MobileMenu({ isLoggedIn, isAdmin, email, displayName, organizerS
       {mounted && open && createPortal(
         <div
           ref={dropdownRef}
+          id="mobile-menu-dropdown"
           style={{ top: menuPos.top, right: menuPos.right }}
           className="fixed z-50 w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl"
         >
@@ -94,7 +107,7 @@ export function MobileMenu({ isLoggedIn, isAdmin, email, displayName, organizerS
             {isLoggedIn ? (
               <>
                 {displayName && (
-                  <p className="border-t border-stone-100 px-4 py-2 text-xs text-stone-400">
+                  <p className="border-t border-stone-100 px-4 py-2 text-xs text-stone-500">
                     {displayName}
                   </p>
                 )}
@@ -132,7 +145,7 @@ export function MobileMenu({ isLoggedIn, isAdmin, email, displayName, organizerS
                     Dashboard
                   </Link>
                 ) : organizerStatus === "pending" ? (
-                  <span className="px-4 py-3 text-stone-400">Application pending</span>
+                  <span className="px-4 py-3 text-stone-500">Application pending</span>
                 ) : (
                   <Link
                     href="/organizers"

@@ -144,7 +144,7 @@ function CancellationPolicyCard({ policy, custom }: { policy: string | null; cus
         </span>
       </div>
       <p className="mt-3 leading-relaxed text-stone-600">{text}</p>
-      <p className="mt-3 leading-relaxed text-stone-400">Refunds to GCash are processed automatically. QR Ph payments are processed manually — our team will reach out within 3–5 business days.</p>
+      <p className="mt-3 leading-relaxed text-stone-500">Refunds to GCash are processed automatically. QR Ph payments are processed manually, and our team will reach out within 3–5 business days.</p>
     </div>
   );
 }
@@ -461,7 +461,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   {tripData.meeting_points.map((mp, idx) => (
                     <li key={idx} className="text-stone-700">
                       <span className="font-medium">{mp.location}</span>
-                      {mp.time && <span className="text-stone-400"> · {mp.time}</span>}
+                      {mp.time && <span className="text-stone-500"> · {mp.time}</span>}
                     </li>
                   ))}
                 </ul>
@@ -484,9 +484,9 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                       className="rounded-xl border border-trailhead/30 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-trailhead"
                     >
                       <span className="font-semibold text-stone-900">{formatDateRange(run.date_start, run.date_end)}</span>
-                      {run.duration && <span className="ml-1.5 text-stone-400">· {run.duration}</span>}
+                      {run.duration && <span className="ml-1.5 text-stone-500">· {run.duration}</span>}
                       <span className="ml-2 font-bold text-trailhead">{formatPrice(run.price)}</span>
-                      {run.remaining_slots === 0 && <span className="ml-1.5 text-xs text-stone-400">· Full</span>}
+                      {run.remaining_slots === 0 && <span className="ml-1.5 text-xs text-stone-500">· Full</span>}
                       {run.remaining_slots > 0 && run.remaining_slots < 5 && (
                         <span className="ml-1.5 text-xs text-red-600">· {run.remaining_slots} left</span>
                       )}
@@ -586,7 +586,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   <div className="mt-4 rounded-2xl border border-stone-100 bg-stone-50 px-6 py-8 text-center">
                     <p className="text-2xl" aria-hidden>★</p>
                     <p className="mt-2 text-sm font-medium text-stone-600">No reviews yet for this organizer.</p>
-                    <p className="mt-1 text-xs text-stone-400">Reviews appear here after participants complete a trip.</p>
+                    <p className="mt-1 text-xs text-stone-500">Reviews appear here after participants complete a trip.</p>
                   </div>
                 )}
                 {reviews.length > 0 && (
@@ -597,10 +597,10 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                           <p className="font-semibold text-stone-900">{review.full_name ?? "Verified adventurer"}</p>
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                             <Stars rating={review.rating} />
-                            <span className="text-xs text-stone-400">{formatReviewDate(review.created_at)}</span>
+                            <span className="text-xs text-stone-500">{formatReviewDate(review.created_at)}</span>
                           </div>
                           {review.trips && (
-                            <p className="mt-1 text-xs text-stone-400">
+                            <p className="mt-1 text-xs text-stone-500">
                               {review.trips.title} · {formatReviewDate(review.trips.date_start)}
                             </p>
                           )}
@@ -821,6 +821,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                     difficulty={tripData.difficulty}
                     waiverText={tripData.waiver_text ?? null}
                     organizerName={organizerName}
+                    customQuestions={tripData.custom_questions ?? (tripData.custom_question ? [tripData.custom_question] : null)}
                     autoOpen={book === "1"}
                     initialName={(user?.user_metadata?.full_name as string | undefined)?.trim() ?? ""}
                     initialEmail={user?.email ?? ""}

@@ -267,16 +267,16 @@ export default async function TripsPage({ searchParams }: PageProps) {
             {/* Filter pills — stacked rows on mobile, one scrollable row on desktop */}
             <div className="mt-2 flex flex-col gap-2 md:flex-row md:flex-nowrap md:items-center md:gap-1.5 md:overflow-x-auto md:pb-1">
               {/* Activity */}
-              <div className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
-                <span className="shrink-0 text-xs font-semibold text-stone-400">Activity</span>
+              <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
+                <span className="shrink-0 text-xs font-semibold text-stone-500">Activity</span>
                 {ACTIVITIES.map((a) => {
                   const active = a === currentActivity;
                   return (
                     <Link
                       key={a}
                       href={filterUrl(current, "activity", a)}
-                      aria-pressed={active}
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                      aria-current={active ? "page" : undefined}
+                      className={`inline-flex shrink-0 items-center min-h-[40px] rounded-full px-3 py-2 text-xs font-medium transition ${
                         active
                           ? "bg-trailhead text-white shadow-sm"
                           : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
@@ -289,16 +289,16 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 <span className="mx-1 hidden shrink-0 text-stone-300 md:inline" aria-hidden>|</span>
               </div>
               {/* Level */}
-              <div className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
-                <span className="shrink-0 text-xs font-semibold text-stone-400">Level</span>
+              <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
+                <span className="shrink-0 text-xs font-semibold text-stone-500">Level</span>
                 {DIFFICULTIES.map((d) => {
                   const active = d === currentDifficulty;
                   return (
                     <Link
                       key={d}
                       href={filterUrl(current, "difficulty", d)}
-                      aria-pressed={active}
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                      aria-current={active ? "page" : undefined}
+                      className={`inline-flex shrink-0 items-center min-h-[40px] rounded-full px-3 py-2 text-xs font-medium transition ${
                         active
                           ? "bg-trailhead text-white shadow-sm"
                           : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
@@ -311,16 +311,16 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 <span className="mx-1 hidden shrink-0 text-stone-300 md:inline" aria-hidden>|</span>
               </div>
               {/* Duration */}
-              <div className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
-                <span className="shrink-0 text-xs font-semibold text-stone-400">Duration</span>
+              <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
+                <span className="shrink-0 text-xs font-semibold text-stone-500">Duration</span>
                 {DURATIONS.map((d) => {
                   const active = d === currentDuration;
                   return (
                     <Link
                       key={d}
                       href={filterUrl(current, "duration", d)}
-                      aria-pressed={active}
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                      aria-current={active ? "page" : undefined}
+                      className={`inline-flex shrink-0 items-center min-h-[40px] rounded-full px-3 py-2 text-xs font-medium transition ${
                         active
                           ? "bg-trailhead text-white shadow-sm"
                           : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
@@ -332,17 +332,17 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 })}
               </div>
               {/* Region */}
-              <div className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
+              <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
                 <span className="mx-1 hidden shrink-0 text-stone-300 md:inline" aria-hidden>|</span>
-                <span className="shrink-0 text-xs font-semibold text-stone-400">Region</span>
+                <span className="shrink-0 text-xs font-semibold text-stone-500">Region</span>
                 {REGIONS.map((r) => {
                   const active = r === currentRegion;
                   return (
                     <Link
                       key={r}
                       href={filterUrl(current, "region", r)}
-                      aria-pressed={active}
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                      aria-current={active ? "page" : undefined}
+                      className={`inline-flex shrink-0 items-center min-h-[40px] rounded-full px-3 py-2 text-xs font-medium transition ${
                         active
                           ? "bg-trailhead text-white shadow-sm"
                           : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
@@ -396,7 +396,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                     return (
                       <Link
                         href={`/trips${qs ? `?${qs}` : ""}`}
-                        className="ml-2 text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline"
+                        className="ml-2 text-stone-500 underline-offset-4 hover:text-stone-600 hover:underline"
                       >
                         Clear search
                       </Link>
@@ -472,25 +472,25 @@ export default async function TripsPage({ searchParams }: PageProps) {
                       )}
                       <p className="text-sm text-stone-500">{trip.destination}</p>
                       {isGrouped ? (
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-xs text-stone-400">Pick a date:</span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-stone-500">Pick a date:</span>
                           {runs.slice(0, 3).map((run) => (
                             <Link
                               key={run.id}
                               href={`/trips/${run.slug}`}
-                              className="rounded-full border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-700 transition hover:border-trailhead hover:text-trailhead"
+                              className="inline-flex min-h-[40px] items-center rounded-full border border-stone-200 px-3 py-2 text-xs font-medium text-stone-700 transition hover:border-trailhead hover:text-trailhead"
                             >
                               {formatDate(run.date_start)}
                             </Link>
                           ))}
                           {runs.length > 3 && (
-                            <span className="rounded-full border border-stone-100 px-2.5 py-1 text-xs text-stone-400">
+                            <span className="inline-flex min-h-[40px] items-center rounded-full border border-stone-100 px-3 py-2 text-xs text-stone-500">
                               +{runs.length - 3} more
                             </span>
                           )}
                         </div>
                       ) : (
-                        <p className="text-xs text-stone-400">
+                        <p className="text-xs text-stone-500">
                           {formatDateRange(trip.date_start, trip.date_end)}{trip.duration && ` · ${trip.duration}`}
                         </p>
                       )}
@@ -498,7 +498,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                         <p className="text-lg font-bold text-trailhead">
                           {isGrouped ? `From ${formatPrice(minPrice)}` : formatPrice(trip.price)}
                         </p>
-                        <span className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-400"}`}>
+                        <span className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-500"}`}>
                           {trip.remaining_slots} slot{trip.remaining_slots !== 1 ? "s" : ""} left
                         </span>
                       </div>

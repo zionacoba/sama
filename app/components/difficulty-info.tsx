@@ -110,7 +110,7 @@ export function RecurringTemplateInfoButton() {
             <li>From your dashboard, create a &ldquo;run&rdquo; each time you want to list a new date</li>
             <li>Each run inherits all your trip details — just add the date, price, and slots</li>
           </ol>
-          <p className="text-xs text-stone-400">
+          <p className="text-xs text-stone-500">
             Templates never appear on the public listing. Only runs do.
           </p>
         </div>
@@ -193,7 +193,7 @@ export function DifficultyInfoButton({ variant, difficulty, compact }: Difficult
                     </span>
                     <p className="text-xs text-stone-600">{description}</p>
                     {examples && (
-                      <p className="mt-0.5 text-xs text-stone-400">Examples: {examples}</p>
+                      <p className="mt-0.5 text-xs text-stone-500">Examples: {examples}</p>
                     )}
                   </div>
                 ))}
