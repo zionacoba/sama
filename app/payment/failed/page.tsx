@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Navbar } from "@/app/components/navbar";
 import { formatBookingRef } from "@/lib/format";
+import { ResumePaymentButton } from "@/app/profile/resume-payment-button";
 
 export const metadata: Metadata = {
   title: "Payment not completed | Sama",
@@ -14,6 +15,8 @@ type PageProps = {
 
 export default async function PaymentFailedPage({ searchParams }: PageProps) {
   const { bookingId } = await searchParams;
+  const parsedBookingId = bookingId ? parseInt(bookingId, 10) : NaN;
+  const hasBookingId = !Number.isNaN(parsedBookingId);
 
   return (
     <>
@@ -35,22 +38,35 @@ export default async function PaymentFailedPage({ searchParams }: PageProps) {
           <h1 className="text-2xl font-bold text-stone-900">Payment was not completed</h1>
 
           <p className="mt-3 text-sm text-stone-600">
-            Your booking slot is reserved for 15 minutes. You can try again or contact us for help.
+            {hasBookingId
+              ? "Your slot is held for a short while longer. Resume payment now to confirm your booking before the hold is released."
+              : "Your slot is held for a short while. Head to your bookings to resume payment before the hold is released, or contact us for help."}
           </p>
 
-          {bookingId && (
+          {hasBookingId && (
             <p className="mt-2 text-xs text-stone-500">
               Booking reference:{" "}
               <span className="font-mono font-medium text-stone-600">
-                {formatBookingRef(parseInt(bookingId, 10))}
+                {formatBookingRef(parsedBookingId)}
               </span>
             </p>
           )}
 
           <div className="mt-8 flex flex-col items-center gap-3">
+            {hasBookingId ? (
+              <ResumePaymentButton
+                bookingId={parsedBookingId}
+                wrapperClassName="w-full sm:w-auto"
+                className="w-full rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[220px]"
+              />
+            ) : null}
             <Link
               href="/profile"
-              className="w-full rounded-xl bg-trailhead px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark sm:w-auto sm:min-w-[220px]"
+              className={`w-full rounded-xl px-6 py-3 text-sm font-semibold shadow-md transition sm:w-auto sm:min-w-[220px] ${
+                hasBookingId
+                  ? "border border-stone-200 bg-white text-stone-700 hover:border-stone-300 hover:text-stone-900"
+                  : "bg-trailhead text-white hover:bg-trailhead-dark"
+              }`}
             >
               View my bookings
             </Link>

@@ -811,6 +811,119 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
   }
 }
 
+// Resume the INITIAL payment for a booking that is still in payment_pending
+// (the joiner abandoned or failed the first PayMongo checkout). Mirrors
+// createBalancePaymentLink: if the stored link is still live and unpaid we
+// return its existing checkout_url so the joiner finishes the SAME payment (no
+// new charge, no duplicate booking); if it is archived/gone we generate a fresh
+// link for the same booking using the server-authoritative amount already
+// stored on the row (amount_due, computed from trip.price at creation, never
+// client-supplied). If the payment had actually completed the booking would no
+// longer be payment_pending (confirmPaidBooking flips status + gateway status),
+// so this stays idempotent with the confirm paths.
+export async function resumeBookingPayment(bookingId: number): Promise<{ success: true; checkoutUrl: string } | { error: string }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: booking } = await admin
+    .from("bookings")
+    .select("id, user_id, trip_id, total_amount, amount_due, status, payment_id, payment_gateway_status")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking) return { error: "Booking not found." };
+  if (booking.user_id !== user.id) return { error: "You don't have permission to access this booking." };
+  if (booking.payment_gateway_status === "paid") return { error: "This booking has already been paid." };
+  if (booking.status !== "payment_pending") {
+    return { error: "This booking is no longer awaiting payment." };
+  }
+
+  const { data: trip } = await admin
+    .from("trips")
+    .select("id, title, date_start, status")
+    .eq("id", booking.trip_id)
+    .maybeSingle();
+
+  if (!trip) return { error: "Trip not found." };
+  if (trip.status !== "active") {
+    return { error: "This trip is no longer available. Your slot hold has been released." };
+  }
+  if (trip.date_start < new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date())) {
+    return { error: "This trip has already taken place." };
+  }
+
+  // Reuse the existing PayMongo link when it is still live and unpaid, so the
+  // joiner resumes the same payment rather than creating a second charge.
+  if (booking.payment_id) {
+    const secretKey = process.env.PAYMONGO_SECRET_KEY;
+    if (secretKey) {
+      try {
+        const auth = "Basic " + Buffer.from(`${secretKey}:`).toString("base64");
+        const pmRes = await fetch(`https://api.paymongo.com/v1/links/${booking.payment_id}`, {
+          headers: { Authorization: auth, Accept: "application/json" },
+        });
+
+        if (pmRes.ok) {
+          const pmData = await pmRes.json();
+          const linkStatus = pmData.data?.attributes?.status as string | undefined;
+          if (linkStatus === "unpaid") {
+            const existingUrl = pmData.data?.attributes?.checkout_url as string | undefined;
+            if (existingUrl) return { success: true, checkoutUrl: existingUrl };
+            // URL missing in response: fall through and generate a new link.
+          }
+          // "archived" or any other terminal status: clear and generate a fresh link.
+          if (linkStatus !== "unpaid") {
+            await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
+          }
+        } else if (pmRes.status === 404) {
+          await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
+        } else {
+          // PayMongo API error: allow re-generation rather than permanently blocking.
+          console.error("[resumeBookingPayment] PayMongo link status check failed:", pmRes.status);
+          await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
+        }
+      } catch (err) {
+        // Network error: allow re-generation.
+        console.error("[resumeBookingPayment] PayMongo link status check error:", err);
+        await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
+      }
+    }
+    // No secret key: fall through and generate a new link.
+  }
+
+  // Server-authoritative initial-payment amount: the amount_due locked onto the
+  // row at creation (computedAmountDue). Never trust a client-supplied price.
+  const amount = Math.round(Number(booking.amount_due ?? booking.total_amount ?? 0) * 100) / 100;
+  if (amount <= 0) return { error: "Nothing left to pay on this booking." };
+
+  const tripDateShort = new Intl.DateTimeFormat("en-PH", {
+    month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila",
+  }).format(new Date(trip.date_start));
+  const description = `Booking for ${trip.title} - ${tripDateShort}`;
+
+  try {
+    const linkResult = await createPaymentLink({ bookingId, amount, description });
+
+    if ("error" in linkResult) {
+      console.error("[resumeBookingPayment] payment link creation failed:", linkResult.error);
+      return { error: "Failed to create payment link. Please try again." };
+    }
+
+    await admin
+      .from("bookings")
+      .update({ payment_id: linkResult.linkId })
+      .eq("id", bookingId);
+
+    return { success: true, checkoutUrl: linkResult.checkoutUrl };
+  } catch (err) {
+    console.error("[resumeBookingPayment] error:", err);
+    return { error: "Failed to create payment link. Please try again." };
+  }
+}
+
 export async function markAsTransferred(bookingId: number, transferredToEmail: string) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

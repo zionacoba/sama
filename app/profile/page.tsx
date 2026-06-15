@@ -10,6 +10,7 @@ import { ProfileForm as SafetyForm } from "@/app/dashboard/profile/profile-form"
 import { ProfileForm } from "./profile-form";
 import { DeleteAccountButton } from "@/app/components/delete-account-button";
 import { ParticipantShareLinks } from "./participant-share-links";
+import { ResumePaymentButton } from "./resume-payment-button";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 import { removeWaitlistEntry } from "@/app/actions/waitlist";
 import { Footer } from "@/app/components/footer";
@@ -190,6 +191,19 @@ function BookingCard({
 
         {incompleteParticipants.length > 0 && (
           <ParticipantShareLinks participants={incompleteParticipants} />
+        )}
+
+        {booking.status === "payment_pending" && !past && (
+          <div className="flex flex-col gap-1.5">
+            <ResumePaymentButton
+              bookingId={booking.id}
+              wrapperClassName="self-start"
+              className="rounded-lg bg-trailhead px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-trailhead-dark disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <p className="text-xs text-stone-500">
+              Your slot is held while payment is pending. Finish paying to confirm it, or it will be released.
+            </p>
+          </div>
         )}
 
         {past && isPaidAttendee(booking) && !reviewed && (
