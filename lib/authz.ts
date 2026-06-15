@@ -4,6 +4,8 @@ export function organizerOwns(
   resourceOrganizerId: string | null | undefined,
   actingOrganizerId: string | null | undefined,
 ): boolean {
-  if (!resourceOrganizerId || !actingOrganizerId) return false;
-  return resourceOrganizerId.trim() === actingOrganizerId.trim();
+  const a = resourceOrganizerId?.trim();
+  const b = actingOrganizerId?.trim();
+  if (!a || !b) return false; // null, undefined, empty, or whitespace-only all reject
+  return a === b;
 }

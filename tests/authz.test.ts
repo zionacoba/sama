@@ -33,9 +33,9 @@ describe("organizerOwns", () => {
   });
 
   it("a whitespace-only id never authorizes", () => {
-    // "   " is truthy so it passes the null guard, but trims to "" and must not
-    // match a real id, nor match another whitespace-only string.
+    // Whitespace-only ids trim to "" and must never authorize, not even against
+    // another whitespace-only string (they must not be treated as equal empties).
     expect(organizerOwns("   ", "org_1")).toBe(false);
-    expect(organizerOwns("   ", "  ")).toBe(true); // both trim to "" -> equal
+    expect(organizerOwns("   ", "  ")).toBe(false);
   });
 });
