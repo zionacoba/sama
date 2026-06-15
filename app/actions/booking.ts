@@ -7,6 +7,7 @@ import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { calculateRefundAmount } from "@/lib/cancellation-policies";
 import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
@@ -18,8 +19,6 @@ import { createPaymentLink } from "@/lib/create-payment-link";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 
-if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
 type CreateBookingInput = {
@@ -363,14 +362,9 @@ export async function createBooking(input: CreateBookingInput) {
         });
       } catch (err) {
         console.error("[email] failed to send participant join links to booker", err);
-        if (ADMIN_EMAIL) {
-          try {
-            await resend.emails.send({
-              from: FROM_ADDRESS,
-              to: ADMIN_EMAIL,
-              replyTo: REPLY_TO_ADDRESS,
-              subject: "Action needed: participant join links failed to send",
-              html: `
+        await sendAdminAlert(
+          "Action needed: participant join links failed to send",
+          `
                 <p>The participant join-links email failed to send. The booker did not receive the links, so additional participants cannot complete their waivers.</p>
                 <p><strong>Booking ID:</strong> ${newBooking.id}</p>
                 <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
@@ -378,11 +372,7 @@ export async function createBooking(input: CreateBookingInput) {
                 <p><strong>Error:</strong> ${escapeHtml(String(err))}</p>
                 <p>Please resend the join links to the booker manually.</p>
               `,
-            });
-          } catch (alertErr) {
-            console.error("[email] failed to send join-links failure alert", alertErr);
-          }
-        }
+        );
       }
     }
 
@@ -877,22 +867,15 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
       .from("bookings")
       .update({ status: "confirmed", transferred_to_email: null, transferred_at: null, transferred_by: null })
       .eq("id", bookingId);
-    try {
-      await resend.emails.send({
-        from: FROM_ADDRESS,
-        to: ADMIN_EMAIL,
-        replyTo: REPLY_TO_ADDRESS,
-        subject: "Action needed: slot restore failed on transfer",
-        html: `
+    await sendAdminAlert(
+      "Action needed: slot restore failed on transfer",
+      `
           <p>A booking transfer was reverted because the slot restore failed. The booking remains confirmed.</p>
           <p><strong>Booking ID:</strong> ${bookingId}</p>
           <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
           <p><strong>Error:</strong> ${escapeHtml(slotErr.message)}</p>
         `,
-      });
-    } catch (alertErr) {
-      console.error("[markAsTransferred] failed to send admin alert:", alertErr);
-    }
+    );
     return { error: "Transfer failed: could not restore slot. Please try again." };
   }
 
@@ -1208,18 +1191,14 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     const needsManualRefund =
       (refundResult && !refundResult.success) ||
       (balanceRefundResult && !balanceRefundResult.success);
-    if (needsManualRefund && ADMIN_EMAIL) {
-      try {
-        const isQrPh = refundResult?.requiresManualProcessing || balanceRefundResult?.requiresManualProcessing;
-        const refundNote = isQrPh
-          ? "Payment method is QR Ph, must be refunded manually."
-          : `Automatic refund failed: ${refundResult?.error ?? balanceRefundResult?.error ?? "Unknown error"}`;
-        await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: ADMIN_EMAIL,
-          replyTo: REPLY_TO_ADDRESS,
-          subject: `[Admin] Manual refund required (partial cancel): ${escapeHtml(booking.full_name)}, ${tripDateCheck.title}`,
-          html: `
+    if (needsManualRefund) {
+      const isQrPh = refundResult?.requiresManualProcessing || balanceRefundResult?.requiresManualProcessing;
+      const refundNote = isQrPh
+        ? "Payment method is QR Ph, must be refunded manually."
+        : `Automatic refund failed: ${refundResult?.error ?? balanceRefundResult?.error ?? "Unknown error"}`;
+      await sendAdminAlert(
+        `[Admin] Manual refund required (partial cancel): ${escapeHtml(booking.full_name)}, ${tripDateCheck.title}`,
+        `
             <p>A partial cancellation refund could not be automatically processed.</p>
             <p><strong>Booking ID:</strong> ${bookingId}</p>
             <p><strong>Slots cancelled:</strong> ${slotsToCancel}</p>
@@ -1227,10 +1206,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
             <p><strong>Refund amount:</strong> ${refundAmount != null && refundAmount > 0 ? fmtCurrency(refundAmount) : "N/A"}</p>
             <p><strong>Reason:</strong> ${refundNote}</p>
           `,
-        });
-      } catch (alertErr) {
-        console.error("[email] failed to send partial cancel manual refund alert", alertErr);
-      }
+      );
     }
   }
 
@@ -1456,37 +1432,26 @@ export async function cancelBooking(bookingId: number) {
         `,
       });
 
-      try {
-        await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: ADMIN_EMAIL,
-          replyTo: REPLY_TO_ADDRESS,
-          subject: `[Admin] Booking cancelled: ${escapeHtml(booking.full_name)}, ${trip.title}`,
-          html: `
+      await sendAdminAlert(
+        `[Admin] Booking cancelled: ${escapeHtml(booking.full_name)}, ${trip.title}`,
+        `
             <p><strong>${escapeHtml(booking.full_name)}</strong> cancelled their booking for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate}.</p>
             <p>Refund: ${refundAmount === null ? "Custom policy, manual review needed." : refundAmount > 0 ? fmtCurrency(refundAmount) : "Not eligible."}</p>
             <p>Reply to the participant at <a href="mailto:${escapeHtml(booking.email)}">${escapeHtml(booking.email)}</a>.</p>
           `,
-        });
-      } catch (adminErr) {
-        console.error("[email] failed to send admin cancellation notification", adminErr);
-      }
+      );
 
       const needsManualRefund =
         (refundResult && !refundResult.success) ||
         (balanceRefundResult && !balanceRefundResult.success);
       if (needsManualRefund) {
-        try {
-          const isQrPh = refundResult?.requiresManualProcessing || balanceRefundResult?.requiresManualProcessing;
-          const refundNote = isQrPh
-            ? 'Payment method is QR Ph, must be refunded manually.'
-            : `Automatic refund failed: ${refundResult?.error ?? balanceRefundResult?.error ?? 'Unknown error'}`;
-          await resend.emails.send({
-            from: FROM_ADDRESS,
-            to: ADMIN_EMAIL,
-            replyTo: REPLY_TO_ADDRESS,
-            subject: `[Admin] Manual refund required: ${escapeHtml(booking.full_name)}, ${trip.title}`,
-            html: `
+        const isQrPh = refundResult?.requiresManualProcessing || balanceRefundResult?.requiresManualProcessing;
+        const refundNote = isQrPh
+          ? 'Payment method is QR Ph, must be refunded manually.'
+          : `Automatic refund failed: ${refundResult?.error ?? balanceRefundResult?.error ?? 'Unknown error'}`;
+        await sendAdminAlert(
+          `[Admin] Manual refund required: ${escapeHtml(booking.full_name)}, ${trip.title}`,
+          `
               <p>A refund could not be automatically processed.</p>
               <p><strong>Booking ID:</strong> ${bookingId}</p>
               <p><strong>Participant:</strong> ${escapeHtml(booking.full_name)} (${escapeHtml(booking.email)})</p>
@@ -1494,35 +1459,28 @@ export async function cancelBooking(bookingId: number) {
               <p><strong>Reason:</strong> ${refundNote}</p>
               <p>Please process this refund manually.</p>
             `,
-          });
-        } catch (alertErr) {
-          console.error('[email] failed to send manual refund alert', alertErr);
-        }
+        );
       }
     } catch (err) {
       console.error("[email] failed to send cancellation email", err);
     }
 
-    if (wasInIncludedPayout && ADMIN_EMAIL) {
-      try {
-        let organizerName = "Unknown";
-        if (trip.organizer_id) {
-          const { data: org } = await admin
-            .from("organizers")
-            .select("display_name, full_name")
-            .eq("id", trip.organizer_id)
-            .maybeSingle();
-          organizerName = org?.display_name ?? org?.full_name ?? "Unknown";
-        }
-        const amountInPayout = booking.payment_option === "downpayment" && booking.amount_due != null
-          ? booking.amount_due
-          : (booking.total_amount ?? 0);
-        await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: ADMIN_EMAIL,
-          replyTo: REPLY_TO_ADDRESS,
-          subject: `[Admin] Booking cancelled after payout created: review before remitting`,
-          html: `
+    if (wasInIncludedPayout) {
+      let organizerName = "Unknown";
+      if (trip.organizer_id) {
+        const { data: org } = await admin
+          .from("organizers")
+          .select("display_name, full_name")
+          .eq("id", trip.organizer_id)
+          .maybeSingle();
+        organizerName = org?.display_name ?? org?.full_name ?? "Unknown";
+      }
+      const amountInPayout = booking.payment_option === "downpayment" && booking.amount_due != null
+        ? booking.amount_due
+        : (booking.total_amount ?? 0);
+      await sendAdminAlert(
+        `[Admin] Booking cancelled after payout created: review before remitting`,
+        `
             <p>A booking was cancelled after its payout record was created but before remittance. <strong>Do not remit this payout until you have adjusted the amounts.</strong></p>
             <p><strong>Booking ID:</strong> ${bookingId}</p>
             <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
@@ -1531,10 +1489,7 @@ export async function cancelBooking(bookingId: number) {
             <p><strong>Amount in payout:</strong> ${fmtCurrency(amountInPayout)}</p>
             <p>The payout has been flagged for reconciliation in the admin dashboard.</p>
           `,
-        });
-      } catch (payoutAlertErr) {
-        console.error("[email] failed to send included payout cancellation alert", payoutAlertErr);
-      }
+      );
     }
   }
 

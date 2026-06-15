@@ -1,24 +1,15 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { escapeHtml, sendEmail } from "../_shared/email.ts";
 
 // Daily reconciliation heartbeat (resilience fix L1). Surfaces the same
 // money-in-limbo states as the admin Operations tab, emailed to the admin once a
 // day. An "all clear" digest is sent on purpose even when every count is zero so
 // the absence of problems is confirmed, not indistinguishable from a broken cron.
 
-const FROM_ADDRESS = Deno.env.get("RESEND_FROM_EMAIL") ?? "Sama <hello@sama.com.ph>";
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
 const SITE_URL = Deno.env.get("NEXT_PUBLIC_SITE_URL") ?? "https://sama.com.ph";
 
 const LIST_CAP = 20;
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-PH", {
@@ -37,21 +28,6 @@ function formatDatePH(date: string): string {
     minute: "2-digit",
     timeZone: "Asia/Manila",
   }).format(new Date(date));
-}
-
-async function sendEmail(to: string, subject: string, html: string) {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from: FROM_ADDRESS, to, subject, html, reply_to: "hello@sama.com.ph" }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Resend error ${res.status}: ${text}`);
-  }
 }
 
 function constantTimeEqual(a: string, b: string): boolean {

@@ -2,11 +2,11 @@ import { revalidatePath } from "next/cache";
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
 export type ConfirmOutcome =
   | "confirmed"
@@ -163,27 +163,16 @@ export async function confirmPaidBooking(
         console.error(`[confirm-paid-booking] error recording manual refund row for booking ${booking.id}:`, refundErr);
       }
 
-      if (ADMIN_EMAIL) {
-        const fmt = (n: number) =>
-          formatPeso(n);
-        try {
-          await resend.emails.send({
-            from: FROM_ADDRESS,
-            to: ADMIN_EMAIL,
-            replyTo: REPLY_TO_ADDRESS,
-            subject: "Action needed: payment received for cancelled booking, manual refund required",
-            html: `
+      await sendAdminAlert(
+        "Action needed: payment received for cancelled booking, manual refund required",
+        `
               <p>A payment was received for a booking that was already cancelled by the cleanup job.</p>
               <p><strong>Booking ID:</strong> ${booking.id}</p>
-              <p><strong>Amount:</strong> ${fmt(booking.amount_due ?? 0)}</p>
+              <p><strong>Amount:</strong> ${formatPeso(booking.amount_due ?? 0)}</p>
               <p><strong>Participant email:</strong> ${escapeHtml(booking.email)}</p>
               <p>Please issue a manual refund via the PayMongo dashboard.</p>
             `,
-          });
-        } catch (alertErr) {
-          console.error("[confirm-paid-booking] failed to send cancelled-booking payment alert:", alertErr);
-        }
-      }
+      );
       console.warn(`[confirm-paid-booking] booking ${booking.id} has status 'cancelled' with no gateway status — manual refund recorded`);
       Sentry.captureException(
         new Error(`Payment received for cancelled booking ${booking.id} — manual refund required`),
@@ -227,28 +216,17 @@ export async function confirmPaidBooking(
     Sentry.captureException(updateError, {
       extra: { context: "confirm-paid-db-update-failed", bookingId: booking.id, linkId, amount: booking.total_amount },
     });
-    if (ADMIN_EMAIL) {
-      const fmt = (n: number) =>
-        formatPeso(n);
-      try {
-        await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: ADMIN_EMAIL,
-          replyTo: REPLY_TO_ADDRESS,
-          subject: "Action needed: booking stuck in payment_pending",
-          html: `
+    await sendAdminAlert(
+      "Action needed: booking stuck in payment_pending",
+      `
             <p>A confirmation DB update failed. The booking is stuck in <strong>payment_pending</strong> and needs manual recovery.</p>
             <p><strong>Booking ID:</strong> ${booking.id}</p>
             <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
-            <p><strong>Amount:</strong> ${fmt(booking.total_amount)}</p>
+            <p><strong>Amount:</strong> ${formatPeso(booking.total_amount)}</p>
             <p><strong>Participant email:</strong> ${escapeHtml(booking.email)}</p>
             <p><strong>Error:</strong> ${escapeHtml(updateError.message)}</p>
           `,
-        });
-      } catch (alertErr) {
-        console.error("[confirm-paid-booking] failed to send stuck booking alert", alertErr);
-      }
-    }
+    );
     return { outcome: "skipped" };
   }
 
@@ -339,14 +317,9 @@ export async function confirmPaidBooking(
     Sentry.captureException(err, {
       extra: { context: "confirm-paid-confirmation-email-failed", bookingId: booking.id, email: booking.email },
     });
-    if (ADMIN_EMAIL) {
-      try {
-        await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: ADMIN_EMAIL,
-          replyTo: REPLY_TO_ADDRESS,
-          subject: "Action needed: booking confirmation email failed to send",
-          html: `
+    await sendAdminAlert(
+      "Action needed: booking confirmation email failed to send",
+      `
             <p>The booking confirmation email failed to send. The booking was created successfully but the participant was not notified.</p>
             <p><strong>Booking ID:</strong> ${booking.id}</p>
             <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
@@ -354,11 +327,7 @@ export async function confirmPaidBooking(
             <p><strong>Error:</strong> ${escapeHtml(String(err))}</p>
             <p>Please send a manual confirmation to the participant.</p>
           `,
-        });
-      } catch (alertErr) {
-        console.error("[confirm-paid-booking] failed to send confirmation email alert:", alertErr);
-      }
-    }
+    );
   }
 
   // Organizer new-booking notification.
@@ -456,14 +425,9 @@ export async function confirmPaidBooking(
     Sentry.captureException(err, {
       extra: { context: "confirm-paid-join-links-email-failed", bookingId: booking.id, email: booking.email },
     });
-    if (ADMIN_EMAIL) {
-      try {
-        await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: ADMIN_EMAIL,
-          replyTo: REPLY_TO_ADDRESS,
-          subject: "Action needed: participant join links failed to send",
-          html: `
+    await sendAdminAlert(
+      "Action needed: participant join links failed to send",
+      `
             <p>The participant join-links email failed to send. The booker did not receive the links, so additional participants cannot complete their waivers.</p>
             <p><strong>Booking ID:</strong> ${booking.id}</p>
             <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
@@ -471,11 +435,7 @@ export async function confirmPaidBooking(
             <p><strong>Error:</strong> ${escapeHtml(String(err))}</p>
             <p>Please resend the join links to the booker manually.</p>
           `,
-        });
-      } catch (alertErr) {
-        console.error("[confirm-paid-booking] failed to send join-links failure alert", alertErr);
-      }
-    }
+    );
   }
 
   // revalidatePath throws if called during a server-component render (the

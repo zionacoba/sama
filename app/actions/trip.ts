@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
@@ -974,48 +975,28 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
 
   // Send consolidated manual refund alert if any bookings couldn't be automatically refunded.
   if (manualRefundList.length > 0) {
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (adminEmail) {
-      try {
-        const rows = manualRefundList
-          .map((b) => `<li>Booking ${b.id}, ${escapeHtml(b.full_name)} (${escapeHtml(b.email)}): ${fmtCurrency(b.amount)}</li>`)
-          .join('\n');
-        await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: adminEmail,
-          replyTo: REPLY_TO_ADDRESS,
-          subject: `[Admin] Manual refunds required: ${escapeHtml(trip.title)}`,
-          html: `
+    const rows = manualRefundList
+      .map((b) => `<li>Booking ${b.id}, ${escapeHtml(b.full_name)} (${escapeHtml(b.email)}): ${fmtCurrency(b.amount)}</li>`)
+      .join('\n');
+    await sendAdminAlert(
+      `[Admin] Manual refunds required: ${escapeHtml(trip.title)}`,
+      `
             <p>The following bookings for <strong>${escapeHtml(trip.title)}</strong> could not be automatically refunded (QR Ph payments or API errors). Please process these manually:</p>
             <ul>${rows}</ul>
             <p>Sama System</p>
           `,
-        });
-      } catch (err) {
-        console.error('[email] failed to send manual refund alert for trip cancellation', err);
-      }
-    }
+    );
   }
 
   // Notify admin.
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (adminEmail) {
-    try {
-      await resend.emails.send({
-        from: FROM_ADDRESS,
-        to: adminEmail,
-        replyTo: REPLY_TO_ADDRESS,
-        subject: `[Admin] Trip cancelled: ${escapeHtml(trip.title)}`,
-        html: `
+  await sendAdminAlert(
+    `[Admin] Trip cancelled: ${escapeHtml(trip.title)}`,
+    `
           <p>Organizer <strong>${escapeHtml(organizer.full_name ?? user.email ?? "Unknown")}</strong> cancelled <strong>${escapeHtml(trip.title)}</strong> scheduled for ${tripDate}.</p>
           <p>${(bookings ?? []).length} participant${(bookings ?? []).length !== 1 ? "s were" : " was"} affected and notified.</p>
           <p>Sama System</p>
         `,
-      });
-    } catch (err) {
-      console.error("[email] failed to send admin trip cancellation notification", err);
-    }
-  }
+  );
 
   revalidatePath("/trips");
   revalidatePath("/organizer/dashboard");

@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -138,26 +139,18 @@ export async function submitReview(
   }
 
   // Alert admin so the review gets noticed quickly.
-  const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
-  if (ADMIN_EMAIL) {
-    try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
-      const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
-      await resend.emails.send({
-        from: FROM_ADDRESS,
-        to: ADMIN_EMAIL,
-        replyTo: REPLY_TO_ADDRESS,
-        subject: `[Admin] New review pending approval: ${tripForDate.title}`,
-        html: `
+  {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
+    const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+    await sendAdminAlert(
+      `[Admin] New review pending approval: ${tripForDate.title}`,
+      `
           <p><strong>${escapeHtml(fullName ?? "A participant")}</strong> submitted a <strong>${rating}-star review</strong> ${stars} for <strong>${escapeHtml(tripForDate.title)}</strong>:</p>
           <blockquote style="border-left:3px solid #ccc;margin:0;padding:0 1em;color:#555;">${escapeHtml(body.length > 400 ? body.slice(0, 397) + "…" : body)}</blockquote>
           <p>Approve it from the <a href="${siteUrl}/admin?tab=reviews">admin Reviews tab</a>.</p>
           <p>Sama System</p>
         `,
-      });
-    } catch (adminEmailErr) {
-      console.error("[email] failed to send admin review alert", adminEmailErr);
-    }
+    );
   }
 
   // Only redirect when submitted from the trip page (no booking_id)

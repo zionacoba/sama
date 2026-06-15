@@ -5,10 +5,10 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { safeExternalUrl } from "@/lib/safe-url";
 
-if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
 export async function applyToBeOrganizer(
@@ -124,13 +124,9 @@ export async function applyToBeOrganizer(
       console.error("[email] failed to send organizer reapplication confirmation", err);
     }
 
-    try {
-      await resend.emails.send({
-        from: FROM_ADDRESS,
-        to: ADMIN_EMAIL,
-        replyTo: REPLY_TO_ADDRESS,
-        subject: `Organizer reapplication: ${escapeHtml(displayName)}`,
-        html: `
+    await sendAdminAlert(
+      `Organizer reapplication: ${escapeHtml(displayName)}`,
+      `
           <p>A rejected organizer has reapplied.</p>
           <ul>
             <li><strong>Name:</strong> ${escapeHtml(fullName)}</li>
@@ -139,10 +135,7 @@ export async function applyToBeOrganizer(
           </ul>
           <p><a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/admin">Review it in the admin dashboard</a></p>
         `,
-      });
-    } catch (err) {
-      console.error("[email] failed to notify admin of organizer reapplication", err);
-    }
+    );
 
     return { success: true };
   }
@@ -198,13 +191,9 @@ export async function applyToBeOrganizer(
     console.error("[email] failed to send organizer application confirmation", err);
   }
 
-  try {
-    await resend.emails.send({
-      from: FROM_ADDRESS,
-      to: ADMIN_EMAIL,
-      replyTo: REPLY_TO_ADDRESS,
-      subject: `New organizer application: ${escapeHtml(displayName)}`,
-      html: `
+  await sendAdminAlert(
+    `New organizer application: ${escapeHtml(displayName)}`,
+    `
         <p>A new organizer application has been submitted.</p>
         <ul>
           <li><strong>Name:</strong> ${escapeHtml(fullName)}</li>
@@ -213,10 +202,7 @@ export async function applyToBeOrganizer(
         </ul>
         <p><a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/admin">Review it in the admin dashboard</a></p>
       `,
-    });
-  } catch (err) {
-    console.error("[email] failed to notify admin of new organizer application", err);
-  }
+  );
 
   return { success: true };
 }

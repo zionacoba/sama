@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
@@ -13,7 +14,6 @@ import { ACTIVE_BOOKING_STATUSES, ATTENDED_STATUSES } from "@/lib/booking-status
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { formatPeso } from "@/lib/format";
 
-if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set — admin alerts will be skipped");
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
 async function requireAdmin() {
@@ -190,27 +190,20 @@ export async function rejectOrganizer(id: string): Promise<void> {
     }));
 
     // Alert admin to any bookings that couldn't be automatically refunded.
-    if (manualRefundList.length > 0 && ADMIN_EMAIL) {
+    if (manualRefundList.length > 0) {
       const fmtCurrency = (n: number) =>
         formatPeso(n);
-      try {
-        const rows = manualRefundList
-          .map((b) => `<li>Booking ${b.id}, ${escapeHtml(b.full_name)} (${escapeHtml(b.email)}): ${fmtCurrency(b.amount)}</li>`)
-          .join('\n');
-        await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: ADMIN_EMAIL,
-          replyTo: REPLY_TO_ADDRESS,
-          subject: `[Admin] Manual refunds required: organizer ${escapeHtml(organizer.full_name)} rejected`,
-          html: `
+      const rows = manualRefundList
+        .map((b) => `<li>Booking ${b.id}, ${escapeHtml(b.full_name)} (${escapeHtml(b.email)}): ${fmtCurrency(b.amount)}</li>`)
+        .join('\n');
+      await sendAdminAlert(
+        `[Admin] Manual refunds required: organizer ${escapeHtml(organizer.full_name)} rejected`,
+        `
             <p>The following bookings could not be automatically refunded after organizer <strong>${escapeHtml(organizer.full_name)}</strong> was rejected (QR Ph payments or API errors). Please process these manually:</p>
             <ul>${rows}</ul>
             <p>Sama System</p>
           `,
-        });
-      } catch (err) {
-        console.error('[email] failed to send manual refund alert for organizer rejection', err);
-      }
+      );
     }
 
     // Notify participants — copy reflects whether the refund was automatic or manual.
@@ -741,21 +734,14 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   if (error || !payoutId) {
     console.error("[createPayout] RPC failed:", error?.message);
 
-    try {
-      await resend.emails.send({
-        from: FROM_ADDRESS,
-        to: ADMIN_EMAIL,
-        replyTo: REPLY_TO_ADDRESS,
-        subject: "Action needed: payout creation failed",
-        html: `
+    await sendAdminAlert(
+      "Action needed: payout creation failed",
+      `
           <p>The payout creation RPC failed. No payout was created and the bookings remain unpaid.</p>
           <p><strong>Error:</strong> ${escapeHtml(error?.message ?? "unknown error")}</p>
           <p>Please retry the payout from the admin dashboard or contact support.</p>
         `,
-      });
-    } catch (alertErr) {
-      console.error("[createPayout] failed to send admin alert:", alertErr);
-    }
+    );
     redirect("/admin?tab=payouts&payoutError=create");
   }
 
@@ -776,23 +762,16 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
 
     if (snapshotError) {
       console.error("[createPayout] failed to save payout_destination snapshot:", snapshotError.message);
-      try {
-        await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: ADMIN_EMAIL,
-          replyTo: REPLY_TO_ADDRESS,
-          subject: "Action needed: payout destination snapshot failed to save",
-          html: `
+      await sendAdminAlert(
+        "Action needed: payout destination snapshot failed to save",
+        `
             <p>The payout was created successfully but the destination snapshot failed to save. The payout will show no destination until manually fixed.</p>
             <p><strong>Payout ID:</strong> ${escapeHtml(payoutId)}</p>
             <p><strong>Organizer ID:</strong> ${escapeHtml(organizerId)}</p>
             <p><strong>Error:</strong> ${escapeHtml(snapshotError.message)}</p>
             <p>Please update the payout_destination field manually via the database console.</p>
           `,
-        });
-      } catch (alertErr) {
-        console.error("[createPayout] failed to send snapshot alert:", alertErr);
-      }
+      );
     }
   }
 
