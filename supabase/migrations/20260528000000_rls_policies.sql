@@ -20,10 +20,20 @@ ON public.bookings FOR SELECT
 TO authenticated
 USING ((auth.jwt() ->> 'email') = (SELECT value FROM public.app_config WHERE key = 'admin_email'));
 
-CREATE POLICY "Authenticated users can insert bookings"
-ON public.bookings FOR INSERT
-TO authenticated
-WITH CHECK (auth.uid() IS NOT NULL);
+-- INTENTIONALLY REMOVED: the bookings INSERT and UPDATE direct-write policies below
+-- are commented out. Booking writes now go through the admin/service-role client
+-- with explicit in-code authorization (book_slot_and_create_booking, payment and
+-- status-transition server actions), so these direct-PostgREST write policies must
+-- not exist. The original INSERT policy (WITH CHECK auth.uid() IS NOT NULL, no field
+-- constraints) would have let any authenticated user forge a paid booking row.
+-- They are dropped by the trailing migration
+-- 20260614000006_lock_down_bookings_direct_writes.sql, and are commented out here so
+-- a full `db reset` does not recreate them. Same model as the trips policies above.
+--
+-- CREATE POLICY "Authenticated users can insert bookings"
+-- ON public.bookings FOR INSERT
+-- TO authenticated
+-- WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Organizers can read bookings on their trips"
 ON public.bookings FOR SELECT
@@ -37,25 +47,29 @@ USING (
   )
 );
 
-CREATE POLICY "Organizers can update bookings on their trips"
-ON public.bookings FOR UPDATE
-TO authenticated
-USING (
-  trip_id IN (
-    SELECT trips.id FROM trips
-    JOIN organizers ON organizers.id = trips.organizer_id
-    WHERE organizers.user_id = auth.uid()
-    AND organizers.status = 'approved'
-  )
-)
-WITH CHECK (
-  trip_id IN (
-    SELECT trips.id FROM trips
-    JOIN organizers ON organizers.id = trips.organizer_id
-    WHERE organizers.user_id = auth.uid()
-    AND organizers.status = 'approved'
-  )
-);
+-- INTENTIONALLY REMOVED (see note above): organizer direct-UPDATE on bookings.
+-- Booking status changes (no-show, transfers, refunds, etc.) flow through the
+-- admin/service-role client with in-code authz; direct PostgREST writes must be denied.
+--
+-- CREATE POLICY "Organizers can update bookings on their trips"
+-- ON public.bookings FOR UPDATE
+-- TO authenticated
+-- USING (
+--   trip_id IN (
+--     SELECT trips.id FROM trips
+--     JOIN organizers ON organizers.id = trips.organizer_id
+--     WHERE organizers.user_id = auth.uid()
+--     AND organizers.status = 'approved'
+--   )
+-- )
+-- WITH CHECK (
+--   trip_id IN (
+--     SELECT trips.id FROM trips
+--     JOIN organizers ON organizers.id = trips.organizer_id
+--     WHERE organizers.user_id = auth.uid()
+--     AND organizers.status = 'approved'
+--   )
+-- );
 
 -- ========================
 -- ORGANIZERS POLICIES
