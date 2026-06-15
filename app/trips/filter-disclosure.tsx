@@ -16,8 +16,8 @@ export function FilterDisclosure({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="mt-3 flex flex-col gap-2">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+    <div className="mt-3 flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
         {searchSlot}
         <button
           type="button"
@@ -49,7 +49,7 @@ export function FilterDisclosure({
       <div
         id="trip-filters-panel"
         aria-label="Trip filters"
-        className={`flex-col gap-2 ${open ? "flex" : "hidden"}`}
+        className={`flex-col gap-1.5 pt-0.5 ${open ? "flex" : "hidden"}`}
       >
         {children}
       </div>

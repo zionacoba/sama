@@ -31,12 +31,12 @@ export function TripFilters({
     router.push(`/trips${qs ? `?${qs}` : ""}`);
   }
 
-  const inputClass = "rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-stone-700 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30";
+  const inputClass = "min-h-[36px] rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-700 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30";
 
   return (
-    <div className="flex flex-col gap-2 md:contents">
+    <div className="flex flex-col gap-1.5 md:contents">
       <div className="flex items-center gap-1.5">
-        <span className="shrink-0 text-xs font-medium text-stone-500">Dates</span>
+        <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Dates</span>
         <input
           type="date"
           value={dateFrom ?? ""}

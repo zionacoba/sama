@@ -27,6 +27,17 @@ const DURATIONS  = ["All", "Day tour", "2D1N", "3D2N", "4D3N+"] as const;
 const DIFFICULTIES = ["All", "Beginner", "Intermediate", "Advanced"] as const;
 const REGIONS = ["All", "Luzon", "Visayas", "Mindanao"] as const;
 
+// Shared filter-pill classes. Active and inactive share the same box (both carry a
+// 1px border, transparent when active) so the green selected pill stays inline and
+// does not bulge against its row label.
+const PILL_BASE =
+  "inline-flex shrink-0 items-center min-h-[36px] rounded-full px-3 py-1.5 text-xs font-medium transition";
+const PILL_ACTIVE = "border border-transparent bg-trailhead text-white shadow-sm";
+const PILL_INACTIVE =
+  "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead";
+const FILTER_ROW = "-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:px-0 md:contents";
+const FILTER_LABEL = "shrink-0 text-[11px] font-semibold uppercase tracking-wide text-stone-400";
+
 type Trip = {
   id: string | number;
   slug: string;
@@ -290,10 +301,10 @@ export default async function TripsPage({ searchParams }: PageProps) {
               </Suspense>
 
               {/* Filter pills: stacked rows on mobile, one scrollable row on desktop */}
-              <div className="flex flex-col gap-2 md:flex-row md:flex-nowrap md:items-center md:gap-1.5 md:overflow-x-auto md:pb-1">
+              <div className="flex flex-col gap-1.5 md:flex-row md:flex-nowrap md:items-center md:gap-1.5 md:overflow-x-auto md:pb-1">
               {/* Activity */}
-              <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
-                <span className="shrink-0 text-xs font-semibold text-stone-500">Activity</span>
+              <div className={FILTER_ROW}>
+                <span className={FILTER_LABEL}>Activity</span>
                 {ACTIVITIES.map((a) => {
                   const active = a === currentActivity;
                   return (
@@ -301,11 +312,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                       key={a}
                       href={filterUrl(current, "activity", a)}
                       aria-current={active ? "page" : undefined}
-                      className={`inline-flex shrink-0 items-center min-h-[40px] rounded-full px-3 py-2 text-xs font-medium transition ${
-                        active
-                          ? "bg-trailhead text-white shadow-sm"
-                          : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
-                      }`}
+                      className={`${PILL_BASE} ${active ? PILL_ACTIVE : PILL_INACTIVE}`}
                     >
                       {a}
                     </Link>
@@ -314,8 +321,8 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 <span className="mx-1 hidden shrink-0 text-stone-300 md:inline" aria-hidden>|</span>
               </div>
               {/* Level */}
-              <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
-                <span className="shrink-0 text-xs font-semibold text-stone-500">Level</span>
+              <div className={FILTER_ROW}>
+                <span className={FILTER_LABEL}>Level</span>
                 {DIFFICULTIES.map((d) => {
                   const active = d === currentDifficulty;
                   return (
@@ -323,11 +330,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                       key={d}
                       href={filterUrl(current, "difficulty", d)}
                       aria-current={active ? "page" : undefined}
-                      className={`inline-flex shrink-0 items-center min-h-[40px] rounded-full px-3 py-2 text-xs font-medium transition ${
-                        active
-                          ? "bg-trailhead text-white shadow-sm"
-                          : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
-                      }`}
+                      className={`${PILL_BASE} ${active ? PILL_ACTIVE : PILL_INACTIVE}`}
                     >
                       {d}
                     </Link>
@@ -336,8 +339,8 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 <span className="mx-1 hidden shrink-0 text-stone-300 md:inline" aria-hidden>|</span>
               </div>
               {/* Duration */}
-              <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
-                <span className="shrink-0 text-xs font-semibold text-stone-500">Duration</span>
+              <div className={FILTER_ROW}>
+                <span className={FILTER_LABEL}>Duration</span>
                 {DURATIONS.map((d) => {
                   const active = d === currentDuration;
                   return (
@@ -345,11 +348,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                       key={d}
                       href={filterUrl(current, "duration", d)}
                       aria-current={active ? "page" : undefined}
-                      className={`inline-flex shrink-0 items-center min-h-[40px] rounded-full px-3 py-2 text-xs font-medium transition ${
-                        active
-                          ? "bg-trailhead text-white shadow-sm"
-                          : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
-                      }`}
+                      className={`${PILL_BASE} ${active ? PILL_ACTIVE : PILL_INACTIVE}`}
                     >
                       {d}
                     </Link>
@@ -357,9 +356,9 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 })}
               </div>
               {/* Region */}
-              <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
+              <div className={FILTER_ROW}>
                 <span className="mx-1 hidden shrink-0 text-stone-300 md:inline" aria-hidden>|</span>
-                <span className="shrink-0 text-xs font-semibold text-stone-500">Region</span>
+                <span className={FILTER_LABEL}>Region</span>
                 {REGIONS.map((r) => {
                   const active = r === currentRegion;
                   return (
@@ -367,11 +366,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                       key={r}
                       href={filterUrl(current, "region", r)}
                       aria-current={active ? "page" : undefined}
-                      className={`inline-flex shrink-0 items-center min-h-[40px] rounded-full px-3 py-2 text-xs font-medium transition ${
-                        active
-                          ? "bg-trailhead text-white shadow-sm"
-                          : "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead"
-                      }`}
+                      className={`${PILL_BASE} ${active ? PILL_ACTIVE : PILL_INACTIVE}`}
                     >
                       {r}
                     </Link>
