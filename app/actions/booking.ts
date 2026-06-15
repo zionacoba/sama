@@ -1300,10 +1300,41 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   if (updateError) return { error: updateError.message };
   if (!updatedRows || updatedRows.length === 0) return { error: "This booking is no longer in a cancellable state. It may have been cancelled or modified by another request. Please refresh and try again." };
 
+  // Flag the associated payout for reconciliation whenever a partial cancel happens
+  // after payout creation. Mirrors cancelBooking's condition and update exactly so
+  // the two stay consistent.
+  if (booking.payout_id && (booking.payout_status === "remitted" || booking.payout_status === "included")) {
+    await admin
+      .from("payouts" as "trips")
+      .update({ needs_reconciliation: true } as never)
+      .eq("id", booking.payout_id);
+  }
+
   await admin.rpc("restore_slot", {
     p_trip_id: booking.trip_id,
     p_slots_requested: slotsToCancel,
   });
+
+  // Record a deduction against the organizer when a partial refund is issued after
+  // their payout was already remitted. Mirrors cancelBooking's deduction (same
+  // table, columns, and status), but the amount is the slot-proportional refund
+  // actually issued for the cancelled slots (refundAmount), not the full booking
+  // amount. refundAmount equals downpaymentRefundAmount + partialBalanceRefundAmount,
+  // i.e. exactly what is refunded below.
+  if (booking.payout_status === "remitted" && tripDateCheck?.organizer_id && refundAmount !== null && refundAmount > 0) {
+    const { error: deductionError } = await (admin
+      .from("organizer_deductions" as "trips")
+      .insert({
+        organizer_id: tripDateCheck.organizer_id,
+        booking_id: bookingId,
+        amount: refundAmount,
+        reason: "Joiner partial cancellation refund after payout remitted",
+        status: "pending",
+      } as never) as unknown as Promise<{ error: { message: string } | null }>);
+    if (deductionError) {
+      console.error("[deduction] failed to record organizer deduction", bookingId, deductionError.message);
+    }
+  }
 
   let refundResult: RefundResult | null = null;
   let balanceRefundResult: RefundResult | null = null;
