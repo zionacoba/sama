@@ -1315,6 +1315,68 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     p_slots_requested: slotsToCancel,
   });
 
+  // Delete the booking_participants rows for the cancelled slots. The booking now
+  // holds remainingSlots, but the table still has originalSlots rows (one per
+  // slot). Leaving the extras makes the {done}/{slots} manifest and the profile
+  // "Pending confirmations" list overcount, and keeps live /join tokens for slots
+  // no longer paid for - a cancelled participant could still sign a waiver via a
+  // stale token. Deleting exactly slotsToCancel rows realigns the row count with
+  // the new slot count and invalidates those tokens (the rows are gone, so
+  // /join/<token> returns notFound).
+  //
+  // Which rows: never slot 0 (always the booker, excluded below). Prefer
+  // INCOMPLETE (completed=false) rows, highest slot_number first, so we tear down
+  // the most recently-added unfilled slots and only touch a completed participant
+  // (someone who already signed a waiver) if there are not enough incomplete slots
+  // to cover the cancellation. This protects real signed participants while still
+  // invalidating the stale tokens, and in the common case (trailing slots unfilled)
+  // leaves the remaining rows contiguous at slot_number 0..remainingSlots-1.
+  //
+  // Best-effort: the cancel, refund, slot restore, and reconciliation already
+  // succeeded and matter more than this cleanup. On failure we log, alert an admin
+  // to clean it up manually, and do NOT roll back. Mirrors the transfer slot-0 prep.
+  try {
+    const { data: slotRows, error: fetchRowsError } = await admin
+      .from("booking_participants")
+      .select("id, slot_number, completed")
+      .eq("booking_id", bookingId)
+      .neq("slot_number", 0);
+    if (fetchRowsError) throw fetchRowsError;
+
+    const candidates = (slotRows ?? []) as { id: string; slot_number: number; completed: boolean | null }[];
+    candidates.sort((a, b) => {
+      const aDone = a.completed ? 1 : 0;
+      const bDone = b.completed ? 1 : 0;
+      // Incomplete (0) before completed (1); within a group, highest slot_number first.
+      if (aDone !== bDone) return aDone - bDone;
+      return b.slot_number - a.slot_number;
+    });
+    const idsToDelete = candidates.slice(0, slotsToCancel).map((r) => r.id);
+
+    if (idsToDelete.length > 0) {
+      const { error: deleteRowsError } = await admin
+        .from("booking_participants")
+        .delete()
+        .in("id", idsToDelete);
+      if (deleteRowsError) throw deleteRowsError;
+    }
+  } catch (err) {
+    console.error("[partialCancelBooking] failed to delete participant rows for cancelled slots", bookingId, err);
+    Sentry.captureException(err, {
+      extra: { context: "partialCancel-participant-row-cleanup", bookingId, slotsToCancel, remainingSlots },
+    });
+    await sendAdminAlert(
+      `[Admin] Partial cancel succeeded but participant-row cleanup failed: booking #${bookingId}`,
+      `
+          <p>A partial cancellation succeeded (slots restored and refund processed), but deleting the booking_participants rows for the cancelled slots failed. The booking now holds ${remainingSlots} slot(s) but may still have stale participant rows and live /join tokens that must be cleaned up manually.</p>
+          <p><strong>Booking ID:</strong> ${bookingId}</p>
+          <p><strong>Slots cancelled:</strong> ${slotsToCancel}</p>
+          <p><strong>Remaining slots:</strong> ${remainingSlots}</p>
+          <p><strong>Error:</strong> ${escapeHtml(String(err))}</p>
+        `,
+    );
+  }
+
   // Record a deduction against the organizer when a partial refund is issued after
   // their payout was already remitted. Mirrors cancelBooking's deduction (same
   // table, columns, and status), but the amount is the slot-proportional refund
