@@ -6,6 +6,7 @@ import { Navbar } from "@/app/components/navbar";
 import { Footer } from "@/app/components/footer";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { TripFilters } from "./trip-filters";
+import { FilterDisclosure } from "./filter-disclosure";
 import { formatPeso } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -204,6 +205,26 @@ export default async function TripsPage({ searchParams }: PageProps) {
   const current = { activity, duration, difficulty, region, search, date_from, date_to, sort };
   const groups = groupByTemplate(trips);
 
+  // Readable summary of non-default filters for the collapsed Filters button.
+  const sortLabels: Record<string, string> = {
+    latest: "Latest first",
+    price_asc: "Price: low to high",
+    price_desc: "Price: high to low",
+  };
+  const activeFilterLabels: string[] = [];
+  if (activity) activeFilterLabels.push(activity);
+  if (difficulty) activeFilterLabels.push(difficulty);
+  if (duration) activeFilterLabels.push(duration);
+  if (region) activeFilterLabels.push(region);
+  if (date_from || date_to) activeFilterLabels.push("Dates");
+  if (sort && sort !== "soonest" && sortLabels[sort]) activeFilterLabels.push(sortLabels[sort]);
+  const activeFilterCount = activeFilterLabels.length;
+  const SUMMARY_CAP = 3;
+  const filterSummary =
+    activeFilterCount <= SUMMARY_CAP
+      ? activeFilterLabels.join(", ")
+      : `${activeFilterLabels.slice(0, SUMMARY_CAP).join(", ")}, +${activeFilterCount - SUMMARY_CAP} more`;
+
   function pageUrl(p: number) {
     const sp = new URLSearchParams();
     if (search) sp.set("search", search);
@@ -230,9 +251,12 @@ export default async function TripsPage({ searchParams }: PageProps) {
               Browse trips
             </h1>
 
-            {/* Search + date pickers + sort */}
-            <div className="mt-3 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
-              <form action="/trips" method="GET" className="flex min-w-0 flex-1 gap-2">
+            {/* Search bar stays visible; everything else collapses behind the Filters toggle */}
+            <FilterDisclosure
+              summary={filterSummary}
+              activeCount={activeFilterCount}
+              searchSlot={
+                <form action="/trips" method="GET" className="flex min-w-0 flex-1 gap-2">
                 {activity && <input type="hidden" name="activity" value={activity} />}
                 {duration && <input type="hidden" name="duration" value={duration} />}
                 {difficulty && <input type="hidden" name="difficulty" value={difficulty} />}
@@ -259,13 +283,14 @@ export default async function TripsPage({ searchParams }: PageProps) {
                   Search
                 </button>
               </form>
+              }
+            >
               <Suspense fallback={null}>
                 <TripFilters sort={sort} dateFrom={date_from} dateTo={date_to} />
               </Suspense>
-            </div>
 
-            {/* Filter pills — stacked rows on mobile, one scrollable row on desktop */}
-            <div className="mt-2 flex flex-col gap-2 md:flex-row md:flex-nowrap md:items-center md:gap-1.5 md:overflow-x-auto md:pb-1">
+              {/* Filter pills: stacked rows on mobile, one scrollable row on desktop */}
+              <div className="flex flex-col gap-2 md:flex-row md:flex-nowrap md:items-center md:gap-1.5 md:overflow-x-auto md:pb-1">
               {/* Activity */}
               <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 md:contents">
                 <span className="shrink-0 text-xs font-semibold text-stone-500">Activity</span>
@@ -353,30 +378,23 @@ export default async function TripsPage({ searchParams }: PageProps) {
                   );
                 })}
               </div>
-            </div>
+              </div>
 
-            {/* Active-filter bar — always visible outside scroll containers */}
-            {(activity || duration || difficulty || region) && (() => {
-              const activeCount = [activity, duration, difficulty, region].filter(Boolean).length;
-              const clearSp = new URLSearchParams();
-              if (search) clearSp.set("search", search);
-              if (sort && sort !== "soonest") clearSp.set("sort", sort);
-              const clearQs = clearSp.toString();
-              const clearHref = `/trips${clearQs ? `?${clearQs}` : ""}`;
-              return (
-                <div className="mt-2 flex items-center justify-between rounded-xl border border-trailhead/20 bg-trailhead/5 px-3 py-1.5">
+              {/* Clear all: resets every filter, search, date, and sort back to defaults */}
+              {(activeFilterCount > 0 || search) && (
+                <div className="flex items-center justify-between rounded-xl border border-trailhead/20 bg-trailhead/5 px-3 py-1.5">
                   <span className="text-xs font-medium text-trailhead">
-                    {activeCount} filter{activeCount !== 1 ? "s" : ""} active
+                    {activeFilterCount} filter{activeFilterCount !== 1 ? "s" : ""} active
                   </span>
                   <Link
-                    href={clearHref}
-                    className="text-xs font-semibold text-trailhead underline-offset-2 hover:underline"
+                    href="/trips"
+                    className="inline-flex min-h-[40px] items-center text-xs font-semibold text-trailhead underline-offset-2 hover:underline"
                   >
                     Clear all
                   </Link>
                 </div>
-              );
-            })()}
+              )}
+            </FilterDisclosure>
 
             <p className="mt-2 text-xs text-stone-500">
               {totalTrips} trip{totalTrips !== 1 ? "s" : ""} found
