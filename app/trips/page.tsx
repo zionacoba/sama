@@ -7,6 +7,7 @@ import { Footer } from "@/app/components/footer";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { TripFilters } from "./trip-filters";
 import { FilterDisclosure } from "./filter-disclosure";
+import { FilterDropdown } from "./filter-dropdown";
 import { formatPeso } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -26,17 +27,6 @@ const ACTIVITIES = ["All", "Hiking", "Freediving", "Beach & Island"] as const;
 const DURATIONS  = ["All", "Day tour", "2D1N", "3D2N", "4D3N+"] as const;
 const DIFFICULTIES = ["All", "Beginner", "Intermediate", "Advanced"] as const;
 const REGIONS = ["All", "Luzon", "Visayas", "Mindanao"] as const;
-
-// Shared filter-pill classes. Active and inactive share the same box (both carry a
-// 1px border, transparent when active) so the green selected pill stays inline and
-// does not bulge against its row label.
-const PILL_BASE =
-  "inline-flex shrink-0 items-center min-h-[36px] rounded-full px-3 py-1.5 text-xs font-medium transition";
-const PILL_ACTIVE = "border border-transparent bg-trailhead text-white shadow-sm";
-const PILL_INACTIVE =
-  "border border-stone-200 bg-white text-stone-700 hover:border-trailhead hover:text-trailhead";
-const FILTER_ROW = "-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:px-0 md:contents";
-const FILTER_LABEL = "shrink-0 text-[11px] font-semibold uppercase tracking-wide text-stone-400";
 
 type Trip = {
   id: string | number;
@@ -300,79 +290,44 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 <TripFilters sort={sort} dateFrom={date_from} dateTo={date_to} />
               </Suspense>
 
-              {/* Filter pills: stacked rows on mobile, one scrollable row on desktop */}
-              <div className="flex flex-col gap-1.5 md:flex-row md:flex-nowrap md:items-center md:gap-1.5 md:overflow-x-auto md:pb-1">
-              {/* Activity */}
-              <div className={FILTER_ROW}>
-                <span className={FILTER_LABEL}>Activity</span>
-                {ACTIVITIES.map((a) => {
-                  const active = a === currentActivity;
-                  return (
-                    <Link
-                      key={a}
-                      href={filterUrl(current, "activity", a)}
-                      aria-current={active ? "page" : undefined}
-                      className={`${PILL_BASE} ${active ? PILL_ACTIVE : PILL_INACTIVE}`}
-                    >
-                      {a}
-                    </Link>
-                  );
-                })}
-                <span className="mx-1 hidden shrink-0 text-stone-300 md:inline" aria-hidden>|</span>
-              </div>
-              {/* Level */}
-              <div className={FILTER_ROW}>
-                <span className={FILTER_LABEL}>Level</span>
-                {DIFFICULTIES.map((d) => {
-                  const active = d === currentDifficulty;
-                  return (
-                    <Link
-                      key={d}
-                      href={filterUrl(current, "difficulty", d)}
-                      aria-current={active ? "page" : undefined}
-                      className={`${PILL_BASE} ${active ? PILL_ACTIVE : PILL_INACTIVE}`}
-                    >
-                      {d}
-                    </Link>
-                  );
-                })}
-                <span className="mx-1 hidden shrink-0 text-stone-300 md:inline" aria-hidden>|</span>
-              </div>
-              {/* Duration */}
-              <div className={FILTER_ROW}>
-                <span className={FILTER_LABEL}>Duration</span>
-                {DURATIONS.map((d) => {
-                  const active = d === currentDuration;
-                  return (
-                    <Link
-                      key={d}
-                      href={filterUrl(current, "duration", d)}
-                      aria-current={active ? "page" : undefined}
-                      className={`${PILL_BASE} ${active ? PILL_ACTIVE : PILL_INACTIVE}`}
-                    >
-                      {d}
-                    </Link>
-                  );
-                })}
-              </div>
-              {/* Region */}
-              <div className={FILTER_ROW}>
-                <span className="mx-1 hidden shrink-0 text-stone-300 md:inline" aria-hidden>|</span>
-                <span className={FILTER_LABEL}>Region</span>
-                {REGIONS.map((r) => {
-                  const active = r === currentRegion;
-                  return (
-                    <Link
-                      key={r}
-                      href={filterUrl(current, "region", r)}
-                      aria-current={active ? "page" : undefined}
-                      className={`${PILL_BASE} ${active ? PILL_ACTIVE : PILL_INACTIVE}`}
-                    >
-                      {r}
-                    </Link>
-                  );
-                })}
-              </div>
+              {/* Filter dropdowns: 2-per-row on phones, one compact toolbar row on wider screens */}
+              <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
+                <FilterDropdown
+                  label="Activity"
+                  selectedValue={currentActivity}
+                  options={ACTIVITIES.map((a) => ({
+                    value: a,
+                    label: a,
+                    href: filterUrl(current, "activity", a),
+                  }))}
+                />
+                <FilterDropdown
+                  label="Level"
+                  selectedValue={currentDifficulty}
+                  options={DIFFICULTIES.map((d) => ({
+                    value: d,
+                    label: d,
+                    href: filterUrl(current, "difficulty", d),
+                  }))}
+                />
+                <FilterDropdown
+                  label="Duration"
+                  selectedValue={currentDuration}
+                  options={DURATIONS.map((d) => ({
+                    value: d,
+                    label: d,
+                    href: filterUrl(current, "duration", d),
+                  }))}
+                />
+                <FilterDropdown
+                  label="Region"
+                  selectedValue={currentRegion}
+                  options={REGIONS.map((r) => ({
+                    value: r,
+                    label: r,
+                    href: filterUrl(current, "region", r),
+                  }))}
+                />
               </div>
 
               {/* Clear all: resets every filter, search, date, and sort back to defaults */}
