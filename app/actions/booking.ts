@@ -823,7 +823,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, slots, status, email, full_name")
+    .select("id, trip_id, status, email, full_name")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -840,10 +840,16 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
     return { error: "You don't have permission to manage this booking." };
   }
 
+  const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  if (trip.date_start < todayPH) {
+    return { error: "This trip has already taken place, so this booking can no longer be transferred." };
+  }
+
+  // A transfer is an off-platform hand-off: the replacement takes this exact
+  // slot, so the slot stays consumed and no slot is restored or reopened.
   // Guard on the current status and verify exactly one row changed before
-  // restoring the slot or sending emails. This closes a double-restore race:
-  // if a concurrent action already moved the booking off "confirmed", zero
-  // rows update and we abort without touching slots or notifying anyone.
+  // sending emails. If a concurrent action already moved the booking off
+  // "confirmed", zero rows update and we abort cleanly with no side effects.
   const { data: updated, error } = await admin
     .from("bookings")
     .update({
@@ -859,28 +865,6 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
   if (error) return { error: error.message };
   if (!updated || updated.length !== 1) {
     return { error: "This booking is no longer confirmed and could not be transferred." };
-  }
-
-  const { error: slotErr } = await admin.rpc("restore_slot", {
-    p_trip_id: trip.id,
-    p_slots_requested: booking.slots,
-  });
-  if (slotErr) {
-    console.error(`[markAsTransferred] restore_slot failed for booking ${bookingId}:`, slotErr.message);
-    await admin
-      .from("bookings")
-      .update({ status: "confirmed", transferred_to_email: null, transferred_at: null, transferred_by: null })
-      .eq("id", bookingId);
-    await sendAdminAlert(
-      "Action needed: slot restore failed on transfer",
-      `
-          <p>A booking transfer was reverted because the slot restore failed. The booking remains confirmed.</p>
-          <p><strong>Booking ID:</strong> ${bookingId}</p>
-          <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
-          <p><strong>Error:</strong> ${escapeHtml(slotErr.message)}</p>
-        `,
-    );
-    return { error: "Transfer failed: could not restore slot. Please try again." };
   }
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {
@@ -930,7 +914,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
         html: `
           <p>Hi ${escapeHtml(org.full_name)},</p>
           <p>The booking for <strong>${escapeHtml(booking.full_name)}</strong> on <strong>${escapeHtml(trip.title)}</strong> (${tripDate}) has been marked as transferred${toNote}.</p>
-          <p>The slot has been restored to the available pool.</p>
+          <p>The slot remains assigned to the replacement. Any payment should be settled directly between the two participants.</p>
           <p>Sama</p>
         `,
       });

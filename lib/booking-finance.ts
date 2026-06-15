@@ -8,12 +8,37 @@
 // `balance_collected` — otherwise Sama remits or refunds money it never held
 // for downpayment bookings whose balance was collected in cash.
 
+import { ATTENDED_STATUSES } from "./booking-status";
+
 type SamaHoldsFields = {
   payment_option: string | null;
   amount_due: number | string | null;
   total_amount: number | string | null;
   balance_payment_gateway_status: string | null;
 };
+
+type PayoutEligibilityFields = {
+  status: string;
+  payment_gateway_status: string | null;
+  total_amount: number | string | null;
+};
+
+// Whether a booking is eligible to be paid out to its organizer, i.e. whether
+// the organizer is treated as having earned it. This is the exact predicate the
+// admin payout pipeline applies: the booking must be in an ATTENDED status
+// (confirmed or no_show) AND payment must have actually been received online
+// (payment_gateway_status === "paid") OR the trip is free (total_amount === 0,
+// which is confirmed without a gateway status).
+//
+// Deliberately NOT included here: the "trip has already taken place" date guard
+// and the payout_status (unpaid vs already paid out) handling. Those vary by
+// call site and stay inline so the shared predicate means exactly one thing.
+export function isPayoutEligible(booking: PayoutEligibilityFields): boolean {
+  const attended = (ATTENDED_STATUSES as readonly string[]).includes(booking.status);
+  const paymentReceived =
+    booking.payment_gateway_status === "paid" || Number(booking.total_amount) === 0;
+  return attended && paymentReceived;
+}
 
 // Returns the gross amount Sama actually received online for this booking —
 // the amount Sama is holding and must remit from, before commission.

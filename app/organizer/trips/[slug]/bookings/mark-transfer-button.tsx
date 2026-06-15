@@ -46,8 +46,8 @@ export function MarkTransferButton({
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <h2 className="text-base font-bold text-stone-900">Mark booking as transferred</h2>
             <p className="mt-2 text-sm text-stone-600">
-              This will mark <strong>{participantName}</strong>&apos;s booking as transferred and restore the slot to the available pool.{" "}
-              <strong>No refund will be processed through Sama.</strong> The participant will be notified.
+              This will transfer <strong>{participantName}</strong>&apos;s booking to the person taking their slot. The slot stays assigned to the replacement.{" "}
+              <strong>No refund will be processed through Sama.</strong> Settle payment directly between the original participant and their replacement. The participant will be notified.
             </p>
 
             <div className="mt-4">

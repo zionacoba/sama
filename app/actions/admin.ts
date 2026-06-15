@@ -9,7 +9,7 @@ import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
-import { amountSamaHolds } from "@/lib/booking-finance";
+import { amountSamaHolds, isPayoutEligible } from "@/lib/booking-finance";
 import { ACTIVE_BOOKING_STATUSES, ATTENDED_STATUSES } from "@/lib/booking-status";
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { formatPeso } from "@/lib/format";
@@ -406,12 +406,13 @@ export async function getPendingPayouts(): Promise<{
   // Confirmed bookings from past trips not yet included in any payout.
   const { data: rawBookings } = await admin
     .from("bookings")
-    .select("id, full_name, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
+    .select("id, full_name, status, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
     .in("status", [...ATTENDED_STATUSES])
     .eq("payout_status", "unpaid") as unknown as {
       data: Array<{
         id: number;
         full_name: string;
+        status: string;
         total_amount: number;
         amount_due: number | null;
         platform_commission: number | null;
@@ -425,10 +426,12 @@ export async function getPendingPayouts(): Promise<{
 
   // Include fully-paid bookings and downpayment bookings (even without balance collected)
   // from trips that have already taken place, and only where payment was actually
-  // received online (free trips are confirmed without a gateway status).
+  // received online (free trips are confirmed without a gateway status). The
+  // attended-status + payment-received predicate is shared with the organizer
+  // dashboard via isPayoutEligible so the two can never drift.
   const eligible = (rawBookings ?? []).filter((b) => {
     if (!b.trip?.date_start || b.trip.date_start >= today) return false;
-    if (!(b.payment_gateway_status === "paid" || Number(b.total_amount) === 0)) return false;
+    if (!isPayoutEligible(b)) return false;
     return b.payment_option === "full" || b.payment_option === "downpayment";
   });
 
@@ -646,12 +649,13 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   // Compute totals server-side from the actual booking records.
   const { data: bookings } = await admin
     .from("bookings")
-    .select("id, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(date_start)")
+    .select("id, status, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(date_start)")
     .in("id", bookingIds)
     .eq("payout_status", "unpaid")
     .in("status", [...ATTENDED_STATUSES]) as unknown as {
       data: Array<{
         id: number;
+        status: string;
         total_amount: number;
         amount_due: number | null;
         platform_commission: number | null;
@@ -665,14 +669,15 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
 
   if (!bookings || bookings.length === 0) redirect("/admin?tab=payouts&payoutError=missing");
 
-  // Only pay out bookings whose trip has already taken place and whose payment
-  // was actually received online (free trips are confirmed without a gateway
-  // status). Mirrors the guards getPendingPayouts uses.
+  // Only pay out bookings whose trip has already taken place and that are
+  // payout-eligible (attended status with payment actually received online; free
+  // trips are confirmed without a gateway status). Shares isPayoutEligible with
+  // getPendingPayouts and the organizer dashboard so the guards never drift.
   const today = new Date().toISOString().split("T")[0];
   const eligible = bookings.filter((b) =>
     b.trip?.date_start != null &&
     b.trip.date_start < today &&
-    (b.payment_gateway_status === "paid" || Number(b.total_amount) === 0)
+    isPayoutEligible(b)
   );
 
   // If any submitted booking is missing or fails the eligibility guards (future
