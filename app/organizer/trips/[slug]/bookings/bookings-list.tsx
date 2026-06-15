@@ -82,6 +82,28 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function ReplacementStatus({
+  b,
+  participants,
+}: {
+  b: Booking;
+  participants: BookingParticipant[] | undefined;
+}) {
+  if (b.status !== "transferred") return null;
+  const slotZero = participants?.find((p) => p.slot_number === 0);
+  // Old pre-Phase-2 transfers have no slot-0 row: show nothing extra.
+  if (!slotZero) return null;
+  return slotZero.completed ? (
+    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+      Replacement: completed{slotZero.full_name ? ` (${slotZero.full_name})` : ""}
+    </span>
+  ) : (
+    <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+      Replacement: pending
+    </span>
+  );
+}
+
 function BookingCard({
   b,
   participants,
@@ -126,7 +148,10 @@ function BookingCard({
             )}
           </div>
         </div>
-        <StatusBadge status={b.status} />
+        <div className="flex flex-col items-end gap-1">
+          <StatusBadge status={b.status} />
+          <ReplacementStatus b={b} participants={participants} />
+        </div>
       </div>
 
       {(b.medical_notes || b.notes) && (
@@ -497,7 +522,10 @@ export function BookingsListWithTabs({
                         })()}
                       </td>
                       <td className="px-5 py-3.5">
-                        <StatusBadge status={b.status} />
+                        <div className="flex flex-col items-start gap-1">
+                          <StatusBadge status={b.status} />
+                          <ReplacementStatus b={b} participants={participants} />
+                        </div>
                       </td>
                       <td className="px-5 py-3.5 text-stone-500">{formatDateTime(b.created_at)}</td>
                       <td className="px-5 py-3.5 text-right">

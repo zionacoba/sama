@@ -160,14 +160,19 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
     nickname: b.user_id ? (nicknameMap.get(b.user_id) ?? null) : null,
   }));
 
-  const multiSlotIds = bookings.filter((b) => b.slots > 1).map((b) => b.id);
+  // Load per-slot participant rows for multi-slot bookings (the {done}/{slots}
+  // manifest) and also for transferred bookings, whose repurposed slot-0 row
+  // carries the replacement's completion status shown in the organizer view.
+  const participantBookingIds = bookings
+    .filter((b) => b.slots > 1 || b.status === "transferred")
+    .map((b) => b.id);
   const participantsMap = new Map<number, BookingParticipant[]>();
 
-  if (multiSlotIds.length > 0) {
+  if (participantBookingIds.length > 0) {
     const { data: participantsData } = await admin
       .from("booking_participants")
       .select("booking_id, slot_number, full_name, completed")
-      .in("booking_id", multiSlotIds)
+      .in("booking_id", participantBookingIds)
       .order("slot_number");
 
     for (const p of (participantsData ?? []) as BookingParticipant[]) {
