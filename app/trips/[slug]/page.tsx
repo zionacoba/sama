@@ -481,22 +481,31 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               <p className="mt-3 whitespace-pre-line leading-relaxed text-stone-600">{tripData.description}</p>
             </div>
 
-            {tripData.meeting_points && tripData.meeting_points.length > 0 ? (
-              <CollapsibleSection title="Meeting points" className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-                <ul className="mt-2 space-y-1">
-                  {tripData.meeting_points.map((mp, idx) => (
-                    <li key={idx} className="text-stone-700">
-                      <span className="font-medium">{mp.location}</span>
-                      {mp.time && <span className="text-stone-500"> · {mp.time}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </CollapsibleSection>
-            ) : tripData.meeting_point ? (
-              <CollapsibleSection title="Meeting point" className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-                <p className="mt-1.5 font-medium text-stone-900">{tripData.meeting_point}</p>
-              </CollapsibleSection>
-            ) : null}
+            {(() => {
+              const validMeetingPoints = (tripData.meeting_points ?? []).filter((mp) => mp.location?.trim());
+              if (validMeetingPoints.length > 0) {
+                return (
+                  <CollapsibleSection title="Meeting points" className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+                    <ul className="mt-2 space-y-1">
+                      {validMeetingPoints.map((mp, idx) => (
+                        <li key={idx} className="text-stone-700">
+                          <span className="font-medium">{mp.location}</span>
+                          {mp.time && <span className="text-stone-500"> · {mp.time}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </CollapsibleSection>
+                );
+              }
+              if (tripData.meeting_point?.trim()) {
+                return (
+                  <CollapsibleSection title="Meeting point" className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+                    <p className="mt-1.5 font-medium text-stone-900">{tripData.meeting_point}</p>
+                  </CollapsibleSection>
+                );
+              }
+              return null;
+            })()}
 
             {siblingRunsData && siblingRunsData.length > 0 && (
               <div className="rounded-2xl border border-trailhead/20 bg-trailhead-muted p-4 sm:p-5">
@@ -578,7 +587,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                     Founding Partner
                   </span>
                 )}
-                {organizer.bio && (
+                {organizer.bio?.trim() && (
                   <p className="mt-3 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
                 )}
                 <Link
