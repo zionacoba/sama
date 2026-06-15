@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { joinWaitlist } from "@/app/actions/waitlist";
+import { useFocusTrap } from "@/app/hooks/use-focus-trap";
 
 type Props = {
   tripId: number;
@@ -35,15 +36,9 @@ export function WaitlistModal({
   const [email, setEmail] = useState(defaultEmail);
   const [phone, setPhone] = useState("");
   const [slots, setSlots] = useState(1);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open]);
+  useFocusTrap(dialogRef, open, { onClose: () => setOpen(false) });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -109,6 +104,7 @@ export function WaitlistModal({
           onClick={() => setOpen(false)}
         >
           <div
+            ref={dialogRef}
             className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-6 shadow-xl"
             role="dialog"
             aria-modal="true"

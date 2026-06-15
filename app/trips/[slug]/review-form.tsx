@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { submitReview } from "@/app/actions/review";
 
 type ReviewFormProps = {
@@ -13,6 +13,17 @@ export function ReviewForm({ tripId, tripSlug, defaultName }: ReviewFormProps) {
   const [state, action, pending] = useActionState(submitReview, null);
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
+  const starRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  function handleStarKeyDown(e: React.KeyboardEvent, star: number) {
+    let next = 0;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") next = Math.min(5, star + 1);
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") next = Math.max(1, star - 1);
+    else return;
+    e.preventDefault();
+    setRating(next);
+    starRefs.current[next - 1]?.focus();
+  }
 
   return (
     <form action={action} className="mt-6 space-y-4">
@@ -49,12 +60,17 @@ export function ReviewForm({ tripId, tripSlug, defaultName }: ReviewFormProps) {
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
+              ref={(el) => { starRefs.current[star - 1] = el; }}
               type="button"
+              role="radio"
+              aria-checked={star === rating}
               aria-label={`${star} star${star !== 1 ? "s" : ""}`}
+              tabIndex={(rating === 0 ? star === 1 : star === rating) ? 0 : -1}
               onClick={() => setRating(star)}
+              onKeyDown={(e) => handleStarKeyDown(e, star)}
               onMouseEnter={() => setHovered(star)}
               onMouseLeave={() => setHovered(0)}
-              className="text-3xl leading-none transition-transform hover:scale-110 focus:outline-none"
+              className="rounded text-3xl leading-none transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-1"
             >
               <span
                 className={

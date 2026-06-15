@@ -8,6 +8,7 @@ import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { createBooking } from "@/app/actions/booking";
 import { formatDateRange, formatPeso } from "@/lib/format";
 import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
+import { useFocusTrap } from "@/app/hooks/use-focus-trap";
 
 type MeetingPoint = { location: string; time: string };
 
@@ -99,6 +100,7 @@ export function BookingModal({
 
   const formRef = useRef<HTMLFormElement>(null);
   const errorSummaryRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const slotsExceedsAvailable = slots > remainingSlots;
   const hasDownpayment = paymentType === "downpayment" && minDownpayment != null;
   const totalAmount = unitPrice * slots;
@@ -209,21 +211,23 @@ export function BookingModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Escape is owned by useFocusTrap below (single Escape path); this effect only
+  // locks body scroll while the modal is open.
   useEffect(() => {
     if (!open) return;
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && !success) setOpen(false);
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
     document.body.style.overflow = "hidden";
-
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [open, success]);
+  }, [open]);
+
+  // Trap focus inside the dialog, return it to the trigger on close, and route
+  // Escape to handleClose (no-op while redirecting after a successful booking).
+  useFocusTrap(dialogRef, open, {
+    onClose: () => {
+      if (!success) handleClose();
+    },
+  });
 
   useEffect(() => {
     if (!showSignInPrompt) return;
@@ -429,7 +433,7 @@ export function BookingModal({
             onClick={loading || success ? undefined : handleClose}
           />
 
-          <div className="relative z-10 flex w-full flex-col max-h-[85dvh] rounded-t-2xl border border-stone-200 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl">
+          <div ref={dialogRef} className="relative z-10 flex w-full flex-col max-h-[85dvh] rounded-t-2xl border border-stone-200 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl">
             <span id="booking-modal-title" className="sr-only">
               {success ? "Redirecting to payment" : "Book this trip"}
             </span>

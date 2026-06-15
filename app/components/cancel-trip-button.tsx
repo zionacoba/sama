@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { cancelTrip, getTripCancelSummary } from "@/app/actions/trip";
 import { formatPeso } from "@/lib/format";
+import { useFocusTrap } from "@/app/hooks/use-focus-trap";
 
 type CancelSummary = {
   bookingCount: number;
@@ -25,6 +26,15 @@ export function CancelTripButton({ tripSlug, tripTitle }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmText, setConfirmText] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  function closeConfirm() {
+    if (isPending) return;
+    setShowConfirm(false);
+    setConfirmText("");
+  }
+
+  useFocusTrap(dialogRef, showConfirm, { onClose: closeConfirm });
 
   async function handleOpenDialog() {
     setError(null);
@@ -75,8 +85,14 @@ export function CancelTripButton({ tripSlug, tripTitle }: Props) {
 
       {showConfirm && summary && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 shadow-xl">
-            <h2 className="text-base font-bold text-stone-900">Cancel this trip?</h2>
+          <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-trip-title"
+            className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 shadow-xl"
+          >
+            <h2 id="cancel-trip-title" className="text-base font-bold text-stone-900">Cancel this trip?</h2>
 
             {hasBookings ? (
               <div className="mt-3 space-y-3 text-sm text-stone-600">
@@ -124,7 +140,7 @@ export function CancelTripButton({ tripSlug, tripTitle }: Props) {
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => { setShowConfirm(false); setConfirmText(""); }}
+                onClick={closeConfirm}
                 disabled={isPending}
                 className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:opacity-60"
               >

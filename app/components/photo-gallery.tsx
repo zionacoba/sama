@@ -2,11 +2,13 @@
 
 import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useFocusTrap } from "@/app/hooks/use-focus-trap";
 
 export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const lightboxRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const isOpen = lightboxIndex !== null;
 
@@ -20,12 +22,13 @@ export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string })
 
   const close = useCallback(() => setLightboxIndex(null), []);
 
+  // Escape is owned by useFocusTrap below (single Escape path); this effect
+  // handles arrow-key navigation and locks body scroll while open.
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") prev();
       else if (e.key === "ArrowRight") next();
-      else if (e.key === "Escape") close();
     };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -33,7 +36,9 @@ export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string })
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [isOpen, prev, next, close]);
+  }, [isOpen, prev, next]);
+
+  useFocusTrap(lightboxRef, isOpen, { onClose: close });
 
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
@@ -196,6 +201,10 @@ export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string })
       {/* Lightbox */}
       {isOpen && (
         <div
+          ref={lightboxRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo gallery"
           className="fixed inset-0 z-50 flex flex-col bg-black/90"
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
