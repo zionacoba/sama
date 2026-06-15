@@ -249,6 +249,11 @@ export async function createBooking(input: CreateBookingInput) {
     meeting_point: i === 0 ? input.meetingPoint : null,
     waiver_accepted: i === 0,
     waiver_accepted_at: i === 0 ? now : null,
+    // Snapshot the same resolved waiver text recorded on the bookings row so every
+    // participant (booker and additional slots) has parity going forward. Slots
+    // 1..n capture their own waiver_ip later via confirmParticipant; slot 0's IP
+    // is already on the bookings row, so we do not set waiver_ip here.
+    waiver_text_snapshot: trip.waiver_text?.replace(/\[Organizer Name\]/gi, organizerName) ?? null,
     completed: i === 0,
   }));
 

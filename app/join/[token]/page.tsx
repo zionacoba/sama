@@ -16,7 +16,7 @@ export default async function JoinPage({ params }: PageProps) {
 
   const { data: participant } = await admin
     .from("booking_participants")
-    .select("id, completed, booking_id, full_name, slot_number")
+    .select("id, completed, booking_id, full_name, slot_number, waiver_text_snapshot")
     .eq("token", token)
     .maybeSingle();
 
@@ -92,8 +92,12 @@ export default async function JoinPage({ params }: PageProps) {
 
 
   const organizerName = organizer?.display_name ?? organizer?.full_name ?? null;
-  const waiverText = ((trip.waiver_text as string | null) ?? DEFAULT_WAIVER_TEXT)
-    .replace(/\[Organizer Name\]/gi, organizerName || "the organizer");
+  // Prefer the snapshotted waiver text recorded on the participant row (e.g. the
+  // text captured for a transfer replacement) so the displayed text is exactly
+  // what will be recorded. Fall back to the live computation for pre-snapshot rows.
+  const waiverText = (participant.waiver_text_snapshot as string | null)
+    ?? ((trip.waiver_text as string | null) ?? DEFAULT_WAIVER_TEXT)
+      .replace(/\[Organizer Name\]/gi, organizerName || "the organizer");
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans text-stone-900">
