@@ -39,7 +39,7 @@ export default async function PaymentFailedPage({ searchParams }: PageProps) {
           </p>
 
           {bookingId && (
-            <p className="mt-2 text-xs text-stone-400">
+            <p className="mt-2 text-xs text-stone-500">
               Booking reference:{" "}
               <span className="font-mono font-medium text-stone-600">
                 {formatBookingRef(parseInt(bookingId, 10))}

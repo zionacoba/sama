@@ -44,7 +44,7 @@ export function PartialCancelButton({
       <button
         type="button"
         onClick={() => { setSlotsToCancel(1); setError(null); setOpen(true); }}
-        className="mt-1 w-fit text-xs font-medium text-stone-400 underline-offset-2 transition hover:text-amber-600 hover:underline"
+        className="mt-1 w-fit text-xs font-medium text-stone-500 underline-offset-2 transition hover:text-amber-600 hover:underline"
       >
         Cancel some slots
       </button>

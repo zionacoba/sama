@@ -65,7 +65,7 @@ export function EmergencyContactPrompt() {
           <button
             type="button"
             onClick={() => setSkipped(true)}
-            className="text-sm text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline"
+            className="text-sm text-stone-500 underline-offset-4 hover:text-stone-600 hover:underline"
           >
             Skip for now
           </button>

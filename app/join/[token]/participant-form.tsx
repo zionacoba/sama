@@ -113,7 +113,7 @@ export function ParticipantForm({ token, meetingPoints, waiverText, defaultMeeti
       <div>
         <label htmlFor="medical_notes" className="block text-sm font-medium text-stone-700">
           Medical conditions or allergies{" "}
-          <span className="text-stone-400">(optional)</span>
+          <span className="text-stone-500">(optional)</span>
         </label>
         <textarea
           id="medical_notes"

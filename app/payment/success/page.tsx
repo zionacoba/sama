@@ -217,7 +217,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
                 Amount paid: <span className="text-trailhead">{formatPeso(amountJoinerPaid(booking))}</span>
               </p>
               {bookingRef && (
-                <p className="mt-1 text-xs text-stone-400">
+                <p className="mt-1 text-xs text-stone-500">
                   Ref:{" "}
                   <span className="font-mono font-medium text-stone-500">{bookingRef}</span>
                 </p>
@@ -225,7 +225,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
             </div>
           ) : (
             bookingRef && (
-              <p className="mt-2 text-xs text-stone-400">
+              <p className="mt-2 text-xs text-stone-500">
                 Booking reference:{" "}
                 <span className="font-mono font-medium text-stone-600">{bookingRef}</span>
               </p>

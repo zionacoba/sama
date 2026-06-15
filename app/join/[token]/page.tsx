@@ -107,12 +107,12 @@ export default async function JoinPage({ params }: PageProps) {
 
       <main className="mx-auto max-w-xl px-4 py-10 sm:px-6">
         <div className="mb-6 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">
+          <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
             Trip confirmation
           </p>
           <h1 className="mt-1 text-xl font-bold text-stone-900">{trip.title}</h1>
           <p className="mt-0.5 text-sm text-stone-500">{tripDate}</p>
-          <p className="mt-2 text-xs text-stone-400">
+          <p className="mt-2 text-xs text-stone-500">
             Booked by <span className="text-stone-600">{booking.full_name}</span>
           </p>
         </div>

@@ -241,7 +241,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
           <StatusBadge status={booking.status} />
         </div>
 
-        <p className="mt-1 font-mono text-sm text-stone-400">#{bookingRef}</p>
+        <p className="mt-1 font-mono text-sm text-stone-600">#{bookingRef}</p>
 
         {booking.status === "transferred" && (
           <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
@@ -263,11 +263,11 @@ export default async function BookingDetailPage({ params }: PageProps) {
             <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Trip</h2>
           </div>
           <dl className="divide-y divide-stone-100 px-5">
-            <DetailRow label="Destination">{trip.destination}{trip.region && <span className="ml-2 text-stone-400">{trip.region}</span>}</DetailRow>
+            <DetailRow label="Destination">{trip.destination}{trip.region && <span className="ml-2 text-stone-500">{trip.region}</span>}</DetailRow>
             <DetailRow label="Date">
               {formatDate(trip.date_start)}
               {trip.date_end && <> – {formatDate(trip.date_end)}</>}
-              {trip.duration && <span className="ml-2 text-stone-400">({trip.duration})</span>}
+              {trip.duration && <span className="ml-2 text-stone-500">({trip.duration})</span>}
             </DetailRow>
             <DetailRow label="Difficulty">
               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
