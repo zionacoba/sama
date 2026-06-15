@@ -7,12 +7,12 @@ import { formatPeso } from "@/lib/format";
 export function PartialCancelButton({
   bookingId,
   totalSlots,
-  pricePerSlot,
+  paidPerSlot,
   refundRatio,
 }: {
   bookingId: number;
   totalSlots: number;
-  pricePerSlot: number;
+  paidPerSlot: number;
   refundRatio: number | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -22,9 +22,13 @@ export function PartialCancelButton({
 
   const fmt = (n: number) => formatPeso(n);
 
+  // Mirrors the server's partial refund: (slotsToCancel / totalSlots) of the
+  // policy-adjusted amount the joiner actually paid. paidPerSlot * totalSlots
+  // equals amountJoinerPaid, and refundRatio is the same policy ratio the
+  // server applies, so this preview matches the amount actually refunded.
   const refundPreview =
     refundRatio !== null
-      ? Math.round((slotsToCancel / totalSlots) * refundRatio * pricePerSlot * totalSlots * 100) / 100
+      ? Math.round((slotsToCancel / totalSlots) * refundRatio * paidPerSlot * totalSlots * 100) / 100
       : null;
 
   function handleConfirm() {

@@ -231,7 +231,12 @@ export default async function BookingDetailPage({ params }: PageProps) {
   const refundRatio = (fullRefundable !== null && amountPaid != null && amountPaid > 0)
     ? fullRefundable / amountPaid
     : null;
-  const pricePerSlot = booking.total_amount != null ? booking.total_amount / booking.slots : 0;
+  // Per-slot figure for the partial-cancel preview must be based on what the
+  // joiner actually paid online (amountPaid), not total_amount. The server
+  // scales its refund off amountJoinerPaid, so a total_amount-based per-slot
+  // figure overstates the preview for downpayment bookings (the joiner paid
+  // only the deposit, not the full trip price).
+  const paidPerSlot = amountPaid != null && booking.slots > 0 ? amountPaid / booking.slots : 0;
 
   return (
     <div className="min-h-full bg-stone-50 font-sans text-stone-900">
@@ -519,7 +524,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
             <PartialCancelButton
               bookingId={booking.id}
               totalSlots={booking.slots}
-              pricePerSlot={pricePerSlot}
+              paidPerSlot={paidPerSlot}
               refundRatio={refundRatio}
             />
           )}
