@@ -534,7 +534,7 @@ export async function updateTrip(
   const effectiveMinDownpayment = safePrice === 0 ? null : min_downpayment;
 
   const titleChanged = title !== existing.title;
-  const startDateChanged = safeDateStart !== existing.date_start;
+  const startDateChanged = (safeDateStart ?? "").slice(0, 10) !== (existing.date_start ?? "").slice(0, 10);
   let newSlug: string | undefined;
   if (titleChanged || startDateChanged) {
     newSlug = await makeUniqueSlug(buildBaseSlug(title, safeDateStart), supabase, tripId);
@@ -587,9 +587,13 @@ export async function updateTrip(
 
   // Notify confirmed/pending bookers if key booking fields changed.
   if (!is_template) {
-    const dateChanged = existing.date_start && (existing.date_start !== date_start || (existing.date_end ?? null) !== (date_end ?? null));
+    const dateChanged = existing.date_start && (
+      (existing.date_start ?? "").slice(0, 10) !== (date_start ?? "").slice(0, 10)
+      || (existing.date_end ?? "").slice(0, 10) !== (date_end ?? "").slice(0, 10)
+    );
     const priceChanged = existing.price != null && existing.price !== price;
-    const mpChanged = JSON.stringify(existing.meeting_points ?? []) !== JSON.stringify(meeting_points);
+    const existingMeetingPoints = (existing.meeting_points ?? []).filter((mp: MeetingPoint) => mp.location.trim() !== "");
+    const mpChanged = JSON.stringify(existingMeetingPoints) !== JSON.stringify(meeting_points);
 
     if (dateChanged || priceChanged || mpChanged) {
       const admin = createSupabaseAdminClient();
