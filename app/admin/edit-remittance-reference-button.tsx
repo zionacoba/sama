@@ -58,7 +58,7 @@ export function EditRemittanceReferenceButton({
       <button
         type="button"
         onClick={() => { setEditing(false); setValue(currentReference ?? ""); }}
-        className="text-xs text-stone-400 hover:text-stone-700"
+        className="text-xs text-stone-500 hover:text-stone-700"
       >
         Cancel
       </button>

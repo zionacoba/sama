@@ -117,7 +117,7 @@ function SignupForm() {
                   <span className="font-semibold text-stone-900">{email}</span>.
                   Click the link to confirm your account and sign in.
                 </p>
-                <p className="mt-6 text-xs text-stone-400">
+                <p className="mt-6 text-xs text-stone-500">
                   Didn&apos;t receive it? Check your spam folder or contact{" "}
                   <a href="mailto:hello@sama.com.ph" className="underline underline-offset-2 hover:text-stone-600">
                     hello@sama.com.ph

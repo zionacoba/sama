@@ -267,7 +267,7 @@ export function PhotoUploader({
             className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-stone-200 py-4 text-sm font-medium text-stone-500 transition hover:border-trailhead hover:text-trailhead"
           >
             + Add photos
-            <span className="font-normal text-stone-400">
+            <span className="font-normal text-stone-500">
               ({items.length} / {MAX_PHOTOS})
             </span>
           </button>

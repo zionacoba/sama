@@ -105,7 +105,7 @@ export default function AboutPage() {
             </h2>
             <div className="mt-8 space-y-10">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
+                <p className="text-xs font-semibold uppercase tracking-widest text-stone-500">
                   Sama
                 </p>
                 <h3 className="mt-1.5 text-xl font-bold text-stone-900">Together</h3>
@@ -116,7 +116,7 @@ export default function AboutPage() {
               </div>
 
               <div className="border-t border-stone-200 pt-10">
-                <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
+                <p className="text-xs font-semibold uppercase tracking-widest text-stone-500">
                   Responsibilidad
                 </p>
                 <h3 className="mt-1.5 text-xl font-bold text-stone-900">Responsibility</h3>
@@ -128,7 +128,7 @@ export default function AboutPage() {
               </div>
 
               <div className="border-t border-stone-200 pt-10">
-                <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
+                <p className="text-xs font-semibold uppercase tracking-widest text-stone-500">
                   Malasakit
                 </p>
                 <h3 className="mt-1.5 text-xl font-bold text-stone-900">Care</h3>

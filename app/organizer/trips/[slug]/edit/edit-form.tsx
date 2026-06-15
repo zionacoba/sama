@@ -276,7 +276,7 @@ export function EditTripForm({
       {!isTemplate && templates.length > 0 && (
         <div>
           <label htmlFor="template_id" className={labelClass}>
-            Link to template <span className="font-normal text-stone-400">(optional)</span>
+            Link to template <span className="font-normal text-stone-500">(optional)</span>
           </label>
           <select
             id="template_id"
@@ -439,7 +439,7 @@ export function EditTripForm({
             <div className="flex flex-col">
               <label htmlFor="date_end" className={`${labelClass} flex-1`}>
                 End date{duration === "" || duration === "Day tour" ? (
-                  <span className="font-normal text-stone-400"> (optional, for overnight or multi-day trips)</span>
+                  <span className="font-normal text-stone-500"> (optional, for overnight or multi-day trips)</span>
                 ) : null}
               </label>
               <input
@@ -590,7 +590,7 @@ export function EditTripForm({
           <div>
             <label htmlFor="messenger_gc_link" className={labelClass}>
               Messenger Group Chat Link{" "}
-              <span className="font-normal text-stone-400">(optional)</span>
+              <span className="font-normal text-stone-500">(optional)</span>
             </label>
             <input
               id="messenger_gc_link"
@@ -714,7 +714,7 @@ export function EditTripForm({
       <div>
         <p className={labelClass}>
           Photos{" "}
-          <span className="font-normal text-stone-400">(up to 5, first is cover)</span>
+          <span className="font-normal text-stone-500">(up to 5, first is cover)</span>
         </p>
         <div className="mt-1.5">
           <PhotoUploader
@@ -745,7 +745,7 @@ export function EditTripForm({
       {/* Custom questions */}
       <div>
         <p className={labelClass}>
-          Ask joiners questions <span className="font-normal text-stone-400">(optional, up to 3)</span>
+          Ask joiners questions <span className="font-normal text-stone-500">(optional, up to 3)</span>
         </p>
         <input type="hidden" name="custom_questions" value={JSON.stringify(customQuestions.filter((q) => q.trim()))} />
         <div className="mt-1.5 space-y-2">

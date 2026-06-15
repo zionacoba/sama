@@ -159,7 +159,7 @@ export function ApplyForm() {
 
       <div>
         <p className={`${labelClass} mb-2`}>
-          Emergency / First Aid certified? <span className="font-normal text-stone-400">(optional)</span>
+          Emergency / First Aid certified? <span className="font-normal text-stone-500">(optional)</span>
         </p>
         <label className="flex cursor-pointer items-start gap-3">
           <input

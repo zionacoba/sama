@@ -191,7 +191,7 @@ function OrganizerPayoutCard({ org }: { org: PendingPayoutOrganizer }) {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
-            <tr className="border-b border-stone-100 text-xs font-semibold uppercase tracking-wide text-stone-400">
+            <tr className="border-b border-stone-100 text-xs font-semibold uppercase tracking-wide text-stone-500">
               <th className="px-5 py-2.5 text-left">Trip</th>
               <th className="px-5 py-2.5 text-left">Date</th>
               <th className="px-5 py-2.5 text-left">Participant</th>
@@ -214,7 +214,7 @@ function OrganizerPayoutCard({ org }: { org: PendingPayoutOrganizer }) {
                   )}
                 </td>
                 <td className="px-5 py-3 text-right text-stone-700">{formatPeso(b.totalAmount)}</td>
-                <td className="px-5 py-3 text-right text-stone-400">−{formatPeso(b.platformCommission)}</td>
+                <td className="px-5 py-3 text-right text-stone-500">−{formatPeso(b.platformCommission)}</td>
                 <td className="px-5 py-3 text-right font-semibold text-trailhead">{formatPeso(b.netAmount)}</td>
               </tr>
             ))}
@@ -225,7 +225,7 @@ function OrganizerPayoutCard({ org }: { org: PendingPayoutOrganizer }) {
                 Total — {org.bookings.length} booking{org.bookings.length !== 1 ? "s" : ""}
               </td>
               <td className="px-5 py-3 text-right text-stone-700">{formatPeso(org.totalAmount)}</td>
-              <td className="px-5 py-3 text-right text-stone-400">−{formatPeso(org.totalCommission)}</td>
+              <td className="px-5 py-3 text-right text-stone-500">−{formatPeso(org.totalCommission)}</td>
               <td className="px-5 py-3 text-right font-bold text-trailhead">{formatPeso(org.totalNet)}</td>
             </tr>
           </tfoot>
@@ -713,7 +713,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                   }`}
                 >
                   {f.charAt(0).toUpperCase() + f.slice(1)}{" "}
-                  <span className={`text-xs font-normal ${activeOrgFilter === f ? "opacity-75" : "text-stone-400"}`}>
+                  <span className={`text-xs font-normal ${activeOrgFilter === f ? "opacity-75" : "text-stone-500"}`}>
                     ({orgCounts[f]})
                   </span>
                 </Link>
@@ -740,11 +740,11 @@ export default async function AdminPage({ searchParams }: PageProps) {
                         <span className="flex-1 min-w-0">
                           <span className="font-semibold text-stone-900">{app.full_name}</span>
                           {app.display_name && app.display_name !== app.full_name && (
-                            <span className="ml-2 text-sm text-stone-400">&ldquo;{app.display_name}&rdquo;</span>
+                            <span className="ml-2 text-sm text-stone-500">&ldquo;{app.display_name}&rdquo;</span>
                           )}
                         </span>
                         <StatusBadge status={app.status} />
-                        <span className="whitespace-nowrap text-xs text-stone-400">{formatDateShort(app.created_at)}</span>
+                        <span className="whitespace-nowrap text-xs text-stone-500">{formatDateShort(app.created_at)}</span>
                         <svg className="h-4 w-4 shrink-0 text-stone-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
@@ -753,43 +753,43 @@ export default async function AdminPage({ searchParams }: PageProps) {
                       <div className="border-t border-stone-100 px-5 py-5">
                         <dl className="grid grid-cols-1 gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Full name</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Full name</dt>
                             <dd className="mt-0.5 text-stone-900">{app.full_name}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Display name</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Display name</dt>
                             <dd className="mt-0.5 text-stone-900">{app.display_name || <span className="text-stone-300">—</span>}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Email</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Email</dt>
                             <dd className="mt-0.5 text-stone-900">{app.email}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Phone</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Phone</dt>
                             <dd className="mt-0.5 text-stone-900">{app.phone || <span className="text-stone-300">—</span>}</dd>
                           </div>
                           <div className="sm:col-span-2 lg:col-span-3">
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Bio</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Bio</dt>
                             <dd className="mt-0.5 leading-relaxed text-stone-900">{app.bio || <span className="text-stone-300">—</span>}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Activity types</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Activity types</dt>
                             <dd className="mt-0.5 text-stone-900">{app.activity_types?.length ? app.activity_types.join(", ") : <span className="text-stone-300">—</span>}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Years of experience</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Years of experience</dt>
                             <dd className="mt-0.5 text-stone-900">{app.years_experience ?? <span className="text-stone-300">—</span>}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Trips per month</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Trips per month</dt>
                             <dd className="mt-0.5 text-stone-900">{app.trips_per_month ?? <span className="text-stone-300">—</span>}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Operating locations</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Operating locations</dt>
                             <dd className="mt-0.5 text-stone-900">{app.operating_locations || <span className="text-stone-300">—</span>}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Personal Facebook</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Personal Facebook</dt>
                             <dd className="mt-0.5">
                               {personalFbUrl
                                 ? <a href={personalFbUrl} target="_blank" rel="noopener noreferrer" className="text-trailhead underline-offset-2 hover:underline">View ↗</a>
@@ -797,7 +797,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Organizer Facebook Page</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Organizer Facebook Page</dt>
                             <dd className="mt-0.5">
                               {organizerFbUrl
                                 ? <a href={organizerFbUrl} target="_blank" rel="noopener noreferrer" className="text-trailhead underline-offset-2 hover:underline">View ↗</a>
@@ -805,7 +805,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Instagram</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Instagram</dt>
                             <dd className="mt-0.5">
                               {instagramUrl
                                 ? <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="text-trailhead underline-offset-2 hover:underline">View ↗</a>
@@ -813,15 +813,15 @@ export default async function AdminPage({ searchParams }: PageProps) {
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Emergency certified</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Emergency certified</dt>
                             <dd className="mt-0.5 text-stone-900">{app.emergency_certified ? "Yes" : "No"}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Applied</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Applied</dt>
                             <dd className="mt-0.5 text-stone-900">{formatCreatedAt(app.created_at)}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Status</dt>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Status</dt>
                             <dd className="mt-0.5"><StatusBadge status={app.status} /></dd>
                           </div>
                         </dl>
@@ -848,7 +848,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                               step={1}
                               className="w-14 rounded border border-stone-200 px-1.5 py-1 text-xs text-stone-900 focus:border-trailhead focus:outline-none"
                             />
-                            <span className="text-xs text-stone-400">%</span>
+                            <span className="text-xs text-stone-500">%</span>
                             <button type="submit" className="rounded bg-trailhead/10 px-2 py-1 text-xs font-semibold text-trailhead hover:bg-trailhead/20">
                               Save commission
                             </button>
@@ -908,10 +908,10 @@ export default async function AdminPage({ searchParams }: PageProps) {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-semibold text-stone-900">{review.fullName ?? "Anonymous"}</span>
                           <span className="text-amber-500">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
-                          <span className="text-xs text-stone-400">on {review.tripTitle}</span>
+                          <span className="text-xs text-stone-500">on {review.tripTitle}</span>
                         </div>
                         <p className="mt-2 text-sm leading-relaxed text-stone-700">{review.body}</p>
-                        <p className="mt-1 text-xs text-stone-400">{formatCreatedAt(review.createdAt)}</p>
+                        <p className="mt-1 text-xs text-stone-500">{formatCreatedAt(review.createdAt)}</p>
                       </div>
                       <form action={approveReview}>
                         <input type="hidden" name="reviewId" value={review.id} />
@@ -1074,7 +1074,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                                     </button>
                                   </form>
                                 ) : (
-                                  <span className="text-xs text-stone-400">Auto-retrying</span>
+                                  <span className="text-xs text-stone-500">Auto-retrying</span>
                                 )}
                               </td>
                             </tr>

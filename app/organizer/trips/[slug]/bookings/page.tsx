@@ -236,7 +236,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
             <div className="shrink-0 text-right">
               <p className="text-2xl font-bold text-trailhead">
                 {slotsBooked}
-                <span className="text-base font-normal text-stone-400"> / {trip.total_slots}</span>
+                <span className="text-base font-normal text-stone-500"> / {trip.total_slots}</span>
               </p>
               <p className="text-sm text-stone-500">slots filled</p>
             </div>
@@ -362,7 +362,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
               </div>
             )}
             {activeBookings.length === 0 && (
-              <div className="rounded-2xl border border-stone-200 bg-white px-6 py-12 text-center text-sm text-stone-400">
+              <div className="rounded-2xl border border-stone-200 bg-white px-6 py-12 text-center text-sm text-stone-500">
                 No confirmed or pending bookings yet.
               </div>
             )}
@@ -372,7 +372,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
               return (
                 <div key={label} className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
                   <div className={`flex items-center gap-3 border-b border-stone-100 px-5 py-3.5 ${isUnknown ? "bg-stone-50" : "bg-white"}`}>
-                    <h2 className={`font-semibold ${isUnknown ? "text-stone-400 italic" : "text-stone-900"}`}>
+                    <h2 className={`font-semibold ${isUnknown ? "text-stone-500 italic" : "text-stone-900"}`}>
                       {label}
                     </h2>
                     <span className="rounded-full bg-trailhead-muted px-2.5 py-0.5 text-xs font-semibold text-trailhead">
@@ -412,7 +412,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                 </a>
                               )}
                               {(b.medical_notes || b.notes) && (
-                                <p className="text-xs text-stone-400 mt-0.5">
+                                <p className="text-xs text-stone-600 mt-0.5">
                                   🏥 {[b.medical_notes, b.notes].filter(Boolean).join(' · ')}
                                 </p>
                               )}
@@ -434,14 +434,14 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                 const done = ps.filter((p) => p.completed).length;
                                 return (
                                   <details className="mt-1 text-left">
-                                    <summary className="cursor-pointer list-none text-xs font-medium text-stone-400 hover:text-stone-600">
+                                    <summary className="cursor-pointer list-none text-xs font-medium text-stone-500 hover:text-stone-600">
                                       {done}/{b.slots} confirmed
                                     </summary>
                                     <ul className="mt-1 space-y-0.5 pl-0.5">
                                       {ps.map((p) => (
                                         <li key={p.slot_number} className="flex items-center gap-1 text-xs">
                                           <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
-                                          <span className={p.completed ? "text-stone-700" : "text-stone-400"}>
+                                          <span className={p.completed ? "text-stone-700" : "text-stone-500"}>
                                             {p.full_name ?? `Participant ${p.slot_number + 1}`}
                                           </span>
                                         </li>
@@ -468,7 +468,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                           participantName={b.full_name}
                                           balanceAmount={formatPeso(b.total_amount - b.amount_due)}
                                         />
-                                        <span className="text-xs text-stone-400">Participant can pay balance online or directly to you. Mark as collected once received. Balance payments made online are remitted 24-48 hours after the trip date.</span>
+                                        <span className="text-xs text-stone-500">Participant can pay balance online or directly to you. Mark as collected once received. Balance payments made online are remitted 24-48 hours after the trip date.</span>
                                       </>
                                     )}
                                   </div>
@@ -498,7 +498,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
         {activeView === "waitlist" && (
           <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
             {waitlist.length === 0 ? (
-              <p className="px-6 py-12 text-center text-sm text-stone-400">No waitlist entries yet.</p>
+              <p className="px-6 py-12 text-center text-sm text-stone-500">No waitlist entries yet.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] text-sm">

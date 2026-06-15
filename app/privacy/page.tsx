@@ -14,7 +14,7 @@ export default function PrivacyPage() {
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
-          <p className="text-sm text-stone-400">Last updated: June 2026</p>
+          <p className="text-sm text-stone-500">Last updated: June 2026</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900">
             Privacy Policy
           </h1>
@@ -171,7 +171,7 @@ export default function PrivacyPage() {
               </ul>
             </section>
 
-            <p className="border-t border-stone-100 pt-6 text-sm text-stone-400">
+            <p className="border-t border-stone-100 pt-6 text-sm text-stone-500">
               Sama is operated as a sole proprietorship by Paul Zion Acoba, Philippines.
             </p>
 

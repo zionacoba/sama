@@ -71,7 +71,7 @@ export function DashboardFilters({ search, status, dateFrom, dateTo }: Props) {
             onChange={(e) => navigate({ date_from: e.target.value })}
             className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
           />
-          <span className="shrink-0 text-xs text-stone-400">to</span>
+          <span className="shrink-0 text-xs text-stone-500">to</span>
           <input
             type="date"
             defaultValue={dateTo}

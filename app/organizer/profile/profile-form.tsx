@@ -141,7 +141,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
 
       {/* Profile photo */}
       <div>
-        <p className={labelClass}>Profile photo <span className="font-normal text-stone-400">(optional)</span></p>
+        <p className={labelClass}>Profile photo <span className="font-normal text-stone-500">(optional)</span></p>
         <div className="mt-2 flex items-center gap-4">
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-trailhead-muted text-lg font-bold text-trailhead">
             {photoUrl ? (
@@ -241,7 +241,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
 
       {/* Cover image */}
       <div>
-        <p className={labelClass}>Cover image <span className="font-normal text-stone-400">(optional)</span></p>
+        <p className={labelClass}>Cover image <span className="font-normal text-stone-500">(optional)</span></p>
         <p className="mt-0.5 text-xs text-stone-500">Banner displayed at the top of your public profile. Recommended: wide landscape photo.</p>
         <div className="mt-2 space-y-2">
           <div className="relative h-24 w-full overflow-hidden rounded-xl bg-trailhead">
@@ -274,7 +274,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
               <button
                 type="button"
                 onClick={handleRemoveCover}
-                className="text-sm text-stone-400 transition hover:text-red-600"
+                className="text-sm text-stone-500 transition hover:text-red-600"
               >
                 Remove
               </button>
@@ -285,7 +285,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
       </div>
 
       <div>
-        <p className={`${labelClass} mb-1`}>Social links <span className="font-normal text-stone-400">(optional)</span></p>
+        <p className={`${labelClass} mb-1`}>Social links <span className="font-normal text-stone-500">(optional)</span></p>
         <div className="space-y-2">
           <input
             name="social_facebook"

@@ -407,7 +407,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                   {" · "}
                   <Link
                     href="/organizer/dashboard"
-                    className="text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline"
+                    className="text-stone-500 underline-offset-4 hover:text-stone-600 hover:underline"
                   >
                     Clear filters
                   </Link>
@@ -496,7 +496,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                           </span>
                           <span className="truncate font-semibold text-stone-900">{template.title}</span>
                         </div>
-                        <p className="mt-0.5 text-xs text-stone-400">
+                        <p className="mt-0.5 text-xs text-stone-500">
                           {runs.length} scheduled run{runs.length !== 1 ? "s" : ""}
                         </p>
                       </div>
@@ -551,7 +551,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                             <span className="text-amber-400">{"★".repeat(Math.round(review.rating))}</span>
                             <span className="text-stone-200">{"★".repeat(5 - Math.round(review.rating))}</span>
-                            <span className="text-xs text-stone-400">
+                            <span className="text-xs text-stone-500">
                               {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(review.created_at))}
                             </span>
                           </div>
@@ -617,7 +617,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                   ) : (
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-stone-100 text-xs font-semibold uppercase tracking-wide text-stone-400">
+                        <tr className="border-b border-stone-100 text-xs font-semibold uppercase tracking-wide text-stone-500">
                           <th className="px-5 py-2.5 text-left">Trip</th>
                           <th className="px-5 py-2.5 text-right">Slots</th>
                           <th className="px-5 py-2.5 text-right">Gross</th>
@@ -636,7 +636,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                             <td className="px-5 py-3 text-right text-stone-600">
                               <span>{formatPeso(b.commissionAmount)}</span>
                               {b.commissionRate != null && (
-                                <span className="block text-xs text-stone-400">{Math.round(b.commissionRate * 100)}%</span>
+                                <span className="block text-xs text-stone-500">{Math.round(b.commissionRate * 100)}%</span>
                               )}
                             </td>
                             <td className="px-5 py-3 text-right font-semibold text-trailhead">
@@ -708,7 +708,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                   ) : (
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-stone-100 text-xs font-semibold uppercase tracking-wide text-stone-400">
+                        <tr className="border-b border-stone-100 text-xs font-semibold uppercase tracking-wide text-stone-500">
                           <th className="px-5 py-2.5 text-left">Date remitted</th>
                           <th className="px-5 py-2.5 text-right">Amount received</th>
                           <th className="px-5 py-2.5 text-right">Bookings</th>

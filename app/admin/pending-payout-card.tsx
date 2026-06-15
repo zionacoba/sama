@@ -61,7 +61,7 @@ export function PendingPayoutCard({ payout }: { payout: PendingPayout }) {
           {!destLine && (
             <p className="mt-0.5 text-sm text-red-600">⚠ No destination on record — verify before sending</p>
           )}
-          <p className="mt-1 text-xs text-stone-400">Created {formatCreatedAt(payout.createdAt)}</p>
+          <p className="mt-1 text-xs text-stone-500">Created {formatCreatedAt(payout.createdAt)}</p>
         </div>
         <div className="text-right">
           <p className="text-xl font-bold text-trailhead">{formatPeso(payout.netAmount)}</p>

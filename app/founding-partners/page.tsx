@@ -73,7 +73,7 @@ export default function FoundingPartnersPage() {
                 key={term.label}
                 className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5"
               >
-                <dt className="text-xs font-semibold uppercase tracking-widest text-stone-400">
+                <dt className="text-xs font-semibold uppercase tracking-widest text-stone-500">
                   {term.label}
                 </dt>
                 <dd className="mt-1.5 text-base font-semibold text-stone-900">{term.value}</dd>
@@ -142,7 +142,7 @@ export default function FoundingPartnersPage() {
               Apply now
             </Link>
           </div>
-          <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-stone-400">
+          <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-stone-500">
             You&apos;ll need to create a Sama account first if you haven&apos;t already.
             Applications are personally reviewed. You&apos;ll hear back within a few days.
           </p>

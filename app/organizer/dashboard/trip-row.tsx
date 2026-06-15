@@ -87,7 +87,7 @@ export function TripRow({ trip: initialTrip, counts }: { trip: OrganizerTrip; co
             </span>
           )}
         </div>
-        <p className="mt-0.5 text-xs text-stone-400">
+        <p className="mt-0.5 text-xs text-stone-500">
           {formatDate(initialTrip.date_start)} · {formatPrice(initialTrip.price)} · {slotsBooked}/{initialTrip.total_slots} slots filled
         </p>
         {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
@@ -166,7 +166,7 @@ export function TripRunRow({ run: initialRun, idx }: { run: OrganizerTrip; idx: 
             {badge.label}
           </span>
           <span className="text-sm font-medium text-stone-700">{formatDate(initialRun.date_start)}</span>
-          <span className="text-xs text-stone-400">{formatPrice(initialRun.price)} · {slotsBooked}/{initialRun.total_slots} slots filled</span>
+          <span className="text-xs text-stone-500">{formatPrice(initialRun.price)} · {slotsBooked}/{initialRun.total_slots} slots filled</span>
         </div>
         {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       </div>

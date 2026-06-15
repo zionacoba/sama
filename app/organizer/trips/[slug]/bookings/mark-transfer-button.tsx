@@ -52,7 +52,7 @@ export function MarkTransferButton({
 
             <div className="mt-4">
               <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wide">
-                Transferee email <span className="font-normal normal-case text-stone-400">(optional — for your records)</span>
+                Transferee email <span className="font-normal normal-case text-stone-500">(optional — for your records)</span>
               </label>
               <input
                 type="email"
