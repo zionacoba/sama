@@ -18,6 +18,7 @@ import { issueAndRecordRefund } from "@/lib/refunds";
 import { createPaymentLink } from "@/lib/create-payment-link";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
 import { formatPeso, formatBookingRef } from "@/lib/format";
+import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
@@ -823,16 +824,19 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, status, email, full_name")
+    .select("id, trip_id, status, email, full_name, slots")
     .eq("id", bookingId)
     .maybeSingle();
 
   if (!booking) return { error: "Booking not found." };
   if (booking.status !== "confirmed") return { error: "Only confirmed bookings can be marked as transferred." };
+  if (booking.slots > 1) {
+    return { error: "Transfers are only available for single-slot bookings right now. For group bookings, please contact support." };
+  }
 
   const { data: trip } = await admin
     .from("trips")
-    .select("id, slug, title, date_start, organizer_id")
+    .select("id, slug, title, date_start, organizer_id, waiver_text")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -867,14 +871,90 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
     return { error: "This booking is no longer confirmed and could not be transferred." };
   }
 
+  const bookingRef = formatBookingRef(booking.id);
+
+  // Resolve the organizer once: reused for the waiver snapshot below and the
+  // organizer notification email further down.
+  const { data: org } = await admin
+    .from("organizers")
+    .select("email, full_name, display_name")
+    .eq("id", organizer.id)
+    .maybeSingle();
+  const organizerName = org?.display_name ?? org?.full_name ?? "";
+
+  // Prepare the slot-0 participant row so the replacement can complete their own
+  // details and sign the waiver via /join. The booker's canonical record stays
+  // safe on the untouched bookings row; this only repurposes the per-slot row:
+  // fresh token, cleared PII, completed:false, with the resolved waiver text
+  // snapshotted so it cannot drift if the trip waiver is edited later.
+  // Best-effort: the transfer already succeeded and the slot stays filled, so a
+  // failure here never rolls back the transfer. We log it and alert an admin.
+  try {
+    const resolvedWaiverText = (trip.waiver_text ?? DEFAULT_WAIVER_TEXT).replace(/\[Organizer Name\]/gi, organizerName);
+    const newToken = randomUUID();
+
+    const { data: existingSlotZero } = await admin
+      .from("booking_participants")
+      .select("id")
+      .eq("booking_id", bookingId)
+      .eq("slot_number", 0)
+      .maybeSingle();
+
+    if (existingSlotZero) {
+      const { error: prepError } = await admin
+        .from("booking_participants")
+        .update({
+          token: newToken,
+          completed: false,
+          waiver_accepted: false,
+          waiver_accepted_at: null,
+          full_name: null,
+          emergency_contact_name: null,
+          emergency_contact_phone: null,
+          medical_notes: null,
+          meeting_point: null,
+          waiver_text_snapshot: resolvedWaiverText,
+          waiver_ip: null,
+        })
+        .eq("booking_id", bookingId)
+        .eq("slot_number", 0);
+      if (prepError) throw prepError;
+    } else {
+      const { error: prepError } = await admin
+        .from("booking_participants")
+        .insert({
+          booking_id: bookingId,
+          slot_number: 0,
+          token: newToken,
+          completed: false,
+          waiver_accepted: false,
+          waiver_text_snapshot: resolvedWaiverText,
+        });
+      if (prepError) throw prepError;
+    }
+  } catch (err) {
+    console.error("[markAsTransferred] failed to prepare replacement slot-0 participant row", err);
+    Sentry.captureException(err, {
+      extra: { context: "markAsTransferred-slot0-prep", bookingId },
+    });
+    await sendAdminAlert(
+      `[Admin] Transfer succeeded but replacement link prep failed: booking #${bookingRef}`,
+      `
+          <p>A booking was marked as transferred, but preparing the replacement participant row (slot 0) failed. The replacement cannot complete their details until this is fixed manually.</p>
+          <p><strong>Booking ID:</strong> ${bookingId}</p>
+          <p><strong>Booking ref:</strong> ${bookingRef}</p>
+          <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
+          <p><strong>Error:</strong> ${escapeHtml(String(err))}</p>
+        `,
+    );
+  }
+
   const tripDate = new Intl.DateTimeFormat("en-PH", {
     year: "numeric",
     month: "long",
     day: "numeric",
     timeZone: "Asia/Manila",
   }).format(new Date(trip.date_start));
-
-  const bookingRef = formatBookingRef(booking.id);
 
   try {
     await resend.emails.send({
@@ -896,12 +976,6 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
   }
 
   try {
-    const { data: org } = await admin
-      .from("organizers")
-      .select("email, full_name")
-      .eq("id", organizer.id)
-      .maybeSingle();
-
     if (org?.email) {
       const toNote = transferredToEmail.trim()
         ? ` to <strong>${escapeHtml(transferredToEmail.trim())}</strong>`
