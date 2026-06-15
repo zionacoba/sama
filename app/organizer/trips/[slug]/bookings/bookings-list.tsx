@@ -34,6 +34,7 @@ type Booking = {
   nickname?: string | null;
   custom_question_answers?: string[] | null;
   custom_question_answer?: string | null;
+  custom_questions_snapshot?: string[] | null;
 };
 
 type BookingParticipant = {
@@ -96,7 +97,7 @@ function BookingCard({
   customQuestions?: string[] | null;
   customQuestion?: string | null;
 }) {
-  const qs: string[] = customQuestions ?? (customQuestion ? [customQuestion] : []);
+  const qs: string[] = b.custom_questions_snapshot ?? customQuestions ?? (customQuestion ? [customQuestion] : []);
   const answers: string[] =
     (b.custom_question_answers as string[] | null) ?? (b.custom_question_answer ? [b.custom_question_answer] : []);
   const showBalance = b.payment_option === "downpayment" && b.amount_due != null;
@@ -416,7 +417,7 @@ export function BookingsListWithTabs({
                           </p>
                         )}
                         {(() => {
-                          const qs: string[] = customQuestions ?? (customQuestion ? [customQuestion] : []);
+                          const qs: string[] = b.custom_questions_snapshot ?? customQuestions ?? (customQuestion ? [customQuestion] : []);
                           const as_: string[] = (b.custom_question_answers as string[] | null) ?? (b.custom_question_answer ? [b.custom_question_answer] : []);
                           return qs.map((q, qi) => as_[qi] ? (
                             <p key={qi} className="text-xs text-stone-500 mt-0.5">

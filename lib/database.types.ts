@@ -103,6 +103,7 @@ export type Database = {
           created_at: string | null
           custom_question_answer: string | null
           custom_question_answers: Json | null
+          custom_questions_snapshot: Json | null
           email: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
@@ -153,6 +154,7 @@ export type Database = {
           created_at?: string | null
           custom_question_answer?: string | null
           custom_question_answers?: Json | null
+          custom_questions_snapshot?: Json | null
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -203,6 +205,7 @@ export type Database = {
           created_at?: string | null
           custom_question_answer?: string | null
           custom_question_answers?: Json | null
+          custom_questions_snapshot?: Json | null
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -843,6 +846,7 @@ export type Database = {
           p_amount_due: number
           p_commission_rate_used: number
           p_custom_question_answers?: Json
+          p_custom_questions_snapshot?: Json
           p_email: string
           p_emergency_contact_name: string
           p_emergency_contact_phone: string

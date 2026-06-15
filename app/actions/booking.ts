@@ -216,6 +216,10 @@ export async function createBooking(input: CreateBookingInput) {
     p_waiver_ip: waiverIp,
     p_platform_waiver_snapshot: "By completing this booking, I agree that Sama is a technology marketplace that connects participants with independent trip organizers. Sama is not responsible for the conduct, acts, or omissions of organizers. I voluntarily assume all risks associated with outdoor activities.",
     p_custom_question_answers: input.customQuestionAnswers ?? null,
+    // Snapshot the question text as-asked, index-aligned with the answers (both
+    // derive from the same activeQuestions array), so answers survive later
+    // trip question edits. Empty -> null, matching how no-answers passes null.
+    p_custom_questions_snapshot: activeQuestions.length > 0 ? activeQuestions : null,
   });
 
   if (bookingError || newBookingId == null) {

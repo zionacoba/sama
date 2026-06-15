@@ -38,6 +38,7 @@ type BookingDetail = {
   platform_waiver_snapshot: string | null;
   custom_question_answers: string[] | null;
   custom_question_answer: string | null;
+  custom_questions_snapshot: string[] | null;
   notes: string | null;
   medical_notes: string | null;
   meeting_point: string | null;
@@ -142,7 +143,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
       id, user_id, full_name, email, phone, slots, total_amount, amount_due,
       payment_option, balance_collected, balance_payment_gateway_status, status, transferred_at, created_at, waiver_agreed,
       waiver_agreed_at, waiver_text_snapshot, platform_waiver_snapshot,
-      custom_question_answers, custom_question_answer, notes, medical_notes, meeting_point,
+      custom_question_answers, custom_question_answer, custom_questions_snapshot, notes, medical_notes, meeting_point,
       emergency_contact_name, emergency_contact_phone,
       trip:trips!bookings_trip_id_fkey(
         title, slug, date_start, date_end, destination, region, difficulty,
@@ -407,7 +408,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
               </DetailRow>
             )}
             {(() => {
-              const questions = trip.custom_questions ?? (trip.custom_question ? [trip.custom_question] : []);
+              const questions = booking.custom_questions_snapshot ?? trip.custom_questions ?? (trip.custom_question ? [trip.custom_question] : []);
               const answers = booking.custom_question_answers ?? (booking.custom_question_answer ? [booking.custom_question_answer] : []);
               return questions.map((q, i) => answers[i] ? (
                 <DetailRow key={i} label={q}>

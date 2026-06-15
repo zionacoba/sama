@@ -49,6 +49,7 @@ type Booking = {
   nickname?: string | null;
   custom_question_answers?: string[] | null;
   custom_question_answer?: string | null;
+  custom_questions_snapshot?: string[] | null;
 };
 
 type BookingParticipant = {
@@ -127,7 +128,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
     admin
       .from("bookings")
       .select(
-        "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, balance_collected, balance_payment_gateway_status, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point, custom_question_answers, custom_question_answer"
+        "id, user_id, full_name, email, phone, slots, total_amount, amount_due, payment_option, balance_collected, balance_payment_gateway_status, status, created_at, participants, emergency_contact_name, emergency_contact_phone, waiver_agreed, medical_notes, notes, meeting_point, custom_question_answers, custom_question_answer, custom_questions_snapshot"
       )
       .eq("trip_id", trip.id)
       .order("created_at", { ascending: false }),
@@ -417,7 +418,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                 </p>
                               )}
                               {(() => {
-                                const qs: string[] = (trip as { custom_questions?: string[] | null; custom_question?: string | null }).custom_questions ?? ((trip as { custom_question?: string | null }).custom_question ? [(trip as { custom_question?: string | null }).custom_question!] : []);
+                                const qs: string[] = b.custom_questions_snapshot ?? (trip as { custom_questions?: string[] | null; custom_question?: string | null }).custom_questions ?? ((trip as { custom_question?: string | null }).custom_question ? [(trip as { custom_question?: string | null }).custom_question!] : []);
                                 const as_: string[] = (b.custom_question_answers as string[] | null) ?? (b.custom_question_answer ? [b.custom_question_answer] : []);
                                 return qs.map((q, qi) => as_[qi] ? (
                                   <p key={qi} className="text-xs text-stone-500 mt-0.5">
