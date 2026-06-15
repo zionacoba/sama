@@ -477,7 +477,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
           {/* Main column */}
           <div className="space-y-4 pb-20 lg:pb-0">
             <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
-              <h2 className="text-lg font-bold text-stone-900">About this trip</h2>
+              <h2 className="text-lg font-bold text-stone-900">Overview</h2>
               <p className="mt-3 whitespace-pre-line leading-relaxed text-stone-600">{tripData.description}</p>
             </div>
 
@@ -524,7 +524,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
             {(includesList.length > 0 || whatToBringList.length > 0) && (
               <div className="grid items-start gap-4 sm:grid-cols-2">
                 {includesList.length > 0 && (
-                  <CollapsibleSection title="What's included" defaultOpen className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+                  <CollapsibleSection title="What's included" className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
                     <ul className="mt-3 space-y-1.5">
                       {includesList.map((item) => (
                         <li key={item} className="flex items-start gap-2 text-sm text-stone-600">
