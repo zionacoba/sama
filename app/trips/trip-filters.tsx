@@ -34,7 +34,7 @@ export function TripFilters({
   const inputClass = "min-h-[36px] rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-700 shadow-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30";
 
   return (
-    <div className="flex flex-col gap-1.5 md:contents">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
       <div className="flex items-center gap-1.5">
         <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Dates</span>
         <input
@@ -66,7 +66,7 @@ export function TripFilters({
           navigate({ sort: e.target.value === "soonest" ? "" : e.target.value })
         }
         aria-label="Sort trips"
-        className={inputClass}
+        className={`${inputClass} w-auto max-w-[12rem]`}
       >
         {SORT_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>
