@@ -5,19 +5,26 @@ export async function Footer({ hideBecomeOrganizer = false }: { hideBecomeOrgani
   let showBecomeOrganizer = !hideBecomeOrganizer;
 
   if (showBecomeOrganizer) {
-    const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    try {
+      const supabase = await createSupabaseServerClient();
+      const { data: { user } } = await supabase.auth.getUser();
 
-    if (user) {
-      const { data: organizer } = await supabase
-        .from("organizers")
-        .select("status")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      if (user) {
+        const { data: organizer } = await supabase
+          .from("organizers")
+          .select("status")
+          .eq("user_id", user.id)
+          .maybeSingle();
 
-      if (organizer?.status === "approved") {
-        showBecomeOrganizer = false;
+        if (organizer?.status === "approved") {
+          showBecomeOrganizer = false;
+        }
       }
+    } catch {
+      // On any auth/lookup failure, degrade gracefully by showing the link
+      // (the normal state for logged-out and non-organizer visitors) rather
+      // than letting the exception break every page the footer renders on.
+      showBecomeOrganizer = true;
     }
   }
 
