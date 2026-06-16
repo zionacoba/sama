@@ -17,7 +17,6 @@ import { SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
 import { formatDate, formatDateShort, formatDateRange, formatReviewDate, formatPeso } from "@/lib/format";
 import { PublishedBanner } from "@/app/trips/[slug]/published-banner";
 import { DifficultyInfoButton } from "@/app/components/difficulty-info";
-import Script from "next/script";
 
 export const revalidate = 30;
 
@@ -382,10 +381,8 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
   return (
     <>
-    <Script
-      id="trip-jsonld"
+    <script
       type="application/ld+json"
-      strategy="beforeInteractive"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026") }}
     />
     <div className="min-h-full bg-stone-50 text-stone-900 font-sans">
