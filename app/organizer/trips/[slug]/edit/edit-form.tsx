@@ -67,6 +67,11 @@ export function EditTripForm({
   const [duration, setDuration] = useState<string>(trip.duration ?? "");
   const [dateStart, setDateStart] = useState<string>(trip.date_start.slice(0, 10));
   const [isTemplate, setIsTemplate] = useState(trip.is_template ?? false);
+  // The recurring-template flag can only be validly set on a draft that is not
+  // itself a run created from a template. updateTrip enforces this server-side
+  // (is_template + non-draft is rejected); hiding the toggle elsewhere keeps the
+  // UI from offering a control that can only ever error.
+  const canEditTemplateFlag = trip.status === "draft" && !trip.template_id;
   const [meetingPoints, setMeetingPoints] = useState<MeetingPoint[]>(
     trip.meeting_points?.length ? trip.meeting_points : [{ location: "", time: "" }],
   );
@@ -788,25 +793,30 @@ export function EditTripForm({
         </p>
       </div>
 
-      {/* Template toggle, advanced option, shown at bottom */}
-      <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
-        <label className="flex cursor-pointer items-center gap-3">
-          <input
-            type="checkbox"
-            checked={isTemplate}
-            onChange={(e) => setIsTemplate(e.target.checked)}
-            className="h-4 w-4 rounded border-stone-300 text-trailhead accent-trailhead"
-          />
-          <input type="hidden" name="is_template" value={isTemplate.toString()} />
-          <span className="flex items-center gap-1.5 text-sm font-medium text-stone-700">
-            This is a recurring trip template
-            <RecurringTemplateInfoButton />
-          </span>
-        </label>
-        <p className="ml-7 mt-0.5 text-xs text-stone-500">
-          Templates hold the trip details. You&apos;ll create separate dated runs linked to this template.
-        </p>
-      </div>
+      {/* Template toggle, advanced option, shown at bottom. Only rendered where
+          is_template can legitimately be set (a draft that is not a run). The
+          hidden input is always submitted so the current value is preserved even
+          when the visible checkbox is hidden (no accidental flip). */}
+      <input type="hidden" name="is_template" value={isTemplate.toString()} />
+      {canEditTemplateFlag && (
+        <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
+          <label className="flex cursor-pointer items-center gap-3">
+            <input
+              type="checkbox"
+              checked={isTemplate}
+              onChange={(e) => setIsTemplate(e.target.checked)}
+              className="h-4 w-4 rounded border-stone-300 text-trailhead accent-trailhead"
+            />
+            <span className="flex items-center gap-1.5 text-sm font-medium text-stone-700">
+              This is a recurring trip template
+              <RecurringTemplateInfoButton />
+            </span>
+          </label>
+          <p className="ml-7 mt-0.5 text-xs text-stone-500">
+            Templates hold the trip details. You&apos;ll create separate dated runs linked to this template.
+          </p>
+        </div>
+      )}
 
       <div className="flex items-center justify-end gap-4 border-t border-stone-100 pt-6">
         <a
