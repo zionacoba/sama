@@ -115,18 +115,18 @@ export default async function Home() {
             priority
             quality={80}
             sizes="100vw"
-            className="object-cover object-[50%_70%]"
+            className="object-cover object-[50%_30%]"
             aria-hidden
           />
           <div
-            className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/60"
+            className="absolute inset-0 bg-white/55"
             aria-hidden
           />
           <div className="relative mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl text-center">
-            <h1 className="text-balance text-3xl font-medium tracking-tight text-white drop-shadow-sm sm:text-4xl md:text-5xl xl:text-6xl">
+            <h1 className="text-balance text-3xl font-medium tracking-tight text-trailhead-dark sm:text-4xl md:text-5xl xl:text-6xl">
               Discover trips. Book your slot. Join the group.
             </h1>
-            <p className="mt-3 text-pretty text-stone-100 sm:text-lg">
+            <p className="mt-3 text-pretty text-stone-700 sm:text-lg">
               Find guided hikes, freediving weekends, and beach trips across the Philippines, led by trusted local organizers.
             </p>
             <form
@@ -149,7 +149,7 @@ export default async function Home() {
                   name="search"
                   type="search"
                   placeholder="Search destination, activity, or organizer…"
-                  className="w-full rounded-xl border border-stone-200 bg-white py-3 pl-10 pr-4 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2"
+                  className="w-full rounded-xl border border-stone-300 bg-white py-3 pl-10 pr-4 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2"
                 />
               </div>
               <button
