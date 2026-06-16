@@ -63,14 +63,16 @@ export async function submitReview(
   // "paid for a trip that happened" (the same predicate as payout
   // eligibility), so an organizer marking an attendee as no_show cannot
   // strip their ability to review.
+  let bookingFullName: string | null = null;
   if (bookingId) {
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, status, user_id, trip_id, payment_gateway_status, total_amount")
+      .select("id, status, user_id, trip_id, payment_gateway_status, total_amount, full_name")
       .eq("id", bookingId)
       .maybeSingle();
 
     if (!booking) return { error: "Booking not found." };
+    bookingFullName = (booking.full_name as string | undefined)?.trim() || null;
     const isPaidAttendee =
       (booking.status === "confirmed" || booking.status === "no_show") &&
       (booking.payment_gateway_status === "paid" || booking.total_amount === 0);
@@ -92,11 +94,17 @@ export async function submitReview(
     .maybeSingle();
   if (existing) return { error: "You've already reviewed this trip." };
 
-  const fullName = (user.user_metadata?.full_name as string | undefined)?.trim() || null;
+  const metadataFullName =
+    (user.user_metadata?.full_name as string | undefined)?.trim() || null;
+  // Prefer the name captured at booking time (signed on the waiver) as the
+  // most reliable source, fall back to auth metadata, then to a safe
+  // non-null default so the NOT NULL full_name column never rejects the insert.
+  const fullName = bookingFullName ?? metadataFullName ?? "Verified joiner";
 
   const { error } = await supabase.from("reviews").insert({
     trip_id: tripId,
     user_id: user.id,
+    organizer_id: tripForDate.organizer_id,
     full_name: fullName,
     rating,
     body,
