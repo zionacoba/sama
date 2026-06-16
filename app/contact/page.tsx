@@ -7,8 +7,6 @@ export const metadata: Metadata = {
   description: "Get in touch with Sama. Reach the team by email or book a call, and view our registered business details.",
 };
 
-const BOOKING_LINK = "https://calendar.app.google/1dBzwm2bX957oQ8C9";
-
 export default function ContactPage() {
   return (
     <div className="flex min-h-full flex-col bg-stone-50 font-sans text-stone-900">
@@ -30,14 +28,6 @@ export default function ContactPage() {
               className="inline-flex w-full items-center justify-center rounded-xl bg-trailhead px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-trailhead-dark sm:w-auto"
             >
               Email hello@sama.com.ph
-            </a>
-            <a
-              href={BOOKING_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex w-full items-center justify-center rounded-xl border border-stone-200 bg-white px-8 py-3 text-sm font-semibold text-stone-700 shadow-sm transition hover:border-trailhead hover:text-trailhead sm:w-auto"
-            >
-              Book a call
             </a>
           </div>
 
