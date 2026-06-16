@@ -107,6 +107,30 @@ export default async function Home() {
       <Navbar />
 
       <main>
+        <section className="relative isolate flex min-h-[62vh] items-center justify-center overflow-hidden bg-trailhead-dark px-4 py-20 text-center sm:min-h-[66vh] lg:min-h-[72vh]">
+          <Image
+            src="/hero.jpg"
+            alt="Sunset over a mountain range in the Philippines"
+            fill
+            priority
+            quality={80}
+            sizes="100vw"
+            className="object-cover object-[50%_60%]"
+          />
+          <div
+            className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/40 to-black/75"
+            aria-hidden
+          />
+          <div className="relative mx-auto max-w-3xl">
+            <h1 className="text-balance text-3xl font-semibold tracking-tight text-white drop-shadow-sm sm:text-5xl lg:text-6xl">
+              Find your next adventure
+            </h1>
+            <p className="mx-auto mt-4 max-w-xl text-pretty text-base text-white/90 sm:text-lg">
+              Discover and book guided outdoor trips across the Philippines, led by trusted local organizers.
+            </p>
+          </div>
+        </section>
+
         <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-16 md:py-32">
           <div className="mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl text-center">
             <h1 className="text-balance text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl xl:text-6xl" style={{ color: "#1A3D2B" }}>
@@ -260,7 +284,7 @@ export default async function Home() {
         </section>
 
         <aside className="border-t border-trailhead-dark/20 bg-trailhead px-4 py-10 text-white sm:py-12">
-          <div className="mx-auto flex max-w-6xl flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
             <p className="text-lg font-semibold sm:text-xl">
               Are you a trip organizer? List your trips free.
             </p>
