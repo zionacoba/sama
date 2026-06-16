@@ -149,7 +149,7 @@ export default function FoundingPartnersPage() {
         </section>
       </main>
 
-      <Footer />
+      <Footer hideBecomeOrganizer />
     </div>
   );
 }

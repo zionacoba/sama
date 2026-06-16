@@ -187,7 +187,7 @@ export default function OrganizersPage() {
         </section>
       </main>
 
-      <Footer />
+      <Footer hideBecomeOrganizer />
     </div>
   );
 }
