@@ -107,36 +107,26 @@ export default async function Home() {
       <Navbar />
 
       <main>
-        <section className="relative isolate flex min-h-[62vh] items-center justify-center overflow-hidden bg-trailhead-dark px-4 py-20 text-center sm:min-h-[66vh] lg:min-h-[72vh]">
+        <section className="relative isolate overflow-hidden border-b border-stone-200 bg-trailhead-dark px-4 py-16 md:py-32">
           <Image
             src="/hero.jpg"
-            alt="Sunset over a mountain range in the Philippines"
+            alt=""
             fill
             priority
             quality={80}
             sizes="100vw"
-            className="object-cover object-[50%_60%]"
-          />
-          <div
-            className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/40 to-black/75"
+            className="object-cover object-[50%_70%]"
             aria-hidden
           />
-          <div className="relative mx-auto max-w-3xl">
-            <h1 className="text-balance text-3xl font-semibold tracking-tight text-white drop-shadow-sm sm:text-5xl lg:text-6xl">
-              Find your next adventure
-            </h1>
-            <p className="mx-auto mt-4 max-w-xl text-pretty text-base text-white/90 sm:text-lg">
-              Discover and book guided outdoor trips across the Philippines, led by trusted local organizers.
-            </p>
-          </div>
-        </section>
-
-        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 py-16 md:py-32">
-          <div className="mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl text-center">
-            <h1 className="text-balance text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl xl:text-6xl" style={{ color: "#1A3D2B" }}>
+          <div
+            className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/60"
+            aria-hidden
+          />
+          <div className="relative mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl text-center">
+            <h1 className="text-balance text-3xl font-medium tracking-tight text-white drop-shadow-sm sm:text-4xl md:text-5xl xl:text-6xl">
               Discover trips. Book your slot. Join the group.
             </h1>
-            <p className="mt-3 text-pretty text-stone-600 sm:text-lg">
+            <p className="mt-3 text-pretty text-stone-100 sm:text-lg">
               Find guided hikes, freediving weekends, and beach trips across the Philippines, led by trusted local organizers.
             </p>
             <form
