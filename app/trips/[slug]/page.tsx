@@ -380,12 +380,11 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
   };
 
   return (
-    <>
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026") }}
-    />
     <div className="min-h-full bg-stone-50 text-stone-900 font-sans">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026") }}
+      />
       {published === "1" && <PublishedBanner tripSlug={slug} />}
       <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
@@ -871,6 +870,5 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
       <Footer />
     </div>
-    </>
   );
 }
