@@ -154,35 +154,54 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-stone-900">10. Intellectual Property</h2>
+              <h2 className="text-lg font-bold text-stone-900">10. Prohibited Uses</h2>
+              <p className="mt-2 leading-relaxed">
+                Sama is exclusively for legitimate, safe outdoor adventure trips and experiences. Organizers may not list, offer, or use the platform for any of the following:
+              </p>
+              <ul className="mt-2 space-y-1.5 leading-relaxed">
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Any illegal activity, goods, or services under Philippine law.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Weapons, firearms, explosives, drugs, or regulated or controlled substances.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Adult content or sexual services.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Gambling or games of chance.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Trips or activities that are unsafe, misrepresented, or that the organizer is not qualified or equipped to run safely.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Any activity that endangers participants, host communities, or the environment.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Any attempt to use the platform to process payments unrelated to a genuine outdoor trip listed on Sama.</span></li>
+              </ul>
+              <p className="mt-4 leading-relaxed">
+                Sama reviews every organizer before they are approved and reserves the right to remove any listing or organizer that violates these terms. Organizers are responsible for ensuring their trips comply with all applicable laws, permits, and safety standards.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-bold text-stone-900">11. Intellectual Property</h2>
               <p className="mt-2 leading-relaxed">
                 All content on Sama — including the platform design, logo, and features — is owned by Paul Zion Acoba. You may not reproduce, distribute, or create derivative works without written permission.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-stone-900">11. Limitation of Liability</h2>
+              <h2 className="text-lg font-bold text-stone-900">12. Limitation of Liability</h2>
               <p className="mt-2 leading-relaxed">
                 To the maximum extent permitted by Philippine law, Sama and its operators shall not be liable for any indirect, incidental, or consequential damages arising from your use of the platform or participation in any trip listed on it.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-stone-900">12. Changes to Terms</h2>
+              <h2 className="text-lg font-bold text-stone-900">13. Changes to Terms</h2>
               <p className="mt-2 leading-relaxed">
                 Sama reserves the right to update these Terms at any time. Continued use of the platform after changes constitutes acceptance of the new Terms. Material changes will be communicated via email.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-stone-900">13. Governing Law</h2>
+              <h2 className="text-lg font-bold text-stone-900">14. Governing Law</h2>
               <p className="mt-2 leading-relaxed">
                 These Terms are governed by the laws of the Republic of the Philippines. Any disputes shall be resolved exclusively in the courts of Mandaluyong City, Philippines.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-stone-900">14. Contact</h2>
+              <h2 className="text-lg font-bold text-stone-900">15. Contact</h2>
               <p className="mt-2 leading-relaxed">
                 For questions about these Terms, contact:{" "}
                 <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a>
