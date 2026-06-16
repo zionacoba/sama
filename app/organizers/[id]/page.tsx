@@ -342,7 +342,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-semibold text-stone-900">
-                        {review.full_name ?? "Verified adventurer"}
+                        {review.full_name ?? "Verified joiner"}
                       </p>
                       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                         <Stars rating={review.rating} />

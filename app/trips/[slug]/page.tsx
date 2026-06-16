@@ -633,7 +633,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                     {reviews.map((review) => (
                       <li key={review.id} className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
                         <div>
-                          <p className="font-semibold text-stone-900">{review.full_name ?? "Verified adventurer"}</p>
+                          <p className="font-semibold text-stone-900">{review.full_name ?? "Verified joiner"}</p>
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                             <Stars rating={review.rating} />
                             <span className="text-xs text-stone-500">{formatReviewDate(review.created_at)}</span>

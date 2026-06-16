@@ -558,7 +558,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                     <li key={review.id} className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="font-semibold text-stone-900">{review.full_name ?? "Verified adventurer"}</p>
+                          <p className="font-semibold text-stone-900">{review.full_name ?? "Verified joiner"}</p>
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                             <span className="text-amber-400">{"★".repeat(Math.round(review.rating))}</span>
                             <span className="text-stone-200">{"★".repeat(5 - Math.round(review.rating))}</span>
