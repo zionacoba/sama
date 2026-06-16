@@ -60,7 +60,7 @@ export default function RootLayout({
           >
             Skip to main content
           </a>
-          <div id="main-content" tabIndex={-1} className="flex flex-1 flex-col focus:outline-none">
+          <div id="main-content" tabIndex={-1} className="flex flex-1 flex-col focus:outline-none [&>*]:flex [&>*]:grow [&>*]:flex-col">
             {children}
           </div>
           <CookieConsent />
