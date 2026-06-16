@@ -115,11 +115,7 @@ export default async function Home() {
             priority
             quality={80}
             sizes="100vw"
-            className="object-cover object-[50%_30%]"
-            aria-hidden
-          />
-          <div
-            className="absolute inset-0 bg-white/55"
+            className="object-cover object-[50%_15%]"
             aria-hidden
           />
           <div className="relative mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl text-center">
