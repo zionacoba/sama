@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Navbar } from "@/app/components/navbar";
+import { Footer } from "@/app/components/footer";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -193,21 +193,7 @@ export default function TermsPage() {
         </div>
       </main>
 
-      <footer className="border-t border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-500">
-        © {new Date().getFullYear()} Sama.
-        {" · "}
-        <Link href="/organizers" className="underline-offset-4 hover:text-trailhead hover:underline">
-          Become an Organizer
-        </Link>
-        {" · "}
-        <Link href="/terms" className="underline-offset-4 hover:text-trailhead hover:underline">
-          Terms of Service
-        </Link>
-        {" · "}
-        <Link href="/privacy" className="underline-offset-4 hover:text-trailhead hover:underline">
-          Privacy Policy
-        </Link>
-      </footer>
+      <Footer />
     </div>
   );
 }
