@@ -265,7 +265,7 @@ export default async function Home() {
               Are you a trip organizer? List your trips free.
             </p>
             <Link
-              href="/apply"
+              href="/organizers"
               className="inline-flex shrink-0 items-center justify-center rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-trailhead shadow transition hover:bg-trailhead-muted"
             >
               Get started
