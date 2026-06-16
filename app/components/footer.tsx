@@ -25,8 +25,12 @@ export function Footer() {
         Privacy Policy
       </Link>
       {" · "}
-      <a href="mailto:hello@sama.com.ph" className="underline-offset-4 hover:text-trailhead hover:underline">
+      <Link href="/contact" className="underline-offset-4 hover:text-trailhead hover:underline">
         Contact
+      </Link>
+      {" · "}
+      <a href="mailto:hello@sama.com.ph" className="underline-offset-4 hover:text-trailhead hover:underline">
+        Email
       </a>
       {" · "}
       <a
@@ -40,6 +44,11 @@ export function Footer() {
           className="h-5 w-auto inline-block"
         />
       </a>
+      <p className="mt-3 text-xs text-stone-400">
+        ACPAM Web Portal Services (operating as Sama)
+        <br />
+        2F SpaceMD, 489 Shaw Blvd., Addition Hills, City of Mandaluyong, NCR 1550, Philippines
+      </p>
     </footer>
   );
 }
