@@ -537,7 +537,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               <div className="grid items-start gap-4">
                 {includesList.length > 0 && (
                   <CollapsibleSection title="What's included" defaultOpen className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-                    <ul className="mt-3 space-y-1.5">
+                    <ul className={`mt-3 ${includesList.length >= 6 ? "grid gap-x-6 gap-y-1.5 sm:grid-cols-2" : "space-y-1.5"}`}>
                       {includesList.map((item) => (
                         <li key={item} className="flex items-start gap-2 text-sm text-stone-600">
                           <span className="mt-0.5 shrink-0 text-trailhead" aria-hidden="true">✓</span>
@@ -549,7 +549,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                 )}
                 {whatToBringList.length > 0 && (
                   <CollapsibleSection title="What to bring" defaultOpen className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-                    <ul className="mt-3 space-y-1.5">
+                    <ul className={`mt-3 ${whatToBringList.length >= 6 ? "grid gap-x-6 gap-y-1.5 sm:grid-cols-2" : "space-y-1.5"}`}>
                       {whatToBringList.map((item) => (
                         <li key={item} className="flex items-start gap-2 text-sm text-stone-600">
                           <span className="mt-0.5 shrink-0 text-stone-400" aria-hidden="true">•</span>
