@@ -59,7 +59,7 @@ function formatDate(date: string) {
   }).format(new Date(date));
 }
 
-function DifficultyBadge({ level }: { level: string }) {
+function DifficultyBadge({ level, className = "" }: { level: string; className?: string }) {
   const colorClass =
     level === "Beginner"
       ? "bg-emerald-100 text-emerald-800"
@@ -68,7 +68,7 @@ function DifficultyBadge({ level }: { level: string }) {
         : "bg-red-100 text-red-800";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${colorClass}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${colorClass} ${className}`}
     >
       {level}
     </span>
@@ -214,9 +214,18 @@ export default async function Home() {
                         priority={index < 4}
                       />
                     )}
+                    {/* Mobile only: chips overlaid top-left on the photo with a subtle backdrop for legibility. Desktop keeps the chips below the image. */}
+                    <div className="absolute left-2 top-2 flex flex-wrap items-center gap-1.5 md:hidden">
+                      {trip.activity_type && (
+                        <span className="inline-flex items-center rounded-full bg-trailhead-muted/95 px-2 py-0.5 text-xs font-semibold text-trailhead shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
+                          {trip.activity_type}
+                        </span>
+                      )}
+                      <DifficultyBadge level={trip.difficulty} className="shadow-sm ring-1 ring-black/5 backdrop-blur-sm" />
+                    </div>
                   </div>
-                  <div className="flex flex-1 flex-col gap-2 p-4">
-                    <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex flex-1 flex-col gap-1.5 p-3 md:gap-2 md:p-4">
+                    <div className="hidden flex-wrap items-center gap-1.5 md:flex">
                       {trip.activity_type && (
                         <span className="inline-flex items-center rounded-full bg-trailhead-muted px-2 py-0.5 text-xs font-semibold text-trailhead">
                           {trip.activity_type}
@@ -229,8 +238,8 @@ export default async function Home() {
                     <p className="text-xs text-stone-500">
                       {formatDate(trip.date_start)}{trip.duration && ` · ${trip.duration}`}
                     </p>
-                    <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-3">
-                      <p className="text-lg font-bold text-trailhead">
+                    <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-2.5 md:pt-3">
+                      <p className="text-base font-bold text-trailhead md:text-lg">
                         {formatPrice(trip.price)}
                       </p>
                       <span className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-500"}`}>
