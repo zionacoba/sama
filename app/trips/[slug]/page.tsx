@@ -534,7 +534,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
             )}
 
             {(includesList.length > 0 || whatToBringList.length > 0) && (
-              <div className="grid items-start gap-4 sm:grid-cols-2">
+              <div className="grid items-start gap-4">
                 {includesList.length > 0 && (
                   <CollapsibleSection title="What's included" defaultOpen className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
                     <ul className="mt-3 space-y-1.5">
