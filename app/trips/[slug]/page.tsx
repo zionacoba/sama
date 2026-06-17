@@ -488,7 +488,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               const validMeetingPoints = (tripData.meeting_points ?? []).filter((mp) => mp.location?.trim());
               if (validMeetingPoints.length > 0) {
                 return (
-                  <CollapsibleSection title="Meeting points" className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+                  <CollapsibleSection title="Meeting points" defaultOpen className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
                     <ul className="mt-2 space-y-1">
                       {validMeetingPoints.map((mp, idx) => (
                         <li key={idx} className="text-stone-700">
@@ -502,7 +502,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               }
               if (tripData.meeting_point?.trim()) {
                 return (
-                  <CollapsibleSection title="Meeting point" className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+                  <CollapsibleSection title="Meeting point" defaultOpen className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
                     <p className="mt-1.5 font-medium text-stone-900">{tripData.meeting_point}</p>
                   </CollapsibleSection>
                 );
