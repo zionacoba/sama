@@ -115,7 +115,7 @@ export default async function Home() {
             priority
             quality={80}
             sizes="100vw"
-            className="object-cover object-[50%_15%]"
+            className="object-cover object-[50%_0%]"
             aria-hidden
           />
           <div className="relative mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl text-center">
@@ -155,7 +155,7 @@ export default async function Home() {
                 Search
               </button>
             </form>
-            <div className="-mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0">
+            <div className="-mx-4 mt-6 flex justify-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0">
               {filterChips.map((chip) => (
                 <Link
                   key={chip}
