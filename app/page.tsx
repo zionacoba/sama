@@ -107,7 +107,7 @@ export default async function Home() {
       <Navbar />
 
       <main>
-        <section className="relative isolate overflow-hidden border-b border-stone-200 bg-trailhead-dark px-4 py-16 md:py-32">
+        <section className="relative isolate overflow-hidden border-b border-stone-200 bg-trailhead-dark px-4 pt-24 pb-16 md:py-32">
           <Image
             src="/hero.jpg"
             alt=""
@@ -116,6 +116,13 @@ export default async function Home() {
             quality={80}
             sizes="100vw"
             className="object-cover object-[50%_0%]"
+            aria-hidden
+          />
+          {/* Mobile-only: solid white top fading into a lightened image band so the
+              headline/subline sit on airy white and the photo reads as a deliberate
+              band behind the search and chips. Hidden on desktop (looks good as-is). */}
+          <div
+            className="absolute inset-0 bg-gradient-to-b from-white from-30% via-white/70 to-white/35 md:hidden"
             aria-hidden
           />
           <div className="relative mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl text-center">
