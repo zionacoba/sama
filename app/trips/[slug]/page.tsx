@@ -687,7 +687,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
           </div>
 
           {/* Desktop sidebar */}
-          <aside className="hidden lg:sticky lg:top-6 lg:block">
+          <aside className="hidden lg:sticky lg:top-24 lg:block">
             <div className="space-y-4">
             <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm space-y-4">
               <div>
