@@ -138,7 +138,7 @@ function CancellationPolicyCard({ policy, custom }: { policy: string | null; cus
     <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-center gap-3">
         <span className="text-xl" aria-hidden>🛡️</span>
-        <h2 className="text-lg font-bold text-stone-900">Cancellation policy</h2>
+        <h2 className="text-base font-bold text-stone-900">Cancellation policy</h2>
         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.color}`}>
           {meta.label}
         </span>
@@ -165,7 +165,7 @@ function CollapsibleSection({
   return (
     <details open={defaultOpen} className={`group ${className}`}>
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
-        <h2 className="text-lg font-bold text-stone-900">{title}</h2>
+        <h2 className="text-base font-bold text-stone-900">{title}</h2>
         <svg className="h-5 w-5 shrink-0 text-stone-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
@@ -480,8 +480,8 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
           {/* Main column */}
           <div className="space-y-4 pb-20 lg:pb-0">
             <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
-              <h2 className="text-lg font-bold text-stone-900">Overview</h2>
-              <p className="mt-3 whitespace-pre-line leading-relaxed text-stone-600">{tripData.description}</p>
+              <h2 className="text-base font-bold text-stone-900">Overview</h2>
+              <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-stone-600">{tripData.description}</p>
             </div>
 
             {(() => {
@@ -491,7 +491,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   <CollapsibleSection title="Meeting points" defaultOpen className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
                     <ul className="mt-2 space-y-1">
                       {validMeetingPoints.map((mp, idx) => (
-                        <li key={idx} className="text-stone-700">
+                        <li key={idx} className="text-sm text-stone-700">
                           <span className="font-medium">{mp.location}</span>
                           {mp.time && <span className="text-stone-500"> · {mp.time}</span>}
                         </li>
@@ -503,7 +503,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
               if (tripData.meeting_point?.trim()) {
                 return (
                   <CollapsibleSection title="Meeting point" defaultOpen className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-                    <p className="mt-1.5 font-medium text-stone-900">{tripData.meeting_point}</p>
+                    <p className="mt-1.5 text-sm font-medium text-stone-900">{tripData.meeting_point}</p>
                   </CollapsibleSection>
                 );
               }
@@ -512,7 +512,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
             {siblingRunsData && siblingRunsData.length > 0 && (
               <div className="rounded-2xl border border-trailhead/20 bg-trailhead-muted p-4 sm:p-5">
-                <h2 className="text-lg font-bold text-stone-900">Other available dates</h2>
+                <h2 className="text-base font-bold text-stone-900">Other available dates</h2>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {siblingRunsData.map((run) => (
                     <Link
@@ -569,7 +569,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
             {organizer && (
               <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
-                <h2 className="text-lg font-bold text-stone-900">Your organizer</h2>
+                <h2 className="text-base font-bold text-stone-900">Your organizer</h2>
                 <Link href={`/organizers/${tripData.organizer_id}`} className="mt-3 flex items-center gap-3 group">
                   <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-trailhead-muted text-base font-bold text-trailhead">
                     {organizer.photo_url ? (
@@ -605,7 +605,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
             {organizer && (
               <div id="reviews">
                 <div className="flex items-baseline justify-between gap-4">
-                  <h2 className="text-lg font-bold text-stone-900">
+                  <h2 className="text-base font-bold text-stone-900">
                     Reviews for {organizer.display_name ?? organizer.full_name}
                     {totalReviewCount > 0 && (
                       <span className="ml-2 text-base font-normal text-stone-500">({totalReviewCount})</span>
