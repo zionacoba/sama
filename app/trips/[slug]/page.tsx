@@ -399,7 +399,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
       <main>
         {/* Compact hero */}
-        <section className="border-b border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 pt-2 pb-5 sm:pt-4">
+        <section className="border-b-0 border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 pt-2 pb-5 sm:border-b sm:pt-4">
           <div className="mx-auto max-w-6xl">
             <div className="flex items-center gap-2">
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
