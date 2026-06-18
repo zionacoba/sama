@@ -591,7 +591,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   </span>
                 )}
                 {organizer.bio?.trim() && (
-                  <p className="mt-3 text-sm leading-relaxed text-stone-600">{organizer.bio}</p>
+                  <p className="mt-3 hidden text-sm leading-relaxed text-stone-600 sm:block">{organizer.bio}</p>
                 )}
                 <Link
                   href={`/organizers/${tripData.organizer_id}`}
