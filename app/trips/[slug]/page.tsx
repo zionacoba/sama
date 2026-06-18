@@ -399,7 +399,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
       <main>
         {/* Compact hero */}
-        <section className="border-b-0 border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 pt-2 pb-5 sm:border-b sm:pt-4">
+        <section className="border-b-0 border-stone-200 bg-gradient-to-b from-trailhead-muted/60 to-stone-50 px-4 pt-2 pb-2 sm:border-b sm:pt-4 sm:pb-5">
           <div className="mx-auto max-w-6xl">
             <div className="flex items-center gap-2">
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -423,7 +423,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                 className="lg:hidden flex-shrink-0 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-600 shadow-sm transition hover:border-trailhead hover:text-trailhead"
               />
             </div>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-stone-900 sm:mt-2 sm:text-3xl">
               {tripData.title}
             </h1>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-stone-600">
