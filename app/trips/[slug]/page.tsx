@@ -144,7 +144,6 @@ function CancellationPolicyCard({ policy, custom }: { policy: string | null; cus
         </span>
       </div>
       <p className="mt-2 text-sm leading-relaxed text-stone-500">{text}</p>
-      <p className="mt-2 text-sm leading-relaxed text-stone-500">Refunds to GCash are processed automatically. QR Ph payments are processed manually, and our team will reach out within 3–5 business days.</p>
     </div>
   );
 }
