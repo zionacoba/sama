@@ -157,17 +157,24 @@ export function PhotoUploader({
     setDragOverIdx(i);
   }
 
+  // Shared reorder logic for both drag-and-drop (desktop) and the tap-based
+  // move buttons (mobile). Moves the item at `from` to position `to`.
+  function move(from: number, to: number) {
+    setItems((prev) => {
+      if (to < 0 || to >= prev.length || from === to) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
+
   function handleDrop(e: React.DragEvent, i: number) {
     e.preventDefault();
     const src = dragSrc.current;
     if (src === null || src === i) { setDragOverIdx(null); return; }
     dragSrc.current = null;
-    setItems((prev) => {
-      const next = [...prev];
-      const [dragged] = next.splice(src, 1);
-      next.splice(i, 0, dragged);
-      return next;
-    });
+    move(src, i);
     setDragOverIdx(null);
   }
 
@@ -231,20 +238,46 @@ export function PhotoUploader({
 
               {item.kind !== "uploading" && (
                 <>
-                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 rounded bg-black/40 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition group-hover:opacity-100">
+                  <span className="pointer-events-none absolute bottom-1.5 right-1.5 hidden rounded bg-black/40 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition group-hover:opacity-100 lg:block">
                     ⠿ drag to reorder
                   </span>
                   <button
                     type="button"
                     onClick={() => remove(i)}
-                    className={`absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-sm text-white transition hover:bg-red-600 ${
-                      item.kind === "error" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    className={`absolute right-1.5 top-1.5 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-sm text-white transition hover:bg-red-600 lg:h-6 lg:w-6 ${
+                      item.kind === "error" ? "opacity-100" : "opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                     }`}
                     aria-label="Remove photo"
                   >
                     ✕
                   </button>
                 </>
+              )}
+
+              {/* Tap-based reorder for touch. Mobile only (lg:hidden) so desktop
+                  drag-and-drop is untouched. Sits in a bar along the bottom edge
+                  with a semi-opaque backdrop for legibility over any photo. */}
+              {item.kind === "url" && (
+                <div className="absolute inset-x-0 bottom-0 flex items-stretch justify-between gap-1 bg-black/40 p-1 lg:hidden">
+                  <button
+                    type="button"
+                    onClick={() => move(i, i - 1)}
+                    disabled={i === 0}
+                    aria-label="Move photo earlier"
+                    className="flex h-10 min-w-[40px] flex-1 items-center justify-center rounded-lg bg-white/20 text-base text-white transition hover:bg-white/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-30"
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(i, i + 1)}
+                    disabled={i === items.length - 1}
+                    aria-label="Move photo later"
+                    className="flex h-10 min-w-[40px] flex-1 items-center justify-center rounded-lg bg-white/20 text-base text-white transition hover:bg-white/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-30"
+                  >
+                    →
+                  </button>
+                </div>
               )}
             </div>
           ))}
