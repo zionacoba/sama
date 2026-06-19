@@ -12,6 +12,7 @@ type Trip = {
   activity_type: string | null;
   difficulty: string;
   date_start: string;
+  duration: string | null;
   price: number;
   total_slots: number;
   remaining_slots: number;
@@ -209,7 +210,7 @@ export function OrganizerTripsSection({ trips }: { trips: Trip[] }) {
                               <DifficultyBadge level={trip.difficulty} />
                             </div>
                             <h3 className="line-clamp-2 font-bold leading-snug text-stone-900">{trip.title}</h3>
-                            <p className="text-xs text-stone-400">{formatDate(trip.date_start)}</p>
+                            <p className="text-xs text-stone-400">{formatDate(trip.date_start)}{trip.duration ? ` · ${trip.duration}` : ""}</p>
                             <div className="mt-auto flex items-baseline gap-3">
                               <p className="text-base font-bold text-trailhead">{formatPrice(trip.price)}</p>
                               {activeTab === "upcoming" && (

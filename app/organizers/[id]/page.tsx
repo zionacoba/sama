@@ -20,6 +20,7 @@ type Trip = {
   activity_type: string | null;
   difficulty: string;
   date_start: string;
+  duration: string | null;
   price: number;
   total_slots: number;
   remaining_slots: number;
@@ -115,7 +116,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
       .maybeSingle(),
     admin
       .from("trips")
-      .select("id, slug, title, activity_type, difficulty, date_start, price, total_slots, remaining_slots, photos, status")
+      .select("id, slug, title, activity_type, difficulty, date_start, duration, price, total_slots, remaining_slots, photos, status")
       .eq("organizer_id", id)
       .neq("status", "draft")
       .order("date_start", { ascending: true }),
