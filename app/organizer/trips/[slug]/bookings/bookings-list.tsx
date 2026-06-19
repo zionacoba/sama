@@ -364,11 +364,11 @@ export function BookingsListWithTabs({
       </div>
 
       {paymentType === "downpayment" && minDownpayment != null ? (
-        <div className="text-sm text-stone-500 mb-3">
+        <div className="mt-4 text-sm text-stone-500 mb-3 lg:mt-0">
           Trip price: {formatPeso(price)} · Downpayment: {formatPeso(minDownpayment)} · Balance due: {formatPeso(price - minDownpayment)}
         </div>
       ) : (
-        <div className="text-sm text-stone-500 mb-3">
+        <div className="mt-4 text-sm text-stone-500 mb-3 lg:mt-0">
           Trip price: {formatPeso(price)} · Full payment
         </div>
       )}
