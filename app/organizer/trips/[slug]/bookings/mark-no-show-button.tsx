@@ -31,7 +31,7 @@ export function MarkNoShowButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-500 transition hover:border-stone-400 hover:text-stone-700"
+        className="min-h-[40px] lg:min-h-0 rounded-lg border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-500 transition hover:border-stone-400 hover:text-stone-700"
       >
         Mark as no show
       </button>

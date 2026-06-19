@@ -33,7 +33,7 @@ export function MarkBalanceButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-trailhead/30 px-2 py-1 text-xs font-medium text-trailhead transition hover:bg-trailhead-muted whitespace-nowrap"
+        className="min-h-[40px] lg:min-h-0 rounded-lg border border-trailhead/30 px-2 py-1 text-xs font-medium text-trailhead transition hover:bg-trailhead-muted whitespace-nowrap"
       >
         Mark Balance Collected
       </button>

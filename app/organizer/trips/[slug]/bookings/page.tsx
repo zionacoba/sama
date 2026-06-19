@@ -376,7 +376,127 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
               const totalSlots = group.reduce((sum, b) => sum + b.slots, 0);
               const isUnknown = label === NO_PICKUP;
               return (
-                <div key={label} className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                <div key={label}>
+                {/* Mobile: section heading + one card per booking */}
+                <div className="space-y-3 lg:hidden">
+                  <div className="flex items-center gap-3 px-1">
+                    <h2 className={`font-semibold ${isUnknown ? "text-stone-500 italic" : "text-stone-900"}`}>
+                      {label}
+                    </h2>
+                    <span className="rounded-full bg-trailhead-muted px-2.5 py-0.5 text-xs font-semibold text-trailhead">
+                      {totalSlots} {totalSlots === 1 ? "joiner" : "joiners"}
+                    </span>
+                  </div>
+                  {group.map((b) => (
+                    <div key={b.id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          {b.nickname && <div className="font-semibold text-stone-900">{b.nickname}</div>}
+                          <div className={b.nickname ? "text-sm text-stone-500" : "font-semibold text-stone-900"}>
+                            {b.full_name}
+                          </div>
+                          {b.facebook_url && (
+                            <a
+                              href={b.facebook_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-trailhead hover:underline"
+                            >
+                              FB Profile
+                            </a>
+                          )}
+                        </div>
+                        <StatusBadge status={b.status} />
+                      </div>
+
+                      {(b.medical_notes || b.notes) && (
+                        <p className="mt-2 text-xs text-stone-600">
+                          🏥 {[b.medical_notes, b.notes].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
+                      {(() => {
+                        const qs: string[] = b.custom_questions_snapshot ?? (trip as { custom_questions?: string[] | null; custom_question?: string | null }).custom_questions ?? ((trip as { custom_question?: string | null }).custom_question ? [(trip as { custom_question?: string | null }).custom_question!] : []);
+                        const as_: string[] = (b.custom_question_answers as string[] | null) ?? (b.custom_question_answer ? [b.custom_question_answer] : []);
+                        return qs.map((q, qi) => as_[qi] ? (
+                          <p key={qi} className="mt-1 text-xs text-stone-500">
+                            <span className="font-medium text-stone-600">{q}:</span>{" "}
+                            {as_[qi]}
+                          </p>
+                        ) : null);
+                      })()}
+
+                      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-stone-100 pt-3 text-sm">
+                        <div className="min-w-0">
+                          <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Slots</dt>
+                          <dd className="mt-0.5 text-stone-700">
+                            {b.slots}
+                            {b.slots > 1 && participantsMap.has(b.id) && (() => {
+                              const ps = participantsMap.get(b.id)!;
+                              const done = ps.filter((p) => p.completed).length;
+                              return (
+                                <details className="mt-1">
+                                  <summary className="cursor-pointer list-none text-xs font-medium text-stone-500 hover:text-stone-600">
+                                    {done}/{b.slots} confirmed
+                                  </summary>
+                                  <ul className="mt-1 space-y-0.5 pl-0.5">
+                                    {ps.map((p) => (
+                                      <li key={p.slot_number} className="flex items-center gap-1 text-xs">
+                                        <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
+                                        <span className={p.completed ? "text-stone-700" : "text-stone-500"}>
+                                          {p.full_name ?? `Participant ${p.slot_number + 1}`}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </details>
+                              );
+                            })()}
+                          </dd>
+                        </div>
+                        <div className="min-w-0">
+                          <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Booked on</dt>
+                          <dd className="mt-0.5 text-stone-500">{formatDateTime(b.created_at)}</dd>
+                        </div>
+                      </dl>
+
+                      <div className="mt-3 flex items-start justify-between gap-3 border-t border-stone-100 pt-3">
+                        <span className="text-xs font-medium uppercase tracking-wide text-stone-500">Payment</span>
+                        <div className="flex flex-col items-end gap-1 text-right">
+                          {b.payment_option === "downpayment" && b.amount_due != null ? (
+                            b.balance_collected ? (
+                              <span className="text-xs font-semibold text-emerald-600">Fully paid</span>
+                            ) : (
+                              <>
+                                <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">Balance pending</span>
+                                {b.status === "confirmed" && (
+                                  <>
+                                    <MarkBalanceButton
+                                      bookingId={b.id}
+                                      participantName={b.full_name}
+                                      balanceAmount={formatPeso(b.total_amount - b.amount_due)}
+                                    />
+                                    <span className="text-xs text-stone-500">Participant can pay balance online or directly to you. Mark as collected once received. Balance payments made online are remitted 24-48 hours after the trip date.</span>
+                                  </>
+                                )}
+                              </>
+                            )
+                          ) : (
+                            <span className="text-xs text-stone-500">Paid in full</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {needsManualApproval && b.status === "pending" && (
+                        <div className="mt-3 border-t border-stone-100 pt-3">
+                          <BookingActions bookingId={b.id} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: table (unchanged) */}
+                <div className="hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm lg:block">
                   <div className={`flex items-center gap-3 border-b border-stone-100 px-5 py-3.5 ${isUnknown ? "bg-stone-50" : "bg-white"}`}>
                     <h2 className={`font-semibold ${isUnknown ? "text-stone-500 italic" : "text-stone-900"}`}>
                       {label}
@@ -495,6 +615,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                     </table>
                   </div>
                 </div>
+                </div>
               );
             })}
           </div>
@@ -502,12 +623,62 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
 
         {/* Waitlist tab */}
         {activeView === "waitlist" && (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-            {waitlist.length === 0 ? (
+          waitlist.length === 0 ? (
+            <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
               <p className="px-6 py-12 text-center text-sm text-stone-500">No waitlist entries yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-sm">
+            </div>
+          ) : (
+            <>
+              {/* Mobile: one card per waitlist entry */}
+              <div className="mt-4 space-y-3 lg:hidden">
+                {waitlist.map((entry) => (
+                  <div key={entry.id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-stone-900">{entry.full_name}</div>
+                        <div className="mt-0.5 break-all text-xs text-stone-500">{entry.email}</div>
+                      </div>
+                      {entry.notified && (
+                        <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                          Notified ✓
+                        </span>
+                      )}
+                    </div>
+
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-stone-100 pt-3 text-sm">
+                      <div className="min-w-0">
+                        <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Phone</dt>
+                        <dd className="mt-0.5 text-stone-600">{entry.phone ?? "—"}</dd>
+                      </div>
+                      <div className="min-w-0">
+                        <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Slots</dt>
+                        <dd className="mt-0.5 text-stone-700">{entry.slots}</dd>
+                      </div>
+                      <div className="min-w-0">
+                        <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Joined on</dt>
+                        <dd className="mt-0.5 text-stone-500">{formatDateTime(entry.created_at)}</dd>
+                      </div>
+                    </dl>
+
+                    {!entry.notified && (
+                      <form action={notifyWaitlistEntry} className="mt-3 border-t border-stone-100 pt-3">
+                        <input type="hidden" name="id" value={entry.id} />
+                        <button
+                          type="submit"
+                          className="min-h-[40px] lg:min-h-0 w-full rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-trailhead hover:text-trailhead"
+                        >
+                          Notify
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: table (unchanged) */}
+              <div className="mt-4 hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm lg:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[640px] text-sm">
                   <thead>
                     <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
                       <th className="px-5 py-3">Name</th>
@@ -536,7 +707,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                               <input type="hidden" name="id" value={entry.id} />
                               <button
                                 type="submit"
-                                className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-trailhead hover:text-trailhead"
+                                className="min-h-[40px] lg:min-h-0 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-trailhead hover:text-trailhead"
                               >
                                 Notify
                               </button>
@@ -547,9 +718,10 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
-            )}
-          </div>
+            </>
+          )
         )}
       </main>
     </div>
