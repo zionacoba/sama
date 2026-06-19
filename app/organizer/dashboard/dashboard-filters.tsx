@@ -64,7 +64,7 @@ export function DashboardFilters({ search, status, dateFrom, dateTo }: Props) {
             className="w-full rounded-xl border border-stone-200 bg-white py-2 pl-9 pr-4 text-sm text-stone-900 shadow-sm outline-none placeholder:text-stone-400 focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
           <input
             type="date"
             defaultValue={dateFrom}

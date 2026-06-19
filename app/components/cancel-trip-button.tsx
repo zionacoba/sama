@@ -90,7 +90,7 @@ export function CancelTripButton({ tripSlug, tripTitle }: Props) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="cancel-trip-title"
-            className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 shadow-xl"
+            className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-2xl border border-stone-200 bg-white p-6 shadow-xl"
           >
             <h2 id="cancel-trip-title" className="text-base font-bold text-stone-900">Cancel this trip?</h2>
 
