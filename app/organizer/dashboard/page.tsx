@@ -292,14 +292,14 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
   return (
     <div className="min-h-screen bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight hover:opacity-90">
             <img src="/sama-mark.svg" alt="Sama" className="h-7 w-auto brightness-0 invert" />
             Sama
             <span className="mx-1 font-normal text-trailhead-muted">·</span>
             <span className="text-base font-normal text-trailhead-muted">Organizer Dashboard</span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <Link
               href={`/organizers/${organizer.id}`}
               target="_blank"
@@ -357,7 +357,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
 
         {/* Tabs: Trips | Templates */}
         <div className="mt-8">
-          <div className="flex w-fit gap-1 rounded-xl border border-stone-200 bg-white p-1 shadow-sm">
+          <div className="flex flex-wrap gap-1 rounded-xl border border-stone-200 bg-white p-1 shadow-sm">
             {([
               { key: "trips", label: "Trips", count: regularTrips.length, href: "/organizer/dashboard" },
               { key: "templates", label: "Templates", count: templateTrips.length, href: "/organizer/dashboard?tab=templates" },
@@ -626,7 +626,40 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                   {unpaidBookingRows.length === 0 ? (
                     <p className="px-5 py-8 text-center text-sm text-stone-500">No pending earnings yet.</p>
                   ) : (
-                    <table className="w-full text-sm">
+                    <>
+                    {/* Mobile cards */}
+                    <div className="divide-y divide-stone-100 lg:hidden">
+                      {unpaidBookingRows.map((b) => (
+                        <div key={b.id} className="px-5 py-4">
+                          <p className="font-semibold text-stone-900">{b.tripTitle}</p>
+                          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                            <div>
+                              <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Slots</dt>
+                              <dd className="mt-0.5 text-stone-700">{b.slots}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Gross</dt>
+                              <dd className="mt-0.5 text-stone-700">{formatPeso(b.grossAmount)}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Commission</dt>
+                              <dd className="mt-0.5 text-stone-700">
+                                {formatPeso(b.commissionAmount)}
+                                {b.commissionRate != null && (
+                                  <span className="ml-1 text-xs text-stone-500">({Math.round(b.commissionRate * 100)}%)</span>
+                                )}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Your earnings</dt>
+                              <dd className="mt-0.5 font-semibold text-trailhead">{formatPeso(b.netAmount)}</dd>
+                            </div>
+                          </dl>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Desktop table */}
+                    <table className="hidden w-full text-sm lg:table">
                       <thead>
                         <tr className="border-b border-stone-100 text-xs font-semibold uppercase tracking-wide text-stone-500">
                           <th className="px-5 py-2.5 text-left">Trip</th>
@@ -657,6 +690,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                         ))}
                       </tbody>
                     </table>
+                    </>
                   )}
                 </div>
               </div>
@@ -674,28 +708,30 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                       will be applied to your next payout for a refund issued after a previous payout was sent. This keeps your account balanced without requiring a manual transfer back.
                     </p>
                   </div>
-                  <table className="w-full text-sm">
+                  <div className="overflow-x-auto">
+                  <table className="w-full min-w-[420px] text-sm">
                     <thead>
                       <tr className="border-b border-amber-100 text-xs font-semibold uppercase tracking-wide text-amber-700">
-                        <th className="px-5 py-2.5 text-left">Date</th>
-                        <th className="px-5 py-2.5 text-left">Booking ref</th>
-                        <th className="px-5 py-2.5 text-right">Amount</th>
+                        <th className="px-3 py-2.5 text-left sm:px-5">Date</th>
+                        <th className="px-3 py-2.5 text-left sm:px-5">Booking ref</th>
+                        <th className="px-3 py-2.5 text-right sm:px-5">Amount</th>
                       </tr>
                     </thead>
                     <tbody>
                       {pendingDeductionRows.map((d) => (
                         <tr key={d.id} className="border-b border-amber-100 last:border-0">
-                          <td className="whitespace-nowrap px-5 py-3 text-stone-600">
+                          <td className="whitespace-nowrap px-3 py-3 text-stone-600 sm:px-5">
                             {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(d.createdAt))}
                           </td>
-                          <td className="px-5 py-3 text-stone-700">#{d.bookingId}</td>
-                          <td className="px-5 py-3 text-right font-semibold text-red-700">
+                          <td className="px-3 py-3 text-stone-700 sm:px-5">#{d.bookingId}</td>
+                          <td className="px-3 py-3 text-right font-semibold text-red-700 sm:px-5">
                             −{formatPeso(d.amount)}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
 
@@ -717,7 +753,33 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                   {payoutHistoryRows.length === 0 ? (
                     <p className="px-5 py-8 text-center text-sm text-stone-500">No payouts received yet.</p>
                   ) : (
-                    <table className="w-full text-sm">
+                    <>
+                    {/* Mobile cards */}
+                    <div className="divide-y divide-stone-100 lg:hidden">
+                      {payoutHistoryRows.map((p) => (
+                        <div key={p.id} className="px-5 py-4">
+                          <p className="font-semibold text-stone-900">
+                            {new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(p.remittedAt))}
+                          </p>
+                          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                            <div>
+                              <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Amount received</dt>
+                              <dd className="mt-0.5 font-semibold text-trailhead">{formatPeso(p.netAmount)}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Bookings</dt>
+                              <dd className="mt-0.5 text-stone-700">{p.bookingCount}</dd>
+                            </div>
+                            <div className="col-span-2 min-w-0">
+                              <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Reference</dt>
+                              <dd className="mt-0.5 break-words font-mono text-xs text-stone-700">{p.remittanceReference ?? "—"}</dd>
+                            </div>
+                          </dl>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Desktop table */}
+                    <table className="hidden w-full text-sm lg:table">
                       <thead>
                         <tr className="border-b border-stone-100 text-xs font-semibold uppercase tracking-wide text-stone-500">
                           <th className="px-5 py-2.5 text-left">Date remitted</th>
@@ -741,6 +803,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                         ))}
                       </tbody>
                     </table>
+                    </>
                   )}
                 </div>
               </div>
