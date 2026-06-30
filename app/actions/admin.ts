@@ -594,7 +594,15 @@ export async function exportPayoutHistoryCSV(): Promise<string> {
     };
 
   function esc(value: string | number | boolean | null | undefined): string {
-    const str = value == null ? "" : String(value);
+    let str = value == null ? "" : String(value);
+    // Neutralize CSV/spreadsheet formula injection on user-controllable text
+    // cells: a cell starting with one of these characters is treated as a
+    // formula by Excel/Sheets/LibreOffice. Prefix a single quote so the value
+    // is rendered as literal text. Numeric/amount cells (passed as numbers) are
+    // intentionally left untouched so their formatting is preserved.
+    if (typeof value === "string" && /^[=+\-@\t\r]/.test(str)) {
+      str = `'${str}`;
+    }
     if (str.includes(",") || str.includes('"') || str.includes("\n")) {
       return `"${str.replace(/"/g, '""')}"`;
     }
