@@ -198,26 +198,6 @@ export async function saveEmergencyContact(
   return { success: true };
 }
 
-export async function saveFacebookUrl(userId: string, facebookUrl: string): Promise<{ success: true } | { error: string }> {
-  if (!facebookUrl || facebookUrl.trim() === "") return { success: true };
-
-  const trimmed = facebookUrl.trim();
-  if (
-    !trimmed.startsWith("https://facebook.com/") &&
-    !trimmed.startsWith("https://www.facebook.com/") &&
-    !trimmed.startsWith("https://m.facebook.com/")
-  ) {
-    return { error: "Invalid Facebook URL" };
-  }
-
-  const admin = createSupabaseAdminClient();
-  await admin
-    .from("profiles")
-    .upsert({ id: userId, facebook_url: trimmed });
-
-  return { success: true };
-}
-
 export async function saveUserProfile(
   _prev: ProfileState,
   formData: FormData,
