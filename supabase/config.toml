@@ -15,3 +15,6 @@ verify_jwt = false
 
 [functions.reconciliation-digest]
 verify_jwt = false
+
+[functions.purge-expired-medical-data]
+verify_jwt = false

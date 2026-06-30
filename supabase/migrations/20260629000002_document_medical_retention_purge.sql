@@ -1,0 +1,39 @@
+-- Documentation only. This migration runs NOTHING — it records out-of-repo infra,
+-- mirroring how 20260610000004_enable_pg_net.sql documents the pg_cron/pg_net setup.
+--
+-- DATA-RETENTION PURGE: MEDICAL & EMERGENCY-CONTACT DATA
+--
+-- Joiner medical and emergency-contact data is purged (set to NULL) 90 days after a
+-- trip ends. Trip end is COALESCE(trips.date_end, trips.date_start) — date_end is NULL
+-- for single-day trips, so date_start is the end in that case. The 90-day cutoff is
+-- computed in Manila time (Asia/Manila), consistent with the rest of the app's date logic.
+--
+-- The purge is performed by the `purge-expired-medical-data` Supabase Edge Function
+-- (supabase/functions/purge-expired-medical-data/index.ts), using the service-role
+-- client and guarded by the CRON_SECRET bearer token, exactly like the other recurring
+-- jobs (cleanup-abandoned-payments, pre-trip-reminder, pending-approval-reminder,
+-- stale-application-reminder, retry-failed-refunds, reconciliation-digest).
+--
+-- COLUMNS PURGED (set to NULL) — six total:
+--   bookings.medical_notes
+--   bookings.emergency_contact_name
+--   bookings.emergency_contact_phone
+--   booking_participants.medical_notes
+--   booking_participants.emergency_contact_name
+--   booking_participants.emergency_contact_phone
+--
+-- COLUMNS DELIBERATELY RETAINED (never touched by the purge):
+--   Waiver consent proof: bookings.waiver_agreed, waiver_agreed_at, waiver_ip,
+--     waiver_text_snapshot, platform_waiver_agreed, platform_waiver_snapshot;
+--     booking_participants.waiver_accepted, waiver_accepted_at, waiver_ip,
+--     waiver_text_snapshot.
+--   Financial/payout data: total_amount, amount_due, balance_collected,
+--     platform_commission, commission_rate_used, refund_amount, payout_id,
+--     payout_status, and all other payment columns.
+--   Identity / account basics: full_name, email, phone, user_id (bookings);
+--     full_name, token, slot_number (booking_participants). The bookings.participants
+--     JSONB (additional participant names) is also retained.
+--
+-- SCHEDULE: configured in the Supabase Cron dashboard (NOT in this repo), running
+-- daily and invoking the function with the CRON_SECRET bearer header, like the other
+-- six jobs. No SQL schedule is defined here.
