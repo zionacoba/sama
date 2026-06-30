@@ -136,6 +136,25 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
     }
   }
 
+  // After reconciliation the in-memory booking.status can be stale: the reconcile
+  // path above writes the new status (confirmed for auto-approved trips, pending
+  // for Advanced trips awaiting organizer review) straight to the DB without
+  // mutating this object. Re-read the authoritative status, read-only, so the
+  // success copy can tell a confirmed booking apart from one that is paid but
+  // still awaiting organizer approval. Any miss falls back to the in-memory value.
+  let bookingStatus = booking?.status ?? null;
+  if (booking && paymentConfirmed) {
+    const { data: freshStatus } = await admin
+      .from("bookings")
+      .select("status")
+      .eq("id", booking.id)
+      .maybeSingle();
+    if (freshStatus?.status) {
+      bookingStatus = freshStatus.status;
+    }
+  }
+  const awaitingApproval = paymentConfirmed && bookingStatus === "pending";
+
   // Ownership gate. The reconciliation above runs ungated on the server-held
   // payment_id so a paid booking is always confirmed, but the sensitive details
   // below (Messenger GC link, amounts, meeting point, organizer contact) may
@@ -199,9 +218,11 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
           <h1 className="text-2xl font-bold text-stone-900">Payment received!</h1>
 
           <p className="mt-3 text-sm text-stone-600">
-            {paymentConfirmed
-              ? "We've received your payment. Check your email for your booking details and next steps."
-              : "We're confirming your booking. You'll receive an email shortly with your booking details."}
+            {awaitingApproval
+              ? "We've received your payment and sent your request to the organizer for review. This usually takes 24 to 48 hours, and we'll email you as soon as they respond."
+              : paymentConfirmed
+                ? "We've received your payment. Check your email for your booking details and next steps."
+                : "We're confirming your booking. You'll receive an email shortly with your booking details."}
           </p>
 
           {booking?.trip ? (
@@ -238,7 +259,11 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
               <ul className="space-y-2.5 text-sm text-stone-600">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 shrink-0 text-trailhead">✓</span>
-                  <span>Check your email for your booking confirmation and full trip details.</span>
+                  <span>
+                    {awaitingApproval
+                      ? "The organizer will review your request, usually within 24 to 48 hours. We'll email you as soon as they respond."
+                      : "Check your email for your booking confirmation and full trip details."}
+                  </span>
                 </li>
                 {booking.meeting_point && (
                   <li className="flex items-start gap-2">
