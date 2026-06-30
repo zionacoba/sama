@@ -29,16 +29,36 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // Find pending bookings older than 24 hours that haven't had a reminder sent.
+  // Initial grace: a booking must have been pending for more than 24 hours
+  // before its FIRST reminder, measured against created_at.
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  // Bound the page so a single run can never do unbounded work; oldest first.
+  // Re-send window: nudge again roughly every other day until the booking is
+  // resolved. We use 47 hours, not 48, on purpose: the cron runs daily at 09:00
+  // UTC, so a strict 48h comparison would land exactly on the boundary and slip
+  // the re-send to the third day. 47h makes it reliably re-fire every other day.
+  const resendCutoff = new Date(Date.now() - 47 * 60 * 60 * 1000).toISOString();
+
+  // Today's date in Manila (YYYY-MM-DD) for the trip-not-passed guard below.
+  // trips.date_start / date_end are date-typed (no time component), so a string
+  // compare against this cutoff is exact and matches the Manila date logic used
+  // elsewhere (purge-expired-medical-data, pre-trip-reminder).
+  const todayManila = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+
+  // Find pending bookings past the 24h grace that either have never been
+  // reminded or were last reminded more than 47h ago. Bound the page so a
+  // single run can never do unbounded work; oldest first.
   const { data: pendingBookings, error } = await supabase
     .from("bookings")
     .select("id, full_name, created_at, trip_id")
     .eq("status", "pending")
     .lt("created_at", cutoff)
-    .is("reminder_sent_at", null)
+    .or(`reminder_sent_at.is.null,reminder_sent_at.lt.${resendCutoff}`)
     .order("created_at", { ascending: true })
     .limit(100);
 
@@ -54,11 +74,11 @@ Deno.serve(async (req) => {
   // Collect the trip ids from this page, fetch those trips in one query, then
   // collect their organizer ids and fetch those organizers in one query.
   const tripIds = [...new Set((pendingBookings ?? []).map((b) => b.trip_id))];
-  const tripMap = new Map<string, { id: string; title: string; slug: string; date_start: string; organizer_id: string }>();
+  const tripMap = new Map<string, { id: string; title: string; slug: string; date_start: string; date_end: string | null; organizer_id: string }>();
   if (tripIds.length > 0) {
     const { data: trips } = await supabase
       .from("trips")
-      .select("id, title, slug, date_start, organizer_id")
+      .select("id, title, slug, date_start, date_end, organizer_id")
       .in("id", tripIds);
     for (const t of trips ?? []) tripMap.set(t.id, t);
   }
@@ -84,6 +104,12 @@ Deno.serve(async (req) => {
     const organizer = organizerMap.get(trip.organizer_id);
     if (!organizer?.email) continue;
 
+    // Stop nagging once the trip is over. Effective trip end is
+    // COALESCE(date_end, date_start) because date_end is null for single-day
+    // trips. Keep reminding while the effective end is today or later (Manila).
+    const effectiveEnd = (trip.date_end ?? trip.date_start).slice(0, 10);
+    if (effectiveEnd < todayManila) continue;
+
     const tripDate = new Intl.DateTimeFormat("en-PH", {
       weekday: "long",
       year: "numeric",
@@ -94,15 +120,18 @@ Deno.serve(async (req) => {
 
     const bookingsUrl = `${SITE_URL}/organizer/trips/${trip.slug}/bookings`;
 
-    // Atomic claim before send: stamp the sent_at column guarded by .is(null)
-    // so only one of two concurrent runs wins the row. If we did not claim it,
-    // another run already sent (or is sending), so skip. On send failure we
-    // un-stamp so a genuine failure retries next run.
+    // Atomic claim before send: re-stamp reminder_sent_at to now() guarded by
+    // the same "never reminded OR last reminded > 47h ago" predicate as the
+    // page query, so only one of two concurrent runs wins the row (the first
+    // update moves reminder_sent_at to now(), which no longer matches the
+    // predicate for the second). Re-stamping on every send restarts the 47h
+    // window. If we did not claim it, another run already sent (or is sending),
+    // so skip. On send failure we un-stamp so a genuine failure retries next run.
     const { data: claimed } = await supabase
       .from("bookings")
       .update({ reminder_sent_at: new Date().toISOString() })
       .eq("id", booking.id)
-      .is("reminder_sent_at", null)
+      .or(`reminder_sent_at.is.null,reminder_sent_at.lt.${resendCutoff}`)
       .select("id")
       .maybeSingle();
     if (!claimed) continue;
