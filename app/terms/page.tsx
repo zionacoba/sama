@@ -134,7 +134,7 @@ export default function TermsPage() {
               <h2 className="text-lg font-bold text-stone-900">8. Participant Responsibilities</h2>
               <ul className="mt-2 space-y-1.5 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>You are responsible for ensuring you are physically fit to participate in any trip you book.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>You must disclose relevant medical conditions to the organizer.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>You must disclose relevant medical conditions to the organizer. This information is collected through the booking process and handled in accordance with our <a href="/privacy" className="text-trailhead hover:underline">Privacy Policy</a>.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>You are responsible for bringing appropriate gear and following organizer instructions.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>If booking on behalf of others, you confirm that all participants are aware of and agree to the trip risks and cancellation policy.</span></li>
               </ul>
