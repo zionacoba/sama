@@ -11,8 +11,14 @@ function verifySignature(rawBody: string, sigHeader: string, secret: string): bo
   const parts = sigHeader.split(",");
   const timestamp = parts.find((p) => p.startsWith("t="))?.slice(2);
   const testSig = parts.find((p) => p.startsWith("te="))?.slice(3);
+  const liveSig = parts.find((p) => p.startsWith("li="))?.slice(3);
 
-  if (!timestamp || !testSig) return false;
+  // PayMongo signs with one secret per endpoint and populates te= for a test
+  // webhook or li= for a live one, leaving the other empty. Verify against
+  // whichever is present so the same secret + HMAC works in both modes.
+  const sig = testSig && testSig.length ? testSig : liveSig;
+
+  if (!timestamp || !sig) return false;
 
   if (Math.abs(Date.now() / 1000 - parseInt(timestamp, 10)) > 300) return false;
 
@@ -22,7 +28,7 @@ function verifySignature(rawBody: string, sigHeader: string, secret: string): bo
 
   try {
     const expectedBuf = Buffer.from(expected, "hex");
-    const actualBuf = Buffer.from(testSig, "hex");
+    const actualBuf = Buffer.from(sig, "hex");
     if (expectedBuf.length !== actualBuf.length) return false;
     return timingSafeEqual(expectedBuf, actualBuf);
   } catch {
