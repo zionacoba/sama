@@ -847,6 +847,11 @@ export function BookingModal({
                   </svg>
                   Payments secured by PayMongo. Pay via GCash or QR Ph.
                 </p>
+                {amountDue > 0 && (
+                  <p className="mb-2 text-center text-xs text-stone-500">
+                    After you pay, PayMongo shows you a receipt page. Your booking confirmation is emailed to you, and you can always view it under My Account &gt; My Bookings.
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <button
                     type="button"
