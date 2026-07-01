@@ -8,6 +8,7 @@ import { ExportCsvButton } from "./export-csv-button";
 import { MarkBalanceButton } from "./mark-balance-button";
 import { BookingsListWithTabs } from "./bookings-list";
 import { formatPeso } from "@/lib/format";
+import { resolveAttendee } from "@/lib/attendee";
 
 type WaitlistEntry = {
   id: string;
@@ -57,6 +58,9 @@ type BookingParticipant = {
   slot_number: number;
   full_name: string | null;
   completed: boolean;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  meeting_point: string | null;
 };
 
 function formatDate(date: string) {
@@ -96,6 +100,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 const NO_PICKUP = "No pickup point selected";
+const AWAITING_PICKUP = "Awaiting details";
 
 export default async function TripBookingsPage({ params, searchParams }: PageProps) {
   const [{ slug }, { view }] = await Promise.all([params, searchParams]);
@@ -171,7 +176,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
   if (participantBookingIds.length > 0) {
     const { data: participantsData } = await admin
       .from("booking_participants")
-      .select("booking_id, slot_number, full_name, completed")
+      .select("booking_id, slot_number, full_name, completed, emergency_contact_name, emergency_contact_phone, meeting_point")
       .in("booking_id", participantBookingIds)
       .order("slot_number");
 
@@ -181,9 +186,15 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
     }
   }
 
+  const participantsRecord = Object.fromEntries(
+    Array.from(participantsMap.entries()).map(([k, v]) => [String(k), v]),
+  );
+
   const pending = bookings.filter((b) => b.status === "pending");
-  const confirmed = bookings.filter((b) => b.status === "confirmed");
-  const rejected = bookings.filter((b) => b.status === "rejected" || b.status === "cancelled" || b.status === "transferred" || b.status === "no_show");
+  // Transferred bookings still occupy a slot on the trip, so they belong with
+  // confirmed (not cancelled/rejected) across the summary chips and the tabs.
+  const confirmed = bookings.filter((b) => b.status === "confirmed" || b.status === "transferred");
+  const rejected = bookings.filter((b) => b.status === "rejected" || b.status === "cancelled" || b.status === "no_show");
 
   const needsManualApproval = trip.difficulty === "Advanced";
   const awaitingPayment = bookings.filter((b) => b.status === "payment_pending");
@@ -191,17 +202,27 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
     .filter((b) => b.status === "confirmed" || b.status === "pending" || b.status === "payment_pending")
     .reduce((sum, b) => sum + b.slots, 0);
 
-  // Grouped view: confirmed + pending only, grouped by meeting_point
-  const activeBookings = bookings.filter((b) => b.status === "confirmed" || b.status === "pending");
+  // Grouped view: confirmed + pending + transferred, grouped by meeting_point.
+  // For transferred bookings the pickup point is the replacement's (via the
+  // slot-0 row), and an awaiting-replacement booking is bucketed separately so
+  // it never lands under the original booker's pickup point.
+  const activeBookings = bookings.filter(
+    (b) => b.status === "confirmed" || b.status === "pending" || b.status === "transferred",
+  );
   const groupMap = new Map<string, Booking[]>();
   for (const b of activeBookings) {
-    const key = b.meeting_point?.trim() || NO_PICKUP;
+    const slotZero = participantsMap.get(b.id)?.find((p) => p.slot_number === 0);
+    const attendee = resolveAttendee(b, slotZero);
+    const key = attendee.awaiting ? AWAITING_PICKUP : attendee.meetingPoint?.trim() || NO_PICKUP;
     if (!groupMap.has(key)) groupMap.set(key, []);
     groupMap.get(key)!.push(b);
   }
   const groups = Array.from(groupMap.entries()).sort(([a], [b]) => {
+    // Push the two catch-all buckets to the end, NO_PICKUP last of all.
     if (a === NO_PICKUP) return 1;
     if (b === NO_PICKUP) return -1;
+    if (a === AWAITING_PICKUP) return 1;
+    if (b === AWAITING_PICKUP) return -1;
     return a.localeCompare(b);
   });
 
@@ -287,9 +308,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
         {activeView === "list" ? (
           <BookingsListWithTabs
             bookings={bookings}
-            participantsRecord={Object.fromEntries(
-              Array.from(participantsMap.entries()).map(([k, v]) => [String(k), v])
-            )}
+            participantsRecord={participantsRecord}
             needsManualApproval={needsManualApproval}
             price={trip.price}
             paymentType={trip.payment_type}
@@ -313,6 +332,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                 </Link>
                 <ExportCsvButton
                   bookings={bookings}
+                  participantsRecord={participantsRecord}
                   tripTitle={trip.title}
                   tripDate={trip.date_start}
                 />
@@ -349,6 +369,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
             </div>
             <ExportCsvButton
               bookings={bookings}
+              participantsRecord={participantsRecord}
               tripTitle={trip.title}
               tripDate={trip.date_start}
             />
@@ -374,7 +395,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
             )}
             {groups.map(([label, group]) => {
               const totalSlots = group.reduce((sum, b) => sum + b.slots, 0);
-              const isUnknown = label === NO_PICKUP;
+              const isUnknown = label === NO_PICKUP || label === AWAITING_PICKUP;
               return (
                 <div key={label}>
                 {/* Mobile: section heading + one card per booking */}
@@ -387,15 +408,19 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                       {totalSlots} {totalSlots === 1 ? "joiner" : "joiners"}
                     </span>
                   </div>
-                  {group.map((b) => (
+                  {group.map((b) => {
+                    const attendee = resolveAttendee(b, participantsMap.get(b.id)?.find((p) => p.slot_number === 0));
+                    const isTransferred = b.status === "transferred";
+                    return (
                     <div key={b.id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          {b.nickname && <div className="font-semibold text-stone-900">{b.nickname}</div>}
-                          <div className={b.nickname ? "text-sm text-stone-500" : "font-semibold text-stone-900"}>
-                            {b.full_name}
+                          {/* Transferred: show the replacement only; the booker's nickname/FB are not the attendee. */}
+                          {!isTransferred && b.nickname && <div className="font-semibold text-stone-900">{b.nickname}</div>}
+                          <div className={!isTransferred && b.nickname ? "text-sm text-stone-500" : "font-semibold text-stone-900"}>
+                            {attendee.name}
                           </div>
-                          {b.facebook_url && (
+                          {!isTransferred && b.facebook_url && (
                             <a
                               href={b.facebook_url}
                               target="_blank"
@@ -492,7 +517,8 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Desktop: table (unchanged) */}
@@ -518,16 +544,20 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-stone-100">
-                        {group.map((b) => (
+                        {group.map((b) => {
+                          const attendee = resolveAttendee(b, participantsMap.get(b.id)?.find((p) => p.slot_number === 0));
+                          const isTransferred = b.status === "transferred";
+                          return (
                           <tr key={b.id} className="hover:bg-stone-50">
                             <td className="px-5 py-3.5 font-medium text-stone-900">
                               <div>
-                                {b.nickname && <span className="font-medium">{b.nickname}</span>}
-                                <span className={b.nickname ? "text-sm text-stone-500 block" : "font-medium"}>
-                                  {b.full_name}
+                                {/* Transferred: show the replacement only; the booker's nickname/FB are not the attendee. */}
+                                {!isTransferred && b.nickname && <span className="font-medium">{b.nickname}</span>}
+                                <span className={!isTransferred && b.nickname ? "text-sm text-stone-500 block" : "font-medium"}>
+                                  {attendee.name}
                                 </span>
                               </div>
-                              {b.facebook_url && (
+                              {!isTransferred && b.facebook_url && (
                                 <a
                                   href={b.facebook_url}
                                   target="_blank"
@@ -610,7 +640,8 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                               </td>
                             )}
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

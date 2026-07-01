@@ -1,6 +1,9 @@
 "use client";
 
+import { resolveAttendee } from "@/lib/attendee";
+
 type BookingRow = {
+  id: number;
   full_name: string;
   email: string;
   phone: string;
@@ -10,6 +13,15 @@ type BookingRow = {
   emergency_contact_phone: string | null;
   status: string;
   created_at: string;
+};
+
+type ParticipantRow = {
+  slot_number: number;
+  full_name: string | null;
+  completed: boolean;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  meeting_point: string | null;
 };
 
 function escapeCsv(value: string | number | null | undefined): string {
@@ -22,10 +34,12 @@ function escapeCsv(value: string | number | null | undefined): string {
 
 export function ExportCsvButton({
   bookings,
+  participantsRecord,
   tripTitle,
   tripDate,
 }: {
   bookings: BookingRow[];
+  participantsRecord: Record<string, ParticipantRow[]>;
   tripTitle: string;
   tripDate: string;
 }) {
@@ -42,17 +56,24 @@ export function ExportCsvButton({
       "Booking date",
     ];
 
-    const rows = bookings.map((b) => [
-      escapeCsv(b.full_name),
-      escapeCsv(b.email),
-      escapeCsv(b.phone),
-      escapeCsv(b.slots),
-      escapeCsv(b.meeting_point),
-      escapeCsv(b.emergency_contact_name),
-      escapeCsv(b.emergency_contact_phone),
-      escapeCsv(b.status),
-      escapeCsv(new Date(b.created_at).toLocaleDateString("en-PH", { timeZone: "Asia/Manila" })),
-    ]);
+    const rows = bookings.map((b) => {
+      // Route the attendee identity (name / emergency contact / pickup) through
+      // the shared helper so a transferred booking exports the real replacement,
+      // not the original booker.
+      const slotZero = participantsRecord[String(b.id)]?.find((p) => p.slot_number === 0);
+      const attendee = resolveAttendee(b, slotZero);
+      return [
+        escapeCsv(attendee.name),
+        escapeCsv(b.email),
+        escapeCsv(b.phone),
+        escapeCsv(b.slots),
+        escapeCsv(attendee.meetingPoint),
+        escapeCsv(attendee.emergencyContactName),
+        escapeCsv(attendee.emergencyContactPhone),
+        escapeCsv(b.status),
+        escapeCsv(new Date(b.created_at).toLocaleDateString("en-PH", { timeZone: "Asia/Manila" })),
+      ];
+    });
 
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

@@ -422,6 +422,7 @@ export async function createBooking(input: CreateBookingInput) {
     }
 
     revalidatePath(`/trips/${input.tripSlug}`);
+    revalidatePath("/organizer/dashboard");
     return { success: true as const, checkoutUrl: null, bookingRef };
   }
 
@@ -493,6 +494,7 @@ export async function createBooking(input: CreateBookingInput) {
   }
 
   revalidatePath(`/trips/${input.tripSlug}`);
+  revalidatePath("/organizer/dashboard");
   return {
     success: true as const,
     checkoutUrl,
@@ -1153,6 +1155,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
 
   revalidatePath("/organizer/trips/[slug]/bookings", "page");
   revalidatePath(`/trips/${trip.slug}`);
+  revalidatePath("/organizer/dashboard");
   return { success: true };
 }
 

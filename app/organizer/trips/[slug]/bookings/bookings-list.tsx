@@ -8,6 +8,7 @@ import { MarkTransferButton } from "./mark-transfer-button";
 import { MarkNoShowButton } from "./mark-no-show-button";
 import { safeExternalUrl } from "@/lib/safe-url";
 import { formatPeso } from "@/lib/format";
+import { resolveAttendee } from "@/lib/attendee";
 
 type Booking = {
   id: number;
@@ -42,6 +43,9 @@ type BookingParticipant = {
   slot_number: number;
   full_name: string | null;
   completed: boolean;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  meeting_point: string | null;
 };
 
 type Tab = "confirmed" | "pending" | "awaiting_payment" | "all" | "cancelled";
@@ -125,28 +129,36 @@ function BookingCard({
   const showBalance = b.payment_option === "downpayment" && b.amount_due != null;
   const balance = showBalance ? b.total_amount - (b.amount_due as number) : 0;
   const showActions = (b.status === "pending" && needsManualApproval) || b.status === "confirmed";
+  // For a transferred booking the attendee is the slot-0 replacement, not the
+  // booker, so name/emergency-contact come from the helper and the booker's
+  // nickname/phone/FB are hidden (they are not the person attending).
+  const slotZero = participants?.find((p) => p.slot_number === 0);
+  const attendee = resolveAttendee(b, slotZero);
+  const isTransferred = b.status === "transferred";
 
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          {b.nickname && <div className="font-semibold text-stone-900">{b.nickname}</div>}
-          <div className={b.nickname ? "text-sm text-stone-500" : "font-semibold text-stone-900"}>{b.full_name}</div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-            <a href={`tel:${b.phone}`} className="text-xs text-stone-500 hover:text-trailhead hover:underline">
-              {b.phone}
-            </a>
-            {safeExternalUrl(b.facebook_url) && (
-              <a
-                href={safeExternalUrl(b.facebook_url)!}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-trailhead hover:underline"
-              >
-                FB Profile
+          {!isTransferred && b.nickname && <div className="font-semibold text-stone-900">{b.nickname}</div>}
+          <div className={!isTransferred && b.nickname ? "text-sm text-stone-500" : "font-semibold text-stone-900"}>{attendee.name}</div>
+          {!isTransferred && (
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+              <a href={`tel:${b.phone}`} className="text-xs text-stone-500 hover:text-trailhead hover:underline">
+                {b.phone}
               </a>
-            )}
-          </div>
+              {safeExternalUrl(b.facebook_url) && (
+                <a
+                  href={safeExternalUrl(b.facebook_url)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-trailhead hover:underline"
+                >
+                  FB Profile
+                </a>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1">
           <StatusBadge status={b.status} />
@@ -175,11 +187,11 @@ function BookingCard({
         <div className="min-w-0">
           <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Emergency contact</dt>
           <dd className="mt-0.5 text-stone-700">
-            {b.emergency_contact_name ? (
+            {attendee.emergencyContactName ? (
               <>
-                <span className="font-medium">{b.emergency_contact_name}</span>
-                {b.emergency_contact_phone && (
-                  <span className="block text-stone-600">{b.emergency_contact_phone}</span>
+                <span className="font-medium">{attendee.emergencyContactName}</span>
+                {attendee.emergencyContactPhone && attendee.emergencyContactPhone !== attendee.emergencyContactName && (
+                  <span className="block text-stone-600">{attendee.emergencyContactPhone}</span>
                 )}
               </>
             ) : (
@@ -291,11 +303,14 @@ export function BookingsListWithTabs({
   const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
   const tripHasPassed = tripDateStart < todayPH;
 
-  const confirmedBookings = bookings.filter((b) => b.status === "confirmed");
+  // Transferred bookings still occupy a slot (the replacement attends), so they
+  // live in the Confirmed tab, distinguished by the "Transferred" badge and the
+  // ReplacementStatus line, not buried under Cancelled.
+  const confirmedBookings = bookings.filter((b) => b.status === "confirmed" || b.status === "transferred");
   const pendingBookings = bookings.filter((b) => b.status === "pending");
   const awaitingPaymentBookings = bookings.filter((b) => b.status === "payment_pending");
   const cancelledBookings = bookings.filter(
-    (b) => b.status === "cancelled" || b.status === "rejected" || b.status === "transferred" || b.status === "no_show",
+    (b) => b.status === "cancelled" || b.status === "rejected" || b.status === "no_show",
   );
 
   const displayed =
@@ -325,7 +340,7 @@ export function BookingsListWithTabs({
         : tab === "awaiting_payment"
           ? "No bookings awaiting payment."
           : tab === "cancelled"
-            ? "No cancelled, rejected, transferred, or no show bookings."
+            ? "No cancelled, rejected, or no show bookings."
             : "No bookings yet.";
 
   return (
@@ -411,22 +426,27 @@ export function BookingsListWithTabs({
               <tbody className="divide-y divide-stone-100">
                 {displayed.map((b) => {
                   const participants = participantsRecord[String(b.id)];
+                  const slotZero = participants?.find((p) => p.slot_number === 0);
+                  const attendee = resolveAttendee(b, slotZero);
+                  const isTransferred = b.status === "transferred";
                   return (
                     <tr key={b.id} className="hover:bg-stone-50">
                       <td className="px-5 py-3.5 font-medium text-stone-900">
                         <div>
-                          {b.nickname && <span className="font-medium">{b.nickname}</span>}
-                          <span className={b.nickname ? "text-sm text-stone-500 block" : "font-medium"}>
-                            {b.full_name}
+                          {!isTransferred && b.nickname && <span className="font-medium">{b.nickname}</span>}
+                          <span className={!isTransferred && b.nickname ? "text-sm text-stone-500 block" : "font-medium"}>
+                            {attendee.name}
                           </span>
                         </div>
-                        <a
-                          href={`tel:${b.phone}`}
-                          className="text-xs text-stone-500 hover:text-trailhead hover:underline"
-                        >
-                          {b.phone}
-                        </a>
-                        {safeExternalUrl(b.facebook_url) && (
+                        {!isTransferred && (
+                          <a
+                            href={`tel:${b.phone}`}
+                            className="text-xs text-stone-500 hover:text-trailhead hover:underline"
+                          >
+                            {b.phone}
+                          </a>
+                        )}
+                        {!isTransferred && safeExternalUrl(b.facebook_url) && (
                           <a
                             href={safeExternalUrl(b.facebook_url)!}
                             target="_blank"
@@ -454,13 +474,13 @@ export function BookingsListWithTabs({
                       </td>
                       <td className="px-5 py-3.5 text-stone-500">{b.email}</td>
                       <td className="px-5 py-3.5 text-stone-700">
-                        {b.emergency_contact_name ? (
+                        {attendee.emergencyContactName ? (
                           <>
-                            <span className="font-medium">{b.emergency_contact_name}</span>
-                            {b.emergency_contact_phone && (
+                            <span className="font-medium">{attendee.emergencyContactName}</span>
+                            {attendee.emergencyContactPhone && attendee.emergencyContactPhone !== attendee.emergencyContactName && (
                               <>
                                 <br />
-                                <span className="text-stone-600">{b.emergency_contact_phone}</span>
+                                <span className="text-stone-600">{attendee.emergencyContactPhone}</span>
                               </>
                             )}
                           </>
