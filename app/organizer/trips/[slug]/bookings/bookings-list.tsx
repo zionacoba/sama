@@ -182,7 +182,9 @@ function BookingCard({
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-stone-100 pt-3 text-sm">
         <div className="min-w-0">
           <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Email</dt>
-          <dd className="mt-0.5 break-words text-stone-600">{b.email}</dd>
+          <dd className="mt-0.5 break-words text-stone-600">
+            {isTransferred ? <span className="text-stone-400">Awaiting replacement details</span> : b.email}
+          </dd>
         </div>
         <div className="min-w-0">
           <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Emergency contact</dt>
@@ -472,7 +474,9 @@ export function BookingsListWithTabs({
                           ) : null);
                         })()}
                       </td>
-                      <td className="px-5 py-3.5 text-stone-500">{b.email}</td>
+                      <td className="px-5 py-3.5 text-stone-500">
+                        {isTransferred ? <span className="text-stone-400">Awaiting replacement details</span> : b.email}
+                      </td>
                       <td className="px-5 py-3.5 text-stone-700">
                         {attendee.emergencyContactName ? (
                           <>
