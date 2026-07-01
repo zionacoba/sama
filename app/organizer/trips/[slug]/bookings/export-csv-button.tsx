@@ -64,7 +64,11 @@ export function ExportCsvButton({
       const attendee = resolveAttendee(b, slotZero);
       return [
         escapeCsv(attendee.name),
-        escapeCsv(b.email),
+        // A transferred booking's real attendee is the replacement, and /join
+        // collects no replacement email, so the booker's email is not the
+        // attendee's. Emit a blank cell (not a text label) to keep the column
+        // machine-readable. Mirrors the on-screen fix in 531f0bf.
+        escapeCsv(b.status === "transferred" ? "" : b.email),
         escapeCsv(b.phone),
         escapeCsv(b.slots),
         escapeCsv(attendee.meetingPoint),
