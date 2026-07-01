@@ -198,9 +198,10 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
 
   const needsManualApproval = trip.difficulty === "Advanced";
   const awaitingPayment = bookings.filter((b) => b.status === "payment_pending");
-  const slotsBooked = bookings
-    .filter((b) => b.status === "confirmed" || b.status === "pending" || b.status === "payment_pending")
-    .reduce((sum, b) => sum + b.slots, 0);
+  // Read the authoritative slot count straight from the DB (matches the main
+  // dashboard trip-row), so the header/fill bar count every slot-holding
+  // booking, including transferred, and stay immune to future status additions.
+  const slotsBooked = trip.total_slots - trip.remaining_slots;
 
   // Grouped view: confirmed + pending + transferred, grouped by meeting_point.
   // For transferred bookings the pickup point is the replacement's (via the
