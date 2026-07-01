@@ -15,4 +15,4 @@ export const ACTIVE_BOOKING_STATUSES = ["confirmed", "pending", "payment_pending
 export const SLOT_HOLDING_STATUSES = ["confirmed", "pending"] as const;
 
 // Bookings eligible for payout / treated as having taken place on a past trip.
-export const ATTENDED_STATUSES = ["confirmed", "no_show"] as const;
+export const ATTENDED_STATUSES = ["confirmed", "no_show", "transferred"] as const;

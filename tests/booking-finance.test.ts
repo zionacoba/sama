@@ -3,6 +3,7 @@ import {
   amountJoinerPaid,
   amountSamaHolds,
   computeRefundSplit,
+  isPayoutEligible,
 } from "@/lib/booking-finance";
 
 // Helper to build the minimal booking shape these functions read. Defaults to a
@@ -72,6 +73,38 @@ describe("amountJoinerPaid / amountSamaHolds", () => {
       balance_payment_gateway_status: null,
     });
     expect(amountJoinerPaid(b)).toBe(3000);
+  });
+});
+
+describe("isPayoutEligible — transferred bookings pay out to the organizer", () => {
+  it("transferred booking paid online IS payout-eligible", () => {
+    expect(
+      isPayoutEligible({
+        status: "transferred",
+        payment_gateway_status: "paid",
+        total_amount: 10000,
+      }),
+    ).toBe(true);
+  });
+
+  it("transferred downpayment booking pays out only the downpayment Sama holds", () => {
+    // Balance was never collected online (balance_payment_gateway_status null),
+    // so amountSamaHolds must be the downpayment (amount_due), not the full
+    // total — we never pay out a balance Sama did not collect.
+    const b = {
+      payment_option: "downpayment",
+      amount_due: 3000,
+      total_amount: 10000,
+      balance_payment_gateway_status: null,
+    };
+    expect(
+      isPayoutEligible({
+        status: "transferred",
+        payment_gateway_status: "paid",
+        total_amount: b.total_amount,
+      }),
+    ).toBe(true);
+    expect(amountSamaHolds(b)).toBe(3000);
   });
 });
 
