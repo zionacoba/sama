@@ -1338,15 +1338,16 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   // Best-effort: the cancel, refund, slot restore, and reconciliation already
   // succeeded and matter more than this cleanup. On failure we log, alert an admin
   // to clean it up manually, and do NOT roll back. Mirrors the transfer slot-0 prep.
+  let droppedSignedNames: string[] = [];
   try {
     const { data: slotRows, error: fetchRowsError } = await admin
       .from("booking_participants")
-      .select("id, slot_number, completed")
+      .select("id, slot_number, completed, full_name")
       .eq("booking_id", bookingId)
       .neq("slot_number", 0);
     if (fetchRowsError) throw fetchRowsError;
 
-    const candidates = (slotRows ?? []) as { id: string; slot_number: number; completed: boolean | null }[];
+    const candidates = (slotRows ?? []) as { id: string; slot_number: number; completed: boolean | null; full_name: string | null }[];
     candidates.sort((a, b) => {
       const aDone = a.completed ? 1 : 0;
       const bDone = b.completed ? 1 : 0;
@@ -1354,7 +1355,14 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
       if (aDone !== bDone) return aDone - bDone;
       return b.slot_number - a.slot_number;
     });
-    const idsToDelete = candidates.slice(0, slotsToCancel).map((r) => r.id);
+    const droppedRows = candidates.slice(0, slotsToCancel);
+    const idsToDelete = droppedRows.map((r) => r.id);
+
+    // Capture names of dropped rows that had already signed a waiver, so the
+    // cancellation emails can call them out instead of silently vanishing.
+    droppedSignedNames = droppedRows
+      .filter((r) => r.completed && r.full_name && r.full_name.trim().length > 0)
+      .map((r) => r.full_name as string);
 
     if (idsToDelete.length > 0) {
       const { error: deleteRowsError } = await admin
@@ -1443,6 +1451,11 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   const fmtCurrency = (n: number) =>
     formatPeso(n);
 
+  const droppedSignedLine =
+    droppedSignedNames.length > 0
+      ? `<p>The following confirmed participant(s) had their spot released: <strong>${droppedSignedNames.map((name) => escapeHtml(name)).join(", ")}</strong>.</p>`
+      : "";
+
   if (tripDateCheck) {
     const tripDate = new Intl.DateTimeFormat("en-PH", {
       weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila",
@@ -1465,6 +1478,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
             html: `
               <p>Hi,</p>
               <p><strong>${escapeHtml(booking.full_name)}</strong> cancelled <strong>${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""}</strong> from their booking for <strong>${escapeHtml(tripDateCheck.title)}</strong> on ${tripDate}. They now have <strong>${remainingSlots} slot${remainingSlots !== 1 ? "s" : ""}</strong> remaining. The cancelled slot${slotsToCancel !== 1 ? "s" : ""} have been returned to the available pool.</p>
+              ${droppedSignedLine}
               <p>Sama</p>
             `,
           });
@@ -1492,6 +1506,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
         html: `
           <p>Hi ${escapeHtml(booking.full_name)},</p>
           <p>You've cancelled <strong>${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""}</strong> from your booking for <strong>${escapeHtml(tripDateCheck.title)}</strong> on ${tripDate}. Your booking now has <strong>${remainingSlots} slot${remainingSlots !== 1 ? "s" : ""}</strong>.</p>
+          ${droppedSignedLine}
           ${refundLine}
           <p>Sama</p>
         `,
