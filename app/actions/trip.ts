@@ -863,7 +863,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     .update({ status: "cancelled" })
     .eq("trip_id", trip.id)
     .in("status", [...ACTIVE_BOOKING_STATUSES])
-    .select("id, full_name, email, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status");
+    .select("id, full_name, email, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status, payout_status, payout_id");
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {
     weekday: "long",
@@ -895,6 +895,30 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     const refundAmount = amountJoinerPaid(booking);
     const { downpaymentRefund, balanceRefund } = computeRefundSplit(booking, refundAmount);
     const downpaymentRefundAmount = downpaymentRefund ?? 0;
+
+    // Flag the associated payout for reconciliation whenever cancellation happens after payout creation.
+    if (booking.payout_id && (booking.payout_status === "remitted" || booking.payout_status === "included")) {
+      await admin
+        .from("payouts" as "trips")
+        .update({ needs_reconciliation: true } as never)
+        .eq("id", booking.payout_id);
+    }
+
+    // Record a deduction against the organizer when a refund is issued after their payout was already remitted.
+    if (booking.payout_status === "remitted" && trip.organizer_id && refundAmount > 0) {
+      const { error: deductionError } = await (admin
+        .from("organizer_deductions" as "trips")
+        .insert({
+          organizer_id: trip.organizer_id,
+          booking_id: booking.id,
+          amount: refundAmount,
+          reason: "Trip cancelled by organizer - refund after payout remitted",
+          status: "pending",
+        } as never) as unknown as Promise<{ error: { message: string } | null }>);
+      if (deductionError) {
+        console.error("[deduction] failed to record organizer deduction", booking.id, deductionError.message);
+      }
+    }
 
     let initialResult: RefundResult | null = null;
     let balanceResult: RefundResult | null = null;

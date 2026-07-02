@@ -113,7 +113,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
       .update({ status: "cancelled" })
       .in("trip_id", tripIds)
       .in("status", [...ACTIVE_BOOKING_STATUSES])
-      .select("id, email, full_name, trip_id, slots, payment_option, amount_due, total_amount, paymongo_payment_id, payment_method, balance_paymongo_payment_id, balance_payment_gateway_status");
+      .select("id, email, full_name, trip_id, slots, payment_option, amount_due, total_amount, paymongo_payment_id, payment_method, balance_paymongo_payment_id, balance_payment_gateway_status, payout_status, payout_id");
 
     if ((affectedBookings ?? []).length > 0) {
       // Restore slots for each cancelled booking.
@@ -141,6 +141,38 @@ export async function rejectOrganizer(id: string): Promise<void> {
         booking.payment_option === "downpayment" && booking.amount_due != null
           ? booking.amount_due
           : (booking.total_amount ?? 0);
+      const balanceAmount = (booking.total_amount ?? 0) - (booking.amount_due ?? 0);
+
+      const initialRefundAmount = booking.paymongo_payment_id ? amountPaid : 0;
+      const balanceRefundAmount =
+        booking.balance_paymongo_payment_id && booking.balance_payment_gateway_status === 'paid' && balanceAmount > 0
+          ? balanceAmount
+          : 0;
+      const totalRefundAmount = initialRefundAmount + balanceRefundAmount;
+
+      // Flag the associated payout for reconciliation whenever cancellation happens after payout creation.
+      if (booking.payout_id && (booking.payout_status === "remitted" || booking.payout_status === "included")) {
+        await admin
+          .from("payouts" as "trips")
+          .update({ needs_reconciliation: true } as never)
+          .eq("id", booking.payout_id);
+      }
+
+      // Record a deduction against the organizer when a refund is issued after their payout was already remitted.
+      if (booking.payout_status === "remitted" && totalRefundAmount > 0) {
+        const { error: deductionError } = await (admin
+          .from("organizer_deductions" as "trips")
+          .insert({
+            organizer_id: id,
+            booking_id: booking.id,
+            amount: totalRefundAmount,
+            reason: "Organizer application rejected - refund after payout remitted",
+            status: "pending",
+          } as never) as unknown as Promise<{ error: { message: string } | null }>);
+        if (deductionError) {
+          console.error("[deduction] failed to record organizer deduction", booking.id, deductionError.message);
+        }
+      }
 
       let initialResult: RefundResult | null = null;
       let balanceResult: RefundResult | null = null;
@@ -164,7 +196,6 @@ export async function rejectOrganizer(id: string): Promise<void> {
       }
 
       if (booking.balance_paymongo_payment_id && booking.balance_payment_gateway_status === 'paid') {
-        const balanceAmount = (booking.total_amount ?? 0) - (booking.amount_due ?? 0);
         if (balanceAmount > 0) {
           balanceResult = await issueAndRecordRefund({
             admin,
