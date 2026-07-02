@@ -81,7 +81,8 @@ export async function applyToBeOrganizer(
     }
 
     // Rejected — allow reapplication by updating the existing row and resetting to pending.
-    const { error: reapplyError } = await supabase
+    const admin = createSupabaseAdminClient();
+    const { data: reapplyData, error: reapplyError } = await admin
       .from("organizers")
       .update({
         display_name: displayName,
@@ -97,13 +98,21 @@ export async function applyToBeOrganizer(
         operating_locations: operatingLocations,
         status: "pending",
       })
-      .eq("id", existingOrganizer.id);
+      .eq("id", existingOrganizer.id)
+      .eq("user_id", user.id)
+      .select("id")
+      .maybeSingle();
 
     if (reapplyError) {
       console.error("[organizer] reapply update failed", reapplyError);
       if (reapplyError.code === "23505" && reapplyError.message?.includes("organizers_display_name_unique")) {
         return { error: "This display name is already taken. Please choose a different one." };
       }
+      return { error: "Something went wrong. Please try again." };
+    }
+
+    if (!reapplyData) {
+      console.error("[organizer] reapply update affected no rows", { organizerId: existingOrganizer.id, userId: user.id });
       return { error: "Something went wrong. Please try again." };
     }
 
