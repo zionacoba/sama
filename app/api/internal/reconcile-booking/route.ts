@@ -158,6 +158,25 @@ export async function POST(req: NextRequest) {
     Sentry.captureException(err, {
       extra: { context: "reconcile-initial-failed", bookingId, linkId: booking.payment_id },
     });
+    // Unreachable — start the strand-escalation clock. Stamp reconcile_first_failed_at
+    // on the FIRST unreachable failure only (guard on it still being null so later
+    // failures never push the clock forward). This is the ONLY place it is set: the
+    // paid and definitively-unpaid branches above return before reaching here, so the
+    // clock starts strictly on "could not verify". This write must never change the
+    // fail-safe response, so any error is logged and swallowed. No status or payment
+    // state is touched: the booking stays payment_pending, slot still held.
+    try {
+      const { error: stampError } = await admin
+        .from("bookings")
+        .update({ reconcile_first_failed_at: new Date().toISOString() })
+        .eq("id", booking.id)
+        .is("reconcile_first_failed_at", null);
+      if (stampError) {
+        console.error(`[reconcile-booking] failed to stamp reconcile_first_failed_at for booking ${booking.id}:`, stampError.message);
+      }
+    } catch (stampErr) {
+      console.error(`[reconcile-booking] error stamping reconcile_first_failed_at for booking ${booking.id}:`, stampErr);
+    }
     // Fail safe: do NOT cancel a booking we could not verify.
     return NextResponse.json({ canCancel: false }, { status: 502 });
   }

@@ -131,6 +131,8 @@ export type Database = {
           platform_waiver_agreed: boolean
           platform_waiver_snapshot: string | null
           pre_trip_reminder_sent_at: string | null
+          reconcile_escalated_at: string | null
+          reconcile_first_failed_at: string | null
           refund_amount: number | null
           refund_issued: boolean | null
           refund_status: string | null
@@ -182,6 +184,8 @@ export type Database = {
           platform_waiver_agreed?: boolean
           platform_waiver_snapshot?: string | null
           pre_trip_reminder_sent_at?: string | null
+          reconcile_escalated_at?: string | null
+          reconcile_first_failed_at?: string | null
           refund_amount?: number | null
           refund_issued?: boolean | null
           refund_status?: string | null
@@ -233,6 +237,8 @@ export type Database = {
           platform_waiver_agreed?: boolean
           platform_waiver_snapshot?: string | null
           pre_trip_reminder_sent_at?: string | null
+          reconcile_escalated_at?: string | null
+          reconcile_first_failed_at?: string | null
           refund_amount?: number | null
           refund_issued?: boolean | null
           refund_status?: string | null

@@ -1,5 +1,6 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { escapeHtml, sendEmail } from "../_shared/email.ts";
+import { ESCALATION_THRESHOLD_HOURS, shouldEscalate } from "../_shared/reconcile-escalation.ts";
 
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
 
@@ -51,13 +52,18 @@ Deno.serve(async (req) => {
 
   const siteUrl = Deno.env.get("NEXT_PUBLIC_SITE_URL") || "https://sama.com.ph";
 
-  const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const nowMs = Date.now();
+  const cutoff = new Date(nowMs - 15 * 60 * 1000).toISOString();
 
+  // Exclude rows already escalated (reconcile_escalated_at set): they have had
+  // their one-time alert and must not be retried or re-alerted. reconcile_first_failed_at
+  // is selected so we can tell how long a booking has been unverifiable.
   const { data: staleBookings, error } = await supabase
     .from("bookings")
-    .select("id, trip_id, slots")
+    .select("id, trip_id, slots, reconcile_first_failed_at")
     .eq("status", "payment_pending")
     .is("payment_gateway_status", null)
+    .is("reconcile_escalated_at", null)
     .lt("created_at", cutoff)
     .order("created_at", { ascending: true })
     .limit(100);
@@ -72,11 +78,69 @@ Deno.serve(async (req) => {
 
   let cleaned = 0;
   let skippedPaid = 0;
+  let escalated = 0;
   // Tracks whether this run had to signal fail (the cancel/restore RPC errored
   // while the ADMIN_EMAIL alert channel was unavailable). If set, the success
   // ping is skipped so the check reads as down, not up.
   const runState = { failed: false };
   for (const booking of staleBookings ?? []) {
+    // Strand-forever bound (Shape C). If this booking has been UNVERIFIABLE
+    // (PayMongo unreachable, so the reconcile route stamped reconcile_first_failed_at)
+    // for over ESCALATION_THRESHOLD_HOURS, stop retrying it. We cannot know whether
+    // the joiner paid, so we NEVER cancel it and NEVER free its slot. Instead fire
+    // ONE admin escalation alert and mark it escalated (reconcile_escalated_at) so it
+    // drops out of this selection on future runs and is never re-alerted. The booking
+    // stays payment_pending with its slot held; the daily digest keeps surfacing it
+    // until a human resolves it in the PayMongo dashboard.
+    if (shouldEscalate(booking.reconcile_first_failed_at, nowMs, ESCALATION_THRESHOLD_HOURS)) {
+      if (ADMIN_EMAIL) {
+        try {
+          await sendEmail(
+            ADMIN_EMAIL,
+            "Action needed: booking payment unverifiable for over 6 hours",
+            `
+              <p>A booking's payment could not be verified with PayMongo for over ${ESCALATION_THRESHOLD_HOURS} hours (PayMongo has been unreachable each time we checked). To stay safe we have NOT cancelled it and have NOT freed its slot, because we cannot tell whether the joiner actually paid.</p>
+              <p><strong>Booking ID:</strong> ${booking.id}</p>
+              <p><strong>First unverifiable at:</strong> ${escapeHtml(String(booking.reconcile_first_failed_at))}</p>
+              <p>Please check this booking's payment link in the PayMongo dashboard and resolve it manually: confirm it if it was paid, or cancel and restore the slot if it was not. This booking is still holding its slot.</p>
+            `,
+          );
+        } catch (alertErr) {
+          // The alert failed to send. Do NOT mark it escalated, so we retry the
+          // alert on the next run rather than silently losing it. Leave the row
+          // untouched (still payment_pending, slot held).
+          console.error(`[cleanup-abandoned-payments] escalation alert failed for booking ${booking.id}, will retry next run:`, alertErr);
+          continue;
+        }
+      } else {
+        // No ADMIN_EMAIL alert channel. Mirror the cancel/restore-failure path:
+        // convert the dropped alert into a single external /fail dead-mans-switch
+        // signal and leave the booking un-escalated so it is retried once a channel
+        // exists. Do NOT mark escalated (that would silently drop the alert).
+        console.error(`[cleanup-abandoned-payments] booking ${booking.id} unverifiable over ${ESCALATION_THRESHOLD_HOURS}h but ADMIN_EMAIL unset; cannot escalate`);
+        if (!runState.failed) {
+          runState.failed = true;
+          await pingDeadMansSwitch("/fail");
+        }
+        continue;
+      }
+
+      // Alert sent. Mark escalated so it never re-alerts and drops out of retry.
+      // Guarded on reconcile_escalated_at still being null for idempotency.
+      const { error: escalateErr } = await supabase
+        .from("bookings")
+        .update({ reconcile_escalated_at: new Date(nowMs).toISOString() })
+        .eq("id", booking.id)
+        .is("reconcile_escalated_at", null);
+      if (escalateErr) {
+        console.error(`[cleanup-abandoned-payments] failed to mark booking ${booking.id} escalated:`, escalateErr.message);
+      } else {
+        escalated++;
+        console.log(`[cleanup-abandoned-payments] booking ${booking.id} unverifiable over ${ESCALATION_THRESHOLD_HOURS}h — escalated to admin, left payment_pending with slot held`);
+      }
+      continue;
+    }
+
     // Webhook-independent reconciliation. Before cancelling, ask the app to
     // check PayMongo directly for this booking's payment. If the payment went
     // through but the webhook was missed, the route confirms the booking and
@@ -171,7 +235,7 @@ Deno.serve(async (req) => {
     cleaned++;
   }
 
-  console.log(`[cleanup-abandoned-payments] cleaned ${cleaned} of ${(staleBookings ?? []).length} stale bookings (skipped ${skippedPaid} paid/unverified)`);
+  console.log(`[cleanup-abandoned-payments] cleaned ${cleaned} of ${(staleBookings ?? []).length} stale bookings (skipped ${skippedPaid} paid/unverified, escalated ${escalated} unverifiable over ${ESCALATION_THRESHOLD_HOURS}h)`);
 
   // Balance reconciliation sweep. A balance payment is confirmed only by its
   // own webhook; if that webhook is dropped the booking stays confirmed but the
@@ -234,6 +298,7 @@ Deno.serve(async (req) => {
     JSON.stringify({
       cleaned,
       skippedPaid,
+      escalated,
       total: (staleBookings ?? []).length,
       balanceConfirmed,
       balanceCandidates: (balanceCandidates ?? []).length,
