@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   amountJoinerPaid,
   amountSamaHolds,
+  computeAppliedNet,
   computeRefundSplit,
   isPayoutEligible,
 } from "@/lib/booking-finance";
@@ -192,5 +193,53 @@ describe("computeRefundSplit", () => {
     const split = computeRefundSplit(b, 10000);
     expect(split.balanceRefund).toBe(0);
     expect(split.downpaymentRefund).toBe(10000);
+  });
+});
+
+describe("computeAppliedNet", () => {
+  it("one deduction fits, the other does not: applies the first, skips (rolls over) the second, not floored to 0", () => {
+    // The assessment's motivating example: display used to floor
+    // max(0, 100 - 160) = 0, but the apply path greedily applies only the
+    // first 80 (fits) and skips the second (doesn't fit into the remaining 20).
+    const result = computeAppliedNet(100, [
+      { id: "d1", amount: 80 },
+      { id: "d2", amount: 80 },
+    ]);
+    expect(result.net).toBe(20);
+    expect(result.appliedDeductionIds).toEqual(["d1"]);
+    expect(result.skippedDeductionIds).toEqual(["d2"]);
+  });
+
+  it("all deductions fit: applies all, net is the exact remainder", () => {
+    const result = computeAppliedNet(100, [
+      { id: "d1", amount: 30 },
+      { id: "d2", amount: 20 },
+    ]);
+    expect(result.net).toBe(50);
+    expect(result.appliedDeductionIds).toEqual(["d1", "d2"]);
+    expect(result.skippedDeductionIds).toEqual([]);
+  });
+
+  it("no deductions fit: all skipped, net is unchanged", () => {
+    const result = computeAppliedNet(50, [
+      { id: "d1", amount: 80 },
+      { id: "d2", amount: 60 },
+    ]);
+    expect(result.net).toBe(50);
+    expect(result.appliedDeductionIds).toEqual([]);
+    expect(result.skippedDeductionIds).toEqual(["d1", "d2"]);
+  });
+
+  it("exact fit: applies the deduction down to net 0", () => {
+    const result = computeAppliedNet(100, [{ id: "d1", amount: 100 }]);
+    expect(result.net).toBe(0);
+    expect(result.appliedDeductionIds).toEqual(["d1"]);
+    expect(result.skippedDeductionIds).toEqual([]);
+  });
+
+  it("string amounts (as Supabase numeric can arrive) are coerced", () => {
+    const result = computeAppliedNet(100, [{ id: "d1", amount: "40" }]);
+    expect(result.net).toBe(60);
+    expect(result.appliedDeductionIds).toEqual(["d1"]);
   });
 });

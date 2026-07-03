@@ -73,6 +73,35 @@ export function amountJoinerPaid(booking: SamaHoldsFields): number {
   return isDownpaymentOnly ? Number(booking.amount_due ?? 0) : Number(booking.total_amount ?? 0);
 }
 
+export type PendingDeduction = { id: string; amount: number | string };
+
+// Applies pending organizer deductions to a payout's net amount, greedily and
+// oldest-first: a deduction is applied only if it fully fits in what remains,
+// otherwise it is skipped and left pending for the next payout. This is the
+// source of truth for what create_payout_atomic actually writes, so the
+// admin payout list's displayed net must call this same function rather than
+// a separate floored subtraction, or the shown number can disagree with the
+// money actually remitted (e.g. two 80 deductions against a net of 100 would
+// floor-display as 0 but this function actually applies only one, leaving 20).
+export function computeAppliedNet(
+  bookingsNet: number,
+  pendingDeductions: PendingDeduction[],
+): { net: number; appliedDeductionIds: string[]; skippedDeductionIds: string[] } {
+  let remaining = Math.round(bookingsNet * 100) / 100;
+  const appliedDeductionIds: string[] = [];
+  const skippedDeductionIds: string[] = [];
+  for (const d of pendingDeductions) {
+    const amt = Number(d.amount);
+    if (remaining >= amt) {
+      remaining = Math.round((remaining - amt) * 100) / 100;
+      appliedDeductionIds.push(d.id);
+    } else {
+      skippedDeductionIds.push(d.id);
+    }
+  }
+  return { net: remaining, appliedDeductionIds, skippedDeductionIds };
+}
+
 type RefundSplitFields = SamaHoldsFields & {
   balance_paymongo_payment_id: string | null;
 };

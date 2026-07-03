@@ -9,7 +9,7 @@ import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
-import { amountSamaHolds, isPayoutEligible, todayManilaDate } from "@/lib/booking-finance";
+import { amountSamaHolds, isPayoutEligible, todayManilaDate, computeAppliedNet } from "@/lib/booking-finance";
 import { ACTIVE_BOOKING_STATUSES, ATTENDED_STATUSES } from "@/lib/booking-status";
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { formatPeso } from "@/lib/format";
@@ -479,7 +479,8 @@ export async function getPendingPayouts(): Promise<{
       .from("organizer_deductions" as "trips")
       .select("id, organizer_id, booking_id, amount, created_at")
       .in("organizer_id", organizerIds)
-      .eq("status", "pending") as unknown as Promise<{
+      .eq("status", "pending")
+      .order("created_at", { ascending: true }) as unknown as Promise<{
         data: Array<{ id: string; organizer_id: string; booking_id: number; amount: number; created_at: string }> | null;
       }>,
   ]);
@@ -551,7 +552,9 @@ export async function getPendingPayouts(): Promise<{
   }
 
   for (const group of grouped.values()) {
-    group.adjustedNet = Math.max(0, Math.round((group.totalNet - group.totalDeductions) * 100) / 100);
+    // Uses the same greedy oldest-first apply logic createPayoutAction uses to
+    // write the payout, so the displayed net always equals what actually gets remitted.
+    group.adjustedNet = computeAppliedNet(group.totalNet, group.pendingDeductions.map((d) => ({ id: d.id, amount: d.amount }))).net;
   }
 
   return { unpaid: [...grouped.values()], pending };
@@ -749,16 +752,8 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
     }>);
 
   const pendingDeductions = pendingDeductionsRaw ?? [];
-  let remainingNet = netAmount;
-  const deductionIdsToApply: string[] = [];
-  for (const d of pendingDeductions) {
-    const amt = Number(d.amount);
-    if (remainingNet >= amt) {
-      remainingNet = Math.round((remainingNet - amt) * 100) / 100;
-      deductionIdsToApply.push(d.id);
-    }
-  }
-  const adjustedNetAmount = remainingNet;
+  const { net: adjustedNetAmount, appliedDeductionIds: deductionIdsToApply } =
+    computeAppliedNet(netAmount, pendingDeductions);
 
   // Snapshot payout destination before the atomic creation so the record reflects the state at creation time.
   const { data: orgForSnapshot } = await admin
