@@ -15,6 +15,7 @@ import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES } from "@/lib/booking-st
 import { organizerOwns } from "@/lib/authz";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
+import { voidBookingCredit } from "@/lib/organizer-credits";
 import { createPaymentLink } from "@/lib/create-payment-link";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
 import { formatPeso, formatBookingRef } from "@/lib/format";
@@ -1409,6 +1410,25 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     }
   }
 
+  // Stage 5d: void the organizer credit for this booking. A partial cancel still
+  // voids the FULL credit (no proportional shrinking); when payout_status is
+  // 'remitted' the deduction above already recovers the balance, so no offset.
+  if (tripDateCheck?.organizer_id) {
+    const creditVoid = await voidBookingCredit(admin, bookingId, tripDateCheck.organizer_id, booking.payout_status);
+    if (creditVoid.error) {
+      console.error("[credit-void] failed to void organizer credit", bookingId, creditVoid.error);
+      await sendAdminAlert(
+        "Action needed: failed to void organizer credit on partial cancellation",
+        `
+              <p>A booking with an active organizer credit was partially cancelled, but voiding the credit (or inserting its offsetting deduction) failed. The organizer may be over- or under-paid until this is corrected manually.</p>
+              <p><strong>Booking ID:</strong> ${bookingId}</p>
+              <p><strong>Action reached:</strong> ${creditVoid.action}</p>
+              <p><strong>Error:</strong> ${escapeHtml(creditVoid.error)}</p>
+            `,
+      );
+    }
+  }
+
   let refundResult: RefundResult | null = null;
   let balanceRefundResult: RefundResult | null = null;
 
@@ -1658,6 +1678,26 @@ export async function cancelBooking(bookingId: number) {
         } as never) as unknown as Promise<{ error: { message: string } | null }>);
       if (deductionError) {
         console.error("[deduction] failed to record organizer deduction", bookingId, deductionError.message);
+      }
+    }
+
+    // Stage 5d: void any organizer credit for this booking. When payout_status is
+    // 'remitted' the deduction above already recovers the balance, so the credit
+    // is voided without an offset; otherwise voidBookingCredit inserts an
+    // offsetting deduction to claw back an already-applied credit.
+    if (trip.organizer_id) {
+      const creditVoid = await voidBookingCredit(admin, bookingId, trip.organizer_id, booking.payout_status);
+      if (creditVoid.error) {
+        console.error("[credit-void] failed to void organizer credit", bookingId, creditVoid.error);
+        await sendAdminAlert(
+          "Action needed: failed to void organizer credit on cancellation",
+          `
+                <p>A booking with an active organizer credit was cancelled, but voiding the credit (or inserting its offsetting deduction) failed. The organizer may be over- or under-paid until this is corrected manually.</p>
+                <p><strong>Booking ID:</strong> ${bookingId}</p>
+                <p><strong>Action reached:</strong> ${creditVoid.action}</p>
+                <p><strong>Error:</strong> ${escapeHtml(creditVoid.error)}</p>
+              `,
+        );
       }
     }
 

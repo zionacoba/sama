@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
+import { voidBookingCredit } from "@/lib/organizer-credits";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountSamaHolds, amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
@@ -917,6 +918,25 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
         } as never) as unknown as Promise<{ error: { message: string } | null }>);
       if (deductionError) {
         console.error("[deduction] failed to record organizer deduction", booking.id, deductionError.message);
+      }
+    }
+
+    // Stage 5d: void any organizer credit for this booking. When payout_status is
+    // 'remitted' the deduction above already recovers the balance, so no offset;
+    // otherwise voidBookingCredit inserts an offsetting deduction.
+    if (trip.organizer_id) {
+      const creditVoid = await voidBookingCredit(admin, booking.id, trip.organizer_id, booking.payout_status);
+      if (creditVoid.error) {
+        console.error("[credit-void] failed to void organizer credit", booking.id, creditVoid.error);
+        await sendAdminAlert(
+          "Action needed: failed to void organizer credit on trip cancellation",
+          `
+                <p>A booking with an active organizer credit was cancelled (trip cancelled by organizer), but voiding the credit (or inserting its offsetting deduction) failed. The organizer may be over- or under-paid until this is corrected manually.</p>
+                <p><strong>Booking ID:</strong> ${booking.id}</p>
+                <p><strong>Action reached:</strong> ${creditVoid.action}</p>
+                <p><strong>Error:</strong> ${escapeHtml(creditVoid.error)}</p>
+              `,
+        );
       }
     }
 
