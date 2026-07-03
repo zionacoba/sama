@@ -15,7 +15,7 @@ import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES } from "@/lib/booking-st
 import { organizerOwns } from "@/lib/authz";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
-import { voidBookingCredit } from "@/lib/organizer-credits";
+import { voidBookingCredit, reverseBookingCredit } from "@/lib/organizer-credits";
 import { createPaymentLink } from "@/lib/create-payment-link";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
 import { formatPeso, formatBookingRef } from "@/lib/format";
@@ -1672,7 +1672,7 @@ export async function cancelBooking(bookingId: number) {
         .insert({
           organizer_id: trip.organizer_id,
           booking_id: bookingId,
-          amount: refundAmount,
+          amount: downpaymentRefundAmount ?? refundAmount,
           reason: "Joiner cancellation refund after payout remitted",
           status: "pending",
         } as never) as unknown as Promise<{ error: { message: string } | null }>);
@@ -1681,21 +1681,29 @@ export async function cancelBooking(bookingId: number) {
       }
     }
 
-    // Stage 5d: void any organizer credit for this booking. When payout_status is
-    // 'remitted' the deduction above already recovers the balance, so the credit
-    // is voided without an offset; otherwise voidBookingCredit inserts an
-    // offsetting deduction to claw back an already-applied credit.
+    // Stage 5e: reverse any organizer credit for this booking. The base deduction
+    // above claws back only the downpayment; the online balance is owned by the
+    // credit ledger, so reverseBookingCredit voids/shrinks/offsets the credit
+    // against the balance actually refunded to the joiner (balanceRefundAmount).
     if (trip.organizer_id) {
-      const creditVoid = await voidBookingCredit(admin, bookingId, trip.organizer_id, booking.payout_status);
-      if (creditVoid.error) {
-        console.error("[credit-void] failed to void organizer credit", bookingId, creditVoid.error);
+      const creditReversal = await reverseBookingCredit(admin, bookingId, trip.organizer_id, balanceRefundAmount);
+      if (creditReversal.error) {
+        console.error("[credit-reversal] failed to reverse organizer credit", bookingId, creditReversal.error);
         await sendAdminAlert(
-          "Action needed: failed to void organizer credit on cancellation",
+          "Action needed: failed to reverse organizer credit on cancellation",
           `
-                <p>A booking with an active organizer credit was cancelled, but voiding the credit (or inserting its offsetting deduction) failed. The organizer may be over- or under-paid until this is corrected manually.</p>
+                <p>A booking with an active organizer credit was cancelled, but reversing the credit (void/shrink/offset) failed. The organizer may be over- or under-paid until this is corrected manually.</p>
                 <p><strong>Booking ID:</strong> ${bookingId}</p>
-                <p><strong>Action reached:</strong> ${creditVoid.action}</p>
-                <p><strong>Error:</strong> ${escapeHtml(creditVoid.error)}</p>
+                <p><strong>Action reached:</strong> ${creditReversal.action.kind}</p>
+                <p><strong>Error:</strong> ${escapeHtml(creditReversal.error)}</p>
+              `,
+        );
+      } else if (creditReversal.action.kind === "document") {
+        await sendAdminAlert(
+          "Action needed: organizer credit applied into an undisbursed payout flagged for review",
+          `
+                <p>A booking was cancelled whose balance credit had already been applied into an organizer payout that has not yet been disbursed. The payout has been flagged for reconciliation; please review and adjust it before it is remitted.</p>
+                <p><strong>Booking ID:</strong> ${bookingId}</p>
               `,
         );
       }
