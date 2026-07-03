@@ -9,7 +9,7 @@ import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
-import { amountSamaHolds, isPayoutEligible } from "@/lib/booking-finance";
+import { amountSamaHolds, isPayoutEligible, todayManilaDate } from "@/lib/booking-finance";
 import { ACTIVE_BOOKING_STATUSES, ATTENDED_STATUSES } from "@/lib/booking-status";
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { formatPeso } from "@/lib/format";
@@ -398,7 +398,7 @@ export async function getPendingPayouts(): Promise<{
 }> {
   await requireAdmin();
   const admin = createSupabaseAdminClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayManilaDate();
 
   // Payouts already created but not yet remitted.
   const { data: pendingRaw } = await admin
@@ -712,7 +712,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   // payout-eligible (attended status with payment actually received online; free
   // trips are confirmed without a gateway status). Shares isPayoutEligible with
   // getPendingPayouts and the organizer dashboard so the guards never drift.
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayManilaDate();
   const eligible = bookings.filter((b) =>
     b.trip?.date_start != null &&
     b.trip.date_start < today &&

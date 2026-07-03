@@ -23,6 +23,13 @@ type PayoutEligibilityFields = {
   total_amount: number | string | null;
 };
 
+// Today's date in Manila, as "YYYY-MM-DD". This is the date basis for every
+// payout/booking/cancellation eligibility gate — using UTC instead would drift
+// from Manila's true today by up to 8 hours near the day boundary.
+export function todayManilaDate(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+}
+
 // Whether a booking is eligible to be paid out to its organizer, i.e. whether
 // the organizer is treated as having earned it. This is the exact predicate the
 // admin payout pipeline applies: the booking must be in an ATTENDED status

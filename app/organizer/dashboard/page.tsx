@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { amountSamaHolds, isPayoutEligible } from "@/lib/booking-finance";
+import { amountSamaHolds, isPayoutEligible, todayManilaDate } from "@/lib/booking-finance";
 import { ATTENDED_STATUSES } from "@/lib/booking-status";
 import { DashboardFilters } from "./dashboard-filters";
 import { TripRow, TripRunRow, type OrganizerTrip, type TripCounts } from "./trip-row";
@@ -117,7 +117,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
 
   if (activeView === "earnings") {
     const admin = createSupabaseAdminClient();
-    const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+    const todayStr = todayManilaDate();
 
     const [{ data: unpaidRaw }, { data: payoutsRaw }, { data: deductionsRaw }] = await Promise.all([
       admin
