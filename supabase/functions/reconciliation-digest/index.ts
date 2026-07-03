@@ -41,6 +41,24 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+// Dead-man's-switch ping. On a fully successful run we ping Healthchecks.io so an
+// external monitor alarms if this heartbeat ever goes silent (CRON_SECRET drift,
+// unset ADMIN_EMAIL, Resend outage, pg_cron not firing). The ping is additive and
+// must never break the digest: a missing URL only warns, and a ping error is caught
+// and logged so a monitoring outage cannot fail an otherwise good run.
+async function pingDeadMansSwitch(): Promise<void> {
+  const url = Deno.env.get("HEALTHCHECK_DIGEST_URL");
+  if (!url) {
+    console.warn("HEALTHCHECK_DIGEST_URL not set, skipping dead-mans-switch ping");
+    return;
+  }
+  try {
+    await fetch(url);
+  } catch (err) {
+    console.error("[reconciliation-digest] dead-mans-switch ping failed:", err);
+  }
+}
+
 type RefundRow = {
   id: number;
   booking_id: number;
@@ -215,6 +233,13 @@ Deno.serve(async (req) => {
       headers: { "Content-Type": "application/json" },
     });
   }
+
+  // Fully successful run: the three queries ran and the digest email was sent.
+  // Fire the dead-man's-switch ping LAST, only here, so it can never produce a
+  // false all-clear. Every earlier failure path returns before reaching this
+  // point and therefore never pings, which is what lets the external monitor
+  // alarm on the absence of a ping.
+  await pingDeadMansSwitch();
 
   return new Response(
     JSON.stringify({
