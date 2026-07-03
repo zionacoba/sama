@@ -14,6 +14,26 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+// Dead-man's-switch ping (mirrors reconciliation-digest). On a fully successful
+// run we ping Healthchecks.io so an external monitor alarms if this job ever goes
+// silent. A `/fail` ping is fired instead when the cancel/restore RPC errors but
+// ADMIN_EMAIL is unset, converting a silently-dropped operator alert into an
+// external signal. The ping is additive and must never break the job: a missing
+// URL only warns, and a ping error is caught and logged so a monitoring outage
+// cannot fail an otherwise good run.
+async function pingDeadMansSwitch(path = ""): Promise<void> {
+  const url = Deno.env.get("HEALTHCHECK_CLEANUP_URL");
+  if (!url) {
+    console.warn("HEALTHCHECK_CLEANUP_URL not set, skipping dead-mans-switch ping");
+    return;
+  }
+  try {
+    await fetch(`${url}${path}`);
+  } catch (err) {
+    console.error("[cleanup-abandoned-payments] dead-mans-switch ping failed:", err);
+  }
+}
+
 Deno.serve(async (req) => {
   const cronSecret = Deno.env.get("CRON_SECRET");
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -52,6 +72,10 @@ Deno.serve(async (req) => {
 
   let cleaned = 0;
   let skippedPaid = 0;
+  // Tracks whether this run had to signal fail (the cancel/restore RPC errored
+  // while the ADMIN_EMAIL alert channel was unavailable). If set, the success
+  // ping is skipped so the check reads as down, not up.
+  const runState = { failed: false };
   for (const booking of staleBookings ?? []) {
     // Webhook-independent reconciliation. Before cancelling, ask the app to
     // check PayMongo directly for this booking's payment. If the payment went
@@ -121,6 +145,15 @@ Deno.serve(async (req) => {
         } catch (alertErr) {
           console.error(`[cleanup-abandoned-payments] failed to send admin alert for booking ${booking.id}:`, alertErr);
         }
+      } else {
+        // ADMIN_EMAIL unset: the operator alert email cannot be sent. Convert that
+        // dropped alert into an external /fail dead-mans-switch signal. One /fail
+        // per run is enough, so guard on runState, and mark the run failed so the
+        // terminal success ping is suppressed for a run that had to signal fail.
+        if (!runState.failed) {
+          runState.failed = true;
+          await pingDeadMansSwitch("/fail");
+        }
       }
       continue;
     }
@@ -187,6 +220,15 @@ Deno.serve(async (req) => {
   }
 
   console.log(`[cleanup-abandoned-payments] balance sweep: confirmed ${balanceConfirmed} of ${(balanceCandidates ?? []).length} candidate balances`);
+
+  // Fully successful run: the initial stale-bookings fetch succeeded and both the
+  // cleanup loop and balance sweep completed. Fire the dead-man's-switch ping LAST,
+  // only here, so the earlier 401/500 returns never ping. Skip it when this run had
+  // to signal fail (cancel/restore errored with no ADMIN_EMAIL to alert): a run that
+  // fired /fail should read as down, not up.
+  if (!runState.failed) {
+    await pingDeadMansSwitch();
+  }
 
   return new Response(
     JSON.stringify({

@@ -17,6 +17,26 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+// Dead-man's-switch ping (mirrors reconciliation-digest). On a fully successful
+// run we ping Healthchecks.io so an external monitor alarms if this job ever goes
+// silent. A `/fail` ping is fired instead when a refund crosses into 'exhausted'
+// but ADMIN_EMAIL is unset, converting a silently-dropped operator alert into an
+// external signal. The ping is additive and must never break the job: a missing
+// URL only warns, and a ping error is caught and logged so a monitoring outage
+// cannot fail an otherwise good run.
+async function pingDeadMansSwitch(path = ""): Promise<void> {
+  const url = Deno.env.get("HEALTHCHECK_RETRY_REFUNDS_URL");
+  if (!url) {
+    console.warn("HEALTHCHECK_RETRY_REFUNDS_URL not set, skipping dead-mans-switch ping");
+    return;
+  }
+  try {
+    await fetch(`${url}${path}`);
+  } catch (err) {
+    console.error("[retry-failed-refunds] dead-mans-switch ping failed:", err);
+  }
+}
+
 type RefundRow = {
   id: number;
   booking_id: number;
@@ -41,6 +61,7 @@ async function recordFailure(
   supabase: any,
   row: RefundRow,
   lastError: string,
+  runState: { failed: boolean },
 ): Promise<boolean> {
   const nextAttempts = (row.attempts ?? 0) + 1;
   const exhausted = nextAttempts >= MAX_ATTEMPTS;
@@ -73,6 +94,15 @@ async function recordFailure(
         );
       } catch (alertErr) {
         console.error(`[retry-failed-refunds] failed to send exhausted alert for refund ${row.id}:`, alertErr);
+      }
+    } else {
+      // ADMIN_EMAIL unset: the manual-action alert email cannot be sent. Convert
+      // that dropped operator alert into an external /fail dead-mans-switch signal.
+      // One /fail per run is enough, so guard on runState, and mark the run failed
+      // so the terminal success ping is suppressed for a run that had to signal fail.
+      if (!runState.failed) {
+        runState.failed = true;
+        await pingDeadMansSwitch("/fail");
       }
     }
   }
@@ -126,11 +156,15 @@ Deno.serve(async (req) => {
   let issued = 0;
   let failed = 0;
   let exhausted = 0;
+  // Tracks whether this run had to signal fail (a refund exhausted while the
+  // ADMIN_EMAIL alert channel was unavailable). If set, the success ping is
+  // skipped so the check reads as down, not up.
+  const runState = { failed: false };
 
   for (const row of (rows ?? []) as RefundRow[]) {
     try {
       if (!row.payment_id) {
-        if (await recordFailure(supabase, row, "No payment_id on refund row")) exhausted++;
+        if (await recordFailure(supabase, row, "No payment_id on refund row", runState)) exhausted++;
         else failed++;
         continue;
       }
@@ -154,6 +188,7 @@ Deno.serve(async (req) => {
             supabase,
             row,
             `Verify failed: HTTP ${paymentRes.status} ${detail.slice(0, 200)}`,
+            runState,
           )
         ) exhausted++;
         else failed++;
@@ -209,6 +244,7 @@ Deno.serve(async (req) => {
             supabase,
             row,
             issueData?.errors?.[0]?.detail ?? `Refund failed: HTTP ${issueRes.status}`,
+            runState,
           )
         ) exhausted++;
         else failed++;
@@ -228,7 +264,7 @@ Deno.serve(async (req) => {
       // One row's failure must not abort the batch.
       console.error(`[retry-failed-refunds] error processing refund ${row.id}:`, err);
       try {
-        if (await recordFailure(supabase, row, err instanceof Error ? err.message : "Unknown error")) exhausted++;
+        if (await recordFailure(supabase, row, err instanceof Error ? err.message : "Unknown error", runState)) exhausted++;
         else failed++;
       } catch (updateErr) {
         console.error(`[retry-failed-refunds] failed to record error for refund ${row.id}:`, updateErr);
@@ -241,6 +277,14 @@ Deno.serve(async (req) => {
   console.log(
     `[retry-failed-refunds] processed ${total}: reconciled ${reconciled}, issued ${issued}, failed ${failed}, exhausted ${exhausted}`,
   );
+
+  // Fully successful run: the initial fetch succeeded and every row was processed.
+  // Fire the dead-man's-switch ping LAST, only here, so earlier 401/500 returns
+  // never ping. Skip it when this run had to signal fail (a refund exhausted with
+  // no ADMIN_EMAIL to alert): a run that fired /fail should read as down, not up.
+  if (!runState.failed) {
+    await pingDeadMansSwitch();
+  }
 
   return new Response(
     JSON.stringify({ total, reconciled, issued, failed, exhausted }),
