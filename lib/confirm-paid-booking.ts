@@ -479,7 +479,7 @@ export async function confirmPaidBalance(
 ): Promise<ConfirmBalanceResult> {
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, full_name, email, total_amount, amount_due, balance_payment_gateway_status")
+    .select("id, trip_id, full_name, email, total_amount, amount_due, balance_payment_gateway_status, payout_status")
     .eq("balance_payment_id", linkId)
     .maybeSingle();
 
@@ -525,6 +525,47 @@ export async function confirmPaidBalance(
     // Idempotency: another path confirmed between our read and write.
     console.log(`[confirm-paid-balance] Duplicate balance confirmation for booking ${booking.id} — skipping`);
     return { outcome: "already_paid" };
+  }
+
+  // Pre-trip payout credit (Stage 5b). If this booking's downpayment was already
+  // paid out to the organizer (payout_status 'included' or 'remitted'), the
+  // balance the joiner just paid online will never be swept by the normal
+  // post-trip payout, which only picks up payout_status='unpaid' bookings. Record
+  // a credit owed to the organizer so a later step can remit it. This runs inside
+  // the once-only guard above (the atomic balance_payment_gateway_status null
+  // check), so it fires at most once per booking even under a double webhook.
+  //
+  // If payout_status is 'unpaid' (or null) we do NOTHING on purpose: the standard
+  // post-trip sweep remits the whole booking (downpayment + balance) and no
+  // separate credit is owed. Nothing reads organizer_credits yet; Stage 5c wires
+  // it into payouts.
+  if (booking.payout_status === "included" || booking.payout_status === "remitted") {
+    const creditAmount = Math.round(((booking.total_amount ?? 0) - (booking.amount_due ?? 0)) * 100) / 100;
+    if (creditAmount > 0 && trip.organizer_id) {
+      const { error: creditError } = await admin.from("organizer_credits").insert({
+        organizer_id: trip.organizer_id,
+        booking_id: booking.id,
+        amount: creditAmount,
+        reason: "Balance paid online after downpayment payout",
+        status: "pending",
+      });
+      if (creditError) {
+        // This is the organizer's money. Never swallow: log and alert a human so
+        // the credit can be recorded manually.
+        console.error(`[confirm-paid-balance] failed to insert organizer credit for booking ${booking.id}:`, creditError.message);
+        await sendAdminAlert(
+          "Action needed: organizer credit insert failed after balance payment",
+          `
+                <p>A participant paid their balance online for a booking whose downpayment was already paid out to the organizer, but recording the organizer credit failed. The organizer is owed this balance and it will NOT be picked up by the post-trip payout sweep.</p>
+                <p><strong>Booking ID:</strong> ${booking.id}</p>
+                <p><strong>Trip:</strong> ${escapeHtml(trip.title)}</p>
+                <p><strong>Amount owed:</strong> ${formatPeso(creditAmount)}</p>
+                <p><strong>Error:</strong> ${escapeHtml(creditError.message)}</p>
+                <p>Please record this credit manually so the organizer is paid.</p>
+              `,
+        );
+      }
+    }
   }
 
   const balance = Math.round(((booking.total_amount ?? 0) - (booking.amount_due ?? 0)) * 100) / 100;
