@@ -47,6 +47,88 @@ export function isPayoutEligible(booking: PayoutEligibilityFields): boolean {
   return attended && paymentReceived;
 }
 
+// "YYYY-MM-DD" for an ISO instant, expressed in Manila. Same formatter as
+// todayManilaDate so a booking's created_at and "today" are compared on one
+// timezone basis.
+export function manilaDateOf(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date(iso));
+}
+
+// Adds n calendar days to a "YYYY-MM-DD" string, returning "YYYY-MM-DD". The
+// input is parsed as UTC midnight ("...T00:00:00Z") and formatted back in UTC on
+// purpose: a plain new Date("YYYY-MM-DD") is already UTC midnight, but doing the
+// arithmetic and formatting in UTC guarantees the +2 / -7 day shift is pure
+// calendar-day math that no local timezone or DST transition can nudge across a
+// day boundary. n may be negative.
+export function addCalendarDays(ymd: string, n: number): string {
+  const base = new Date(`${ymd}T00:00:00Z`).getTime() + n * 86_400_000;
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(new Date(base));
+}
+
+type PayoutTimingFields = {
+  payment_option: string | null;
+  balance_payment_gateway_status: string | null;
+  created_at: string;
+  trip: { date_start: string } | null;
+};
+
+export type PayoutTiming =
+  | { payable: true; reason: "pre-trip-cleared" }
+  | { payable: true; reason: "post-trip-balance" }
+  | { payable: true; reason: "post-trip-late" }
+  | { payable: false; reason: "not-cleared" | "trip-not-past" | "no-trip" };
+
+// Decides WHETHER a booking is payable now and WHY, implementing the three
+// payout-timing lanes. This replaces the old inline "trip.date_start < today"
+// gate at every payout call site. It is deliberately orthogonal to
+// isPayoutEligible: this answers "is it the right time to pay", isPayoutEligible
+// answers "was it earned at all" (attended + payment received). Both must pass.
+//
+// All dates are "YYYY-MM-DD" Manila strings compared lexically (which matches
+// chronological order for that format). Lanes are mutually exclusive and checked
+// C, then B, then A:
+//   Lane C: the balance was paid online (balance_payment_gateway_status ===
+//     "paid"). The whole booking waits post-trip, since amountSamaHolds returns
+//     the combined total on one row and a booking row is never split across two
+//     payouts. Payable only once the trip is past.
+//   Lane B: a late booking, created less than 7 days before the trip. Falls back
+//     to the original post-trip gate. Payable only once the trip is past.
+//   Lane A: everything else. Pre-trip eligible once the payment has "cleared",
+//     defined as created_at Manila date + 2 calendar days <= today Manila, even
+//     if the trip has not happened yet.
+export function payoutTimingGate(b: PayoutTimingFields, todayManila: string): PayoutTiming {
+  if (!b.trip?.date_start) return { payable: false, reason: "no-trip" };
+
+  const tripPast = b.trip.date_start < todayManila;
+  const balancePaidOnline = b.balance_payment_gateway_status === "paid";
+
+  // Lane C: online balance payment always waits post-trip (whole booking).
+  if (balancePaidOnline) {
+    return tripPast
+      ? { payable: true, reason: "post-trip-balance" }
+      : { payable: false, reason: "trip-not-past" };
+  }
+
+  // Lane B: late booking (created less than 7 days before the trip). A booking
+  // created exactly on the cutoff (trip minus 7 days) is NOT late; only one
+  // created strictly after it (fewer than 7 days out) is.
+  const createdManila = manilaDateOf(b.created_at);
+  const cutoff = addCalendarDays(b.trip.date_start, -7);
+  const isLate = createdManila > cutoff;
+  if (isLate) {
+    return tripPast
+      ? { payable: true, reason: "post-trip-late" }
+      : { payable: false, reason: "trip-not-past" };
+  }
+
+  // Lane A: pre-trip. Payable once the payment has cleared, regardless of whether
+  // the trip has taken place.
+  const cleared = addCalendarDays(createdManila, 2) <= todayManila;
+  return cleared
+    ? { payable: true, reason: "pre-trip-cleared" }
+    : { payable: false, reason: "not-cleared" };
+}
+
 // Returns the gross amount Sama actually received online for this booking —
 // the amount Sama is holding and must remit from, before commission.
 //

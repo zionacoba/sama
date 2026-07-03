@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  addCalendarDays,
   amountJoinerPaid,
   amountSamaHolds,
   computeAppliedNet,
   computeRefundSplit,
   isPayoutEligible,
+  manilaDateOf,
+  payoutTimingGate,
 } from "@/lib/booking-finance";
 
 // Helper to build the minimal booking shape these functions read. Defaults to a
@@ -241,5 +244,143 @@ describe("computeAppliedNet", () => {
     const result = computeAppliedNet(100, [{ id: "d1", amount: "40" }]);
     expect(result.net).toBe(60);
     expect(result.appliedDeductionIds).toEqual(["d1"]);
+  });
+});
+
+describe("addCalendarDays", () => {
+  it("adds days across a month boundary", () => {
+    expect(addCalendarDays("2026-06-30", 2)).toBe("2026-07-02");
+  });
+
+  it("adds one day across the end of January", () => {
+    expect(addCalendarDays("2026-01-31", 1)).toBe("2026-02-01");
+  });
+
+  it("adds days across a year boundary", () => {
+    expect(addCalendarDays("2026-12-31", 1)).toBe("2027-01-01");
+  });
+
+  it("subtracts days (negative n)", () => {
+    expect(addCalendarDays("2026-03-01", -7)).toBe("2026-02-22");
+  });
+
+  it("is unaffected by any local DST transition (pure UTC calendar math)", () => {
+    // US DST ends 2026-11-01; a naive local-time shift could land back on the
+    // same wall-clock day. UTC-midnight math must still advance exactly one day.
+    expect(addCalendarDays("2026-11-01", 1)).toBe("2026-11-02");
+  });
+});
+
+describe("manilaDateOf", () => {
+  it("returns the Manila calendar date for a same-day UTC instant", () => {
+    expect(manilaDateOf("2026-06-30T02:00:00Z")).toBe("2026-06-30");
+  });
+
+  it("rolls forward to the next Manila day for a late UTC instant (+8)", () => {
+    // 20:00 UTC is 04:00 next day in Manila.
+    expect(manilaDateOf("2026-06-30T20:00:00Z")).toBe("2026-07-01");
+  });
+});
+
+describe("payoutTimingGate", () => {
+  // Minimal booking shape the gate reads. created_at times use T02:00:00Z so the
+  // Manila date equals the date part regardless of the +8 offset. Defaults to a
+  // downpayment booking, balance not paid online, future trip 2026-07-20.
+  function tooking(
+    over: {
+      payment_option?: string | null;
+      balance_payment_gateway_status?: string | null;
+      created_at?: string;
+      dateStart?: string | null;
+    } = {},
+  ) {
+    const { dateStart = "2026-07-20", ...rest } = over;
+    return {
+      payment_option: "downpayment",
+      balance_payment_gateway_status: null,
+      created_at: "2026-06-30T02:00:00Z",
+      trip: dateStart == null ? null : { date_start: dateStart },
+      ...rest,
+    };
+  }
+
+  it("Lane A: created 3 days ago, future trip -> payable pre-trip-cleared", () => {
+    // created 2026-06-30 (Manila), today 2026-07-03, future trip 2026-07-20.
+    const b = tooking({ created_at: "2026-06-30T02:00:00Z", dateStart: "2026-07-20" });
+    const r = payoutTimingGate(b, "2026-07-03");
+    expect(r).toEqual({ payable: true, reason: "pre-trip-cleared" });
+  });
+
+  it("Lane A: created today, future trip -> not payable (not-cleared)", () => {
+    const b = tooking({ created_at: "2026-07-03T02:00:00Z", dateStart: "2026-07-20" });
+    const r = payoutTimingGate(b, "2026-07-03");
+    expect(r).toEqual({ payable: false, reason: "not-cleared" });
+  });
+
+  it("Lane A boundary: created exactly 2 calendar days ago -> payable", () => {
+    // created 2026-07-01, today 2026-07-03 -> +2 days = 2026-07-03 <= today.
+    const b = tooking({ created_at: "2026-07-01T02:00:00Z", dateStart: "2026-07-20" });
+    const r = payoutTimingGate(b, "2026-07-03");
+    expect(r).toEqual({ payable: true, reason: "pre-trip-cleared" });
+  });
+
+  it("Lane B boundary: created exactly 7 days before trip is NOT late (goes to Lane A)", () => {
+    // trip 2026-07-20, cutoff = 2026-07-13. created 2026-07-13 is not > cutoff, so
+    // not late. today 2026-07-16 clears it -> pre-trip-cleared, proving the exactly
+    // -7-days case is treated as pre-trip, not post-trip-late.
+    const b = tooking({ created_at: "2026-07-13T02:00:00Z", dateStart: "2026-07-20" });
+    const r = payoutTimingGate(b, "2026-07-16");
+    expect(r).toEqual({ payable: true, reason: "pre-trip-cleared" });
+  });
+
+  it("Lane B: created 6 days before trip (less than 7) is late -> not payable pre-trip", () => {
+    // trip 2026-07-20, cutoff 2026-07-13, created 2026-07-14 > cutoff -> late.
+    const b = tooking({ created_at: "2026-07-14T02:00:00Z", dateStart: "2026-07-20" });
+    const r = payoutTimingGate(b, "2026-07-16");
+    expect(r).toEqual({ payable: false, reason: "trip-not-past" });
+  });
+
+  it("Lane B: same late booking after the trip -> payable post-trip-late", () => {
+    const b = tooking({ created_at: "2026-07-14T02:00:00Z", dateStart: "2026-07-20" });
+    const r = payoutTimingGate(b, "2026-07-25");
+    expect(r).toEqual({ payable: true, reason: "post-trip-late" });
+  });
+
+  it("Lane C: balance paid online, future trip -> not payable (trip-not-past)", () => {
+    const b = tooking({
+      balance_payment_gateway_status: "paid",
+      created_at: "2026-06-30T02:00:00Z",
+      dateStart: "2026-07-20",
+    });
+    const r = payoutTimingGate(b, "2026-07-03");
+    expect(r).toEqual({ payable: false, reason: "trip-not-past" });
+  });
+
+  it("Lane C: balance paid online, past trip -> payable post-trip-balance", () => {
+    const b = tooking({
+      balance_payment_gateway_status: "paid",
+      created_at: "2026-06-30T02:00:00Z",
+      dateStart: "2026-07-20",
+    });
+    const r = payoutTimingGate(b, "2026-07-25");
+    expect(r).toEqual({ payable: true, reason: "post-trip-balance" });
+  });
+
+  it("Lane C wins over Lane A: balance paid online blocks an otherwise-cleared pre-trip booking", () => {
+    // Cleared by Lane A math (created 3 days ago) but balance paid online, so the
+    // whole booking must wait post-trip. Future trip -> not payable.
+    const b = tooking({
+      balance_payment_gateway_status: "paid",
+      created_at: "2026-06-30T02:00:00Z",
+      dateStart: "2026-07-20",
+    });
+    const r = payoutTimingGate(b, "2026-07-03");
+    expect(r).toEqual({ payable: false, reason: "trip-not-past" });
+  });
+
+  it("no trip -> not payable (no-trip)", () => {
+    const b = tooking({ dateStart: null });
+    const r = payoutTimingGate(b, "2026-07-03");
+    expect(r).toEqual({ payable: false, reason: "no-trip" });
   });
 });

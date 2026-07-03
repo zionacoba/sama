@@ -9,7 +9,7 @@ import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
-import { amountSamaHolds, isPayoutEligible, todayManilaDate, computeAppliedNet } from "@/lib/booking-finance";
+import { amountSamaHolds, isPayoutEligible, payoutTimingGate, todayManilaDate, computeAppliedNet } from "@/lib/booking-finance";
 import { ACTIVE_BOOKING_STATUSES, ATTENDED_STATUSES } from "@/lib/booking-status";
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { formatPeso } from "@/lib/format";
@@ -437,7 +437,7 @@ export async function getPendingPayouts(): Promise<{
   // Confirmed bookings from past trips not yet included in any payout.
   const { data: rawBookings } = await admin
     .from("bookings")
-    .select("id, full_name, status, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
+    .select("id, full_name, status, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, created_at, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
     .in("status", [...ATTENDED_STATUSES])
     .eq("payout_status", "unpaid") as unknown as {
       data: Array<{
@@ -451,17 +451,19 @@ export async function getPendingPayouts(): Promise<{
         balance_collected: boolean;
         payment_gateway_status: string | null;
         balance_payment_gateway_status: string | null;
+        created_at: string;
         trip: { title: string; date_start: string; organizer_id: string } | null;
       }> | null;
     };
 
   // Include fully-paid bookings and downpayment bookings (even without balance collected)
-  // from trips that have already taken place, and only where payment was actually
+  // whose payout timing has come due, and only where payment was actually
   // received online (free trips are confirmed without a gateway status). The
-  // attended-status + payment-received predicate is shared with the organizer
-  // dashboard via isPayoutEligible so the two can never drift.
+  // timing gate (three-lane pre-trip / post-trip logic) and the attended-status +
+  // payment-received predicate (isPayoutEligible) are both shared with
+  // createPayoutAction and the organizer dashboard so the sites can never drift.
   const eligible = (rawBookings ?? []).filter((b) => {
-    if (!b.trip?.date_start || b.trip.date_start >= today) return false;
+    if (!payoutTimingGate(b, today).payable) return false;
     if (!isPayoutEligible(b)) return false;
     return b.payment_option === "full" || b.payment_option === "downpayment";
   });
@@ -691,7 +693,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   // Compute totals server-side from the actual booking records.
   const { data: bookings } = await admin
     .from("bookings")
-    .select("id, status, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(date_start)")
+    .select("id, status, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, created_at, trip:trips!bookings_trip_id_fkey(date_start)")
     .in("id", bookingIds)
     .eq("payout_status", "unpaid")
     .in("status", [...ATTENDED_STATUSES]) as unknown as {
@@ -705,20 +707,24 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
         balance_collected: boolean;
         payment_gateway_status: string | null;
         balance_payment_gateway_status: string | null;
+        created_at: string;
         trip: { date_start: string } | null;
       }> | null;
     };
 
   if (!bookings || bookings.length === 0) redirect("/admin?tab=payouts&payoutError=missing");
 
-  // Only pay out bookings whose trip has already taken place and that are
+  // Only pay out bookings whose payout timing has come due and that are
   // payout-eligible (attended status with payment actually received online; free
-  // trips are confirmed without a gateway status). Shares isPayoutEligible with
-  // getPendingPayouts and the organizer dashboard so the guards never drift.
+  // trips are confirmed without a gateway status). Shares payoutTimingGate and
+  // isPayoutEligible with getPendingPayouts and the organizer dashboard so the
+  // guards never drift. This gate MUST match getPendingPayouts exactly: both call
+  // payoutTimingGate with the same todayManilaDate() basis, so a booking the
+  // admin list showed as payable re-validates as payable here and the
+  // batch-drift check below never wrongly rejects a valid pre-trip batch.
   const today = todayManilaDate();
   const eligible = bookings.filter((b) =>
-    b.trip?.date_start != null &&
-    b.trip.date_start < today &&
+    payoutTimingGate(b, today).payable &&
     isPayoutEligible(b)
   );
 

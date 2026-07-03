@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { amountSamaHolds, isPayoutEligible, todayManilaDate } from "@/lib/booking-finance";
+import { amountSamaHolds, isPayoutEligible, payoutTimingGate, todayManilaDate } from "@/lib/booking-finance";
 import { ATTENDED_STATUSES } from "@/lib/booking-status";
 import { DashboardFilters } from "./dashboard-filters";
 import { TripRow, TripRunRow, type OrganizerTrip, type TripCounts } from "./trip-row";
@@ -122,7 +122,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     const [{ data: unpaidRaw }, { data: payoutsRaw }, { data: deductionsRaw }] = await Promise.all([
       admin
         .from("bookings")
-        .select("id, slots, status, total_amount, amount_due, platform_commission, commission_rate_used, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
+        .select("id, slots, status, total_amount, amount_due, platform_commission, commission_rate_used, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, created_at, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
         .in("status", [...ATTENDED_STATUSES])
         .eq("payout_status", "unpaid") as unknown as Promise<{
           data: Array<{
@@ -137,6 +137,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
             balance_collected: boolean;
             payment_gateway_status: string | null;
             balance_payment_gateway_status: string | null;
+            created_at: string;
             trip: { title: string; date_start: string; organizer_id: string } | null;
           }> | null;
         }>,
@@ -166,16 +167,17 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
         }>,
     ]);
 
-    // Filter unpaid bookings to this organizer only, from past trips, and only
-    // those actually eligible for payout. isPayoutEligible is the same predicate
-    // the admin payout pipeline uses, so pending earnings can never drift from
-    // what is actually paid out: no_show bookings that were paid are included,
+    // Filter unpaid bookings to this organizer only, whose payout timing has come
+    // due, and that are actually eligible for payout. payoutTimingGate and
+    // isPayoutEligible are the same predicates the admin payout pipeline uses, so
+    // pending earnings can never drift from what is actually paid out: pre-trip
+    // cleared bookings are surfaced, no_show bookings that were paid are included,
     // and confirmed bookings whose payment was never received online are not.
     const myUnpaid = (unpaidRaw ?? []).filter(
       (b) =>
         b.trip != null &&
         b.trip.organizer_id === organizer.id &&
-        b.trip.date_start < todayStr &&
+        payoutTimingGate(b, todayStr).payable &&
         isPayoutEligible(b),
     );
 
