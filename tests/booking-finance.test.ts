@@ -245,6 +245,49 @@ describe("computeAppliedNet", () => {
     expect(result.net).toBe(60);
     expect(result.appliedDeductionIds).toEqual(["d1"]);
   });
+
+  it("credits-only: net is bookingsNet plus credits, all credits applied", () => {
+    const result = computeAppliedNet(100, [], [{ id: "c1", amount: 50 }]);
+    expect(result.net).toBe(150);
+    expect(result.appliedCreditIds).toEqual(["c1"]);
+    expect(result.appliedDeductionIds).toEqual([]);
+    expect(result.skippedDeductionIds).toEqual([]);
+  });
+
+  it("credit + deduction net as one balance: base 150, deduction 120 fits, net 30", () => {
+    // Credits add first (100 + 50 = 150), then the deduction applies greedily
+    // against the credit-inflated base, so a 120 deduction that would NOT fit in
+    // 100 alone fits in 150 and leaves 30.
+    const result = computeAppliedNet(
+      100,
+      [{ id: "d1", amount: 120 }],
+      [{ id: "c1", amount: 50 }],
+    );
+    expect(result.net).toBe(30);
+    expect(result.appliedDeductionIds).toEqual(["d1"]);
+    expect(result.skippedDeductionIds).toEqual([]);
+    expect(result.appliedCreditIds).toEqual(["c1"]);
+  });
+
+  it("credit present but deduction still does not fit: deduction skipped, credit always applied", () => {
+    // Base is 100 + 20 = 120; a 200 deduction does not fit and rolls over, but
+    // the credit is still applied (credits only add, they never skip).
+    const result = computeAppliedNet(
+      100,
+      [{ id: "d1", amount: 200 }],
+      [{ id: "c1", amount: 20 }],
+    );
+    expect(result.net).toBe(120);
+    expect(result.appliedDeductionIds).toEqual([]);
+    expect(result.skippedDeductionIds).toEqual(["d1"]);
+    expect(result.appliedCreditIds).toEqual(["c1"]);
+  });
+
+  it("string credit amounts are coerced", () => {
+    const result = computeAppliedNet(100, [], [{ id: "c1", amount: "25" }]);
+    expect(result.net).toBe(125);
+    expect(result.appliedCreditIds).toEqual(["c1"]);
+  });
 });
 
 describe("addCalendarDays", () => {

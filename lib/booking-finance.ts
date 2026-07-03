@@ -156,20 +156,31 @@ export function amountJoinerPaid(booking: SamaHoldsFields): number {
 }
 
 export type PendingDeduction = { id: string; amount: number | string };
+export type PendingCredit = { id: string; amount: number | string };
 
-// Applies pending organizer deductions to a payout's net amount, greedily and
-// oldest-first: a deduction is applied only if it fully fits in what remains,
-// otherwise it is skipped and left pending for the next payout. This is the
-// source of truth for what create_payout_atomic actually writes, so the
-// admin payout list's displayed net must call this same function rather than
+// Applies pending organizer credits and deductions to a payout's net amount.
+// Credits and deductions net as ONE running balance (decision D4): credits ADD
+// first (they always apply, since they only increase what the organizer is
+// owed), then deductions apply greedily and oldest-first against the
+// credit-inflated base. A deduction is applied only if it fully fits in what
+// remains, otherwise it is skipped and left pending for the next payout.
+//
+// This is the source of truth for what create_payout_atomic actually writes, so
+// the admin payout list's displayed net must call this same function rather than
 // a separate floored subtraction, or the shown number can disagree with the
 // money actually remitted (e.g. two 80 deductions against a net of 100 would
 // floor-display as 0 but this function actually applies only one, leaving 20).
+//
+// pendingCredits defaults to [] so existing callers that pass no credits behave
+// identically to before. appliedCreditIds is every credit id (credits always
+// apply); the greedy skip logic is deductions-only.
 export function computeAppliedNet(
   bookingsNet: number,
   pendingDeductions: PendingDeduction[],
-): { net: number; appliedDeductionIds: string[]; skippedDeductionIds: string[] } {
-  let remaining = Math.round(bookingsNet * 100) / 100;
+  pendingCredits: PendingCredit[] = [],
+): { net: number; appliedDeductionIds: string[]; skippedDeductionIds: string[]; appliedCreditIds: string[] } {
+  const creditsTotal = Math.round(pendingCredits.reduce((s, c) => s + Number(c.amount), 0) * 100) / 100;
+  let remaining = Math.round((bookingsNet + creditsTotal) * 100) / 100;
   const appliedDeductionIds: string[] = [];
   const skippedDeductionIds: string[] = [];
   for (const d of pendingDeductions) {
@@ -181,7 +192,8 @@ export function computeAppliedNet(
       skippedDeductionIds.push(d.id);
     }
   }
-  return { net: remaining, appliedDeductionIds, skippedDeductionIds };
+  const appliedCreditIds = pendingCredits.map((c) => c.id);
+  return { net: remaining, appliedDeductionIds, skippedDeductionIds, appliedCreditIds };
 }
 
 type RefundSplitFields = SamaHoldsFields & {

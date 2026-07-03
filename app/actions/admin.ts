@@ -328,6 +328,13 @@ export type OrganizerDeduction = {
   createdAt: string;
 };
 
+export type OrganizerCredit = {
+  id: string;
+  bookingId: number;
+  amount: number;
+  createdAt: string;
+};
+
 export type PendingPayoutOrganizer = {
   organizerId: string;
   displayName: string;
@@ -353,6 +360,8 @@ export type PendingPayoutOrganizer = {
   totalNet: number;
   pendingDeductions: OrganizerDeduction[];
   totalDeductions: number;
+  pendingCredits: OrganizerCredit[];
+  totalCredits: number;
   adjustedNet: number;
 };
 
@@ -472,13 +481,21 @@ export async function getPendingPayouts(): Promise<{
 
   const organizerIds = [...new Set(eligible.map((b) => b.trip!.organizer_id))];
 
-  const [{ data: organizers }, { data: deductionsRaw }] = await Promise.all([
+  const [{ data: organizers }, { data: deductionsRaw }, { data: creditsRaw }] = await Promise.all([
     admin
       .from("organizers")
       .select("id, full_name, display_name, email, payout_method, gcash_number, gcash_name, bank_name, bank_account_number, bank_account_name")
       .in("id", organizerIds),
     admin
       .from("organizer_deductions" as "trips")
+      .select("id, organizer_id, booking_id, amount, created_at")
+      .in("organizer_id", organizerIds)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true }) as unknown as Promise<{
+        data: Array<{ id: string; organizer_id: string; booking_id: number; amount: number; created_at: string }> | null;
+      }>,
+    admin
+      .from("organizer_credits" as "trips")
       .select("id, organizer_id, booking_id, amount, created_at")
       .in("organizer_id", organizerIds)
       .eq("status", "pending")
@@ -498,6 +515,16 @@ export async function getPendingPayouts(): Promise<{
       createdAt: d.created_at,
     });
   }
+  const creditsByOrg = new Map<string, OrganizerCredit[]>();
+  for (const c of (creditsRaw ?? [])) {
+    if (!creditsByOrg.has(c.organizer_id)) creditsByOrg.set(c.organizer_id, []);
+    creditsByOrg.get(c.organizer_id)!.push({
+      id: c.id,
+      bookingId: c.booking_id,
+      amount: Number(c.amount),
+      createdAt: c.created_at,
+    });
+  }
 
   const grouped = new Map<string, PendingPayoutOrganizer>();
 
@@ -509,6 +536,8 @@ export async function getPendingPayouts(): Promise<{
     if (!grouped.has(orgId)) {
       const deductions = deductionsByOrg.get(orgId) ?? [];
       const totalDeductions = Math.round(deductions.reduce((s, d) => s + d.amount, 0) * 100) / 100;
+      const credits = creditsByOrg.get(orgId) ?? [];
+      const totalCredits = Math.round(credits.reduce((s, c) => s + c.amount, 0) * 100) / 100;
       grouped.set(orgId, {
         organizerId: orgId,
         displayName: org.display_name ?? org.full_name,
@@ -525,6 +554,8 @@ export async function getPendingPayouts(): Promise<{
         totalNet: 0,
         pendingDeductions: deductions,
         totalDeductions,
+        pendingCredits: credits,
+        totalCredits,
         adjustedNet: 0,
       });
     }
@@ -556,7 +587,12 @@ export async function getPendingPayouts(): Promise<{
   for (const group of grouped.values()) {
     // Uses the same greedy oldest-first apply logic createPayoutAction uses to
     // write the payout, so the displayed net always equals what actually gets remitted.
-    group.adjustedNet = computeAppliedNet(group.totalNet, group.pendingDeductions.map((d) => ({ id: d.id, amount: d.amount }))).net;
+    // Credits and deductions net as one balance (credits add first, deductions apply greedily).
+    group.adjustedNet = computeAppliedNet(
+      group.totalNet,
+      group.pendingDeductions.map((d) => ({ id: d.id, amount: d.amount })),
+      group.pendingCredits.map((c) => ({ id: c.id, amount: c.amount })),
+    ).net;
   }
 
   return { unpaid: [...grouped.values()], pending };
@@ -757,9 +793,21 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
       data: Array<{ id: string; amount: number }> | null;
     }>);
 
+  // Fetch pending credits and add to net amount before remitting. Same
+  // organizer/status filter as deductions so both sides net as one balance.
+  const { data: pendingCreditsRaw } = await (admin
+    .from("organizer_credits" as "trips")
+    .select("id, amount")
+    .eq("organizer_id", organizerId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: true }) as unknown as Promise<{
+      data: Array<{ id: string; amount: number }> | null;
+    }>);
+
   const pendingDeductions = pendingDeductionsRaw ?? [];
-  const { net: adjustedNetAmount, appliedDeductionIds: deductionIdsToApply } =
-    computeAppliedNet(netAmount, pendingDeductions);
+  const pendingCredits = pendingCreditsRaw ?? [];
+  const { net: adjustedNetAmount, appliedDeductionIds: deductionIdsToApply, appliedCreditIds: creditIdsToApply } =
+    computeAppliedNet(netAmount, pendingDeductions, pendingCredits);
 
   // Snapshot payout destination before the atomic creation so the record reflects the state at creation time.
   const { data: orgForSnapshot } = await admin
@@ -829,6 +877,20 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
       .in("id", deductionIdsToApply) as unknown as Promise<{ error: { message: string } | null }>);
     if (deductionUpdateError) {
       console.error("[createPayout] failed to mark deductions as applied:", deductionUpdateError.message);
+    }
+  }
+
+  // Mark applied credits now that the payout was created successfully. Mirrors
+  // the deduction marking exactly so an applied credit cannot be double-counted
+  // in a later payout.
+  if (creditIdsToApply.length > 0 && payoutId) {
+    const { error: creditUpdateError } = await (admin
+      .from("organizer_credits" as "trips")
+      .update({ status: "applied", applied_payout_id: payoutId } as never)
+      .eq("status", "pending")
+      .in("id", creditIdsToApply) as unknown as Promise<{ error: { message: string } | null }>);
+    if (creditUpdateError) {
+      console.error("[createPayout] failed to mark credits as applied:", creditUpdateError.message);
     }
   }
 
