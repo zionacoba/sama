@@ -10,7 +10,7 @@ import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { calculateRefundAmount } from "@/lib/cancellation-policies";
-import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
+import { amountJoinerPaid, computeRefundSplit, shouldRefundOnReject } from "@/lib/booking-finance";
 import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
 import { type RefundResult } from "@/lib/paymongo-refund";
@@ -522,7 +522,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, slots, status, email, full_name, amount_due, payment_option")
+    .select("id, trip_id, slots, status, email, full_name, amount_due, payment_option, paymongo_payment_id, payment_method")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -579,6 +579,32 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     });
   }
 
+  // Organizer rejection = full refund of the joiner's initial payment. No cancellation
+  // policy percentage applies. Fires ONLY when there is a real payment to refund:
+  // amount_due > 0 AND a recorded paymongo_payment_id. A free Advanced trip has
+  // amount_due 0 and no payment id, so it issues no refund and makes no PayMongo call.
+  // A pending booking has no collected balance, so the initial payment is the only source.
+  let rejectRefundResult: RefundResult | null = null;
+  const rejectRefundAmount = booking.amount_due ?? 0;
+  const rejectHasPayment = shouldRefundOnReject(booking.amount_due, booking.paymongo_payment_id);
+  if (status === "rejected" && rejectHasPayment) {
+    rejectRefundResult = await issueAndRecordRefund({
+      admin,
+      bookingId,
+      source: "downpayment",
+      paymentId: booking.paymongo_payment_id,
+      paymentMethod: booking.payment_method,
+      amountPesos: rejectRefundAmount,
+      notes: "Organizer rejected booking",
+    });
+    if (rejectRefundResult && !rejectRefundResult.success && !rejectRefundResult.requiresManualProcessing) {
+      console.error("[refund] updateBookingStatus reject refund failed", bookingId, rejectRefundResult.error);
+      Sentry.captureException(new Error(`updateBookingStatus reject refund failed: ${rejectRefundResult.error ?? "Unknown error"}`), {
+        extra: { context: "reject-refund-failed", bookingId, source: "downpayment", amount: rejectRefundAmount },
+      });
+    }
+  }
+
   // Notify participant of the status change.
   try {
     const tripDate = new Intl.DateTimeFormat("en-PH", {
@@ -609,6 +635,13 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     } else if (status === "rejected") {
       const bookingRef = formatBookingRef(booking.id);
       const fmtPHP = (n: number) => formatPeso(n);
+      // Tailor the refund copy to what actually happened. No hard timeline promise is
+      // made on a failed/manual refund. Free-trip/no-payment keeps the plain no-refund copy.
+      const refundLine = rejectHasPayment
+        ? rejectRefundResult?.success
+          ? `<p>Your full refund of <strong>${fmtPHP(rejectRefundAmount)}</strong> has been issued to your original payment method and should reflect within a few business days. You do not need to do anything.</p>`
+          : `<p>We are processing your full refund of <strong>${fmtPHP(rejectRefundAmount)}</strong> to your original payment method and will follow up once it is complete. If you don't receive it, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${bookingRef}</strong></p>`
+        : `<p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`;
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: booking.email,
@@ -617,10 +650,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
         html: `
           <p>Hi ${escapeHtml(booking.full_name)},</p>
           <p>Unfortunately your booking request for <strong>${escapeHtml(trip.title)}</strong> on ${tripDate} was not approved by the organizer.</p>
-          ${booking.amount_due ? `
-          <p>Your payment of <strong>${fmtPHP(booking.amount_due)}</strong> will be refunded to your original payment method within 3 to 5 business days. You do not need to do anything.</p>
-          <p>If you don't receive your refund after 5 business days, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${bookingRef}</strong></p>
-          ` : `<p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`}
+          ${refundLine}
           <p>Sama</p>
         `,
       });

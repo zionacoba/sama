@@ -8,6 +8,7 @@ import {
   isPayoutEligible,
   manilaDateOf,
   payoutTimingGate,
+  shouldRefundOnReject,
 } from "@/lib/booking-finance";
 
 // Helper to build the minimal booking shape these functions read. Defaults to a
@@ -287,6 +288,28 @@ describe("computeAppliedNet", () => {
     const result = computeAppliedNet(100, [], [{ id: "c1", amount: "25" }]);
     expect(result.net).toBe(125);
     expect(result.appliedCreditIds).toEqual(["c1"]);
+  });
+});
+
+describe("shouldRefundOnReject", () => {
+  it("paid reject (amount + payment id) refunds", () => {
+    expect(shouldRefundOnReject(2000, "pay_123")).toBe(true);
+  });
+
+  it("free trip (amount 0, no payment id) does not refund", () => {
+    expect(shouldRefundOnReject(0, null)).toBe(false);
+  });
+
+  it("paid amount but no payment id does not refund", () => {
+    expect(shouldRefundOnReject(2000, null)).toBe(false);
+  });
+
+  it("null amount with a payment id does not refund", () => {
+    expect(shouldRefundOnReject(null, "pay_123")).toBe(false);
+  });
+
+  it("zero amount with a payment id does not refund", () => {
+    expect(shouldRefundOnReject(0, "pay_123")).toBe(false);
   });
 });
 

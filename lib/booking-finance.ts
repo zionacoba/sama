@@ -228,3 +228,13 @@ export function computeRefundSplit(
     refundAmount !== null ? Math.round((refundAmount - balanceRefund) * 100) / 100 : null;
   return { downpaymentRefund, balanceRefund };
 }
+
+// Organizer rejection refunds the joiner's full initial payment, but only when there
+// is a real payment to refund. Free Advanced trips (amount_due 0) and any booking with
+// no recorded PayMongo payment id must not trigger a refund or a PayMongo call.
+export function shouldRefundOnReject(
+  amountDue: number | null | undefined,
+  paymongoPaymentId: string | null | undefined,
+): boolean {
+  return (amountDue ?? 0) > 0 && !!paymongoPaymentId;
+}
