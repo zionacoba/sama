@@ -577,6 +577,24 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
       p_trip_id: trip.id,
       p_slots_requested: booking.slots,
     });
+
+    // A slot genuinely opened (restore_slot above), so notify the waitlist.
+    // Wrapped defensively: a notify failure must never throw past the refund
+    // logic below, so the reject, slot restore, and refund all still complete.
+    // (cancelBooking calls this unguarded and has the same latent risk - a
+    // pre-existing issue worth a separate follow-up; not changed in this stage.)
+    try {
+      await notifyWaitlistSlotOpened(trip.id, {
+        title: trip.title,
+        slug: trip.slug,
+        dateStart: trip.date_start,
+      });
+    } catch (err) {
+      console.error("[waitlist-notify] failed to notify waitlist on reject", trip.id, err);
+      Sentry.captureException(err, {
+        extra: { context: "waitlist-notify-reject-failed", tripId: trip.id, bookingId },
+      });
+    }
   }
 
   // Organizer rejection = full refund of the joiner's initial payment. No cancellation
@@ -1348,6 +1366,27 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     p_trip_id: booking.trip_id,
     p_slots_requested: slotsToCancel,
   });
+
+  // A slot genuinely opened (restore_slot above), so notify the waitlist.
+  // Wrapped defensively: a notify failure must never throw past the refund and
+  // participant cleanup below, so the partial cancel, slot restore, and refund
+  // all still complete. (cancelBooking calls this unguarded and has the same
+  // latent risk - a pre-existing issue worth a separate follow-up; not changed
+  // in this stage.)
+  if (tripDateCheck) {
+    try {
+      await notifyWaitlistSlotOpened(booking.trip_id, {
+        title: tripDateCheck.title,
+        slug: tripDateCheck.slug,
+        dateStart: tripDateCheck.date_start,
+      });
+    } catch (err) {
+      console.error("[waitlist-notify] failed to notify waitlist on partial cancel", booking.trip_id, err);
+      Sentry.captureException(err, {
+        extra: { context: "waitlist-notify-partial-cancel-failed", tripId: booking.trip_id, bookingId },
+      });
+    }
+  }
 
   // Delete the booking_participants rows for the cancelled slots. The booking now
   // holds remainingSlots, but the table still has originalSlots rows (one per
