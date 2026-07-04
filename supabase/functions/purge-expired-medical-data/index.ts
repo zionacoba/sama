@@ -21,6 +21,28 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+// Dead-man's-switch ping (success-only). On a fully completed run we ping
+// Healthchecks.io so an external monitor alarms if this purge ever goes silent
+// (CRON_SECRET drift, pg_cron not firing, an unhandled outage). If the purge
+// silently stops, expired medical data is retained past its window, which is a
+// privacy problem, so this one job earns a monitor even though there is no
+// per-item alert path. There is no /fail signal here: the only thing worth
+// confirming is that the daily purge ran to completion. The ping is additive and
+// must never break the purge: a missing URL only warns, and a ping error is
+// caught and logged so a monitoring outage cannot fail an otherwise good run.
+async function pingDeadMansSwitch(): Promise<void> {
+  const url = Deno.env.get("HEALTHCHECK_PURGE_MEDICAL_URL");
+  if (!url) {
+    console.warn("HEALTHCHECK_PURGE_MEDICAL_URL not set, skipping dead-mans-switch ping");
+    return;
+  }
+  try {
+    await fetch(url);
+  } catch (err) {
+    console.error("[purge-expired-medical-data] dead-mans-switch ping failed:", err);
+  }
+}
+
 Deno.serve(async (req) => {
   const cronSecret = Deno.env.get("CRON_SECRET");
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -70,6 +92,11 @@ Deno.serve(async (req) => {
 
   if (tripIds.length === 0) {
     console.log("[purge-expired-medical-data] no ended trips past retention window, nothing to purge");
+    // A run that finds nothing past the retention window still ran to completion,
+    // so it counts as a successful daily purge and must ping. Otherwise the monitor
+    // would false-alarm on every quiet day. Reached only after the trips query
+    // succeeded; the 401 gate and the trips-fetch 500 both return before here.
+    await pingDeadMansSwitch();
     return new Response(
       JSON.stringify({ tripsConsidered: 0, bookingsPurged: 0, participantsPurged: 0 }),
       { headers: { "Content-Type": "application/json" } },
@@ -148,6 +175,13 @@ Deno.serve(async (req) => {
     `[purge-expired-medical-data] cutoff ${cutoff}: considered ${tripIds.length} ended trip(s), ` +
       `purged ${bookingsPurged} booking(s) and ${participantsPurged} participant(s)`,
   );
+
+  // Fully successful run: the trips query, both purge updates, and the booking-id
+  // fetch all completed. Fire the dead-man's-switch ping LAST, only here, so it can
+  // never produce a false all-clear. Every earlier failure path (the 401 gate and
+  // each error 500) returns before this point and therefore never pings, which is
+  // what lets the external monitor alarm on the absence of a ping.
+  await pingDeadMansSwitch();
 
   return new Response(
     JSON.stringify({
