@@ -26,6 +26,7 @@ Last updated: June 30, 2026. Living document; update as items close.
 - Note: payment methods are dashboard-controlled (Links API). Card disabled by PayMongo support; only GCash + QR Ph enabled. There is no payment-method list in code.
 
 ## SECURITY / RELIABILITY FAST-FOLLOWS
+- Cron reference: the eight live pg_cron schedules are documented in supabase/functions/CRON_SCHEDULES.md (dashboard remains source of truth; 4 jobs still lack a Healthchecks dead-mans-switch).
 - Email send reliability: confirmation emails are tied to the one-time paid transition with no sent-flag and no retry; if a confirming run's emails fail, no path retries and there's no way to detect it. Add a sent flag + retry path.
 - Organizer notification email: organizers.email is written once at signup and never updated; org profile editor has no email field. Add an email field to the organizer profile editor (or re-sync on account email change) so organizers control their notification address.
 - Add unit tests for the webhook verifySignature (valid te=, valid li=, both-empty rejects, wrong-length rejects, stale-timestamp rejects). Currently untested; this is the money-confirmation gate.
