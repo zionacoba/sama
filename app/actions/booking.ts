@@ -1703,11 +1703,22 @@ export async function cancelBooking(bookingId: number) {
     // already restored above (restore_slot), so this is a genuine opening. The
     // shared helper handles the 12-hour debounce, rate-limit-safe sending via
     // sendInChunks, and success-only stamping.
-    await notifyWaitlistSlotOpened(trip.id, {
-      title: trip.title,
-      slug: trip.slug,
-      dateStart: trip.date_start,
-    });
+    // Wrapped defensively: a notify failure must never throw past the refund
+    // and credit-reversal logic below, so the cancel, slot restore, and refund
+    // all still complete. Mirrors partialCancelBooking and the reject branch
+    // of updateBookingStatus.
+    try {
+      await notifyWaitlistSlotOpened(trip.id, {
+        title: trip.title,
+        slug: trip.slug,
+        dateStart: trip.date_start,
+      });
+    } catch (err) {
+      console.error("[waitlist-notify] failed to notify waitlist on cancel", trip.id, err);
+      Sentry.captureException(err, {
+        extra: { context: "waitlist-notify-cancel-failed", tripId: trip.id, bookingId },
+      });
+    }
 
     // Calculate refund based on cancellation policy.
     // Compare calendar dates in Philippine time so boundary days (e.g. cancelling
