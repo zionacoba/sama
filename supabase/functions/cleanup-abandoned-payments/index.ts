@@ -232,6 +232,27 @@ Deno.serve(async (req) => {
     // Cancelled and slot restored atomically — clean up participants.
     await supabase.from("booking_participants").delete().eq("booking_id", booking.id);
 
+    // A slot was genuinely freed (didCancel === true), so ask the app to notify
+    // this trip's waitlist. Fire-and-forget: a failure here must never break the
+    // cleanup loop, and the notify helper's 12-hour per-member debounce makes
+    // repeated calls for the same trip in one run (several abandoned bookings on
+    // one full trip) safe without any dedupe on this side.
+    try {
+      const notifyRes = await fetch(`${siteUrl}/api/internal/notify-waitlist`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${cronSecret}`,
+        },
+        body: JSON.stringify({ tripId: booking.trip_id }),
+      });
+      if (!notifyRes.ok) {
+        console.warn(`[cleanup-abandoned-payments] notify-waitlist returned ${notifyRes.status} for trip ${booking.trip_id} (booking ${booking.id}); waitlist will be notified on the next slot event`);
+      }
+    } catch (notifyErr) {
+      console.warn(`[cleanup-abandoned-payments] notify-waitlist call failed for trip ${booking.trip_id} (booking ${booking.id}); waitlist will be notified on the next slot event:`, notifyErr);
+    }
+
     cleaned++;
   }
 
