@@ -14,7 +14,7 @@ export default function TermsPage() {
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
-          <p className="text-sm text-stone-500">Last updated: June 2026</p>
+          <p className="text-sm text-stone-500">Last updated: July 2026</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900">
             Terms of Service
           </h1>
@@ -55,7 +55,6 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers must apply and be approved by Sama before listing trips.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers are independent operators and are solely responsible for their trips, participants, safety, permits, and compliance with applicable laws.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers must hold all required permits (DENR, LGU, etc.) for restricted trails and sites.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers can create recurring trip templates with multiple dated runs, allowing participants to book specific departure dates.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama reserves the right to suspend or remove any organizer who violates platform policies.</span></li>
               </ul>
             </section>
@@ -75,7 +74,7 @@ export default function TermsPage() {
             <section id="refund-policy">
               <h2 className="text-lg font-bold text-stone-900">6. Cancellation and Refunds</h2>
               <p className="mt-2 leading-relaxed">
-                Refunds are processed automatically based on the cancellation policy selected by the trip organizer. The policy that applies to your booking is shown on the trip page before you book and in your booking confirmation email.
+                Refunds are processed based on the cancellation policy selected by the trip organizer. Most refunds are automatic; QR Ph payments are refunded manually (see Refund processing below). The policy that applies to your booking is shown on the trip page before you book and in your booking confirmation email.
               </p>
 
               <h3 className="mt-5 text-base font-semibold text-stone-800">Cancellation by participant</h3>
@@ -101,9 +100,14 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Less than 7 days before trip: No refund</span></li>
               </ul>
 
+              <h3 className="mt-5 text-base font-semibold text-stone-800">What the refund percentage applies to</h3>
+              <p className="mt-2 leading-relaxed">
+                Refund percentages apply to the amount you actually paid through Sama, not the full trip price. If you paid only a downpayment, your refund is calculated as a percentage of that downpayment. If you also paid your balance online through Sama, the refund is calculated on the total you paid online. Any amount paid in cash directly to the organizer is arranged and refunded with the organizer directly and is not processed through Sama.
+              </p>
+
               <h3 className="mt-5 text-base font-semibold text-stone-800">Cancellation by organizer</h3>
               <p className="mt-2 leading-relaxed">
-                If the organizer cancels a trip, all participants receive a full refund regardless of timing or policy.
+                If the organizer cancels a trip, all participants receive a full refund of the amount they paid through Sama, regardless of timing or policy.
               </p>
 
               <h3 className="mt-5 text-base font-semibold text-stone-800">Refund processing</h3>
@@ -147,7 +151,7 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Post false, misleading, or fraudulent information.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Impersonate any person or organization.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Use the platform for any unlawful purpose.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Attempt to circumvent platform fees by taking transactions off-platform after initial contact.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Initiate a booking through Sama and then deceptively move that specific transaction off-platform to avoid platform fees. (Organizers are free to accept direct bookings made independently of Sama; this provision addresses only bad-faith circumvention of a booking begun on the platform.)</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Harass, threaten, or harm other users or organizers.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Attempt to book trips with false medical or fitness information.</span></li>
               </ul>

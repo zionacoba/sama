@@ -15,7 +15,7 @@ export default function PrivacyPage() {
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
-          <p className="text-sm text-stone-500">Last updated: June 2026</p>
+          <p className="text-sm text-stone-500">Last updated: July 2026</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900">
             Privacy Policy
           </h1>
@@ -42,6 +42,11 @@ export default function PrivacyPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Phone number</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Facebook profile URL (optional) — shared with organizers of trips you book to facilitate group chat invitations.</span></li>
               </ul>
+              <p className="mt-3 font-medium text-stone-700">In your profile (optional):</p>
+              <ul className="mt-1.5 space-y-1 leading-relaxed">
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Date of birth - shown to trip organizers for safety and registration records.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>A default emergency contact (name and phone) that is reused to pre-fill your bookings. Unlike a booking-specific emergency contact, this profile copy persists with your account until you change or remove it.</span></li>
+              </ul>
               <p className="mt-3 font-medium text-stone-700">When you make a booking:</p>
               <ul className="mt-1.5 space-y-1 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Number of slots booked</span></li>
@@ -64,6 +69,7 @@ export default function PrivacyPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Evidence of past trips</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Activity types and years of experience</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Emergency certification status</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Payout details (bank account or GCash number) used to remit your earnings from completed trips.</span></li>
               </ul>
               <p className="mt-3 font-medium text-stone-700">Automatically collected:</p>
               <ul className="mt-1.5 space-y-1 leading-relaxed">
@@ -97,6 +103,7 @@ export default function PrivacyPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Resend</strong> — transactional email delivery</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Supabase</strong> — database and authentication infrastructure</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Vercel</strong> — hosting infrastructure</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Sentry</strong> — error monitoring and diagnostics; receives technical information such as IP address and device/browser details to help us detect and fix problems</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Legal authorities</strong> — if required by Philippine law</span></li>
               </ul>
             </section>
@@ -107,7 +114,10 @@ export default function PrivacyPage() {
                 We retain your personal data for as long as your account is active or as required by law. Personal data associated with cancelled bookings is retained for record-keeping purposes. You may request deletion of your personal data at any time by deleting your account or contacting <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>. Booking and payment records, including consent and waiver records, are retained for a minimum of 10 years for legal, financial, and dispute resolution purposes.
               </p>
               <p className="mt-3 leading-relaxed">
-                Health information (medical notes and allergies) and emergency-contact information are used only to support participant safety for a booked trip. This sensitive data is kept for a shorter retention period than the rest of the booking record: it is automatically deleted 90 days after the trip ends. The surrounding booking, payment, consent, and waiver records are retained for the longer legal and financial period described above, but the health and emergency-contact fields within them are permanently stripped once the 90-day window passes. This is why a booking record may persist for up to 10 years while its medical notes and emergency-contact details do not.
+                Health information (medical notes and allergies) and emergency-contact information attached to a specific booking are used only to support participant safety for that booked trip. This sensitive data is kept for a shorter retention period than the rest of the booking record: it is automatically deleted 90 days after the trip ends. The surrounding booking, payment, consent, and waiver records are retained for the longer legal and financial period described above, but the health and emergency-contact fields within them are permanently stripped once the 90-day window passes. This is why a booking record may persist for up to 10 years while its medical notes and emergency-contact details do not.
+              </p>
+              <p className="mt-3 leading-relaxed">
+                Separately, if you save a default emergency contact in your profile, that profile copy persists with your account until you remove it or delete your account, because it is reused to pre-fill your future bookings. You can edit or clear your profile emergency contact at any time in your profile settings.
               </p>
               <p className="mt-3 leading-relaxed">
                 Profile photos and trip photos uploaded to Sama are permanently deleted from our storage when you delete your account.
@@ -120,7 +130,7 @@ export default function PrivacyPage() {
               <ul className="mt-2 space-y-1.5 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Access</strong> — request a copy of your personal data we hold</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Correction</strong> — request correction of inaccurate data</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Erasure</strong> — delete your account directly from your <Link href="/profile?tab=profile" className="text-trailhead hover:underline">profile settings</Link>, or contact us to request deletion of specific data</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Erasure</strong> — delete your account from your <Link href="/profile?tab=profile" className="text-trailhead hover:underline">profile settings</Link>, or contact us to request deletion of specific data. Note that booking, payment, consent, and waiver records are retained for the legal periods described in Data Retention above (up to 10 years), so some records may be kept, in limited form, even after an erasure request, where the law requires it.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Object</strong> — object to the processing of your personal data</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Portability</strong> — request your data in a portable format</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">File a complaint</strong> — with the National Privacy Commission (NPC)</span></li>
@@ -140,7 +150,7 @@ export default function PrivacyPage() {
               <ul className="mt-2 space-y-1.5 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Encrypted data storage via Supabase</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Secure HTTPS connections</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Role-based access controls</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Strict access controls that limit administrative access to authorized personnel only.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Regular security reviews</span></li>
               </ul>
               <p className="mt-3 leading-relaxed">
