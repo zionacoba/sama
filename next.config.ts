@@ -14,10 +14,9 @@ import { withSentryConfig } from "@sentry/nextjs";
 //
 // NOTE: 'unsafe-inline' is required in script-src because the Next.js App Router
 // emits inline hydration scripts and we do not (yet) use a nonce middleware.
-// This policy is shipped as Content-Security-Policy-Report-Only so it CANNOT
-// break the app. Test in production (watch for CSP violation reports), confirm
-// nothing is blocked, then switch the header key below to "Content-Security-Policy"
-// to enforce it.
+// This policy is ENFORCED (Content-Security-Policy): violations are blocked, not
+// just reported. No report-uri/report-to sink is wired up yet, so violations
+// surface only in the browser console; add a sink before changing directives.
 const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
@@ -34,8 +33,8 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const securityHeaders = [
-  // Report-Only: observe and verify before enforcing (see note above).
-  { key: "Content-Security-Policy-Report-Only", value: contentSecurityPolicy },
+  // Enforced: violations are blocked (see note above).
+  { key: "Content-Security-Policy", value: contentSecurityPolicy },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
