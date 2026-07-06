@@ -11,7 +11,8 @@ import { reverseBookingCredit } from "@/lib/organizer-credits";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { classifyRefundResult, MANUAL_REFUND_FOLLOWUP } from "@/lib/refund-email-copy";
 import { issueAndRecordRefund } from "@/lib/refunds";
-import { amountSamaHolds, amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
+import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
+import { computeTripCancelSummary, type TripCancelSummary } from "@/lib/trip-cancel-summary";
 import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
 import { sendInChunks } from "@/lib/send-in-chunks";
@@ -772,7 +773,7 @@ export async function publishTrip(tripSlug: string): Promise<{ error: string } |
 
 export async function getTripCancelSummary(tripSlug: string): Promise<
   | { error: string }
-  | { bookingCount: number; paymongoCount: number; manualCount: number; pendingEarningsNet: number }
+  | TripCancelSummary
 > {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -798,30 +799,17 @@ export async function getTripCancelSummary(tripSlug: string): Promise<
     return { error: "Trip not found." };
   }
 
+  // Query the SAME set cancelTrip sweeps and refunds. Anything narrower (the
+  // old ACTIVE_BOOKING_STATUSES query) makes the confirmation dialog undercount
+  // what the cancellation actually does; transferred bookings in particular are
+  // refunded to the original payer and drop out of payout eligibility.
   const { data: bookings } = await admin
     .from("bookings")
-    .select("paymongo_payment_id, status, payout_status, total_amount, amount_due, payment_option, balance_collected, balance_payment_gateway_status, platform_commission")
+    .select("paymongo_payment_id, balance_paymongo_payment_id, payment_method, status, payout_status, total_amount, amount_due, payment_option, balance_payment_gateway_status, platform_commission")
     .eq("trip_id", trip.id)
-    .in("status", [...ACTIVE_BOOKING_STATUSES]);
+    .in("status", [...TRIP_CANCELLATION_REFUND_STATUSES]);
 
-  const all = bookings ?? [];
-  const bookingCount = all.length;
-  const paymongoCount = all.filter((b) => !!b.paymongo_payment_id).length;
-  const manualCount = bookingCount - paymongoCount;
-
-  let pendingEarningsNet = 0;
-  for (const b of all) {
-    if (b.status !== "confirmed" || b.payout_status !== "unpaid") continue;
-    // Gross is what Sama actually received online — for downpayment bookings
-    // whose balance was collected in cash, that's only the downpayment.
-    const gross = amountSamaHolds(b);
-    // platform_commission is the full commission, already deducted from the downpayment. No pro-rating.
-    const commission = Number(b.platform_commission ?? 0);
-    const net = Math.round((gross - commission) * 100) / 100;
-    pendingEarningsNet = Math.round((pendingEarningsNet + net) * 100) / 100;
-  }
-
-  return { bookingCount, paymongoCount, manualCount, pendingEarningsNet };
+  return computeTripCancelSummary(bookings ?? []);
 }
 
 export async function cancelTrip(tripSlug: string): Promise<{ error: string } | void> {

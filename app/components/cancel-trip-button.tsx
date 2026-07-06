@@ -9,6 +9,8 @@ type CancelSummary = {
   bookingCount: number;
   paymongoCount: number;
   manualCount: number;
+  noPaymentCount: number;
+  refundTotal: number;
   pendingEarningsNet: number;
 };
 
@@ -108,10 +110,22 @@ export function CancelTripButton({ tripSlug, tripTitle }: Props) {
                   )}
                   {summary.manualCount > 0 && (
                     <li>
-                      <strong className="text-stone-800">{summary.manualCount}</strong> require manual refund (cash/QR Ph — you may need to follow up)
+                      <strong className="text-stone-800">{summary.manualCount}</strong> paid via QR Ph and will be refunded manually by Sama
+                    </li>
+                  )}
+                  {summary.noPaymentCount > 0 && (
+                    <li>
+                      <strong className="text-stone-800">{summary.noPaymentCount}</strong> have no online payment, so no refund will be issued
                     </li>
                   )}
                 </ul>
+                {summary.refundTotal > 0 && (
+                  <p>
+                    A total of{" "}
+                    <strong className="text-stone-800">{fmtPHP(summary.refundTotal)}</strong>{" "}
+                    will be refunded to participants.
+                  </p>
+                )}
                 {summary.pendingEarningsNet > 0 && (
                   <p>
                     Your pending earnings of{" "}
