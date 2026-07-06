@@ -11,7 +11,7 @@ import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountSamaHolds, isPayoutEligible, payoutTimingGate, todayManilaDate, computeAppliedNet } from "@/lib/booking-finance";
 import { reverseBookingCredit } from "@/lib/organizer-credits";
-import { ACTIVE_BOOKING_STATUSES, ATTENDED_STATUSES } from "@/lib/booking-status";
+import { ATTENDED_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { formatPeso } from "@/lib/format";
 
@@ -105,15 +105,17 @@ export async function rejectOrganizer(id: string): Promise<void> {
       .update({ status: "draft" })
       .in("id", tripIds);
 
-    // Cancel all confirmed/pending/payment_pending bookings for affected trips.
+    // Cancel all confirmed/pending/payment_pending/transferred bookings for affected trips.
     // The status-guarded update returns exactly the rows THIS call transitioned, so a
     // booking already cancelled by a concurrent path (cancelBooking/partialCancelBooking)
     // is excluded and never gets a double slot-restore, redundant refund, or duplicate email.
+    // Includes "transferred": on a whole-trip cancellation the original payer is refunded
+    // and the booking leaves ATTENDED_STATUSES payout eligibility.
     const { data: affectedBookings } = await admin
       .from("bookings")
       .update({ status: "cancelled" })
       .in("trip_id", tripIds)
-      .in("status", [...ACTIVE_BOOKING_STATUSES])
+      .in("status", [...TRIP_CANCELLATION_REFUND_STATUSES])
       .select("id, email, full_name, trip_id, slots, payment_option, amount_due, total_amount, paymongo_payment_id, payment_method, balance_paymongo_payment_id, balance_payment_gateway_status, payout_status, payout_id");
 
     if ((affectedBookings ?? []).length > 0) {

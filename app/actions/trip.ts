@@ -11,7 +11,7 @@ import { reverseBookingCredit } from "@/lib/organizer-credits";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountSamaHolds, amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
-import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
+import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
@@ -858,12 +858,14 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   // Only refund/notify bookings THIS call actually transitioned. The status-guarded
   // update returns exactly the rows still cancellable at update time, so a booking
   // already cancelled by a concurrent path (partialCancelBooking/cancelBooking) is
-  // excluded and never receives a second refund.
+  // excluded and never receives a second refund. Includes "transferred": on a whole-
+  // trip cancellation the original payer is refunded and the booking leaves
+  // ATTENDED_STATUSES payout eligibility.
   const { data: bookings } = await admin
     .from("bookings")
     .update({ status: "cancelled" })
     .eq("trip_id", trip.id)
-    .in("status", [...ACTIVE_BOOKING_STATUSES])
+    .in("status", [...TRIP_CANCELLATION_REFUND_STATUSES])
     .select("id, full_name, email, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status, payout_status, payout_id");
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {

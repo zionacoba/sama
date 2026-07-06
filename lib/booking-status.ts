@@ -16,3 +16,14 @@ export const SLOT_HOLDING_STATUSES = ["confirmed", "pending"] as const;
 
 // Bookings eligible for payout / treated as having taken place on a past trip.
 export const ATTENDED_STATUSES = ["confirmed", "no_show", "transferred"] as const;
+
+// The statuses swept into the cancel-and-refund update when a WHOLE trip is
+// cancelled (organizer cancelTrip, admin rejectOrganizer). This is
+// ACTIVE_BOOKING_STATUSES plus "transferred": when the trip itself is cancelled,
+// a transferred booking must be refunded to the ORIGINAL payer and transitioned
+// to "cancelled" so it drops out of ATTENDED_STATUSES payout eligibility.
+// Deliberately separate from ACTIVE_BOOKING_STATUSES, which slot-freeing and
+// voluntary-cancel paths use and where "transferred" must stay excluded (a
+// transferred slot is consumed by the replacement, and a voluntary cancel of a
+// transferred booking is never refundable).
+export const TRIP_CANCELLATION_REFUND_STATUSES = ["confirmed", "pending", "payment_pending", "transferred"] as const;
