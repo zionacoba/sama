@@ -141,6 +141,7 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>You must disclose relevant medical conditions to the organizer. This information is collected through the booking process and handled in accordance with our <a href="/privacy" className="text-trailhead hover:underline">Privacy Policy</a>.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>You are responsible for bringing appropriate gear and following organizer instructions.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>If booking on behalf of others, you confirm that all participants are aware of and agree to the trip risks and cancellation policy.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>All participants must be at least 18 years old. If you book on behalf of others, you confirm that every participant in the booking is 18 or older. Sama does not permit minors to participate in trips booked through the platform.</span></li>
               </ul>
             </section>
 
@@ -177,35 +178,42 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-stone-900">11. Intellectual Property</h2>
+              <h2 className="text-lg font-bold text-stone-900">11. Slot Transfers</h2>
+              <p className="mt-2 leading-relaxed">
+                An organizer may transfer a confirmed single-slot booking to a replacement participant before the trip. The replacement must submit their own details and sign the waiver through a personal link before the trip. Any payment between the original participant and the replacement is arranged privately between them; Sama does not process any payment or refund for the transfer itself. If the trip is later cancelled by the organizer, Sama refunds the original payer (the person who paid Sama), in accordance with the cancellation terms above; any settlement between the original participant and the replacement remains private between them. A transferred booking cannot be voluntarily cancelled for a refund.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-bold text-stone-900">12. Intellectual Property</h2>
               <p className="mt-2 leading-relaxed">
                 All content on Sama — including the platform design, logo, and features — is owned by Paul Zion Acoba. You may not reproduce, distribute, or create derivative works without written permission.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-stone-900">12. Limitation of Liability</h2>
+              <h2 className="text-lg font-bold text-stone-900">13. Limitation of Liability</h2>
               <p className="mt-2 leading-relaxed">
                 To the maximum extent permitted by Philippine law, Sama and its operators shall not be liable for any indirect, incidental, or consequential damages arising from your use of the platform or participation in any trip listed on it.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-stone-900">13. Changes to Terms</h2>
+              <h2 className="text-lg font-bold text-stone-900">14. Changes to Terms</h2>
               <p className="mt-2 leading-relaxed">
                 Sama reserves the right to update these Terms at any time. Continued use of the platform after changes constitutes acceptance of the new Terms. Material changes will be communicated via email.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-stone-900">14. Governing Law</h2>
+              <h2 className="text-lg font-bold text-stone-900">15. Governing Law</h2>
               <p className="mt-2 leading-relaxed">
                 These Terms are governed by the laws of the Republic of the Philippines. Any disputes shall be resolved exclusively in the courts of Mandaluyong City, Philippines.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-stone-900">15. Contact</h2>
+              <h2 className="text-lg font-bold text-stone-900">16. Contact</h2>
               <p className="mt-2 leading-relaxed">
                 For questions about these Terms, contact:{" "}
                 <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a>
