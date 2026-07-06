@@ -13,7 +13,7 @@ import { classifyRefundResult, MANUAL_REFUND_FOLLOWUP } from "@/lib/refund-email
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
 import { computeTripCancelSummary, type TripCancelSummary } from "@/lib/trip-cancel-summary";
-import { summarizeTripSlots, type TripSlotSummary } from "@/lib/trip-slot-summary";
+import { summarizeTripSlots, shouldWriteRemainingSlots, type TripSlotSummary } from "@/lib/trip-slot-summary";
 import { SLOT_CONSUMING_STATUSES, SLOT_HOLDING_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
 import { sendInChunks } from "@/lib/send-in-chunks";
@@ -532,6 +532,15 @@ export async function updateTrip(
   // consumedSlots counts every slot-consuming status (including transferred and
   // no_show), so the recompute reproduces what the incremental RPC machinery
   // (book_slot decrement / restore_slot) would hold.
+  //
+  // shouldWriteRemaining is TRUE only when total_slots actually changed on an
+  // active (non-draft, non-template) trip, i.e. the one case where the value
+  // above is a fresh recompute rather than the stale top-of-function read.
+  // In every other case (draft/template, or an unchanged-total active edit) we
+  // must NOT write remaining_slots back: doing so replays existing.remaining_slots
+  // captured before this function's other work and clobbers any concurrent
+  // book_slot decrement or restore_slot restore that landed in the window. The
+  // remaining_slots variable is still computed for the waitlist check below.
   let remaining_slots: number;
   if (isDraft || is_template) {
     remaining_slots = existing.remaining_slots ?? 0;
@@ -540,6 +549,12 @@ export async function updateTrip(
   } else {
     remaining_slots = existing.remaining_slots ?? 0;
   }
+  const shouldWriteRemaining = shouldWriteRemainingSlots({
+    isDraft,
+    isTemplate: is_template,
+    newTotalSlots: total_slots,
+    existingTotalSlots: existing.total_slots ?? 0,
+  });
 
   // Normalise numerics for drafts.
   const safePrice = isDraft && isNaN(price) ? existing.price ?? 0 : price;
@@ -579,7 +594,7 @@ export async function updateTrip(
       date_end: date_end || null,
       price: safePrice,
       total_slots: safeTotalSlots,
-      remaining_slots,
+      ...(shouldWriteRemaining ? { remaining_slots } : {}),
       meeting_points: is_template ? [] : meeting_points,
       description: description || null,
       includes: includes || null,

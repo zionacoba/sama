@@ -70,3 +70,30 @@ export function summarizeTripSlots(
 
   return { consumedSlots, activeBookingCount, pendingBalanceCount, liveBookingCount };
 }
+
+// Whether updateTrip should include remaining_slots in its trips.update() payload.
+//
+// remaining_slots is maintained incrementally and atomically by the RPC
+// machinery (book_slot decrement, restore_slot / cancel_and_restore_slot
+// restore). updateTrip reads existing.remaining_slots near the top of the
+// function and does substantial other work before writing, so writing that
+// value back would clobber any concurrent booking or cancel that landed in the
+// window (oversell or capacity leak). The ONLY case where updateTrip legitimately
+// owns remaining_slots is when total_slots actually changes on an active trip:
+// there it recomputes capacity from live bookings. In every other case
+// (draft/template edits, and unchanged-total active edits) it must OMIT the
+// column and leave the live value untouched.
+//
+// (Part 2a: this predicate gates the omit. The changed-total branch still writes
+// a JS-recomputed value; part 2b replaces that with an atomic SQL delta RPC so
+// even the capacity-change write is race-safe.)
+export function shouldWriteRemainingSlots(args: {
+  isDraft: boolean;
+  isTemplate: boolean;
+  newTotalSlots: number;
+  existingTotalSlots: number;
+}): boolean {
+  const { isDraft, isTemplate, newTotalSlots, existingTotalSlots } = args;
+  if (isDraft || isTemplate) return false;
+  return newTotalSlots !== existingTotalSlots;
+}

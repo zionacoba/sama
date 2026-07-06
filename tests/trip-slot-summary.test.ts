@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   summarizeTripSlots,
+  shouldWriteRemainingSlots,
   type SlotSummaryBookingRow,
 } from "@/lib/trip-slot-summary";
 import { SLOT_CONSUMING_STATUSES } from "@/lib/booking-status";
@@ -106,5 +107,68 @@ describe("summarizeTripSlots", () => {
       pendingBalanceCount: 0,
       liveBookingCount: 0,
     });
+  });
+});
+
+describe("shouldWriteRemainingSlots", () => {
+  // TRUE only when total_slots actually changes on an active (non-draft,
+  // non-template) trip. That is the sole case where updateTrip recomputes
+  // remaining_slots from live bookings and legitimately owns the write. In
+  // every other case it must omit the column so it cannot clobber a concurrent
+  // book_slot decrement or restore_slot restore (the write-path TOCTOU).
+
+  it("is true when total_slots increases on an active trip", () => {
+    expect(
+      shouldWriteRemainingSlots({
+        isDraft: false,
+        isTemplate: false,
+        newTotalSlots: 15,
+        existingTotalSlots: 10,
+      }),
+    ).toBe(true);
+  });
+
+  it("is true when total_slots decreases on an active trip", () => {
+    expect(
+      shouldWriteRemainingSlots({
+        isDraft: false,
+        isTemplate: false,
+        newTotalSlots: 6,
+        existingTotalSlots: 10,
+      }),
+    ).toBe(true);
+  });
+
+  it("is false for a non-capacity active edit (total_slots unchanged)", () => {
+    expect(
+      shouldWriteRemainingSlots({
+        isDraft: false,
+        isTemplate: false,
+        newTotalSlots: 10,
+        existingTotalSlots: 10,
+      }),
+    ).toBe(false);
+  });
+
+  it("is false for a draft edit even when total_slots changes", () => {
+    expect(
+      shouldWriteRemainingSlots({
+        isDraft: true,
+        isTemplate: false,
+        newTotalSlots: 20,
+        existingTotalSlots: 10,
+      }),
+    ).toBe(false);
+  });
+
+  it("is false for a template edit even when total_slots changes", () => {
+    expect(
+      shouldWriteRemainingSlots({
+        isDraft: false,
+        isTemplate: true,
+        newTotalSlots: 20,
+        existingTotalSlots: 0,
+      }),
+    ).toBe(false);
   });
 });
