@@ -92,6 +92,8 @@ export function BookingModal({
   const [waiverError, setWaiverError] = useState(false);
   const [platformWaiverAccepted, setPlatformWaiverAccepted] = useState(false);
   const [platformWaiverError, setPlatformWaiverError] = useState(false);
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
+  const [adultError, setAdultError] = useState(false);
   const [paymentOption, setPaymentOption] = useState<"full" | "downpayment">("full");
   const activeQuestions = (customQuestions ?? []).filter((q) => q.trim());
   const [customQuestionAnswers, setCustomQuestionAnswers] = useState<string[]>(() => activeQuestions.map(() => ""));
@@ -261,6 +263,8 @@ export function BookingModal({
     setWaiverExpanded(false);
     setPlatformWaiverAccepted(false);
     setPlatformWaiverError(false);
+    setAdultConfirmed(false);
+    setAdultError(false);
     setError(null);
     setSuccess(false);
     setPaymentOption("full");
@@ -292,13 +296,14 @@ export function BookingModal({
     if (!phoneValid) setPhoneError(true);
     const isSamePhone = phone.replace(/\s/g, "") === emergencyContactPhone.replace(/\s/g, "") && phone.trim() !== "";
     if (isSamePhone) setSamePhoneError(true);
-    const hasErrors = !platformWaiverAccepted || !waiverAccepted || !phoneValid || isSamePhone;
+    const hasErrors = !platformWaiverAccepted || !waiverAccepted || !adultConfirmed || !phoneValid || isSamePhone;
     if (!platformWaiverAccepted) setPlatformWaiverError(true);
     if (!waiverAccepted) setWaiverError(true);
+    if (!adultConfirmed) setAdultError(true);
     if (hasErrors) {
-      const onlyWaiversBlocking = phoneValid && !isSamePhone && (!platformWaiverAccepted || !waiverAccepted);
+      const onlyWaiversBlocking = phoneValid && !isSamePhone && (!platformWaiverAccepted || !waiverAccepted || !adultConfirmed);
       setError(onlyWaiversBlocking
-        ? "Please accept the waiver(s) at the bottom of the form to continue."
+        ? "Please accept the required confirmations at the bottom of the form to continue."
         : "Please fix the highlighted fields before continuing.");
       return;
     }
@@ -321,6 +326,7 @@ export function BookingModal({
         emergencyContactPhone,
         waiverAgreed: waiverAccepted,
         platformWaiverAgreed: platformWaiverAccepted,
+        adultConfirmed,
         medicalNotes: notes.trim() || null,
         meetingPoint: selectedMeetingPoint || null,
         customQuestionAnswers: activeQuestions.length > 0 ? customQuestionAnswers.map((a) => a.trim()) : null,
@@ -825,6 +831,32 @@ export function BookingModal({
                       {waiverError && (
                         <p role="alert" className="mt-1.5 text-xs text-red-600">
                           You must accept the organizer waiver before confirming your booking.
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="mb-1.5 text-sm font-medium text-stone-700">
+                        Age requirement
+                      </p>
+                      <label className="flex cursor-pointer items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={adultConfirmed}
+                          disabled={loading}
+                          onChange={(e) => {
+                            setAdultConfirmed(e.target.checked);
+                            if (e.target.checked) setAdultError(false);
+                          }}
+                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
+                        />
+                        <span className="text-xs leading-relaxed text-stone-600">
+                          I confirm that I and all other participants in this booking are 18 years of age or older.
+                        </span>
+                      </label>
+                      {adultError && (
+                        <p role="alert" className="mt-1.5 text-xs text-red-600">
+                          You must confirm that all participants in this booking are 18 years of age or older.
                         </p>
                       )}
                     </div>

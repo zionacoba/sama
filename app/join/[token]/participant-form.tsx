@@ -137,7 +137,7 @@ export function ParticipantForm({ token, meetingPoints, waiverText, defaultMeeti
             className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
           />
           <span className="text-xs leading-relaxed text-stone-600">
-            I understand the risks of this outdoor activity and agree to participate at my own risk. I have read and agree to the cancellation policy.
+            I understand the risks of this outdoor activity and agree to participate at my own risk. I have read and agree to the cancellation policy. I confirm I am 18 years of age or older.
           </span>
         </label>
       </div>

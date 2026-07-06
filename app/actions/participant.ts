@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
+import { withParticipantAdultAttestation } from "@/lib/waiver-snapshot";
 
 type ParticipantState = { success: true } | { error: string } | null;
 
@@ -23,7 +24,7 @@ export async function confirmParticipant(
     return { error: "Please fill in all required fields." };
   }
   if (!waiverAccepted) {
-    return { error: "You must accept the waiver to confirm your spot." };
+    return { error: "You must accept the waiver, including the confirmation that you are 18 years of age or older, to confirm your spot." };
   }
 
   const admin = createSupabaseAdminClient();
@@ -91,8 +92,18 @@ export async function confirmParticipant(
           .maybeSingle()
       : { data: null };
     const organizerName = organizer?.display_name ?? organizer?.full_name ?? null;
-    updatePayload.waiver_text_snapshot = ((trip.waiver_text as string | null) ?? DEFAULT_WAIVER_TEXT)
-      .replace(/\[Organizer Name\]/gi, organizerName || "the organizer");
+    updatePayload.waiver_text_snapshot = withParticipantAdultAttestation(
+      ((trip.waiver_text as string | null) ?? DEFAULT_WAIVER_TEXT)
+        .replace(/\[Organizer Name\]/gi, organizerName || "the organizer"),
+    );
+  } else {
+    // Rows snapshotted before the 18+ attestation existed still lack it. The
+    // checkbox the participant accepts includes the attestation, so fold it into
+    // the stored snapshot at confirmation time. Idempotent: rows whose snapshot
+    // already carries the attestation are stored unchanged.
+    updatePayload.waiver_text_snapshot = withParticipantAdultAttestation(
+      participant.waiver_text_snapshot as string,
+    );
   }
 
   const { data: updated, error } = await admin

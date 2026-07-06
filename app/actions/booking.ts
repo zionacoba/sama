@@ -19,7 +19,8 @@ import { voidBookingCredit, reverseBookingCredit } from "@/lib/organizer-credits
 import { createPaymentLink } from "@/lib/create-payment-link";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
 import { formatPeso, formatBookingRef } from "@/lib/format";
-import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
+import { DEFAULT_WAIVER_TEXT, PLATFORM_WAIVER_SNAPSHOT_TEXT } from "@/lib/constants";
+import { withParticipantAdultAttestation } from "@/lib/waiver-snapshot";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
@@ -38,6 +39,7 @@ type CreateBookingInput = {
   emergencyContactPhone: string;
   waiverAgreed: boolean;
   platformWaiverAgreed: boolean;
+  adultConfirmed: boolean;
   medicalNotes: string | null;
   meetingPoint: string | null;
   customQuestionAnswers: string[] | null;
@@ -104,6 +106,9 @@ export async function createBooking(input: CreateBookingInput) {
   }
   if (!input.waiverAgreed || !input.platformWaiverAgreed) {
     return { error: "You must agree to both waivers before booking." };
+  }
+  if (input.adultConfirmed !== true) {
+    return { error: "You must confirm that you and all other participants in this booking are 18 years of age or older." };
   }
 
   // Prevent duplicate bookings for the same trip (cancelled/rejected/transferred bookings allow re-booking).
@@ -216,7 +221,7 @@ export async function createBooking(input: CreateBookingInput) {
     p_commission_rate_used: commissionRate,
     p_waiver_text_snapshot: trip.waiver_text?.replace(/\[Organizer Name\]/gi, organizerName) ?? null,
     p_waiver_ip: waiverIp,
-    p_platform_waiver_snapshot: "By completing this booking, I agree that Sama is a technology marketplace that connects participants with independent trip organizers. Sama is not responsible for the conduct, acts, or omissions of organizers. I voluntarily assume all risks associated with outdoor activities.",
+    p_platform_waiver_snapshot: PLATFORM_WAIVER_SNAPSHOT_TEXT,
     p_custom_question_answers: input.customQuestionAnswers ?? null,
     // Snapshot the question text as-asked, index-aligned with the answers (both
     // derive from the same activeQuestions array), so answers survive later
@@ -253,8 +258,10 @@ export async function createBooking(input: CreateBookingInput) {
     // Snapshot the same resolved waiver text recorded on the bookings row so every
     // participant (booker and additional slots) has parity going forward. Slots
     // 1..n capture their own waiver_ip later via confirmParticipant; slot 0's IP
-    // is already on the bookings row, so we do not set waiver_ip here.
-    waiver_text_snapshot: trip.waiver_text?.replace(/\[Organizer Name\]/gi, organizerName) ?? null,
+    // is already on the bookings row, so we do not set waiver_ip here. The 18+
+    // attestation is folded in so each participant's stored waiver carries the
+    // exact language they accept on /join.
+    waiver_text_snapshot: withParticipantAdultAttestation(trip.waiver_text?.replace(/\[Organizer Name\]/gi, organizerName) ?? null),
     completed: i === 0,
   }));
 
@@ -1062,7 +1069,9 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
   // working /join link; if prep failed it stays null and we send no link.
   let replacementToken: string | null = null;
   try {
-    const resolvedWaiverText = (trip.waiver_text ?? DEFAULT_WAIVER_TEXT).replace(/\[Organizer Name\]/gi, organizerName);
+    const resolvedWaiverText = withParticipantAdultAttestation(
+      (trip.waiver_text ?? DEFAULT_WAIVER_TEXT).replace(/\[Organizer Name\]/gi, organizerName),
+    );
     const newToken = randomUUID();
 
     const { data: existingSlotZero } = await admin
