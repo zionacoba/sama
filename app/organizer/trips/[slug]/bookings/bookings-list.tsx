@@ -9,6 +9,7 @@ import { MarkNoShowButton } from "./mark-no-show-button";
 import { safeExternalUrl } from "@/lib/safe-url";
 import { formatPeso } from "@/lib/format";
 import { resolveAttendee } from "@/lib/attendee";
+import { ParticipantManifest } from "./participant-manifest";
 
 type Booking = {
   id: number;
@@ -45,6 +46,7 @@ type BookingParticipant = {
   completed: boolean;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
+  medical_notes: string | null;
   meeting_point: string | null;
 };
 
@@ -211,28 +213,9 @@ function BookingCard({
         </div>
       </dl>
 
-      {b.slots > 1 &&
-        participants &&
-        (() => {
-          const done = participants.filter((p) => p.completed).length;
-          return (
-            <details className="mt-3">
-              <summary className="cursor-pointer list-none text-xs font-medium text-stone-500 hover:text-stone-600">
-                {done}/{b.slots} confirmed
-              </summary>
-              <ul className="mt-1 space-y-0.5 pl-0.5">
-                {participants.map((p) => (
-                  <li key={p.slot_number} className="flex items-center gap-1 text-xs">
-                    <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
-                    <span className={p.completed ? "text-stone-700" : "text-stone-500"}>
-                      {p.full_name ?? `Participant ${p.slot_number + 1}`}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          );
-        })()}
+      {b.slots > 1 && participants && (
+        <ParticipantManifest b={b} participants={participants} className="mt-3" />
+      )}
 
       <div className="mt-3 flex items-center justify-between gap-3 border-t border-stone-100 pt-3">
         <span className="text-xs font-medium uppercase tracking-wide text-stone-500">Amount</span>
@@ -494,26 +477,9 @@ export function BookingsListWithTabs({
                       </td>
                       <td className="px-5 py-3.5 text-center text-stone-700">
                         {b.slots}
-                        {b.slots > 1 && participants && (() => {
-                          const done = participants.filter((p) => p.completed).length;
-                          return (
-                            <details className="mt-1 text-left">
-                              <summary className="cursor-pointer list-none text-xs font-medium text-stone-500 hover:text-stone-600">
-                                {done}/{b.slots} confirmed
-                              </summary>
-                              <ul className="mt-1 space-y-0.5 pl-0.5">
-                                {participants.map((p) => (
-                                  <li key={p.slot_number} className="flex items-center gap-1 text-xs">
-                                    <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
-                                    <span className={p.completed ? "text-stone-700" : "text-stone-500"}>
-                                      {p.full_name ?? `Participant ${p.slot_number + 1}`}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </details>
-                          );
-                        })()}
+                        {b.slots > 1 && participants && (
+                          <ParticipantManifest b={b} participants={participants} />
+                        )}
                       </td>
                       <td className="px-5 py-3.5 text-right font-semibold text-trailhead">
                         {formatPeso(b.total_amount)}

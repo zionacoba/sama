@@ -9,6 +9,7 @@ import { MarkBalanceButton } from "./mark-balance-button";
 import { BookingsListWithTabs } from "./bookings-list";
 import { formatPeso } from "@/lib/format";
 import { resolveAttendee } from "@/lib/attendee";
+import { ParticipantManifest } from "./participant-manifest";
 
 type WaitlistEntry = {
   id: string;
@@ -60,6 +61,7 @@ type BookingParticipant = {
   completed: boolean;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
+  medical_notes: string | null;
   meeting_point: string | null;
 };
 
@@ -176,7 +178,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
   if (participantBookingIds.length > 0) {
     const { data: participantsData } = await admin
       .from("booking_participants")
-      .select("booking_id, slot_number, full_name, completed, emergency_contact_name, emergency_contact_phone, meeting_point")
+      .select("booking_id, slot_number, full_name, completed, emergency_contact_name, emergency_contact_phone, medical_notes, meeting_point")
       .in("booking_id", participantBookingIds)
       .order("slot_number");
 
@@ -456,27 +458,9 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                           <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Slots</dt>
                           <dd className="mt-0.5 text-stone-700">
                             {b.slots}
-                            {b.slots > 1 && participantsMap.has(b.id) && (() => {
-                              const ps = participantsMap.get(b.id)!;
-                              const done = ps.filter((p) => p.completed).length;
-                              return (
-                                <details className="mt-1">
-                                  <summary className="cursor-pointer list-none text-xs font-medium text-stone-500 hover:text-stone-600">
-                                    {done}/{b.slots} confirmed
-                                  </summary>
-                                  <ul className="mt-1 space-y-0.5 pl-0.5">
-                                    {ps.map((p) => (
-                                      <li key={p.slot_number} className="flex items-center gap-1 text-xs">
-                                        <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
-                                        <span className={p.completed ? "text-stone-700" : "text-stone-500"}>
-                                          {p.full_name ?? `Participant ${p.slot_number + 1}`}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </details>
-                              );
-                            })()}
+                            {b.slots > 1 && participantsMap.has(b.id) && (
+                              <ParticipantManifest b={b} participants={participantsMap.get(b.id)!} className="mt-1" />
+                            )}
                           </dd>
                         </div>
                         <div className="min-w-0">
@@ -586,27 +570,9 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                             </td>
                             <td className="px-5 py-3.5 text-center text-stone-700">
                               {b.slots}
-                              {b.slots > 1 && participantsMap.has(b.id) && (() => {
-                                const ps = participantsMap.get(b.id)!;
-                                const done = ps.filter((p) => p.completed).length;
-                                return (
-                                  <details className="mt-1 text-left">
-                                    <summary className="cursor-pointer list-none text-xs font-medium text-stone-500 hover:text-stone-600">
-                                      {done}/{b.slots} confirmed
-                                    </summary>
-                                    <ul className="mt-1 space-y-0.5 pl-0.5">
-                                      {ps.map((p) => (
-                                        <li key={p.slot_number} className="flex items-center gap-1 text-xs">
-                                          <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
-                                          <span className={p.completed ? "text-stone-700" : "text-stone-500"}>
-                                            {p.full_name ?? `Participant ${p.slot_number + 1}`}
-                                          </span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </details>
-                                );
-                              })()}
+                              {b.slots > 1 && participantsMap.has(b.id) && (
+                                <ParticipantManifest b={b} participants={participantsMap.get(b.id)!} />
+                              )}
                             </td>
                             <td className="px-5 py-3.5">
                               <StatusBadge status={b.status} />
