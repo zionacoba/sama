@@ -881,6 +881,11 @@ export function BookingModal({
                 </p>
                 {amountDue > 0 && (
                   <p className="mb-2 text-center text-xs text-stone-500">
+                    If a refund is ever due, GCash refunds are automatic; QR Ph refunds are processed manually by our team and take 3 to 5 business days.
+                  </p>
+                )}
+                {amountDue > 0 && (
+                  <p className="mb-2 text-center text-xs text-stone-500">
                     After you pay, PayMongo shows you a receipt page. Your booking confirmation is emailed to you, and you can always view it under My Account &gt; My Bookings.
                   </p>
                 )}

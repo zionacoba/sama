@@ -9,6 +9,7 @@ import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { reverseBookingCredit } from "@/lib/organizer-credits";
 import { type RefundResult } from "@/lib/paymongo-refund";
+import { classifyRefundResult, MANUAL_REFUND_FOLLOWUP } from "@/lib/refund-email-copy";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountSamaHolds, amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
 import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
@@ -998,12 +999,18 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
 
   await sendInChunks(bookings ?? [], async (booking) => {
     const amountPaid = amountJoinerPaid(booking);
-    const refundSucceeded = refundResultMap.get(booking.id)?.initial?.success === true;
+    const bookingRefundResults = refundResultMap.get(booking.id);
+    const refundSucceeded = bookingRefundResults?.initial?.success === true;
+    const refundManual =
+      classifyRefundResult(bookingRefundResults?.initial) === "manual" ||
+      classifyRefundResult(bookingRefundResults?.balance) === "manual";
     const refundLine =
       amountPaid > 0
         ? (refundSucceeded
             ? `<p>A full refund of <strong>${fmtCurrency(amountPaid)}</strong> has been processed and will reflect within 24 hours.</p>`
-            : `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process your refund within 3 to 5 business days.</p>`)
+            : refundManual
+              ? `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. It is being processed manually. ${MANUAL_REFUND_FOLLOWUP}</p>`
+              : `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process your refund within 3 to 5 business days.</p>`)
         : `<p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`;
     try {
       await resend.emails.send({
