@@ -1865,6 +1865,35 @@ export async function cancelBooking(bookingId: number) {
                   : `<p>Based on our cancellation policy, your refund will be <strong>${fmtCurrency(refundAmount)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process it within 5 to 7 business days.</p>`)
           : `<p>Based on our cancellation policy, this cancellation is not eligible for a refund.</p>`;
 
+    // Manual-refund operator alert. Kept independent of the customer-facing
+    // email sends below: a customer email failure must not skip this alert, and
+    // this alert must not break the email send or throw out of cancelBooking.
+    // (sendAdminAlert never throws; the try/catch is a defensive backstop.)
+    const needsManualRefund =
+      (refundResult && !refundResult.success) ||
+      (balanceRefundResult && !balanceRefundResult.success);
+    if (needsManualRefund) {
+      try {
+        const isQrPh = refundResult?.requiresManualProcessing || balanceRefundResult?.requiresManualProcessing;
+        const refundNote = isQrPh
+          ? 'Payment method is QR Ph, must be refunded manually.'
+          : `Automatic refund failed: ${refundResult?.error ?? balanceRefundResult?.error ?? 'Unknown error'}`;
+        await sendAdminAlert(
+          `[Admin] Manual refund required: ${escapeHtml(booking.full_name)}, ${trip.title}`,
+          `
+              <p>A refund could not be automatically processed.</p>
+              <p><strong>Booking ID:</strong> ${bookingId}</p>
+              <p><strong>Participant:</strong> ${escapeHtml(booking.full_name)} (${escapeHtml(booking.email)})</p>
+              <p><strong>Refund amount:</strong> ${refundAmount !== null && refundAmount > 0 ? fmtCurrency(refundAmount) : 'See booking details'}</p>
+              <p><strong>Reason:</strong> ${refundNote}</p>
+              <p>Please process this refund manually.</p>
+            `,
+        );
+      } catch (alertErr) {
+        console.error("[admin-alert] failed to send manual-refund alert", alertErr);
+      }
+    }
+
     try {
       const tripDate = new Intl.DateTimeFormat("en-PH", {
         weekday: "long",
@@ -1917,27 +1946,6 @@ export async function cancelBooking(bookingId: number) {
             <p>Reply to the participant at <a href="mailto:${escapeHtml(booking.email)}">${escapeHtml(booking.email)}</a>.</p>
           `,
       );
-
-      const needsManualRefund =
-        (refundResult && !refundResult.success) ||
-        (balanceRefundResult && !balanceRefundResult.success);
-      if (needsManualRefund) {
-        const isQrPh = refundResult?.requiresManualProcessing || balanceRefundResult?.requiresManualProcessing;
-        const refundNote = isQrPh
-          ? 'Payment method is QR Ph, must be refunded manually.'
-          : `Automatic refund failed: ${refundResult?.error ?? balanceRefundResult?.error ?? 'Unknown error'}`;
-        await sendAdminAlert(
-          `[Admin] Manual refund required: ${escapeHtml(booking.full_name)}, ${trip.title}`,
-          `
-              <p>A refund could not be automatically processed.</p>
-              <p><strong>Booking ID:</strong> ${bookingId}</p>
-              <p><strong>Participant:</strong> ${escapeHtml(booking.full_name)} (${escapeHtml(booking.email)})</p>
-              <p><strong>Refund amount:</strong> ${refundAmount !== null && refundAmount > 0 ? fmtCurrency(refundAmount) : 'See booking details'}</p>
-              <p><strong>Reason:</strong> ${refundNote}</p>
-              <p>Please process this refund manually.</p>
-            `,
-        );
-      }
     } catch (err) {
       console.error("[email] failed to send cancellation email", err);
     }
