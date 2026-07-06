@@ -335,6 +335,22 @@ describe("addCalendarDays", () => {
     // same wall-clock day. UTC-midnight math must still advance exactly one day.
     expect(addCalendarDays("2026-11-01", 1)).toBe("2026-11-02");
   });
+
+  // Regression: trips.date_start is a timestamptz, so PostgREST hands the payout
+  // call sites the FULL ISO form ("2026-12-01T00:00:00+00:00"), not the bare
+  // "YYYY-MM-DD" these earlier tests use — which is why they never caught the
+  // crash. The full form must not throw and must give the same answer as the
+  // bare date.
+  it("accepts the full ISO timestamptz form production actually passes", () => {
+    expect(addCalendarDays("2026-12-01T00:00:00+00:00", -7)).toBe("2026-11-24");
+    expect(addCalendarDays("2026-12-01T00:00:00+00:00", -7)).toBe(
+      addCalendarDays("2026-12-01", -7),
+    );
+  });
+
+  it("does not throw on the full ISO form (was RangeError: Invalid time value)", () => {
+    expect(() => addCalendarDays("2026-12-01T00:00:00+00:00", 2)).not.toThrow();
+  });
 });
 
 describe("manilaDateOf", () => {
@@ -448,5 +464,43 @@ describe("payoutTimingGate", () => {
     const b = tooking({ dateStart: null });
     const r = payoutTimingGate(b, "2026-07-03");
     expect(r).toEqual({ payable: false, reason: "no-trip" });
+  });
+
+  // Regression: production passes date_start as the full ISO timestamptz string
+  // (trips.date_start via PostgREST), not the bare "YYYY-MM-DD" used above —
+  // which is why the suite never caught the addCalendarDays RangeError. Any
+  // booking whose balance was NOT paid online (the common case: Lanes A and B)
+  // reaches the addCalendarDays cutoff and used to crash on this form.
+  it("full-ISO date_start, balance not paid online, future trip -> pre-trip-cleared, no throw", () => {
+    const b = tooking({
+      created_at: "2026-06-30T02:00:00Z",
+      dateStart: "2026-07-20T00:00:00+00:00",
+    });
+    expect(() => payoutTimingGate(b, "2026-07-03")).not.toThrow();
+    expect(payoutTimingGate(b, "2026-07-03")).toEqual({
+      payable: true,
+      reason: "pre-trip-cleared",
+    });
+  });
+
+  it("full-ISO date_start, late booking, past trip -> post-trip-late, no throw", () => {
+    // created 2026-07-14 (6 days before the trip) -> late; today is after the trip.
+    const b = tooking({
+      created_at: "2026-07-14T02:00:00Z",
+      dateStart: "2026-07-20T00:00:00+00:00",
+    });
+    expect(() => payoutTimingGate(b, "2026-07-25")).not.toThrow();
+    expect(payoutTimingGate(b, "2026-07-25")).toEqual({
+      payable: true,
+      reason: "post-trip-late",
+    });
+  });
+
+  it("full-ISO date_start gives the same verdicts as the bare date", () => {
+    for (const today of ["2026-07-03", "2026-07-16", "2026-07-25"]) {
+      expect(
+        payoutTimingGate(tooking({ dateStart: "2026-07-20T00:00:00+00:00" }), today),
+      ).toEqual(payoutTimingGate(tooking({ dateStart: "2026-07-20" }), today));
+    }
   });
 });

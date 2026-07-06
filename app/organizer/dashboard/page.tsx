@@ -15,8 +15,10 @@ export const maxDuration = 60;
 
 const PAGE_SIZE = 20;
 
+// date_start is a timestamptz, so it arrives as "2099-12-31T00:00:00+00:00";
+// compare the date-only prefix or the sentinel never matches.
 const isTemplateLike = (t: OrganizerTrip) =>
-  t.is_template === true || t.date_start === "2099-12-31";
+  t.is_template === true || t.date_start?.slice(0, 10) === "2099-12-31";
 
 type PageProps = {
   searchParams: Promise<{

@@ -60,8 +60,17 @@ export function manilaDateOf(iso: string): string {
 // arithmetic and formatting in UTC guarantees the +2 / -7 day shift is pure
 // calendar-day math that no local timezone or DST transition can nudge across a
 // day boundary. n may be negative.
+//
+// Callers also pass full ISO timestamptz strings: trips.date_start is a
+// timestamptz, so the payout call sites receive "2026-12-01T00:00:00+00:00"
+// from PostgREST, not a bare date. Without the slice, the template below would
+// produce "...+00:00T00:00:00Z" (an invalid date) and Intl.format would throw
+// RangeError. The first 10 chars are the organizer-picked calendar date
+// (date_start is always stored at UTC midnight from a bare-date insert), which
+// is the same calendar date the gate's lexical date_start comparisons use.
 export function addCalendarDays(ymd: string, n: number): string {
-  const base = new Date(`${ymd}T00:00:00Z`).getTime() + n * 86_400_000;
+  const day = ymd.slice(0, 10);
+  const base = new Date(`${day}T00:00:00Z`).getTime() + n * 86_400_000;
   return new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(new Date(base));
 }
 
