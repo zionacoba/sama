@@ -13,7 +13,8 @@ import { classifyRefundResult, MANUAL_REFUND_FOLLOWUP } from "@/lib/refund-email
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
 import { computeTripCancelSummary, type TripCancelSummary } from "@/lib/trip-cancel-summary";
-import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
+import { summarizeTripSlots, type TripSlotSummary } from "@/lib/trip-slot-summary";
+import { SLOT_CONSUMING_STATUSES, SLOT_HOLDING_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
@@ -463,28 +464,33 @@ export async function updateTrip(
     }
   }
 
-  // Single booking query covers all five edge-case checks below.
-  let bookedSlots = 0;
-  let activeBookingCount = 0;
-  let pendingBalanceCount = 0;
+  // Single booking query covers all five edge-case checks below. Queried over
+  // SLOT_CONSUMING_STATUSES (not just ACTIVE) because transferred and no_show
+  // bookings still hold their slots; summarizeTripSlots splits the rows into
+  // the per-purpose counters (see lib/trip-slot-summary.ts for which counter
+  // uses which status set).
+  let slotSummary: TripSlotSummary = {
+    consumedSlots: 0,
+    activeBookingCount: 0,
+    pendingBalanceCount: 0,
+    liveBookingCount: 0,
+  };
   if (!isDraft && !is_template) {
     const adminForChecks = createSupabaseAdminClient();
-    const { data: activeBookings } = await adminForChecks
+    const { data: consumingBookings } = await adminForChecks
       .from("bookings")
-      .select("slots, amount_due, total_amount")
+      .select("status, slots, amount_due, total_amount")
       .eq("trip_id", tripId)
-      .in("status", [...ACTIVE_BOOKING_STATUSES]);
-    bookedSlots = (activeBookings ?? []).reduce((sum, b) => sum + (b.slots ?? 0), 0);
-    activeBookingCount = activeBookings?.length ?? 0;
-    pendingBalanceCount = (activeBookings ?? []).filter(
-      (b) => b.amount_due != null && b.total_amount != null && Number(b.amount_due) < Number(b.total_amount)
-    ).length;
+      .in("status", [...SLOT_CONSUMING_STATUSES]);
+    slotSummary = summarizeTripSlots(consumingBookings ?? []);
   }
+  const { consumedSlots, activeBookingCount, pendingBalanceCount, liveBookingCount } = slotSummary;
 
-  // 1. Block reducing total_slots below confirmed + pending slot sum.
+  // 1. Block reducing total_slots below the slots bookings still consume
+  // (confirmed + pending + payment_pending + transferred + no_show).
   if (!isDraft && !is_template && total_slots < existing.total_slots) {
-    if (total_slots < bookedSlots) {
-      return { error: `Cannot reduce total slots below your current confirmed bookings (${bookedSlots} slots booked). Cancel bookings first if you need to reduce capacity.` };
+    if (total_slots < consumedSlots) {
+      return { error: `Cannot reduce total slots below your current bookings (${consumedSlots} slots booked, including transfers). Cancel bookings first if you need to reduce capacity.` };
     }
   }
 
@@ -493,10 +499,13 @@ export async function updateTrip(
     return { error: "Cannot change difficulty to Advanced while confirmed bookings exist. Advanced trips require organizer approval for new bookings, which would create an inconsistent experience for existing participants." };
   }
 
-  // Block moving a trip with active bookings back to draft.
+  // Block moving a trip back to draft while anyone is still attending. Uses
+  // liveBookingCount (ACTIVE plus transferred), not activeBookingCount: a trip
+  // whose only booking is transferred still has a replacement participant on
+  // it and must stay visible.
   if (status === "draft" && existing.status === "active") {
-    if (activeBookingCount > 0) {
-      return { error: "This trip has confirmed bookings and cannot be moved to draft. Cancel the trip instead." };
+    if (liveBookingCount > 0) {
+      return { error: "This trip has confirmed or transferred bookings and cannot be moved to draft. Cancel the trip instead." };
     }
   }
 
@@ -520,11 +529,14 @@ export async function updateTrip(
   }
 
   // 5. Recalculate remaining_slots from actual bookings when total_slots changes.
+  // consumedSlots counts every slot-consuming status (including transferred and
+  // no_show), so the recompute reproduces what the incremental RPC machinery
+  // (book_slot decrement / restore_slot) would hold.
   let remaining_slots: number;
   if (isDraft || is_template) {
     remaining_slots = existing.remaining_slots ?? 0;
   } else if (total_slots !== existing.total_slots) {
-    remaining_slots = Math.max(0, total_slots - bookedSlots);
+    remaining_slots = Math.max(0, total_slots - consumedSlots);
   } else {
     remaining_slots = existing.remaining_slots ?? 0;
   }
