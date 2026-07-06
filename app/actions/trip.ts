@@ -161,6 +161,10 @@ export async function createTrip(
     return { error: "Trip title must be 100 characters or fewer." };
   }
 
+  if (!["flexible", "moderate", "strict"].includes(cancellation_policy)) {
+    return { error: "Invalid cancellation policy." };
+  }
+
   if (!isDraft) {
     if (!activity_type || !destination || !difficulty || !description) {
       return { error: "Please fill in all required fields." };
@@ -175,9 +179,6 @@ export async function createTrip(
     }
     if (!is_template && payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
       return { error: "Please enter a minimum downpayment amount." };
-    }
-    if (!is_template && cancellation_policy === "custom" && !cancellation_policy_custom) {
-      return { error: "Please enter your custom cancellation policy." };
     }
     if (!is_template) {
       if (price < 0) return { error: "Price cannot be negative." };
@@ -410,6 +411,10 @@ export async function updateTrip(
     return { error: "Trip title must be 100 characters or fewer." };
   }
 
+  if (!["flexible", "moderate", "strict"].includes(cancellation_policy)) {
+    return { error: "Invalid cancellation policy." };
+  }
+
   if (!isDraft && !activity_type || !isDraft && !destination || !isDraft && !difficulty || !isDraft && !description) {
     return { error: "Please fill in all required fields." };
   }
@@ -427,10 +432,6 @@ export async function updateTrip(
 
   if (!isDraft && !is_template && payment_type === "downpayment" && (!min_downpayment || isNaN(min_downpayment))) {
     return { error: "Please enter a minimum downpayment amount." };
-  }
-
-  if (!isDraft && !is_template && cancellation_policy === "custom" && !cancellation_policy_custom) {
-    return { error: "Please enter your custom cancellation policy." };
   }
 
   if (!isDraft && !is_template) {

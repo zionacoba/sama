@@ -63,10 +63,10 @@ export function TripForm({
   const [paymentType, setPaymentType] = useState<"full" | "downpayment">(
     defaultValues?.payment_type === "downpayment" ? "downpayment" : "full",
   );
-  const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict" | "custom">(
-    (["flexible", "moderate", "strict", "custom"].includes(defaultValues?.cancellation_policy ?? "")
+  const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict">(
+    (["flexible", "moderate", "strict"].includes(defaultValues?.cancellation_policy ?? "")
       ? defaultValues!.cancellation_policy
-      : "flexible") as "flexible" | "moderate" | "strict" | "custom",
+      : "flexible") as "flexible" | "moderate" | "strict",
   );
   const initialQuestions = defaultValues?.custom_questions ?? (defaultValues?.custom_question ? [defaultValues.custom_question] : []);
   const [customQuestions, setCustomQuestions] = useState<string[]>(initialQuestions);
@@ -485,27 +485,14 @@ export function TripForm({
               <option value="flexible">{CANCELLATION_POLICIES.flexible.label}: {CANCELLATION_POLICIES.flexible.short}</option>
               <option value="moderate">{CANCELLATION_POLICIES.moderate.label}: {CANCELLATION_POLICIES.moderate.short}</option>
               <option value="strict">{CANCELLATION_POLICIES.strict.label}: {CANCELLATION_POLICIES.strict.short}</option>
-              <option value="custom">{CANCELLATION_POLICIES.custom.label}: {CANCELLATION_POLICIES.custom.short}</option>
             </select>
-            {cancellationPolicy !== "custom" && (
-              <p className="mt-1.5 text-xs text-stone-500">
-                {({
-                  flexible: "Full refund up to 7 days before the trip. 50% refund between 3 and 7 days. No refund within 3 days.",
-                  moderate: "Full refund up to 14 days before the trip. 50% refund between 7 and 14 days. No refund within 7 days.",
-                  strict: "Full refund up to 30 days before the trip. 50% refund between 7 and 30 days. No refund within 7 days.",
-                } as Record<string, string>)[cancellationPolicy]}
-              </p>
-            )}
-            {cancellationPolicy === "custom" && (
-              <textarea
-                name="cancellation_policy_custom"
-                required
-                rows={3}
-                defaultValue={defaultValues?.cancellation_policy_custom ?? ""}
-                className={`${inputClass} mt-3 resize-none`}
-                placeholder="Describe your cancellation and refund terms…"
-              />
-            )}
+            <p className="mt-1.5 text-xs text-stone-500">
+              {({
+                flexible: "Full refund up to 7 days before the trip. 50% refund between 3 and 7 days. No refund within 3 days.",
+                moderate: "Full refund up to 14 days before the trip. 50% refund between 7 and 14 days. No refund within 7 days.",
+                strict: "Full refund up to 30 days before the trip. 50% refund between 7 and 30 days. No refund within 7 days.",
+              } as Record<string, string>)[cancellationPolicy]}
+            </p>
           </div>
 
           <div>
