@@ -1,0 +1,46 @@
+-- Remove the redundant, buggy slot-availability trigger on bookings.
+--
+-- WHAT IT DID:
+-- Live had a BEFORE INSERT trigger before_booking_inserted on public.bookings
+-- running check_slot_availability(), which raised
+-- "Not enough slots available (N remaining)" whenever remaining_slots < NEW.slots.
+--
+-- WHY IT WAS BUGGY:
+-- book_slot_and_create_booking already decrements remaining_slots FIRST, under an
+-- atomic guarded UPDATE (WHERE remaining_slots >= p_slots_requested, raising
+-- not_enough_slots if the guard is not met), and only THEN inserts the booking
+-- row. The trigger fired on that insert and read the ALREADY-DECREMENTED
+-- remaining_slots, double-counting the booking against itself. Effect: any
+-- booking larger than half the remaining slots was wrongly rejected (e.g. a
+-- 7-slot booking on a trip with 10 remaining decremented to 3, then the trigger
+-- saw 3 < 7 and raised "Not enough slots available (3 remaining)"). Real group
+-- bookings were capped at half of capacity.
+--
+-- WHY REMOVAL IS SAFE:
+-- book_slot_and_create_booking is the ONLY production insert path into bookings,
+-- and its guarded UPDATE takes a row lock on the trip and serializes concurrent
+-- bookings. That UPDATE is therefore the sole and sufficient atomic slot gate;
+-- the trigger protected nothing and only introduced the double-count bug.
+--
+-- PRECEDENT:
+-- This is the identical anti-pattern already removed once in
+-- 20260610000006_drop_booking_inserted_trigger.sql, which dropped a prior
+-- double-decrement trigger (on_booking_inserted / decrement_remaining_slots) on
+-- the same grounds: the RPC already handles remaining_slots atomically.
+--
+-- PROVENANCE:
+-- before_booking_inserted / check_slot_availability were hand-applied to
+-- production and never captured in any migration. This file documents their
+-- removal so the repo matches the fixed live state and a full `db reset`
+-- reproduces it.
+--
+-- AFTER THIS MIGRATION:
+-- The RPC's guarded UPDATE is the only slot check. A genuine capacity rejection
+-- raises not_enough_slots, which createBooking's existing error mapping surfaces
+-- to the user as "This trip is fully booked." Legitimate group bookings up to the
+-- true remaining capacity now succeed.
+--
+-- Idempotent and safe to replay: both drops use IF EXISTS.
+
+DROP TRIGGER IF EXISTS before_booking_inserted ON public.bookings;
+DROP FUNCTION IF EXISTS check_slot_availability();
