@@ -1,0 +1,30 @@
+-- Drop the orphaned decrement_remaining_slots() function.
+--
+-- WHY:
+-- This is the function that backed the on_booking_inserted BEFORE INSERT trigger
+-- on public.bookings. That trigger was removed in
+-- 20260610000006_drop_booking_inserted_trigger.sql because it double-counted:
+-- book_slot_and_create_booking already decrements remaining_slots atomically, so
+-- the trigger made every booking decrement twice. The intent then was for the
+-- function to go too (that migration also lists a DROP FUNCTION for it), but live
+-- reconciliation found the function still present in production: orphaned (no
+-- trigger referenced it), yet SECURITY DEFINER and world-callable
+-- (anon/authenticated held EXECUTE). Its body was the hazardous double-decrement:
+--   update trips set remaining_slots = remaining_slots - new.slots
+--   where id = new.trip_id
+-- A SECURITY DEFINER, world-callable function carrying that shape is a standing
+-- capacity-integrity risk even with its trigger gone, so it was dropped by hand
+-- in the Supabase SQL editor (per the repo convention that migrations here are
+-- applied manually, not by an automated runner). This migration records that
+-- removal so a full db reset reproduces the fixed state.
+--
+-- Idempotent and safe to replay: IF EXISTS makes the drop a no-op once gone.
+--
+-- NOTE: The same reconciliation pass also found an undocumented but PROTECTIVE
+-- pair in live that is being KEPT: an rls_auto_enable() function and its
+-- ensure_rls event trigger, which auto-enable row level security on newly
+-- created tables. These are intentionally NOT touched here; they will be
+-- documented in a dedicated follow-up migration so the repo captures the live
+-- state without conflating a removal with an addition.
+
+DROP FUNCTION IF EXISTS decrement_remaining_slots();
