@@ -300,12 +300,27 @@ export async function rejectOrganizer(id: string): Promise<void> {
         console.error("[email] failed to send trip cancellation notice to participant", err);
       }
     });
+
+    // Remove waitlist rows for the now-unpublished trips. Best-effort: a lingering
+    // waitlist row is low-severity, so a delete failure is logged but never aborts
+    // the rejection. Deliberately NO "trip cancelled" email to waitlisted users:
+    // rejection drafts the trip (it is not cancelled) and is a back-office
+    // moderation action, so a cancellation notice could be wrong if the organizer
+    // is later re-approved and the trip republished. Deleting the rows also
+    // prevents a future slot-opening event from notifying a pre-rejection waitlist.
+    const { error: waitlistDeleteError } = await admin
+      .from("waitlist")
+      .delete()
+      .in("trip_id", tripIds);
+    if (waitlistDeleteError) {
+      console.error("[rejectOrganizer] failed to delete waitlist rows for rejected trips:", waitlistDeleteError.message);
+    }
   }
 
   // Notify the organizer their account has been rejected and trips unpublished.
   const tripsUnpublishedNote =
     tripIds.length > 0
-      ? `<p>As a result, the following trip${tripIds.length > 1 ? "s have" : " has"} been unpublished: <strong>${(activeTrips ?? []).map((t) => escapeHtml(t.title)).join(", ")}</strong>. Participants with confirmed or pending bookings will be notified and issued full refunds.</p>`
+      ? `<p>As a result, the following trip${tripIds.length > 1 ? "s have" : " has"} been unpublished: <strong>${(activeTrips ?? []).map((t) => escapeHtml(t.title)).join(", ")}</strong>. Anyone who booked will be notified, and anyone who paid will be issued a full refund.</p>`
       : "";
 
   try {
