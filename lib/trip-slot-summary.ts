@@ -71,7 +71,8 @@ export function summarizeTripSlots(
   return { consumedSlots, activeBookingCount, pendingBalanceCount, liveBookingCount };
 }
 
-// Whether updateTrip should include remaining_slots in its trips.update() payload.
+// Whether an updateTrip edit is a capacity change on an active trip: total_slots
+// actually changed and the trip is neither a draft nor a template.
 //
 // remaining_slots is maintained incrementally and atomically by the RPC
 // machinery (book_slot decrement, restore_slot / cancel_and_restore_slot
@@ -79,15 +80,16 @@ export function summarizeTripSlots(
 // function and does substantial other work before writing, so writing that
 // value back would clobber any concurrent booking or cancel that landed in the
 // window (oversell or capacity leak). The ONLY case where updateTrip legitimately
-// owns remaining_slots is when total_slots actually changes on an active trip:
-// there it recomputes capacity from live bookings. In every other case
-// (draft/template edits, and unchanged-total active edits) it must OMIT the
-// column and leave the live value untouched.
+// owns the slot fields is when total_slots actually changes on an active trip.
 //
-// (Part 2a: this predicate gates the omit. The changed-total branch still writes
-// a JS-recomputed value; part 2b replaces that with an atomic SQL delta RPC so
-// even the capacity-change write is race-safe.)
-export function shouldWriteRemainingSlots(args: {
+// On that path updateTrip omits BOTH total_slots and remaining_slots from the
+// main .update() payload and instead calls the atomic set_total_slots RPC, which
+// adjusts remaining_slots against the LIVE row (remaining + (new_total - old_total))
+// in a single UPDATE, so a concurrent decrement/restore cannot be clobbered. On
+// every other path (draft/template edits, and unchanged-total active edits) the
+// RPC is not used: the payload writes total_slots (unchanged value, harmless) and
+// leaves remaining_slots to the incremental slot RPCs.
+export function isActiveCapacityChange(args: {
   isDraft: boolean;
   isTemplate: boolean;
   newTotalSlots: number;

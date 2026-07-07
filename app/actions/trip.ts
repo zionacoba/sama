@@ -1,5 +1,6 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
@@ -13,7 +14,7 @@ import { classifyRefundResult, MANUAL_REFUND_FOLLOWUP } from "@/lib/refund-email
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
 import { computeTripCancelSummary, type TripCancelSummary } from "@/lib/trip-cancel-summary";
-import { summarizeTripSlots, shouldWriteRemainingSlots, type TripSlotSummary } from "@/lib/trip-slot-summary";
+import { summarizeTripSlots, isActiveCapacityChange, type TripSlotSummary } from "@/lib/trip-slot-summary";
 import { SLOT_CONSUMING_STATUSES, SLOT_HOLDING_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
 import { sendInChunks } from "@/lib/send-in-chunks";
@@ -528,28 +529,17 @@ export async function updateTrip(
     }
   }
 
-  // 5. Recalculate remaining_slots from actual bookings when total_slots changes.
-  // consumedSlots counts every slot-consuming status (including transferred and
-  // no_show), so the recompute reproduces what the incremental RPC machinery
-  // (book_slot decrement / restore_slot) would hold.
-  //
-  // shouldWriteRemaining is TRUE only when total_slots actually changed on an
-  // active (non-draft, non-template) trip, i.e. the one case where the value
-  // above is a fresh recompute rather than the stale top-of-function read.
-  // In every other case (draft/template, or an unchanged-total active edit) we
-  // must NOT write remaining_slots back: doing so replays existing.remaining_slots
-  // captured before this function's other work and clobbers any concurrent
-  // book_slot decrement or restore_slot restore that landed in the window. The
-  // remaining_slots variable is still computed for the waitlist check below.
-  let remaining_slots: number;
-  if (isDraft || is_template) {
-    remaining_slots = existing.remaining_slots ?? 0;
-  } else if (total_slots !== existing.total_slots) {
-    remaining_slots = Math.max(0, total_slots - consumedSlots);
-  } else {
-    remaining_slots = existing.remaining_slots ?? 0;
-  }
-  const shouldWriteRemaining = shouldWriteRemainingSlots({
+  // 5. Slot fields on a capacity change are owned by the atomic set_total_slots
+  // RPC, not by the main .update() below. useCapacityRpc is TRUE only when
+  // total_slots actually changed on an active (non-draft, non-template) trip.
+  // On that path both total_slots and remaining_slots are omitted from the
+  // payload and set together atomically by the RPC after the main update, which
+  // adjusts remaining_slots against the LIVE row (remaining + (new_total -
+  // old_total)) so a concurrent book_slot decrement or restore_slot restore
+  // cannot be clobbered. On every other path (draft/template, or unchanged
+  // capacity) the payload writes total_slots (unchanged value is harmless) and
+  // never writes remaining_slots, leaving it to the incremental slot RPCs.
+  const useCapacityRpc = isActiveCapacityChange({
     isDraft,
     isTemplate: is_template,
     newTotalSlots: total_slots,
@@ -593,8 +583,11 @@ export async function updateTrip(
       date_start: safeDateStart,
       date_end: date_end || null,
       price: safePrice,
-      total_slots: safeTotalSlots,
-      ...(shouldWriteRemaining ? { remaining_slots } : {}),
+      // Capacity-RPC path: omit BOTH slot fields; set_total_slots (called after
+      // this update) sets total_slots and remaining_slots together atomically,
+      // so the main update never clobbers the live remaining_slots. Otherwise
+      // write total_slots (unchanged value is harmless) and never remaining_slots.
+      ...(useCapacityRpc ? {} : { total_slots: safeTotalSlots }),
       meeting_points: is_template ? [] : meeting_points,
       description: description || null,
       includes: includes || null,
@@ -615,6 +608,37 @@ export async function updateTrip(
     .eq("id", tripId);
 
   if (error) return { error: error.message };
+
+  // On a capacity change the slot fields were omitted from the update above;
+  // set_total_slots now writes total_slots and remaining_slots together in one
+  // atomic UPDATE (remaining_slots = greatest(0, remaining + (new_total -
+  // old_total)), reading the LIVE row) so a concurrent booking or cancel is not
+  // clobbered. It returns the resulting remaining_slots.
+  //
+  // Failure severity: unlike a fire-and-forget restore_slot, a failure here is
+  // worse. The payload no longer writes total_slots on this path, so if the RPC
+  // fails the capacity change did NOT apply at all while the other field edits
+  // DID: the edit is partially applied. We surface an error so the organizer
+  // retries; re-submitting the same form is safe because set_total_slots is an
+  // idempotent set-to-new-total against the live row (running it again just
+  // reasserts the same total and re-derives remaining from live consumption).
+  // A null/undefined return means the UPDATE matched zero rows (the trip row
+  // vanished between the update and the RPC); treat that as a failure too.
+  // Returning here also skips the notifications below, which is correct: on
+  // retry they run once against the fully-applied edit, never double-sent.
+  if (useCapacityRpc) {
+    const { data: newRemaining, error: slotRpcError } = await adminForUpdate.rpc("set_total_slots", {
+      p_trip_id: tripId,
+      p_new_total: safeTotalSlots,
+    });
+    if (slotRpcError || newRemaining == null) {
+      Sentry.captureException(
+        slotRpcError ?? new Error("set_total_slots returned null (trip row not found)"),
+        { extra: { context: "updateTrip-set_total_slots", tripId, newTotal: safeTotalSlots } },
+      );
+      return { error: "Could not update trip capacity, please retry." };
+    }
+  }
 
   // Notify confirmed/pending bookers if key booking fields changed.
   if (!is_template) {
@@ -682,7 +706,12 @@ export async function updateTrip(
   // previously full trip. This slot increase is a genuine opening, so the
   // shared helper handles the 12-hour debounce, rate-limit-safe sending, and
   // success-only stamping.
-  if (existing.remaining_slots === 0 && remaining_slots > 0) {
+  //
+  // Gate on the capacity delta itself (was full, and total_slots increased),
+  // not on a post-write remaining_slots value: on the capacity-RPC path the JS
+  // no longer holds the written remaining_slots. A failed capacity RPC returns
+  // above, so reaching here means the increase actually applied.
+  if (existing.remaining_slots === 0 && safeTotalSlots > (existing.total_slots ?? 0)) {
     await notifyWaitlistSlotOpened(tripId, {
       title,
       slug: existing.slug,
