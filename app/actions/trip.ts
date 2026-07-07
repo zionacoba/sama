@@ -10,7 +10,7 @@ import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { reverseBookingCredit } from "@/lib/organizer-credits";
 import { type RefundResult } from "@/lib/paymongo-refund";
-import { classifyRefundResult, MANUAL_REFUND_FOLLOWUP } from "@/lib/refund-email-copy";
+import { cancellationRefundLine } from "@/lib/refund-email-copy";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
 import { computeTripCancelSummary, type TripCancelSummary } from "@/lib/trip-cancel-summary";
@@ -1042,20 +1042,11 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   }));
 
   await sendInChunks(bookings ?? [], async (booking) => {
-    const amountPaid = amountJoinerPaid(booking);
     const bookingRefundResults = refundResultMap.get(booking.id);
-    const refundSucceeded = bookingRefundResults?.initial?.success === true;
-    const refundManual =
-      classifyRefundResult(bookingRefundResults?.initial) === "manual" ||
-      classifyRefundResult(bookingRefundResults?.balance) === "manual";
-    const refundLine =
-      amountPaid > 0
-        ? (refundSucceeded
-            ? `<p>A full refund of <strong>${fmtCurrency(amountPaid)}</strong> has been processed and will reflect within 24 hours.</p>`
-            : refundManual
-              ? `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. It is being processed manually. ${MANUAL_REFUND_FOLLOWUP}</p>`
-              : `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> to process your refund within 3 to 5 business days.</p>`)
-        : `<p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`;
+    // Gate the refund copy on whether a refund is ACTUALLY being issued for this
+    // booking (a real PayMongo payment id exists to refund against), not on the
+    // quoted amount. See cancellationRefundLine for the never-paid rationale.
+    const refundLine = cancellationRefundLine(booking, bookingRefundResults, fmtCurrency);
     try {
       await resend.emails.send({
         from: FROM_ADDRESS,
