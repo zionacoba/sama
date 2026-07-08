@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ESCALATION_THRESHOLD_HOURS,
   shouldEscalate,
-} from "../supabase/functions/_shared/reconcile-escalation.ts";
+} from "../supabase/functions/_shared/reconcile-escalation";
 
 // The strand-forever bound escalates a payment_pending booking whose PayMongo
 // link has been unreachable for at or beyond ESCALATION_THRESHOLD_HOURS.
