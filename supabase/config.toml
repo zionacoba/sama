@@ -1,3 +1,8 @@
+# project_id names the local Supabase stack's Docker resources. It is required
+# for `supabase start` to boot the local stack (used by CI). It does not affect
+# the linked remote project.
+project_id = "landas"
+
 [functions.cleanup-abandoned-payments]
 verify_jwt = false
 

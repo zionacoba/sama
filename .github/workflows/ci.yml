@@ -1,0 +1,110 @@
+name: CI
+
+# Runs on every push to main and on every pull request targeting main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Single job: bring up a Supabase-shaped local stack, prove every migration
+  # applies cleanly from scratch, then build/typecheck/test AGAINST that running
+  # stack.
+  #
+  # The build must run against a live local DB because the homepage
+  # (app/page.tsx) is statically prerendered (revalidate = 300, no cookies) and
+  # fetches trips via the service-role admin client at build time. With no
+  # database and no SUPABASE_SERVICE_ROLE_KEY, `next build` would throw
+  # "supabaseKey is required" while prerendering "/". Rather than make the
+  # homepage dynamic (a production behavior change), we build against the local
+  # stack so that one build-time query hits a real, empty local DB.
+  #
+  # Everything is local Docker on the runner: no production access, no project
+  # ref, no `supabase link`, no access token, no real secrets. The anon and
+  # service_role keys captured below are the well-known local development keys.
+  # ---------------------------------------------------------------------------
+  ci:
+    name: Migrations, build, typecheck, test
+    runs-on: ubuntu-latest # Docker is preinstalled here, required by the stack.
+    steps:
+      - uses: actions/checkout@v4
+
+      # No engines field or .nvmrc in the repo, so we pin to Node 20 (current
+      # LTS). Local dev runs Node 24; bump this if the build ever needs newer.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Official Supabase CLI installer. Pinned to the version used locally
+      # (supabase --version = 2.109.1) so CI is reproducible; bump deliberately.
+      # We do NOT install the CLI via npm because it is not a repo dependency.
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      # Clean, lockfile-exact install (package-lock.json is committed).
+      - name: Install dependencies
+        run: npm ci
+
+      # Boot the full local stack. On first boot the CLI applies the platform
+      # internals (roles, auth schema/functions, extensions), giving migrations
+      # the service_role / anon / authenticated roles, the auth schema with
+      # auth.uid() / auth.jwt(), and the pg_net extension that a bare postgres
+      # container lacks. No --project-ref and no link, so this stays fully local.
+      - name: Start Supabase local stack
+        run: supabase start
+
+      # Explicit "migrations apply cleanly from scratch" proof: db reset drops
+      # and recreates the local database, re-runs the platform init, then
+      # applies every file in supabase/migrations/ top-to-bottom. It exits
+      # non-zero on the first migration that fails.
+      - name: Apply all migrations from scratch
+        run: supabase db reset
+
+      # Capture the running stack's credentials so the build below talks to the
+      # live local DB. `supabase status -o env` (supported on CLI 2.109.1) prints
+      # KEY=VALUE lines (API_URL, ANON_KEY, SERVICE_ROLE_KEY, ...). We map those
+      # to the env var names the app reads and write them to $GITHUB_ENV so the
+      # build, typecheck, and test steps see them. This is what lets the
+      # homepage's build-time service-role query hit a real empty local DB
+      # instead of failing on a missing key.
+      - name: Export local stack credentials for the build
+        run: |
+          set -euo pipefail
+          supabase status -o env > /tmp/sb-status.env
+          # Strip optional surrounding quotes from each value.
+          API_URL=$(grep '^API_URL=' /tmp/sb-status.env | cut -d= -f2- | tr -d '"')
+          ANON_KEY=$(grep '^ANON_KEY=' /tmp/sb-status.env | cut -d= -f2- | tr -d '"')
+          SERVICE_ROLE_KEY=$(grep '^SERVICE_ROLE_KEY=' /tmp/sb-status.env | cut -d= -f2- | tr -d '"')
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=${API_URL}"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
+            echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000"
+          } >> "$GITHUB_ENV"
+
+      # Production build must be error-free. It runs against the local stack;
+      # the homepage's build-time trip query returns an empty list on the fresh
+      # local DB, which is fine. We are proving the build COMPLETES, not
+      # snapshotting content.
+      - name: Build
+        run: npm run build
+
+      # Typecheck separately so a tsc regression is a distinct, clear failure.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # Vitest suite (vitest run via the "test" script).
+      - name: Test
+        run: npm test
+
+      # Tear the stack down. Not strictly required on an ephemeral runner, but
+      # explicit; always() so it runs even if a step above fails.
+      - name: Stop Supabase local stack
+        if: always()
+        run: supabase stop
