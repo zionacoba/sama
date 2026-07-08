@@ -5,25 +5,27 @@ import {
   cancellationRefundLine,
   type CancellationEmailBooking,
 } from "@/lib/refund-email-copy";
+import type { RefundResult } from "@/lib/paymongo-refund";
 
 describe("classifyRefundResult", () => {
   it("classifies a successful automatic refund as success", () => {
     expect(classifyRefundResult({ success: true })).toBe("success");
-    expect(classifyRefundResult({ success: true, refundId: "ref_123" })).toBe("success");
+    const withRefundId: RefundResult = { success: true, refundId: "ref_123" };
+    expect(classifyRefundResult(withRefundId)).toBe("success");
   });
 
   it("classifies a QR Ph manual refund as manual, not failed", () => {
-    expect(
-      classifyRefundResult({
-        success: false,
-        requiresManualProcessing: true,
-        error: "QR Ph payments require manual refund",
-      }),
-    ).toBe("manual");
+    const manualResult: RefundResult = {
+      success: false,
+      requiresManualProcessing: true,
+      error: "QR Ph payments require manual refund",
+    };
+    expect(classifyRefundResult(manualResult)).toBe("manual");
   });
 
   it("classifies a genuine API failure as failed", () => {
-    expect(classifyRefundResult({ success: false, error: "Refund failed" })).toBe("failed");
+    const failedResult: RefundResult = { success: false, error: "Refund failed" };
+    expect(classifyRefundResult(failedResult)).toBe("failed");
     expect(classifyRefundResult({ success: false })).toBe("failed");
   });
 

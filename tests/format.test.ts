@@ -33,6 +33,6 @@ describe("formatBookingRef", () => {
   });
 
   it("accepts bigint ids", () => {
-    expect(formatBookingRef(42n)).toBe("0000002A");
+    expect(formatBookingRef(BigInt(42))).toBe("0000002A");
   });
 });
