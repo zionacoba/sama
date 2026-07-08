@@ -15,8 +15,10 @@ import { withSentryConfig } from "@sentry/nextjs";
 // NOTE: 'unsafe-inline' is required in script-src because the Next.js App Router
 // emits inline hydration scripts and we do not (yet) use a nonce middleware.
 // This policy is ENFORCED (Content-Security-Policy): violations are blocked, not
-// just reported. No report-uri/report-to sink is wired up yet, so violations
-// surface only in the browser console; add a sink before changing directives.
+// just reported. Violations are reported to /api/csp-report (see that route),
+// wired up via the report-uri (legacy) and report-to (modern) directives below
+// plus the companion Reporting-Endpoints header; they still also surface in the
+// browser console.
 const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
@@ -30,11 +32,16 @@ const contentSecurityPolicy = [
   "object-src 'none'",
   "worker-src 'self' blob:",
   "upgrade-insecure-requests",
+  // Reporting only - these do NOT change what the policy allows.
+  "report-uri /api/csp-report",
+  "report-to csp-endpoint",
 ].join("; ");
 
 const securityHeaders = [
   // Enforced: violations are blocked (see note above).
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
+  // Names the `csp-endpoint` group referenced by the CSP report-to directive.
+  { key: "Reporting-Endpoints", value: 'csp-endpoint="/api/csp-report"' },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
