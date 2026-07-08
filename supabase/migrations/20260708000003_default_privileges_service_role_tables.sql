@@ -1,0 +1,32 @@
+-- Fix the service_role default-privilege gap on future public tables.
+--
+-- The gap:
+--   The existing ALTER DEFAULT PRIVILEGES rule for role postgres in schema
+--   public grants service_role only the peripheral privileges on new tables
+--   (Dxtm = TRUNCATE, REFERENCES, TRIGGER, MAINTAIN). It does NOT grant the
+--   core arwd privileges (SELECT, INSERT, UPDATE, DELETE). So any newly
+--   created public table ships with service_role able to truncate/reference/
+--   trigger it, but unable to read or write it.
+--
+-- Why it matters:
+--   This is the exact gap that caused the original payout table to ship
+--   without working service_role grants. A hand-created table did not inherit
+--   the read/write grants, so someone had to remember to add SELECT/INSERT/
+--   UPDATE/DELETE per-table. Missing that step is a latent, easy-to-repeat bug.
+--
+-- Scope decision (FOR ROLE postgres):
+--   Tables in public are created as current_user = postgres. Confirmed via
+--   live probe: the 13 existing public tables are all postgres-owned, and
+--   db push connects with current_user = postgres. Scoping the default
+--   privilege FOR ROLE postgres therefore covers both future db push
+--   migrations and any future SQL-editor-created tables.
+--
+-- Scope boundaries:
+--   This is tables-only. It deliberately does NOT touch functions: functions
+--   are granted to service_role individually per-grant on purpose, and must
+--   NOT receive a blanket default privilege. It also does not touch sequences.
+--   We add only the four core privileges (SELECT, INSERT, UPDATE, DELETE);
+--   the peripheral privileges are already covered by the existing rule, so we
+--   do not grant ALL.
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO service_role;
