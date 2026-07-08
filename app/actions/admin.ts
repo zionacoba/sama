@@ -1,5 +1,6 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
@@ -127,6 +128,9 @@ export async function rejectOrganizer(id: string): Promise<void> {
         });
         if (slotErr) {
           console.error(`[rejectOrganizer] restore_slot failed for booking ${booking.id}:`, slotErr.message);
+          Sentry.captureException(slotErr, {
+            extra: { context: "rejectOrganizer-restore-slot-failed", bookingId: booking.id, organizerId: id },
+          });
         }
       }
     }
@@ -174,6 +178,9 @@ export async function rejectOrganizer(id: string): Promise<void> {
           } as never) as unknown as Promise<{ error: { message: string } | null }>);
         if (deductionError) {
           console.error("[deduction] failed to record organizer deduction", booking.id, deductionError.message);
+          Sentry.captureException(deductionError, {
+            extra: { context: "rejectOrganizer-deduction-failed", bookingId: booking.id, organizerId: id },
+          });
         }
       }
 
@@ -184,6 +191,9 @@ export async function rejectOrganizer(id: string): Promise<void> {
       const creditReversal = await reverseBookingCredit(admin, booking.id, id, balanceRefundAmount);
       if (creditReversal.error) {
         console.error("[credit-reversal] failed to reverse organizer credit", booking.id, creditReversal.error);
+        Sentry.captureException(new Error(`Credit reversal failed: ${creditReversal.error ?? "Unknown error"}`), {
+          extra: { context: "rejectOrganizer-credit-reversal-failed", bookingId: booking.id, organizerId: id },
+        });
         await sendAdminAlert(
           "Action needed: failed to reverse organizer credit on organizer rejection",
           `
@@ -219,6 +229,9 @@ export async function rejectOrganizer(id: string): Promise<void> {
         if (initialResult && !initialResult.success) {
           if (!initialResult.requiresManualProcessing) {
             console.error('[refund] rejectOrganizer initial refund failed', booking.id, initialResult.error);
+            Sentry.captureException(new Error(`Initial refund failed: ${initialResult.error ?? "Unknown error"}`), {
+              extra: { context: "rejectOrganizer-initial-refund-failed", bookingId: booking.id, organizerId: id },
+            });
           }
           manualRefundList.push({ id: booking.id, full_name: booking.full_name, email: booking.email, amount: amountPaid });
         }
@@ -238,6 +251,9 @@ export async function rejectOrganizer(id: string): Promise<void> {
           if (balanceResult && !balanceResult.success) {
             if (!balanceResult.requiresManualProcessing) {
               console.error('[refund] rejectOrganizer balance refund failed', booking.id, balanceResult.error);
+              Sentry.captureException(new Error(`Balance refund failed: ${balanceResult.error ?? "Unknown error"}`), {
+                extra: { context: "rejectOrganizer-balance-refund-failed", bookingId: booking.id, organizerId: id },
+              });
             }
             if (!manualRefundList.some((b) => b.id === booking.id)) {
               manualRefundList.push({ id: booking.id, full_name: booking.full_name, email: booking.email, amount: balanceAmount });
@@ -298,6 +314,9 @@ export async function rejectOrganizer(id: string): Promise<void> {
         });
       } catch (err) {
         console.error("[email] failed to send trip cancellation notice to participant", err);
+        Sentry.captureException(err, {
+          extra: { context: "rejectOrganizer-participant-email-failed", bookingId: booking.id, tripId: booking.trip_id, organizerId: id },
+        });
       }
     });
 
@@ -314,6 +333,9 @@ export async function rejectOrganizer(id: string): Promise<void> {
       .in("trip_id", tripIds);
     if (waitlistDeleteError) {
       console.error("[rejectOrganizer] failed to delete waitlist rows for rejected trips:", waitlistDeleteError.message);
+      Sentry.captureException(waitlistDeleteError, {
+        extra: { context: "rejectOrganizer-waitlist-delete-failed", organizerId: id },
+      });
     }
   }
 
@@ -340,6 +362,9 @@ export async function rejectOrganizer(id: string): Promise<void> {
     });
   } catch (err) {
     console.error("[email] failed to send organizer rejection email", err);
+    Sentry.captureException(err, {
+      extra: { context: "rejectOrganizer-organizer-email-failed", organizerId: id },
+    });
   }
 
   revalidatePath("/admin");
