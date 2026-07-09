@@ -6,11 +6,11 @@ import { Footer } from "@/app/components/footer";
 export const metadata: Metadata = {
   title: "Founding Partner Invitation | Sama",
   description:
-    "You've been personally invited to join Sama as a Founding Partner. 20 spots. 5% for life. Closes July 31, 2026.",
+    "You've been personally invited to join Sama as a Founding Partner. 20 spots. 5% for life. Closes August 31, 2026.",
   openGraph: {
     title: "Founding Partner Invitation | Sama",
     description:
-      "You've been personally invited to join Sama as a Founding Partner. 20 spots. 5% for life. Closes July 31, 2026.",
+      "You've been personally invited to join Sama as a Founding Partner. 20 spots. 5% for life. Closes August 31, 2026.",
     url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph"}/founding-partners`,
     type: "website",
   },
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 const terms = [
   { label: "Platform fee", value: "5% per booking, locked in for life" },
   { label: "Spots available", value: "20 only" },
-  { label: "Deadline", value: "July 31, 2026" },
+  { label: "Deadline", value: "August 31, 2026" },
   { label: "Lock-in", value: "None. Stop anytime." },
 ];
 
@@ -57,7 +57,7 @@ export default function FoundingPartnersPage() {
               You&apos;re invited to join Sama as a Founding Partner.
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/80">
-              20 spots. 5% platform fee, locked in for life. Closes July 31, 2026.
+              20 spots. 5% platform fee, locked in for life. Closes August 31, 2026.
             </p>
           </div>
         </section>
