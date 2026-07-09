@@ -1,0 +1,25 @@
+-- Drop the hand-applied NOT NULL on refunds.payment_id.
+--
+-- On production, refunds.payment_id carries a NOT NULL constraint that was
+-- applied by hand, outside this migration folder. The code's design in
+-- lib/refunds.ts requires a NULL payment_id: issueAndRecordRefund inserts the
+-- refund obligation with payload payment_id = paymentId ?? null, and that
+-- NULL-payment_id 'owed' row is the visibility mechanism for downpayment
+-- refunds that are owed but cannot be issued automatically (the booking has no
+-- PayMongo payment id to refund against).
+--
+-- With the NOT NULL in place, that owed insert fails with Postgres error 23502.
+-- lib/refunds.ts does not recognize 23502; the failure falls into the generic
+-- bookkeeping-failure branch, which logs to Sentry/console and moves on WITHOUT
+-- creating any refunds row. As a result the reconciliation digest, the admin
+-- Operations tab, and the exhausted-status escalation never see the owed money.
+--
+-- This migration drops the NOT NULL to restore the designed behavior and to
+-- match this folder's own definition of the column: 20260614000001 creates
+-- refunds.payment_id as nullable text.
+--
+-- ALTER COLUMN ... DROP NOT NULL is a silent no-op when the column is already
+-- nullable, so this migration no-ops on fresh replays (where the column was
+-- never NOT NULL) and does exactly one thing on production.
+
+alter table public.refunds alter column payment_id drop not null;
