@@ -92,16 +92,33 @@ jobs:
       # the homepage's build-time trip query returns an empty list on the fresh
       # local DB, which is fine. We are proving the build COMPLETES, not
       # snapshotting content.
+      #
+      # Dummy build-time secrets: the app instantiates some SDK clients at module
+      # scope, and their constructors throw when the env var is undefined, which
+      # fails `next build` during page-data collection (e.g. lib/resend.ts does
+      # `new Resend(process.env.RESEND_API_KEY)`, which throws "Missing API key").
+      # These clients are never CALLED at build time, only constructed, so an
+      # obviously-fake value satisfies the constructor without contacting anything.
+      # NOTE: the Supabase URL/anon/service-role keys are ALSO build-required, but
+      # they are already supplied with the real local-stack values by the
+      # "Export local stack credentials" step above and must NOT be dummied here
+      # (the homepage's build-time query needs a working key against the local DB).
       - name: Build
         run: npm run build
+        env:
+          RESEND_API_KEY: re_dummy_ci_000
 
       # Typecheck separately so a tsc regression is a distinct, clear failure.
       - name: Typecheck
         run: npx tsc --noEmit
+        env:
+          RESEND_API_KEY: re_dummy_ci_000
 
       # Vitest suite (vitest run via the "test" script).
       - name: Test
         run: npm test
+        env:
+          RESEND_API_KEY: re_dummy_ci_000
 
       # Tear the stack down. Not strictly required on an ephemeral runner, but
       # explicit; always() so it runs even if a step above fails.
