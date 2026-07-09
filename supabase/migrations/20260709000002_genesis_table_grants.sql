@@ -1,0 +1,49 @@
+-- Genesis table grants: these grants were hand-applied in the pre-migration
+-- era on the 7 genesis tables and are captured here so a from-scratch replay
+-- matches prod. GRANT is idempotent, so this migration is a no-op on prod.
+
+grant delete on table "public"."booking_participants" to "service_role";
+grant insert on table "public"."booking_participants" to "service_role";
+grant select on table "public"."booking_participants" to "service_role";
+grant update on table "public"."booking_participants" to "service_role";
+grant select on table "public"."bookings" to "anon";
+grant select on table "public"."bookings" to "authenticated";
+grant delete on table "public"."bookings" to "service_role";
+grant insert on table "public"."bookings" to "service_role";
+grant select on table "public"."bookings" to "service_role";
+grant update on table "public"."bookings" to "service_role";
+grant select on table "public"."organizers" to "anon";
+grant insert on table "public"."organizers" to "authenticated";
+grant select on table "public"."organizers" to "authenticated";
+grant update on table "public"."organizers" to "authenticated";
+grant delete on table "public"."organizers" to "service_role";
+grant insert on table "public"."organizers" to "service_role";
+grant select on table "public"."organizers" to "service_role";
+grant update on table "public"."organizers" to "service_role";
+grant delete on table "public"."profiles" to "authenticated";
+grant insert on table "public"."profiles" to "authenticated";
+grant select on table "public"."profiles" to "authenticated";
+grant update on table "public"."profiles" to "authenticated";
+grant delete on table "public"."profiles" to "service_role";
+grant insert on table "public"."profiles" to "service_role";
+grant select on table "public"."profiles" to "service_role";
+grant update on table "public"."profiles" to "service_role";
+grant select on table "public"."reviews" to "anon";
+grant insert on table "public"."reviews" to "authenticated";
+grant select on table "public"."reviews" to "authenticated";
+grant delete on table "public"."reviews" to "service_role";
+grant insert on table "public"."reviews" to "service_role";
+grant select on table "public"."reviews" to "service_role";
+grant update on table "public"."reviews" to "service_role";
+grant select on table "public"."trips" to "anon";
+grant insert on table "public"."trips" to "authenticated";
+grant select on table "public"."trips" to "authenticated";
+grant update on table "public"."trips" to "authenticated";
+grant delete on table "public"."trips" to "service_role";
+grant insert on table "public"."trips" to "service_role";
+grant select on table "public"."trips" to "service_role";
+grant update on table "public"."trips" to "service_role";
+grant delete on table "public"."waitlist" to "service_role";
+grant insert on table "public"."waitlist" to "service_role";
+grant select on table "public"."waitlist" to "service_role";
+grant update on table "public"."waitlist" to "service_role";
