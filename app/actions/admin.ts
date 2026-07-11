@@ -15,6 +15,7 @@ import { reverseBookingCredit } from "@/lib/organizer-credits";
 import { ATTENDED_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { formatPeso } from "@/lib/format";
+import { parseCommissionRatePercent } from "@/lib/commission";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
@@ -24,27 +25,33 @@ async function requireAdmin() {
   if (!user || user.email !== ADMIN_EMAIL) throw new Error("Unauthorized");
 }
 
-export async function approveOrganizer(id: string): Promise<void> {
+export async function approveOrganizer(id: string, ratePercent: number): Promise<void> {
   await requireAdmin();
+
+  // The rate comes from the client, so validate it here regardless of the
+  // TypeScript signature. Approval must carry an explicit in-bounds rate.
+  const commissionRatePercent = parseCommissionRatePercent(ratePercent);
+  if (!id || commissionRatePercent === null) {
+    redirect("/admin?tab=organizers&commissionError=1");
+  }
+
   const admin = createSupabaseAdminClient();
 
   const { data: organizer } = await admin
     .from("organizers")
-    .select("email, full_name, display_name, status, commission_rate")
+    .select("email, full_name, display_name, status")
     .eq("id", id)
     .maybeSingle();
 
   if (!organizer) return;
 
-  // Idempotency guard — skip DB write and email if already approved.
+  // Idempotency guard - skip DB write and email if already approved.
   if (organizer.status === "approved") {
     redirect("/admin?tab=organizers");
   }
 
-  await admin.from("organizers").update({ status: "approved" }).eq("id", id);
-
-  // commission_rate is stored as a decimal (e.g. 0.05). Render it as a whole percentage.
-  const commissionRatePercent = Math.round((organizer.commission_rate ?? 0.05) * 100);
+  const rate = Number((commissionRatePercent / 100).toFixed(4));
+  await admin.from("organizers").update({ status: "approved", commission_rate: rate }).eq("id", id);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
   try {
@@ -374,9 +381,9 @@ export async function rejectOrganizer(id: string): Promise<void> {
 export async function updateCommissionRate(formData: FormData): Promise<void> {
   await requireAdmin();
   const organizerId = formData.get("organizerId") as string;
-  const ratePercent = parseFloat(formData.get("ratePercent") as string);
+  const ratePercent = parseCommissionRatePercent(formData.get("ratePercent"));
 
-  if (!organizerId || isNaN(ratePercent) || ratePercent < 1 || ratePercent > 20) {
+  if (!organizerId || ratePercent === null) {
     redirect("/admin?tab=organizers&commissionError=1");
   }
 

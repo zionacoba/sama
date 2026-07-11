@@ -24,6 +24,7 @@ import { EditRemittanceReferenceButton } from "./edit-remittance-reference-butto
 import { ExportPayoutCsvButton } from "./export-payout-csv-button";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { safeExternalUrl } from "@/lib/safe-url";
+import { COMMISSION_RATE_MIN_PERCENT, COMMISSION_RATE_MAX_PERCENT, DEFAULT_COMMISSION_RATE } from "@/lib/commission";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 const PAGE_SIZE = 20;
@@ -692,7 +693,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
           <section className="mt-8">
             {commissionError && (
               <p role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                Invalid commission rate. Must be between 1% and 20%.
+                Invalid commission rate. Must be between {COMMISSION_RATE_MIN_PERCENT}% and {COMMISSION_RATE_MAX_PERCENT}%.
               </p>
             )}
             {orgError && (
@@ -829,7 +830,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                         <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-stone-100 pt-4">
                           {app.status === "pending" && (
                             <>
-                              <OrganizerApproveButton id={app.id} />
+                              <OrganizerApproveButton id={app.id} name={app.display_name || app.full_name} />
                               <form action={rejectOrganizer.bind(null, app.id)}>
                                 <button type="submit" className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700">
                                   Reject
@@ -842,9 +843,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
                             <input
                               type="number"
                               name="ratePercent"
-                              defaultValue={Math.round((app.commission_rate ?? 0.05) * 100)}
-                              min={1}
-                              max={20}
+                              defaultValue={Math.round((app.commission_rate ?? DEFAULT_COMMISSION_RATE) * 100)}
+                              min={COMMISSION_RATE_MIN_PERCENT}
+                              max={COMMISSION_RATE_MAX_PERCENT}
                               step={1}
                               className="w-14 rounded border border-stone-200 px-1.5 py-1 text-xs text-stone-900 focus:border-trailhead focus:outline-none"
                             />
