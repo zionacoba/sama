@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 
 export const maxDuration = 60;
 import { confirmPaidBooking, confirmPaidBalance, extractPaymentDetails } from "@/lib/confirm-paid-booking";
+import { filterPaidPayments } from "@/lib/paymongo-checkout";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 
@@ -66,14 +67,22 @@ export async function POST(req: NextRequest) {
   const attrs = eventData?.attributes as Record<string, unknown> | undefined;
   const eventType = attrs?.type as string | undefined;
 
-  if (eventType !== "link.payment.paid") {
+  // checkout_session.payment.paid is the Checkout Sessions replacement for
+  // link.payment.paid. The link branch is kept intact as transition insurance
+  // for payments still completing on pre-migration links; removing it is a
+  // later cleanup commit.
+  if (eventType !== "link.payment.paid" && eventType !== "checkout_session.payment.paid") {
     return NextResponse.json({ received: true });
   }
 
   try {
-    await handleLinkPaymentPaid(attrs!);
+    if (eventType === "link.payment.paid") {
+      await handleLinkPaymentPaid(attrs!);
+    } else {
+      await handleCheckoutSessionPaymentPaid(attrs!);
+    }
   } catch (err) {
-    console.error("[webhook] handler error for link.payment.paid:", err);
+    console.error(`[webhook] handler error for ${eventType}:`, err);
     const droppedLinkData = attrs!.data as Record<string, unknown> | undefined;
     Sentry.captureException(err, {
       extra: {
@@ -82,16 +91,16 @@ export async function POST(req: NextRequest) {
       },
     });
     // A paid event was dropped (money was taken but the booking is unconfirmed).
-    // Alert an operator so they can look up the PayMongo link and confirm manually.
-    // This covers both the initial-payment and balance-payment paths, which share
-    // this single handler and catch.
+    // Alert an operator so they can look up the PayMongo link or checkout
+    // session and confirm manually. This covers both the initial-payment and
+    // balance-payment paths, which share this single handler and catch.
     const linkData = attrs!.data as Record<string, unknown> | undefined;
     const linkId = (linkData?.id as string | undefined) ?? "unknown";
     await sendAdminAlert(
       "Action needed: PayMongo paid webhook dropped, booking unconfirmed",
       `
-            <p>A PayMongo <strong>link.payment.paid</strong> webhook failed to process. Payment was taken but the booking was not confirmed, and PayMongo will not retry.</p>
-            <p><strong>PayMongo link ID:</strong> ${escapeHtml(linkId)}</p>
+            <p>A PayMongo <strong>${escapeHtml(eventType)}</strong> webhook failed to process. Payment was taken but the booking was not confirmed, and PayMongo will not retry.</p>
+            <p><strong>PayMongo resource ID:</strong> ${escapeHtml(linkId)}</p>
             <p><strong>Error:</strong> ${escapeHtml(String(err))}</p>
             <p>Look up the link in the PayMongo dashboard and confirm the booking manually.</p>
           `,
@@ -131,6 +140,43 @@ async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
     const balanceResult = await confirmPaidBalance(linkId, paymentTransactionId);
     if (balanceResult.outcome === "not_found") {
       console.error("[webhook] no booking found for link (initial or balance):", linkId);
+    }
+  }
+}
+
+// checkout_session.payment.paid mirrors link.payment.paid: the event's
+// attributes.data carries the checkout session resource (id "cs_...") whose
+// attributes.payments array holds the payment resources. The session id is
+// what createPaymentCheckout stores in bookings.payment_id /
+// balance_payment_id, so it routes through the same confirm chain as a link id.
+async function handleCheckoutSessionPaymentPaid(attrs: Record<string, unknown>) {
+  const sessionData = attrs.data as Record<string, unknown> | undefined;
+  const sessionId = sessionData?.id as string | undefined;
+  const sessionAttrs = sessionData?.attributes as Record<string, unknown> | undefined;
+
+  // A paid event we cannot parse means money was taken and the booking cannot
+  // be confirmed; returning silently would suppress the Sentry capture and
+  // admin alert in the caller's catch block, which exist precisely for this case.
+  if (!sessionId) {
+    throw new Error("checkout_session.payment.paid event missing session id: payload shape mismatch");
+  }
+
+  // Extract payment method and transaction ID, preferring a paid payment so a
+  // failed attempt earlier in the array can never supply the details.
+  const payments = sessionAttrs?.payments as unknown[] | undefined;
+  const paidPayments = filterPaidPayments(payments);
+  const { paymentMethod, paymentTransactionId } = extractPaymentDetails(
+    paidPayments.length > 0 ? paidPayments : payments,
+  );
+
+  // Same idempotent confirm chain as the link handler: initial payment first,
+  // then fall back to the balance payment when no initial booking matches.
+  const result = await confirmPaidBooking(sessionId, paymentMethod, paymentTransactionId);
+
+  if (result.outcome === "not_found") {
+    const balanceResult = await confirmPaidBalance(sessionId, paymentTransactionId);
+    if (balanceResult.outcome === "not_found") {
+      console.error("[webhook] no booking found for checkout session (initial or balance):", sessionId);
     }
   }
 }

@@ -17,7 +17,8 @@ import { type RefundResult } from "@/lib/paymongo-refund";
 import { classifyRefundResult, MANUAL_REFUND_FOLLOWUP } from "@/lib/refund-email-copy";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { voidBookingCredit, reverseBookingCredit } from "@/lib/organizer-credits";
-import { createPaymentLink } from "@/lib/create-payment-link";
+import { createPaymentCheckout } from "@/lib/create-payment-link";
+import { hasPaidPayment } from "@/lib/paymongo-checkout";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 import { DEFAULT_WAIVER_TEXT, PLATFORM_WAIVER_SNAPSHOT_TEXT } from "@/lib/constants";
@@ -446,7 +447,7 @@ export async function createBooking(input: CreateBookingInput) {
 
   let checkoutUrl: string | null = null;
   try {
-    const linkResult = await createPaymentLink({
+    const linkResult = await createPaymentCheckout({
       bookingId: newBooking.id,
       amount: computedAmountDue,
       description,
@@ -798,21 +799,24 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
     if (secretKey) {
       try {
         const auth = "Basic " + Buffer.from(`${secretKey}:`).toString("base64");
-        const pmRes = await fetch(`https://api.paymongo.com/v1/links/${booking.balance_payment_id}`, {
+        const pmRes = await fetch(`https://api.paymongo.com/v1/checkout_sessions/${booking.balance_payment_id}`, {
           headers: { Authorization: auth, Accept: "application/json" },
         });
 
         if (pmRes.ok) {
           const pmData = await pmRes.json();
-          const linkStatus = pmData.data?.attributes?.status as string | undefined;
-          if (linkStatus === "unpaid") {
-            // Link is still live — return the existing checkout URL to the joiner.
+          const sessionStatus = pmData.data?.attributes?.status as string | undefined;
+          // A session has no paid/unpaid status; it is reusable only while
+          // still active AND no payment on it has succeeded.
+          const sessionPaid = hasPaidPayment(pmData.data?.attributes?.payments as unknown[] | undefined);
+          if (sessionStatus === "active" && !sessionPaid) {
+            // Session is still live — return the existing checkout URL to the joiner.
             const existingUrl = pmData.data?.attributes?.checkout_url as string | undefined;
             if (existingUrl) return { success: true, checkoutUrl: existingUrl };
-            // URL missing in response — fall through and generate a new link.
+            // URL missing in response — fall through and generate a new session.
           }
-          // "archived" or any other terminal status: clear and generate a fresh link.
-          if (linkStatus !== "unpaid") {
+          // Expired, paid, or any other terminal state: clear and generate a fresh session.
+          if (sessionStatus !== "active" || sessionPaid) {
             await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
           }
         } else if (pmRes.status === 404) {
@@ -851,7 +855,7 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
   const description = `Balance payment for ${trip.title} - ${tripDateShort}`;
 
   try {
-    const linkResult = await createPaymentLink({ bookingId, amount: balance, description });
+    const linkResult = await createPaymentCheckout({ bookingId, amount: balance, description });
 
     if ("error" in linkResult) {
       console.error("[createBalancePaymentLink] payment link creation failed:", linkResult.error);
@@ -921,20 +925,23 @@ export async function resumeBookingPayment(bookingId: number): Promise<{ success
     if (secretKey) {
       try {
         const auth = "Basic " + Buffer.from(`${secretKey}:`).toString("base64");
-        const pmRes = await fetch(`https://api.paymongo.com/v1/links/${booking.payment_id}`, {
+        const pmRes = await fetch(`https://api.paymongo.com/v1/checkout_sessions/${booking.payment_id}`, {
           headers: { Authorization: auth, Accept: "application/json" },
         });
 
         if (pmRes.ok) {
           const pmData = await pmRes.json();
-          const linkStatus = pmData.data?.attributes?.status as string | undefined;
-          if (linkStatus === "unpaid") {
+          const sessionStatus = pmData.data?.attributes?.status as string | undefined;
+          // A session has no paid/unpaid status; it is reusable only while
+          // still active AND no payment on it has succeeded.
+          const sessionPaid = hasPaidPayment(pmData.data?.attributes?.payments as unknown[] | undefined);
+          if (sessionStatus === "active" && !sessionPaid) {
             const existingUrl = pmData.data?.attributes?.checkout_url as string | undefined;
             if (existingUrl) return { success: true, checkoutUrl: existingUrl };
-            // URL missing in response: fall through and generate a new link.
+            // URL missing in response: fall through and generate a new session.
           }
-          // "archived" or any other terminal status: clear and generate a fresh link.
-          if (linkStatus !== "unpaid") {
+          // Expired, paid, or any other terminal state: clear and generate a fresh session.
+          if (sessionStatus !== "active" || sessionPaid) {
             await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
           }
         } else if (pmRes.status === 404) {
@@ -964,7 +971,7 @@ export async function resumeBookingPayment(bookingId: number): Promise<{ success
   const description = `Booking for ${trip.title} - ${tripDateShort}`;
 
   try {
-    const linkResult = await createPaymentLink({ bookingId, amount, description });
+    const linkResult = await createPaymentCheckout({ bookingId, amount, description });
 
     if ("error" in linkResult) {
       console.error("[resumeBookingPayment] payment link creation failed:", linkResult.error);

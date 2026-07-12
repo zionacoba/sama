@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { amountJoinerPaid } from "@/lib/booking-finance";
 import { safeExternalUrl } from "@/lib/safe-url";
-import { confirmPaidBooking, confirmPaidBalance, fetchPaymongoLinkPayment } from "@/lib/confirm-paid-booking";
+import { confirmPaidBooking, confirmPaidBalance, fetchPaymongoCheckoutPayment } from "@/lib/confirm-paid-booking";
 import { EmergencyContactPrompt } from "./emergency-contact-prompt";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 
@@ -95,7 +95,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
     booking.payment_id
   ) {
     try {
-      const linkPayment = await fetchPaymongoLinkPayment(booking.payment_id);
+      const linkPayment = await fetchPaymongoCheckoutPayment(booking.payment_id);
       if (linkPayment.status === "paid") {
         const result = await confirmPaidBooking(
           booking.payment_id,
@@ -124,7 +124,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
     booking.balance_payment_gateway_status === null
   ) {
     try {
-      const linkPayment = await fetchPaymongoLinkPayment(booking.balance_payment_id);
+      const linkPayment = await fetchPaymongoCheckoutPayment(booking.balance_payment_id);
       if (linkPayment.status === "paid") {
         await confirmPaidBalance(
           booking.balance_payment_id,

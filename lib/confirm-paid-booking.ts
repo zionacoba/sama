@@ -5,6 +5,7 @@ import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { formatPeso, formatBookingRef } from "@/lib/format";
+import { filterPaidPayments, deriveCheckoutPaymentStatus } from "@/lib/paymongo-checkout";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
@@ -23,10 +24,11 @@ export type ConfirmBalanceResult = { outcome: ConfirmBalanceOutcome };
 
 /**
  * Extract the payment method and PayMongo payment transaction id from the
- * `payments` array on a PayMongo link resource. PayMongo may wrap each payment
- * resource under a `data` key or not, so both shapes are handled. This is the
- * exact extraction the webhook has always used, now shared with the
- * reconciliation paths so all callers parse the link identically.
+ * `payments` array on a PayMongo link or checkout session resource. PayMongo
+ * may wrap each payment resource under a `data` key or not, so both shapes are
+ * handled. This is the exact extraction the webhook has always used, now
+ * shared with the reconciliation paths so all callers parse the resource
+ * identically.
  */
 export function extractPaymentDetails(
   payments: unknown[] | undefined,
@@ -44,35 +46,42 @@ export function extractPaymentDetails(
   return { paymentMethod, paymentTransactionId };
 }
 
-export type PaymongoLinkPayment = {
+export type PaymongoCheckoutPayment = {
   status: string | null;
   paymentMethod: string | null;
   paymentTransactionId: string | null;
 };
 
 /**
- * Query PayMongo for the current status of a payment link and extract the
- * payment details. Reuses the same GET /v1/links/{id} pattern and Basic auth
- * header used elsewhere. Throws on any configuration or API error so callers
- * can fail safe (never confirm or cancel on an inconclusive result).
+ * Query PayMongo for the current payment state of a checkout session and
+ * extract the payment details. A session has no paid/unpaid status of its own
+ * (its status is only "active" | "expired"), so `status` is derived: "paid"
+ * when the session's payments array contains a paid payment, otherwise the raw
+ * session status. Throws on any configuration or API error so callers can fail
+ * safe (never confirm or cancel on an inconclusive result).
  */
-export async function fetchPaymongoLinkPayment(linkId: string): Promise<PaymongoLinkPayment> {
+export async function fetchPaymongoCheckoutPayment(sessionId: string): Promise<PaymongoCheckoutPayment> {
   const secretKey = process.env.PAYMONGO_SECRET_KEY;
   if (!secretKey) {
     throw new Error("PAYMONGO_SECRET_KEY not configured");
   }
   const auth = "Basic " + Buffer.from(`${secretKey}:`).toString("base64");
-  const res = await fetch(`https://api.paymongo.com/v1/links/${linkId}`, {
+  const res = await fetch(`https://api.paymongo.com/v1/checkout_sessions/${sessionId}`, {
     headers: { Authorization: auth, Accept: "application/json" },
   });
   if (!res.ok) {
-    throw new Error(`PayMongo link fetch failed: ${res.status}`);
+    throw new Error(`PayMongo checkout session fetch failed: ${res.status}`);
   }
   const data = await res.json();
   const attrs = data.data?.attributes as Record<string, unknown> | undefined;
-  const status = (attrs?.status as string) ?? null;
+  const sessionStatus = (attrs?.status as string) ?? null;
+  const payments = attrs?.payments as unknown[] | undefined;
+  const paidPayments = filterPaidPayments(payments);
+  const status = deriveCheckoutPaymentStatus(sessionStatus, payments);
+  // Extract details from a paid payment when one exists, so a failed attempt
+  // earlier in the array can never supply the transaction id or method.
   const { paymentMethod, paymentTransactionId } = extractPaymentDetails(
-    attrs?.payments as unknown[] | undefined,
+    paidPayments.length > 0 ? paidPayments : payments,
   );
   return { status, paymentMethod, paymentTransactionId };
 }
@@ -86,8 +95,8 @@ export async function fetchPaymongoLinkPayment(linkId: string): Promise<Paymongo
  * `.is("payment_gateway_status", null)` guard so concurrent callers can never
  * double-confirm or double-email.
  *
- * @param linkId The PayMongo link id stored as `bookings.payment_id`.
- * @param paymentMethod The payment method parsed from the link's payments array.
+ * @param linkId The PayMongo link or checkout session id stored as `bookings.payment_id`.
+ * @param paymentMethod The payment method parsed from the resource's payments array.
  * @param paymentTransactionId The PayMongo payment transaction id.
  */
 export async function confirmPaidBooking(
@@ -482,7 +491,7 @@ export async function confirmPaidBooking(
  * it sets the three balance columns, sends the participant + organizer balance
  * emails, and revalidates the profile / organizer paths.
  *
- * @param linkId The PayMongo link id stored as `bookings.balance_payment_id`.
+ * @param linkId The PayMongo link or checkout session id stored as `bookings.balance_payment_id`.
  * @param paymentTransactionId The PayMongo payment transaction id (when known).
  * @param admin Optional shared admin client; one is created if not supplied.
  */

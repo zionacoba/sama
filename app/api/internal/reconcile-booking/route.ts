@@ -5,7 +5,7 @@ import * as Sentry from "@sentry/nextjs";
 export const maxDuration = 60;
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { confirmPaidBooking, confirmPaidBalance, fetchPaymongoLinkPayment } from "@/lib/confirm-paid-booking";
+import { confirmPaidBooking, confirmPaidBalance, fetchPaymongoCheckoutPayment } from "@/lib/confirm-paid-booking";
 
 function constantTimeEqual(a: string, b: string): boolean {
   const aBuf = Buffer.from(a);
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const linkPayment = await fetchPaymongoLinkPayment(balBooking.balance_payment_id);
+      const linkPayment = await fetchPaymongoCheckoutPayment(balBooking.balance_payment_id);
       if (linkPayment.status === "paid") {
         const result = await confirmPaidBalance(
           balBooking.balance_payment_id,
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const linkPayment = await fetchPaymongoLinkPayment(booking.payment_id);
+    const linkPayment = await fetchPaymongoCheckoutPayment(booking.payment_id);
     if (linkPayment.status === "paid") {
       const result = await confirmPaidBooking(
         booking.payment_id,
