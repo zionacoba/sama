@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import * as Sentry from "@sentry/nextjs";
 import { Navbar } from "@/app/components/navbar";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -28,7 +29,9 @@ function formatDate(dateStr: string) {
 }
 
 export default async function PaymentSuccessPage({ searchParams }: PageProps) {
-  const { bookingId } = await searchParams;
+  const { bookingId: rawBookingId } = await searchParams;
+  const bookingId = rawBookingId ? parseInt(rawBookingId, 10) : null;
+  if (rawBookingId && Number.isNaN(bookingId)) redirect("/profile");
 
   const authClient = await createSupabaseServerClient();
   const { data: { user } } = await authClient.auth.getUser();
@@ -72,11 +75,20 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
 
   let booking: BookingSummary | null = null;
   if (bookingId) {
-    const { data } = await admin
+    const { data, error } = await admin
       .from("bookings")
-      .select("id, user_id, total_amount, amount_due, payment_option, status, payment_id, payment_gateway_status, balance_payment_id, balance_payment_gateway_status, meeting_point, trip:trips(title, date_start, messenger_gc_link, organizer:organizers(display_name, full_name, facebook_url, social_links))")
+      .select("id, user_id, total_amount, amount_due, payment_option, status, payment_id, payment_gateway_status, balance_payment_id, balance_payment_gateway_status, meeting_point, trip:trips!bookings_trip_id_fkey(title, date_start, messenger_gc_link, organizer:organizers(display_name, full_name, facebook_url, social_links))")
       .eq("id", bookingId)
       .maybeSingle();
+    if (error) {
+      // booking stays null and the ownership gate's redirect remains the
+      // fail-safe, but a fetch failure here silently bounces a legitimate
+      // owner to /profile — it must be loud.
+      console.error("[payment-success] booking fetch failed:", error);
+      Sentry.captureException(error, {
+        extra: { context: "payment-success-booking-fetch-failed", bookingId },
+      });
+    }
     booking = data as BookingSummary | null;
   }
 
@@ -171,9 +183,7 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
     }
   }
 
-  const bookingRef = bookingId
-    ? formatBookingRef(parseInt(bookingId, 10))
-    : null;
+  const bookingRef = bookingId ? formatBookingRef(bookingId) : null;
 
   const hasRemainingBalance =
     booking?.payment_option === "downpayment" &&
