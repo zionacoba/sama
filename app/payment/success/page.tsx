@@ -12,7 +12,7 @@ import { EmergencyContactPrompt } from "./emergency-contact-prompt";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 
 export const metadata: Metadata = {
-  title: "Payment received | Sama",
+  title: "Payment received",
   robots: { index: false },
 };
 

@@ -125,7 +125,7 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: "Booking Details | Sama",
+    title: "Booking Details",
   };
 }
 

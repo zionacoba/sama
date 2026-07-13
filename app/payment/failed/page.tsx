@@ -5,7 +5,7 @@ import { formatBookingRef } from "@/lib/format";
 import { ResumePaymentButton } from "@/app/profile/resume-payment-button";
 
 export const metadata: Metadata = {
-  title: "Payment not completed | Sama",
+  title: "Payment not completed",
   robots: { index: false },
 };
 

@@ -4,7 +4,7 @@ import { Navbar } from "@/app/components/navbar";
 import { Footer } from "@/app/components/footer";
 
 export const metadata: Metadata = {
-  title: "Become an Organizer | Sama",
+  title: "Become an Organizer",
   description:
     "Sama is looking for serious, accountable Philippine outdoor organizers who care about doing this right.",
   openGraph: {

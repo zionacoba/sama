@@ -4,7 +4,7 @@ import { Navbar } from "@/app/components/navbar";
 import { Footer } from "@/app/components/footer";
 
 export const metadata: Metadata = {
-  title: "Founding Partner Invitation | Sama",
+  title: "Founding Partner Invitation",
   description:
     "You've been personally invited to join Sama as a Founding Partner. 20 spots. 5% for life. Closes August 31, 2026.",
   openGraph: {
