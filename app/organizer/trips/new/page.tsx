@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { TripForm } from "./trip-form";
 
@@ -13,19 +14,25 @@ export default async function NewTripPage({ searchParams }: PageProps) {
 
   if (!user) redirect("/login?redirectTo=/organizer/trips/new");
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerError } = await supabase
     .from("organizers")
     .select("id, status")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (organizerError) {
+    console.error("[trip-new] organizer fetch failed:", organizerError);
+    Sentry.captureException(organizerError, {
+      extra: { context: "trip-new-organizer-fetch-failed", userId: user.id },
+    });
+  }
   if (!organizer || organizer.status !== "approved") {
     redirect("/apply");
   }
 
   const { template_id, template } = await searchParams;
 
-  const [{ data: destinationsData }, { data: templatesData }, { data: templateData }] =
+  const [{ data: destinationsData }, { data: templatesData }, { data: templateData, error: templateError }] =
     await Promise.all([
       supabase
         .from("trips")
@@ -48,8 +55,15 @@ export default async function NewTripPage({ searchParams }: PageProps) {
             .eq("organizer_id", organizer.id)
             .eq("is_template", true)
             .maybeSingle()
-        : Promise.resolve({ data: null }),
+        : Promise.resolve({ data: null, error: null }),
     ]);
+
+  if (templateError) {
+    console.error("[trip-new] template fetch failed:", templateError);
+    Sentry.captureException(templateError, {
+      extra: { context: "trip-new-template-fetch-failed", templateId: template_id, organizerId: organizer.id },
+    });
+  }
 
   const destinations = [
     ...new Set((destinationsData ?? []).map((t: { destination: string }) => t.destination).filter(Boolean)),

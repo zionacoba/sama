@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
 import { EditTripForm } from "./edit-form";
@@ -18,16 +19,22 @@ export default async function EditTripPage({ params }: PageProps) {
 
   if (!user) redirect("/login?redirectTo=/organizer/dashboard");
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerError } = await supabase
     .from("organizers")
     .select("id, full_name, status")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (organizerError) {
+    console.error("[trip-edit] organizer fetch failed:", organizerError);
+    Sentry.captureException(organizerError, {
+      extra: { context: "trip-edit-organizer-fetch-failed", userId: user.id, slug },
+    });
+  }
   if (!organizer) redirect("/apply");
   if (organizer.status !== "approved") redirect("/organizer/dashboard");
 
-  const { data: trip } = await supabase
+  const { data: trip, error: tripError } = await supabase
     .from("trips")
     .select(
       "id, status, title, activity_type, difficulty, duration, destination, region, date_start, date_end, price, total_slots, meeting_point, meeting_points, description, includes, what_to_bring, photos, payment_type, min_downpayment, downpayment_cutoff_days, cancellation_policy, cancellation_policy_custom, waiver_text, messenger_gc_link, is_template, template_id, custom_questions, custom_question",
@@ -36,6 +43,12 @@ export default async function EditTripPage({ params }: PageProps) {
     .eq("organizer_id", organizer.id)
     .maybeSingle();
 
+  if (tripError) {
+    console.error("[trip-edit] trip fetch failed:", tripError);
+    Sentry.captureException(tripError, {
+      extra: { context: "trip-edit-trip-fetch-failed", slug, organizerId: organizer.id },
+    });
+  }
   if (!trip) redirect("/organizer/dashboard");
 
   const [{ data: destinationsData }, { data: templatesData }] = await Promise.all([

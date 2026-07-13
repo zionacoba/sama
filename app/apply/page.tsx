@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { Navbar } from "@/app/components/navbar";
 import { ApplyForm } from "./apply-form";
@@ -30,17 +31,31 @@ export default async function ApplyPage() {
 
   if (!user) redirect("/login?redirectTo=/apply");
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("organizers")
     .select("status")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const { data: profile } = await supabase
+  if (existingError) {
+    console.error("[apply] organizer fetch failed:", existingError);
+    Sentry.captureException(existingError, {
+      extra: { context: "apply-organizer-fetch-failed", userId: user.id },
+    });
+  }
+
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("first_name, last_name, phone, facebook_url")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (profileError) {
+    console.error("[apply] profile fetch failed:", profileError);
+    Sentry.captureException(profileError, {
+      extra: { context: "apply-profile-fetch-failed", userId: user.id },
+    });
+  }
 
   const fullName = profile?.first_name && profile?.last_name
     ? `${profile.first_name} ${profile.last_name}`

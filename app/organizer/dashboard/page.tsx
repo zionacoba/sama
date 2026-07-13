@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { amountSamaHolds, isPayoutEligible, payoutTimingGate, todayManilaDate } from "@/lib/booking-finance";
@@ -36,12 +37,18 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?redirectTo=/organizer/dashboard");
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error } = await supabase
     .from("organizers")
     .select("id, full_name, status, payout_method, gcash_number, bank_account_number")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (error) {
+    console.error("[organizer-dashboard] organizer fetch failed:", error);
+    Sentry.captureException(error, {
+      extra: { context: "organizer-dashboard-organizer-fetch-failed", userId: user.id },
+    });
+  }
   if (!organizer) redirect("/apply");
 
   if (organizer.status !== "approved") {

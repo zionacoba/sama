@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { BookingActions } from "@/app/organizer/dashboard/booking-actions";
@@ -112,21 +113,33 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?redirectTo=/organizer/trips/${slug}/bookings`);
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerError } = await supabase
     .from("organizers")
     .select("id, status")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (organizerError) {
+    console.error("[trip-bookings] organizer fetch failed:", organizerError);
+    Sentry.captureException(organizerError, {
+      extra: { context: "trip-bookings-organizer-fetch-failed", userId: user.id, slug },
+    });
+  }
   if (!organizer || organizer.status !== "approved") redirect("/organizer/dashboard");
 
-  const { data: trip } = await supabase
+  const { data: trip, error: tripError } = await supabase
     .from("trips")
     .select("id, title, slug, difficulty, activity_type, date_start, total_slots, remaining_slots, price, payment_type, min_downpayment, custom_questions, custom_question")
     .eq("slug", slug)
     .eq("organizer_id", organizer.id)
     .maybeSingle();
 
+  if (tripError) {
+    console.error("[trip-bookings] trip fetch failed:", tripError);
+    Sentry.captureException(tripError, {
+      extra: { context: "trip-bookings-trip-fetch-failed", slug, organizerId: organizer.id },
+    });
+  }
   if (!trip) redirect("/organizer/dashboard");
 
   const admin = createSupabaseAdminClient();

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { ProfileForm } from "./profile-form";
 
@@ -9,12 +10,18 @@ export default async function OrganizerProfileEditPage() {
 
   if (!user) redirect("/login?redirectTo=/organizer/profile");
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error } = await supabase
     .from("organizers")
     .select("id, display_name, full_name, phone, bio, photo_url, cover_image_url, social_links, payout_method, gcash_number, gcash_name, bank_name, bank_account_number, bank_account_name, status")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (error) {
+    console.error("[organizer-profile-edit] organizer fetch failed:", error);
+    Sentry.captureException(error, {
+      extra: { context: "organizer-profile-edit-organizer-fetch-failed", userId: user.id },
+    });
+  }
   if (!organizer) redirect("/apply");
   if (organizer.status !== "approved") redirect("/organizer/dashboard");
 
