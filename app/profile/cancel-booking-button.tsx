@@ -9,11 +9,13 @@ export function CancelBookingButton({
   tripTitle,
   tripDate,
   refundAmount,
+  paymentMethod,
 }: {
   bookingId: number;
   tripTitle: string;
   tripDate: string;
   refundAmount: number | null;
+  paymentMethod: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -54,7 +56,9 @@ export function CancelBookingButton({
             </p>
             <p className="mt-3 text-sm text-stone-600">
               {refundAmount != null && refundAmount > 0
-                ? <>You will receive a <strong>{formatPeso(refundAmount)}</strong> refund within 3–5 business days.</>
+                ? paymentMethod === "gcash"
+                  ? <>You will receive a <strong>{formatPeso(refundAmount)}</strong> refund to your GCash, typically within a few days.</>
+                  : <>You will receive a <strong>{formatPeso(refundAmount)}</strong> refund, processed manually by our team within 3 to 5 business days.</>
                 : "No refund is available based on the cancellation policy."
               }
             </p>

@@ -28,6 +28,7 @@ type BookingDetail = {
   total_amount: number;
   amount_due: number | null;
   payment_option: string;
+  payment_method: string | null;
   balance_collected: boolean;
   balance_payment_gateway_status: string | null;
   status: string;
@@ -142,7 +143,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
     .from("bookings")
     .select(`
       id, user_id, full_name, email, phone, slots, total_amount, amount_due,
-      payment_option, balance_collected, balance_payment_gateway_status, status, transferred_at, created_at, waiver_agreed,
+      payment_option, payment_method, balance_collected, balance_payment_gateway_status, status, transferred_at, created_at, waiver_agreed,
       waiver_agreed_at, waiver_text_snapshot, platform_waiver_snapshot,
       custom_question_answers, custom_question_answer, custom_questions_snapshot, notes, medical_notes, meeting_point,
       emergency_contact_name, emergency_contact_phone,
@@ -534,6 +535,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
               tripTitle={trip.title}
               tripDate={formatDate(trip.date_start)}
               refundAmount={fullRefundable}
+              paymentMethod={booking.payment_method}
             />
           )}
         </div>
