@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
@@ -139,7 +140,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
   if (!user) redirect(`/login?redirectTo=/profile/bookings/${id}`);
 
   const admin = createSupabaseAdminClient();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("bookings")
     .select(`
       id, user_id, full_name, email, phone, slots, total_amount, amount_due,
@@ -156,6 +157,12 @@ export default async function BookingDetailPage({ params }: PageProps) {
     .eq("id", bookingId)
     .maybeSingle();
 
+  if (error) {
+    console.error("[booking-detail] booking fetch failed:", error);
+    Sentry.captureException(error, {
+      extra: { context: "booking-detail-booking-fetch-failed", bookingId, userId: user.id },
+    });
+  }
   if (!data || data.user_id !== user.id) redirect("/profile");
 
   const booking = data as unknown as BookingDetail;

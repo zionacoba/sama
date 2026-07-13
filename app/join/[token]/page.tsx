@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { ParticipantForm } from "./participant-form";
 import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
@@ -14,20 +15,32 @@ export default async function JoinPage({ params }: PageProps) {
   const { token } = await params;
   const admin = createSupabaseAdminClient();
 
-  const { data: participant } = await admin
+  const { data: participant, error: participantError } = await admin
     .from("booking_participants")
     .select("id, completed, booking_id, full_name, slot_number, waiver_text_snapshot")
     .eq("token", token)
     .maybeSingle();
 
+  if (participantError) {
+    console.error("[join] participant fetch failed:", participantError);
+    Sentry.captureException(participantError, {
+      extra: { context: "join-participant-fetch-failed", token },
+    });
+  }
   if (!participant) notFound();
 
-  const { data: booking } = await admin
+  const { data: booking, error: bookingError } = await admin
     .from("bookings")
     .select("trip_id, full_name, meeting_point, status")
     .eq("id", participant.booking_id)
     .maybeSingle();
 
+  if (bookingError) {
+    console.error("[join] booking fetch failed:", bookingError);
+    Sentry.captureException(bookingError, {
+      extra: { context: "join-booking-fetch-failed", token, bookingId: participant.booking_id },
+    });
+  }
   if (!booking) notFound();
 
   if (booking.status === "cancelled") {
@@ -47,12 +60,18 @@ export default async function JoinPage({ params }: PageProps) {
     );
   }
 
-  const { data: trip } = await admin
+  const { data: trip, error: tripError } = await admin
     .from("trips")
     .select("title, date_start, meeting_points, waiver_text, organizer_id")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
+  if (tripError) {
+    console.error("[join] trip fetch failed:", tripError);
+    Sentry.captureException(tripError, {
+      extra: { context: "join-trip-fetch-failed", token, tripId: booking.trip_id },
+    });
+  }
   if (!trip) notFound();
 
   const { data: organizer } = trip.organizer_id

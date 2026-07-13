@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { safeExternalUrl } from "@/lib/safe-url";
@@ -104,7 +105,7 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const [
-    { data: organizer },
+    { data: organizer, error: organizerError },
     { data: allTrips },
     { data: reviewsData },
     { data: currentUserOrg },
@@ -131,6 +132,12 @@ export default async function OrganizerProfilePage({ params }: PageProps) {
       : Promise.resolve({ data: null }),
   ]);
 
+  if (organizerError) {
+    console.error("[organizer-profile] organizer fetch failed:", organizerError);
+    Sentry.captureException(organizerError, {
+      extra: { context: "organizer-profile-organizer-fetch-failed", organizerId: id },
+    });
+  }
   if (!organizer) notFound();
   if (organizer.status !== "approved") notFound();
 

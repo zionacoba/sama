@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { safeExternalUrl } from "@/lib/safe-url";
@@ -189,11 +190,17 @@ type PageProps = {
 
 const getTripBySlug = cache(async (slug: string) => {
   const admin = createSupabaseAdminClient();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("trips")
     .select("id, title, slug, destination, region, date_start, date_end, total_slots, remaining_slots, price, payment_type, min_downpayment, downpayment_cutoff_days, difficulty, activity_type, duration, meeting_points, meeting_point, description, photos, waiver_text, cancellation_policy, cancellation_policy_custom, messenger_gc_link, organizer_id, status, is_template, template_id, includes, what_to_bring, waitlist_enabled, custom_questions, custom_question, organizers!organizer_id(display_name, full_name, bio, photo_url, facebook_url, social_links, is_founding_partner, user_id)")
     .eq("slug", slug)
     .maybeSingle();
+  if (error) {
+    console.error("[trip-detail] trip fetch failed:", error);
+    Sentry.captureException(error, {
+      extra: { context: "trip-detail-trip-fetch-failed", slug },
+    });
+  }
   return data;
 });
 
@@ -242,11 +249,17 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
   if (!trip) {
     const adminForRedirect = createSupabaseAdminClient();
-    const { data: slugRedirect } = await adminForRedirect
+    const { data: slugRedirect, error: slugRedirectError } = await adminForRedirect
       .from("trip_slug_redirects")
       .select("new_slug")
       .eq("old_slug", slug)
       .maybeSingle();
+    if (slugRedirectError) {
+      console.error("[trip-detail] slug redirect lookup failed:", slugRedirectError);
+      Sentry.captureException(slugRedirectError, {
+        extra: { context: "trip-detail-slug-redirect-lookup-failed", slug },
+      });
+    }
     if (slugRedirect?.new_slug) {
       redirect(`/trips/${slugRedirect.new_slug}`);
     }
