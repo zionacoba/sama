@@ -518,23 +518,35 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerError } = await supabase
     .from("organizers")
     .select("id")
     .eq("user_id", user.id)
     .eq("status", "approved")
     .maybeSingle();
 
+  if (organizerError) {
+    console.error("[update-booking-status] organizer fetch failed:", organizerError);
+    Sentry.captureException(organizerError, {
+      extra: { context: "update-booking-status-organizer-fetch-failed", userId: user.id, bookingId },
+    });
+  }
   if (!organizer) return { error: "Not an approved organizer." };
 
   const admin = createSupabaseAdminClient();
 
-  const { data: booking } = await admin
+  const { data: booking, error: bookingError } = await admin
     .from("bookings")
     .select("id, trip_id, slots, status, email, full_name, amount_due, payment_option, paymongo_payment_id, payment_method, payment_gateway_status")
     .eq("id", bookingId)
     .maybeSingle();
 
+  if (bookingError) {
+    console.error("[update-booking-status] booking fetch failed:", bookingError);
+    Sentry.captureException(bookingError, {
+      extra: { context: "update-booking-status-booking-fetch-failed", bookingId },
+    });
+  }
   if (!booking) return { error: "Booking not found." };
 
   // Block acting on payment_pending bookings (no payment confirmed yet).
@@ -547,12 +559,18 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     return { error: "This booking cannot be updated in its current state." };
   }
 
-  const { data: trip } = await admin
+  const { data: trip, error: tripError } = await admin
     .from("trips")
     .select("id, slug, title, date_start, organizer_id, messenger_gc_link, status")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
+  if (tripError) {
+    console.error("[update-booking-status] trip fetch failed:", tripError);
+    Sentry.captureException(tripError, {
+      extra: { context: "update-booking-status-trip-fetch-failed", bookingId },
+    });
+  }
   if (!trip || !organizerOwns(trip.organizer_id, organizer.id)) {
     return { error: "You don't have permission to manage this booking." };
   }
@@ -686,6 +704,9 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     }
   } catch (err) {
     console.error("[email] failed to send booking status update", err);
+    Sentry.captureException(err, {
+      extra: { context: "booking-status-email", bookingId, status },
+    });
   }
 
   revalidatePath("/organizer/dashboard");
