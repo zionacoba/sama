@@ -67,12 +67,18 @@ export async function createTrip(
 
   if (!user) redirect("/login?redirectTo=/organizer/trips/new");
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerError } = await supabase
     .from("organizers")
     .select("id, status, payout_method, gcash_number, bank_account_number")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (organizerError) {
+    console.error("[create-trip] organizer fetch failed:", organizerError);
+    Sentry.captureException(organizerError, {
+      extra: { context: "create-trip-organizer-fetch-failed", userId: user.id },
+    });
+  }
   if (!organizer || organizer.status !== "approved") {
     redirect("/apply");
   }
@@ -285,12 +291,18 @@ export async function updateTrip(
 
   if (!user) redirect("/login?redirectTo=/organizer/dashboard");
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerError } = await supabase
     .from("organizers")
     .select("id, status, payout_method, gcash_number, bank_account_number")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (organizerError) {
+    console.error("[update-trip] organizer fetch failed:", organizerError);
+    Sentry.captureException(organizerError, {
+      extra: { context: "update-trip-organizer-fetch-failed", userId: user.id },
+    });
+  }
   if (!organizer || organizer.status !== "approved") redirect("/apply");
 
   const rawTripId = formData.get("trip_id");
@@ -302,6 +314,12 @@ export async function updateTrip(
     .eq("id", tripId)
     .maybeSingle();
 
+  if (fetchError) {
+    console.error("[update-trip] trip fetch failed:", fetchError);
+    Sentry.captureException(fetchError, {
+      extra: { context: "update-trip-trip-fetch-failed", tripId, userId: user.id },
+    });
+  }
   if (fetchError || !existing) {
     return { error: "Trip not found or you don't have permission to edit it." };
   }
@@ -354,7 +372,13 @@ export async function updateTrip(
         .map((url) => url.slice(prefix.length));
       if (removedPaths.length > 0) {
         const adminForStorage = createSupabaseAdminClient();
-        await adminForStorage.storage.from("trip-photos").remove(removedPaths);
+        const { error: photoRemoveError } = await adminForStorage.storage.from("trip-photos").remove(removedPaths);
+        if (photoRemoveError) {
+          console.error("[update-trip] removed photo cleanup failed:", photoRemoveError);
+          Sentry.captureException(photoRemoveError, {
+            extra: { context: "update-trip-photo-cleanup-failed", tripId, userId: user.id },
+          });
+        }
       }
     }
   }
@@ -560,10 +584,16 @@ export async function updateTrip(
   if (titleChanged || startDateChanged) {
     newSlug = await makeUniqueSlug(buildBaseSlug(title, safeDateStart), supabase, tripId);
     const adminForRedirect = createSupabaseAdminClient();
-    await adminForRedirect.from("trip_slug_redirects").upsert(
+    const { error: slugRedirectError } = await adminForRedirect.from("trip_slug_redirects").upsert(
       { old_slug: existing.slug, new_slug: newSlug, trip_id: tripId },
       { onConflict: "old_slug" }
     );
+    if (slugRedirectError) {
+      console.error("[update-trip] slug redirect upsert failed:", slugRedirectError);
+      Sentry.captureException(slugRedirectError, {
+        extra: { context: "update-trip-slug-redirect-upsert-failed", tripId },
+      });
+    }
   }
 
   // Write through the admin client. Authorization is enforced in code above:
@@ -652,12 +682,18 @@ export async function updateTrip(
 
     if (dateChanged || priceChanged || mpChanged) {
       const admin = createSupabaseAdminClient();
-      const { data: affectedBookings } = await admin
+      const { data: affectedBookings, error: affectedBookingsError } = await admin
         .from("bookings")
         .select("id, full_name, email")
         .eq("trip_id", tripId)
         .in("status", [...SLOT_HOLDING_STATUSES]);
 
+      if (affectedBookingsError) {
+        console.error("[update-trip] affected bookings fetch failed:", affectedBookingsError);
+        Sentry.captureException(affectedBookingsError, {
+          extra: { context: "update-trip-affected-bookings-fetch-failed", tripId },
+        });
+      }
       if (affectedBookings && affectedBookings.length > 0) {
         const fmt = (d: string) => new Intl.DateTimeFormat("en-PH", {
           weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila",
@@ -696,6 +732,9 @@ export async function updateTrip(
             });
           } catch (err) {
             console.error("[email] failed to notify booking change", booking.id, err);
+            Sentry.captureException(err, {
+              extra: { context: "update-trip-booking-change-email-failed", bookingId: booking.id, tripId },
+            });
           }
         });
       }
@@ -722,11 +761,18 @@ export async function updateTrip(
   // Notify participants with outstanding balances when payment type switches to full.
   if (downpaymentDisabled && pendingBalanceCount > 0) {
     const admin = createSupabaseAdminClient();
-    const { data: balanceBookings } = await admin
+    const { data: balanceBookings, error: balanceBookingsError } = await admin
       .from("bookings")
       .select("id, full_name, email, total_amount, amount_due")
       .eq("trip_id", tripId)
       .in("status", [...SLOT_HOLDING_STATUSES]);
+
+    if (balanceBookingsError) {
+      console.error("[update-trip] balance bookings fetch failed:", balanceBookingsError);
+      Sentry.captureException(balanceBookingsError, {
+        extra: { context: "update-trip-balance-bookings-fetch-failed", tripId },
+      });
+    }
 
     const fmt = (n: number) => formatPeso(n);
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
@@ -753,6 +799,9 @@ export async function updateTrip(
         });
       } catch (err) {
         console.error("[email] failed to notify balance due after payment type change", booking.id, err);
+        Sentry.captureException(err, {
+          extra: { context: "update-trip-balance-due-email-failed", bookingId: booking.id, tripId },
+        });
       }
     }
   }
@@ -774,12 +823,18 @@ export async function publishTrip(tripSlug: string): Promise<{ error: string } |
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerError } = await supabase
     .from("organizers")
     .select("id, status, payout_method, gcash_number, bank_account_number")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (organizerError) {
+    console.error("[publish-trip] organizer fetch failed:", organizerError);
+    Sentry.captureException(organizerError, {
+      extra: { context: "publish-trip-organizer-fetch-failed", userId: user.id },
+    });
+  }
   if (!organizer || organizer.status !== "approved") return { error: "Not authorized." };
 
   const { data: tripData } = await supabase
@@ -835,22 +890,34 @@ export async function getTripCancelSummary(tripSlug: string): Promise<
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerError } = await supabase
     .from("organizers")
     .select("id")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (organizerError) {
+    console.error("[get-trip-cancel-summary] organizer fetch failed:", organizerError);
+    Sentry.captureException(organizerError, {
+      extra: { context: "get-trip-cancel-summary-organizer-fetch-failed", userId: user.id },
+    });
+  }
   if (!organizer) return { error: "Not an organizer." };
 
   const admin = createSupabaseAdminClient();
 
-  const { data: trip } = await admin
+  const { data: trip, error: tripError } = await admin
     .from("trips")
     .select("id, organizer_id")
     .eq("slug", tripSlug)
     .maybeSingle();
 
+  if (tripError) {
+    console.error("[get-trip-cancel-summary] trip fetch failed:", tripError);
+    Sentry.captureException(tripError, {
+      extra: { context: "get-trip-cancel-summary-trip-fetch-failed", organizerId: organizer.id, userId: user.id },
+    });
+  }
   if (!trip || !organizerOwns(trip.organizer_id, organizer.id)) {
     return { error: "Trip not found." };
   }
@@ -873,22 +940,34 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?redirectTo=/organizer/dashboard");
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerError } = await supabase
     .from("organizers")
     .select("id, status, full_name")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (organizerError) {
+    console.error("[cancel-trip] organizer fetch failed:", organizerError);
+    Sentry.captureException(organizerError, {
+      extra: { context: "cancel-trip-organizer-fetch-failed", userId: user.id },
+    });
+  }
   if (!organizer || organizer.status !== "approved") redirect("/apply");
 
   const admin = createSupabaseAdminClient();
 
-  const { data: trip } = await admin
+  const { data: trip, error: tripError } = await admin
     .from("trips")
     .select("id, title, date_start, total_slots, organizer_id, status")
     .eq("slug", tripSlug)
     .maybeSingle();
 
+  if (tripError) {
+    console.error("[cancel-trip] trip fetch failed:", tripError);
+    Sentry.captureException(tripError, {
+      extra: { context: "cancel-trip-trip-fetch-failed", organizerId: organizer.id, userId: user.id },
+    });
+  }
   if (!trip) return { error: "Trip not found." };
   if (!organizerOwns(trip.organizer_id, organizer.id)) return { error: "You don't have permission to cancel this trip." };
   if (trip.status === "cancelled") return { error: "This trip is already cancelled." };
@@ -1013,6 +1092,9 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
       if (initialResult && !initialResult.success) {
         if (!initialResult.requiresManualProcessing) {
           console.error('[refund] cancelTrip initial refund failed', booking.id, initialResult.error);
+          Sentry.captureException(new Error(initialResult.error ?? "cancelTrip initial refund failed"), {
+            extra: { context: "cancel-trip-initial-refund-failed", bookingId: booking.id, tripId: trip.id },
+          });
         }
         manualRefundList.push({ id: booking.id, full_name: booking.full_name, email: booking.email, amount: downpaymentRefundAmount });
       }
@@ -1031,6 +1113,9 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
       if (balanceResult && !balanceResult.success) {
         if (!balanceResult.requiresManualProcessing) {
           console.error('[refund] cancelTrip balance refund failed', booking.id, balanceResult.error);
+          Sentry.captureException(new Error(balanceResult.error ?? "cancelTrip balance refund failed"), {
+            extra: { context: "cancel-trip-balance-refund-failed", bookingId: booking.id, tripId: trip.id },
+          });
         }
         if (!manualRefundList.some((b) => b.id === booking.id)) {
           manualRefundList.push({ id: booking.id, full_name: booking.full_name, email: booking.email, amount: balanceRefund });
@@ -1063,6 +1148,9 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
       });
     } catch (err) {
       console.error("[email] failed to notify booking cancellation", booking.id, err);
+      Sentry.captureException(err, {
+        extra: { context: "cancel-trip-booking-email-failed", bookingId: booking.id, tripId: trip.id },
+      });
     }
   });
 
@@ -1082,6 +1170,9 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
       });
     } catch (err) {
       console.error("[email] failed to notify waitlist cancellation", entry.id, err);
+      Sentry.captureException(err, {
+        extra: { context: "cancel-trip-waitlist-email-failed", waitlistEntryId: entry.id, tripId: trip.id },
+      });
     }
   });
 
