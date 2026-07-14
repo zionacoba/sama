@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
@@ -105,6 +106,9 @@ export async function applyToBeOrganizer(
 
     if (reapplyError) {
       console.error("[organizer] reapply update failed", reapplyError);
+      Sentry.captureException(reapplyError, {
+        extra: { context: "apply-to-be-organizer-reapply-update-failed", organizerId: existingOrganizer.id, userId: user.id },
+      });
       if (reapplyError.code === "23505" && reapplyError.message?.includes("organizers_display_name_unique")) {
         return { error: "This display name is already taken. Please choose a different one." };
       }
@@ -131,6 +135,9 @@ export async function applyToBeOrganizer(
       });
     } catch (err) {
       console.error("[email] failed to send organizer reapplication confirmation", err);
+      Sentry.captureException(err, {
+        extra: { context: "apply-to-be-organizer-reapply-email-failed", userId: user.id },
+      });
     }
 
     await sendAdminAlert(
@@ -169,11 +176,17 @@ export async function applyToBeOrganizer(
     insertError = error;
   } catch (err) {
     console.error("[organizer] insert failed", err);
+    Sentry.captureException(err, {
+      extra: { context: "apply-to-be-organizer-insert-failed", userId: user.id },
+    });
     return { error: "Something went wrong. Please try again." };
   }
 
   if (insertError) {
     console.error("[organizer] insert error", insertError);
+    Sentry.captureException(insertError, {
+      extra: { context: "apply-to-be-organizer-insert-error", userId: user.id },
+    });
     if (insertError.code === "23505") {
       if (insertError.message?.includes("organizers_display_name_unique")) {
         return { error: "This display name is already taken. Please choose a different one." };
@@ -198,6 +211,9 @@ export async function applyToBeOrganizer(
     });
   } catch (err) {
     console.error("[email] failed to send organizer application confirmation", err);
+    Sentry.captureException(err, {
+      extra: { context: "apply-to-be-organizer-confirmation-email-failed", userId: user.id },
+    });
   }
 
   await sendAdminAlert(
@@ -225,12 +241,18 @@ export async function updateOrganizerProfile(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?redirectTo=/organizer/profile");
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerError } = await supabase
     .from("organizers")
     .select("id, status")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (organizerError) {
+    console.error("[update-organizer-profile] organizer fetch failed:", organizerError);
+    Sentry.captureException(organizerError, {
+      extra: { context: "update-organizer-profile-organizer-fetch-failed", userId: user.id },
+    });
+  }
   if (!organizer || organizer.status !== "approved") redirect("/apply");
 
   const display_name = (formData.get("display_name") as string)?.trim();
@@ -361,7 +383,13 @@ export async function toggleFoundingPartner(formData: FormData) {
 
   if (user?.email !== ADMIN_EMAIL) return;
 
-  await supabase.from("organizers").update({ is_founding_partner: value }).eq("id", id);
+  const { error } = await supabase.from("organizers").update({ is_founding_partner: value }).eq("id", id);
+  if (error) {
+    console.error("[toggle-founding-partner] update failed:", error);
+    Sentry.captureException(error, {
+      extra: { context: "toggle-founding-partner-update-failed", organizerId: id },
+    });
+  }
 
   revalidatePath("/admin");
   revalidatePath(`/organizers/${id}`);

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -101,15 +102,27 @@ export async function deleteAccount(): Promise<{ success: true } | { error: stri
       }
     }
     if (orgPhotoPaths.length > 0) {
-      await admin.storage.from("organizer-photos").remove(orgPhotoPaths);
+      const { error: orgPhotoRemoveError } = await admin.storage.from("organizer-photos").remove(orgPhotoPaths);
+      if (orgPhotoRemoveError) {
+        console.error("[delete-account] organizer photo cleanup failed:", orgPhotoRemoveError);
+        Sentry.captureException(orgPhotoRemoveError, {
+          extra: { context: "delete-account-organizer-photo-cleanup-failed", organizerId: org.id, userId: user.id },
+        });
+      }
     }
 
     // Delete trip photos for all trips owned by this organizer.
-    const { data: tripRows } = await admin
+    const { data: tripRows, error: tripRowsError } = await admin
       .from("trips")
       .select("photos")
       .eq("organizer_id", org.id);
 
+    if (tripRowsError) {
+      console.error("[delete-account] trip photos fetch failed:", tripRowsError);
+      Sentry.captureException(tripRowsError, {
+        extra: { context: "delete-account-trip-photos-fetch-failed", organizerId: org.id, userId: user.id },
+      });
+    }
     if (tripRows && tripRows.length > 0 && supabaseUrl) {
       const tripPhotoPrefix = `${supabaseUrl}/storage/v1/object/public/trip-photos/`;
       const tripPhotoPaths: string[] = [];
@@ -122,7 +135,13 @@ export async function deleteAccount(): Promise<{ success: true } | { error: stri
         }
       }
       if (tripPhotoPaths.length > 0) {
-        await admin.storage.from("trip-photos").remove(tripPhotoPaths);
+        const { error: tripPhotoRemoveError } = await admin.storage.from("trip-photos").remove(tripPhotoPaths);
+        if (tripPhotoRemoveError) {
+          console.error("[delete-account] trip photo cleanup failed:", tripPhotoRemoveError);
+          Sentry.captureException(tripPhotoRemoveError, {
+            extra: { context: "delete-account-trip-photo-cleanup-failed", organizerId: org.id, userId: user.id },
+          });
+        }
       }
     }
 
@@ -133,7 +152,13 @@ export async function deleteAccount(): Promise<{ success: true } | { error: stri
   await admin.from("profiles").delete().eq("id", user.id);
 
   // Sign the user out before removing the auth record so the cookie is cleared.
-  await supabase.auth.signOut();
+  const { error: signOutError } = await supabase.auth.signOut();
+  if (signOutError) {
+    console.error("[delete-account] signOut failed:", signOutError);
+    Sentry.captureException(signOutError, {
+      extra: { context: "delete-account-sign-out-failed", userId: user.id },
+    });
+  }
 
   // Hard-delete the auth user (service-role required).
   await admin.auth.admin.deleteUser(user.id);
