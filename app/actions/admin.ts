@@ -37,12 +37,18 @@ export async function approveOrganizer(id: string, ratePercent: number): Promise
 
   const admin = createSupabaseAdminClient();
 
-  const { data: organizer } = await admin
+  const { data: organizer, error: organizerError } = await admin
     .from("organizers")
     .select("email, full_name, display_name, status")
     .eq("id", id)
     .maybeSingle();
 
+  if (organizerError) {
+    console.error("[approveOrganizer] organizer fetch failed:", organizerError.message);
+    Sentry.captureException(organizerError, {
+      extra: { context: "approveOrganizer-organizer-fetch-failed", organizerId: id },
+    });
+  }
   if (!organizer) return;
 
   // Idempotency guard - skip DB write and email if already approved.
@@ -78,6 +84,9 @@ export async function approveOrganizer(id: string, ratePercent: number): Promise
     });
   } catch (err) {
     console.error("[email] failed to send organizer approval email", err);
+    Sentry.captureException(err, {
+      extra: { context: "approveOrganizer-organizer-email-failed", organizerId: id },
+    });
   }
 
   revalidatePath("/admin");
@@ -88,12 +97,18 @@ export async function rejectOrganizer(id: string): Promise<void> {
   await requireAdmin();
   const admin = createSupabaseAdminClient();
 
-  const { data: organizer } = await admin
+  const { data: organizer, error: organizerError } = await admin
     .from("organizers")
     .select("email, full_name")
     .eq("id", id)
     .maybeSingle();
 
+  if (organizerError) {
+    console.error("[rejectOrganizer] organizer fetch failed:", organizerError.message);
+    Sentry.captureException(organizerError, {
+      extra: { context: "rejectOrganizer-organizer-fetch-failed", organizerId: id },
+    });
+  }
   if (!organizer) return;
 
   await admin.from("organizers").update({ status: "rejected" }).eq("id", id);
@@ -150,7 +165,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
     const refundResultMap = new Map<number, { initial: RefundResult | null; balance: RefundResult | null }>();
     const manualRefundList: Array<{ id: number; full_name: string; email: string; amount: number }> = [];
 
-    await Promise.allSettled((affectedBookings ?? []).map(async (booking) => {
+    const refundSettlements = await Promise.allSettled((affectedBookings ?? []).map(async (booking) => {
       const amountPaid =
         booking.payment_option === "downpayment" && booking.amount_due != null
           ? booking.amount_due
@@ -271,6 +286,17 @@ export async function rejectOrganizer(id: string): Promise<void> {
 
       refundResultMap.set(booking.id, { initial: initialResult, balance: balanceResult });
     }));
+
+    refundSettlements.forEach((settlement, index) => {
+      if (settlement.status === "rejected") {
+        const bookingId = (affectedBookings ?? [])[index]?.id;
+        console.error("[rejectOrganizer] refund processing rejected for booking", bookingId, settlement.reason);
+        Sentry.captureException(
+          settlement.reason instanceof Error ? settlement.reason : new Error(`Refund processing rejected: ${String(settlement.reason)}`),
+          { extra: { context: "rejectOrganizer-refund-processing-rejected", bookingId, organizerId: id } },
+        );
+      }
+    });
 
     // Alert admin to any bookings that couldn't be automatically refunded.
     if (manualRefundList.length > 0) {
@@ -1014,7 +1040,7 @@ export async function getPendingReviews(): Promise<PendingReview[]> {
   await requireAdmin();
   const admin = createSupabaseAdminClient();
 
-  const { data } = await admin
+  const { data, error } = await admin
     .from("reviews")
     .select("id, full_name, rating, body, created_at, trips(title, slug)")
     .eq("approved", false)
@@ -1027,7 +1053,15 @@ export async function getPendingReviews(): Promise<PendingReview[]> {
         created_at: string;
         trips: { title: string; slug: string } | null;
       }> | null;
+      error: { message: string } | null;
     };
+
+  if (error) {
+    console.error("[getPendingReviews] reviews fetch failed:", error.message);
+    Sentry.captureException(error, {
+      extra: { context: "getPendingReviews-fetch-failed" },
+    });
+  }
 
   return (data ?? []).map((r) => ({
     id: r.id,
@@ -1047,10 +1081,17 @@ export async function approveReview(formData: FormData): Promise<void> {
   const reviewId = formData.get("reviewId") as string;
   if (!reviewId) redirect("/admin?tab=reviews");
 
-  await admin
+  const { error: updateError } = await admin
     .from("reviews")
     .update({ approved: true })
     .eq("id", reviewId);
+
+  if (updateError) {
+    console.error("[approveReview] review update failed:", updateError.message);
+    Sentry.captureException(updateError, {
+      extra: { context: "approveReview-update-failed", reviewId },
+    });
+  }
 
   revalidatePath("/admin");
   revalidatePath("/trips", "layout");
