@@ -512,7 +512,7 @@ export async function getPendingPayouts(): Promise<{
   const today = todayManilaDate();
 
   // Payouts already created but not yet remitted.
-  const { data: pendingRaw } = await admin
+  const { data: pendingRaw, error: pendingError } = await admin
     .from("payouts" as "trips")
     .select("id, organizer_id, total_amount, platform_commission, net_amount, booking_ids, created_at, payout_destination, needs_reconciliation, organizer:organizers(full_name, display_name, email)")
     .eq("status", "pending")
@@ -529,7 +529,15 @@ export async function getPendingPayouts(): Promise<{
         needs_reconciliation: boolean | null;
         organizer: { full_name: string; display_name: string | null; email: string } | null;
       }> | null;
+      error: { message: string } | null;
     };
+
+  if (pendingError) {
+    console.error("[getPendingPayouts] pending payouts fetch failed:", pendingError.message);
+    Sentry.captureException(pendingError, {
+      extra: { context: "getPendingPayouts-pending-fetch-failed" },
+    });
+  }
 
   const pending: PendingPayout[] = (pendingRaw ?? []).map((p) => ({
     id: p.id,
@@ -546,7 +554,7 @@ export async function getPendingPayouts(): Promise<{
   }));
 
   // Confirmed bookings from past trips not yet included in any payout.
-  const { data: rawBookings } = await admin
+  const { data: rawBookings, error: bookingsError } = await admin
     .from("bookings")
     .select("id, full_name, status, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, created_at, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
     .in("status", [...ATTENDED_STATUSES])
@@ -565,7 +573,15 @@ export async function getPendingPayouts(): Promise<{
         created_at: string;
         trip: { title: string; date_start: string; organizer_id: string } | null;
       }> | null;
+      error: { message: string } | null;
     };
+
+  if (bookingsError) {
+    console.error("[getPendingPayouts] bookings fetch failed:", bookingsError.message);
+    Sentry.captureException(bookingsError, {
+      extra: { context: "getPendingPayouts-bookings-fetch-failed" },
+    });
+  }
 
   // Include fully-paid bookings and downpayment bookings (even without balance collected)
   // whose payout timing has come due, and only where payment was actually
@@ -583,7 +599,7 @@ export async function getPendingPayouts(): Promise<{
 
   const organizerIds = [...new Set(eligible.map((b) => b.trip!.organizer_id))];
 
-  const [{ data: organizers }, { data: deductionsRaw }, { data: creditsRaw }] = await Promise.all([
+  const [{ data: organizers, error: organizersError }, { data: deductionsRaw }, { data: creditsRaw }] = await Promise.all([
     admin
       .from("organizers")
       .select("id, full_name, display_name, email, payout_method, gcash_number, gcash_name, bank_name, bank_account_number, bank_account_name")
@@ -605,6 +621,13 @@ export async function getPendingPayouts(): Promise<{
         data: Array<{ id: string; organizer_id: string; booking_id: number; amount: number; created_at: string }> | null;
       }>,
   ]);
+
+  if (organizersError) {
+    console.error("[getPendingPayouts] organizers fetch failed:", organizersError.message);
+    Sentry.captureException(organizersError, {
+      extra: { context: "getPendingPayouts-organizers-fetch-failed" },
+    });
+  }
 
   const orgMap = new Map((organizers ?? []).map((o) => [o.id, o]));
   const deductionsByOrg = new Map<string, OrganizerDeduction[]>();
@@ -704,7 +727,7 @@ export async function getPayoutHistory(): Promise<PayoutHistoryEntry[]> {
   await requireAdmin();
   const admin = createSupabaseAdminClient();
 
-  const { data } = await admin
+  const { data, error } = await admin
     .from("payouts" as "trips")
     .select("id, total_amount, platform_commission, net_amount, booking_ids, remitted_at, remittance_reference, notes, needs_reconciliation, organizer:organizers(full_name, display_name)")
     .eq("status", "remitted")
@@ -721,7 +744,15 @@ export async function getPayoutHistory(): Promise<PayoutHistoryEntry[]> {
         needs_reconciliation: boolean;
         organizer: { full_name: string; display_name: string | null } | null;
       }> | null;
+      error: { message: string } | null;
     };
+
+  if (error) {
+    console.error("[getPayoutHistory] payouts fetch failed:", error.message);
+    Sentry.captureException(error, {
+      extra: { context: "getPayoutHistory-fetch-failed" },
+    });
+  }
 
   return (data ?? []).map((p) => ({
     id: p.id,
@@ -741,7 +772,7 @@ export async function exportPayoutHistoryCSV(): Promise<string> {
   await requireAdmin();
   const admin = createSupabaseAdminClient();
 
-  const { data } = await admin
+  const { data, error } = await admin
     .from("payouts" as "trips")
     .select("id, total_amount, platform_commission, net_amount, booking_ids, remitted_at, remittance_reference, needs_reconciliation, payout_destination, organizer:organizers(full_name, display_name)")
     .eq("status", "remitted")
@@ -765,7 +796,15 @@ export async function exportPayoutHistoryCSV(): Promise<string> {
         } | null;
         organizer: { full_name: string; display_name: string | null } | null;
       }> | null;
+      error: { message: string } | null;
     };
+
+  if (error) {
+    console.error("[exportPayoutHistoryCSV] payouts fetch failed:", error.message);
+    Sentry.captureException(error, {
+      extra: { context: "exportPayoutHistoryCSV-fetch-failed" },
+    });
+  }
 
   function esc(value: string | number | boolean | null | undefined): string {
     let str = value == null ? "" : String(value);
@@ -829,7 +868,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   if (!bookingIds.length) redirect("/admin?tab=payouts");
 
   // Compute totals server-side from the actual booking records.
-  const { data: bookings } = await admin
+  const { data: bookings, error: bookingsError } = await admin
     .from("bookings")
     .select("id, status, total_amount, amount_due, platform_commission, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, created_at, trip:trips!bookings_trip_id_fkey(date_start)")
     .in("id", bookingIds)
@@ -848,7 +887,15 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
         created_at: string;
         trip: { date_start: string } | null;
       }> | null;
+      error: { message: string } | null;
     };
+
+  if (bookingsError) {
+    console.error("[createPayoutAction] bookings fetch failed:", bookingsError.message);
+    Sentry.captureException(bookingsError, {
+      extra: { context: "createPayoutAction-bookings-fetch-failed", organizerId },
+    });
+  }
 
   if (!bookings || bookings.length === 0) redirect("/admin?tab=payouts&payoutError=missing");
 
@@ -912,11 +959,18 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
     computeAppliedNet(netAmount, pendingDeductions, pendingCredits);
 
   // Snapshot payout destination before the atomic creation so the record reflects the state at creation time.
-  const { data: orgForSnapshot } = await admin
+  const { data: orgForSnapshot, error: orgForSnapshotError } = await admin
     .from("organizers")
     .select("payout_method, gcash_number, gcash_name, bank_name, bank_account_number, bank_account_name")
     .eq("id", organizerId)
     .maybeSingle();
+
+  if (orgForSnapshotError) {
+    console.error("[createPayoutAction] organizer snapshot fetch failed:", orgForSnapshotError.message);
+    Sentry.captureException(orgForSnapshotError, {
+      extra: { context: "createPayoutAction-organizer-snapshot-fetch-failed", organizerId },
+    });
+  }
 
   const { data: payoutId, error } = await admin.rpc("create_payout_atomic", {
     p_organizer_id: organizerId,
@@ -928,6 +982,9 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
 
   if (error || !payoutId) {
     console.error("[createPayout] RPC failed:", error?.message);
+    Sentry.captureException(error ?? new Error("create_payout_atomic returned no payout id"), {
+      extra: { context: "createPayoutAction-rpc-failed", organizerId },
+    });
 
     await sendAdminAlert(
       "Action needed: payout creation failed",
@@ -957,6 +1014,9 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
 
     if (snapshotError) {
       console.error("[createPayout] failed to save payout_destination snapshot:", snapshotError.message);
+      Sentry.captureException(snapshotError, {
+        extra: { context: "createPayoutAction-payout-destination-snapshot-failed", payoutId, organizerId },
+      });
       await sendAdminAlert(
         "Action needed: payout destination snapshot failed to save",
         `
@@ -1017,6 +1077,9 @@ export async function updatePayoutReference(formData: FormData): Promise<void> {
 
   if (error) {
     console.error("[updatePayoutReference] failed:", error.message);
+    Sentry.captureException(error, {
+      extra: { context: "updatePayoutReference-update-failed", payoutId },
+    });
     redirect("/admin?tab=payouts&payoutError=create");
   }
 
@@ -1142,14 +1205,22 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
 
   if (!payoutId || !remittanceReference) redirect("/admin?tab=payouts&payoutError=missing");
 
-  const { data: payout } = await admin
+  const { data: payout, error: payoutError } = await admin
     .from("payouts" as "trips")
     .select("id, organizer_id, booking_ids, net_amount")
     .eq("id", payoutId)
     .eq("status", "pending")
     .maybeSingle() as unknown as {
       data: { id: string; organizer_id: string; booking_ids: number[]; net_amount: number } | null;
+      error: { message: string } | null;
     };
+
+  if (payoutError) {
+    console.error("[markPayoutRemitted] payout fetch failed:", payoutError.message);
+    Sentry.captureException(payoutError, {
+      extra: { context: "markPayoutRemitted-payout-fetch-failed", payoutId },
+    });
+  }
 
   if (!payout) redirect("/admin?tab=payouts&payoutError=notfound");
 
@@ -1163,6 +1234,10 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
     .single() as unknown as { data: { id: string } | null; error: unknown };
 
   if (updateError || !updatedPayout) {
+    console.error("[markPayoutRemitted] payout update failed:", updateError);
+    Sentry.captureException(updateError ?? new Error("Payout update returned no row"), {
+      extra: { context: "markPayoutRemitted-update-failed", payoutId },
+    });
     redirect("/admin?tab=payouts&payoutError=already_remitted");
   }
 
@@ -1172,12 +1247,20 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
     .in("id", payout.booking_ids);
 
   // Fetch trip date range for the email.
-  const { data: tripRows } = await admin
+  const { data: tripRows, error: tripRowsError } = await admin
     .from("bookings")
     .select("trip:trips!bookings_trip_id_fkey(date_start)")
     .in("id", payout.booking_ids) as unknown as {
       data: Array<{ trip: { date_start: string } | null }> | null;
+      error: { message: string } | null;
     };
+
+  if (tripRowsError) {
+    console.error("[markPayoutRemitted] trip rows fetch failed:", tripRowsError.message);
+    Sentry.captureException(tripRowsError, {
+      extra: { context: "markPayoutRemitted-trip-rows-fetch-failed", payoutId },
+    });
+  }
 
   const dates = (tripRows ?? [])
     .map((r) => r.trip?.date_start)
@@ -1194,11 +1277,18 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
       ? ` from ${fmtDate(dates[0])}`
       : ` from ${fmtDate(dates[0])} to ${fmtDate(dates[dates.length - 1])}`;
 
-  const { data: organizer } = await admin
+  const { data: organizer, error: organizerError } = await admin
     .from("organizers")
     .select("email, full_name, display_name")
     .eq("id", payout.organizer_id)
     .maybeSingle();
+
+  if (organizerError) {
+    console.error("[markPayoutRemitted] organizer fetch failed:", organizerError.message);
+    Sentry.captureException(organizerError, {
+      extra: { context: "markPayoutRemitted-organizer-fetch-failed", payoutId, organizerId: payout.organizer_id },
+    });
+  }
 
   if (organizer?.email) {
     const name = organizer.display_name ?? organizer.full_name;
@@ -1221,6 +1311,9 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
       });
     } catch (err) {
       console.error("[email] failed to send payout remittance email", err);
+      Sentry.captureException(err, {
+        extra: { context: "markPayoutRemitted-remittance-email-failed", payoutId },
+      });
     }
   }
 
