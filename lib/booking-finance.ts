@@ -238,12 +238,18 @@ export function computeRefundSplit(
   return { downpaymentRefund, balanceRefund };
 }
 
-// Organizer rejection refunds the joiner's full initial payment, but only when there
-// is a real payment to refund. Free Advanced trips (amount_due 0) and any booking with
-// no recorded PayMongo payment id must not trigger a refund or a PayMongo call.
+// Organizer rejection records a refund obligation whenever money was collected.
+// payment_gateway_status === "paid" is the authoritative collected signal: the only
+// writer that puts a booking into a rejectable state with amount_due > 0 is
+// confirmPaidBooking, which sets that status in the same UPDATE. A null
+// paymongo_payment_id must NOT suppress the record; that case flows through
+// issueAndRecordRefund, which writes the durable refunds row and then fails at
+// processPayMongoRefund ("No payment transaction ID found"), matching the
+// cancellation path's downpayment leg. Free Advanced trips (amount_due 0) still
+// never trigger a refund or a PayMongo call.
 export function shouldRefundOnReject(
   amountDue: number | null | undefined,
-  paymongoPaymentId: string | null | undefined,
+  paymentGatewayStatus: string | null | undefined,
 ): boolean {
-  return (amountDue ?? 0) > 0 && !!paymongoPaymentId;
+  return (amountDue ?? 0) > 0 && paymentGatewayStatus === "paid";
 }

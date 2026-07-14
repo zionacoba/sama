@@ -292,24 +292,36 @@ describe("computeAppliedNet", () => {
 });
 
 describe("shouldRefundOnReject", () => {
-  it("paid reject (amount + payment id) refunds", () => {
-    expect(shouldRefundOnReject(2000, "pay_123")).toBe(true);
+  it("collected reject (amount + gateway status paid) refunds", () => {
+    expect(shouldRefundOnReject(2000, "paid")).toBe(true);
   });
 
-  it("free trip (amount 0, no payment id) does not refund", () => {
+  it("positive amount with gateway status paid but a null paymongo payment id refunds (records the obligation)", () => {
+    // The motivating case for the gateway-status gate: money was collected but no
+    // paymongo_payment_id was stored on the row. The payment id is no longer an
+    // input, so the null-id booking must still return true and flow into
+    // issueAndRecordRefund for a durable refunds record.
+    expect(shouldRefundOnReject(2000, "paid")).toBe(true);
+  });
+
+  it("free trip (amount 0, no gateway status) does not refund", () => {
     expect(shouldRefundOnReject(0, null)).toBe(false);
   });
 
-  it("paid amount but no payment id does not refund", () => {
+  it("positive amount but no gateway status does not refund", () => {
     expect(shouldRefundOnReject(2000, null)).toBe(false);
   });
 
-  it("null amount with a payment id does not refund", () => {
-    expect(shouldRefundOnReject(null, "pay_123")).toBe(false);
+  it("positive amount with a non-paid gateway status does not refund", () => {
+    expect(shouldRefundOnReject(2000, "pending")).toBe(false);
   });
 
-  it("zero amount with a payment id does not refund", () => {
-    expect(shouldRefundOnReject(0, "pay_123")).toBe(false);
+  it("null amount with gateway status paid does not refund", () => {
+    expect(shouldRefundOnReject(null, "paid")).toBe(false);
+  });
+
+  it("zero amount with gateway status paid does not refund", () => {
+    expect(shouldRefundOnReject(0, "paid")).toBe(false);
   });
 });
 

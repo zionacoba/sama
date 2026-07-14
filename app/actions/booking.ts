@@ -531,7 +531,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, slots, status, email, full_name, amount_due, payment_option, paymongo_payment_id, payment_method")
+    .select("id, trip_id, slots, status, email, full_name, amount_due, payment_option, paymongo_payment_id, payment_method, payment_gateway_status")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -607,13 +607,15 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
   }
 
   // Organizer rejection = full refund of the joiner's initial payment. No cancellation
-  // policy percentage applies. Fires ONLY when there is a real payment to refund:
-  // amount_due > 0 AND a recorded paymongo_payment_id. A free Advanced trip has
-  // amount_due 0 and no payment id, so it issues no refund and makes no PayMongo call.
+  // policy percentage applies. Fires whenever money was collected: amount_due > 0 AND
+  // payment_gateway_status "paid" (the authoritative collected signal). A free Advanced
+  // trip has amount_due 0, so it issues no refund and makes no PayMongo call. A null
+  // paymongo_payment_id does not suppress the record: issueAndRecordRefund still writes
+  // the durable refunds row and the PayMongo call fails cleanly, mirroring cancelBooking.
   // A pending booking has no collected balance, so the initial payment is the only source.
   let rejectRefundResult: RefundResult | null = null;
   const rejectRefundAmount = booking.amount_due ?? 0;
-  const rejectHasPayment = shouldRefundOnReject(booking.amount_due, booking.paymongo_payment_id);
+  const rejectHasPayment = shouldRefundOnReject(booking.amount_due, booking.payment_gateway_status);
   if (status === "rejected" && rejectHasPayment) {
     rejectRefundResult = await issueAndRecordRefund({
       admin,
