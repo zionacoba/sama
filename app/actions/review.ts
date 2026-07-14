@@ -1,5 +1,6 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
@@ -39,12 +40,18 @@ export async function submitReview(
 
   // Gate reviews to trips whose date has passed.
   const admin = createSupabaseAdminClient();
-  const { data: tripForDate } = await admin
+  const { data: tripForDate, error: tripFetchError } = await admin
     .from("trips")
     .select("date_start, title, slug, organizer_id")
     .eq("id", tripId)
     .maybeSingle();
 
+  if (tripFetchError) {
+    console.error("[submit-review] trip fetch failed:", tripFetchError);
+    Sentry.captureException(tripFetchError, {
+      extra: { context: "submit-review-trip-fetch-failed", tripId, userId: user.id },
+    });
+  }
   if (!tripForDate) return { error: "Trip not found." };
   if (tripForDate.date_start > new Date().toISOString().split("T")[0]) {
     return { error: "You can only leave a review after the trip has taken place." };
@@ -65,12 +72,18 @@ export async function submitReview(
   // strip their ability to review.
   let bookingFullName: string | null = null;
   if (bookingId) {
-    const { data: booking } = await supabase
+    const { data: booking, error: bookingFetchError } = await supabase
       .from("bookings")
       .select("id, status, user_id, trip_id, payment_gateway_status, total_amount, full_name")
       .eq("id", bookingId)
       .maybeSingle();
 
+    if (bookingFetchError) {
+      console.error("[submit-review] booking fetch failed:", bookingFetchError);
+      Sentry.captureException(bookingFetchError, {
+        extra: { context: "submit-review-booking-fetch-failed", bookingId, tripId, userId: user.id },
+      });
+    }
     if (!booking) return { error: "Booking not found." };
     bookingFullName = (booking.full_name as string | undefined)?.trim() || null;
     const isPaidAttendee =
@@ -117,12 +130,18 @@ export async function submitReview(
   // Notify the organizer of the new review.
   try {
     if (tripForDate.organizer_id) {
-      const { data: organizer } = await admin
+      const { data: organizer, error: organizerFetchError } = await admin
         .from("organizers")
         .select("email, display_name, full_name")
         .eq("id", tripForDate.organizer_id)
         .maybeSingle();
 
+      if (organizerFetchError) {
+        console.error("[submit-review] organizer fetch failed:", organizerFetchError);
+        Sentry.captureException(organizerFetchError, {
+          extra: { context: "submit-review-organizer-fetch-failed", organizerId: tripForDate.organizer_id, tripId },
+        });
+      }
       if (organizer?.email) {
         const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
         const excerpt = body.length > 200 ? body.slice(0, 197) + "…" : body;
@@ -144,6 +163,9 @@ export async function submitReview(
     }
   } catch (emailErr) {
     console.error("[email] failed to notify organizer of new review", emailErr);
+    Sentry.captureException(emailErr, {
+      extra: { context: "submit-review-email-failed", tripId, userId: user.id, rating },
+    });
   }
 
   // Alert admin so the review gets noticed quickly.
@@ -180,21 +202,33 @@ export async function respondToReview(
 
   const admin = createSupabaseAdminClient();
 
-  const { data: organizer } = await admin
+  const { data: organizer, error: organizerFetchError } = await admin
     .from("organizers")
     .select("id")
     .eq("user_id", user.id)
     .eq("status", "approved")
     .maybeSingle();
 
+  if (organizerFetchError) {
+    console.error("[respond-to-review] organizer fetch failed:", organizerFetchError);
+    Sentry.captureException(organizerFetchError, {
+      extra: { context: "respond-to-review-organizer-fetch-failed", userId: user.id, reviewId },
+    });
+  }
   if (!organizer) return { error: "Not an approved organizer." };
 
-  const { data: review } = await admin
+  const { data: review, error: reviewFetchError } = await admin
     .from("reviews")
     .select("id, trip_id, organizer_id")
     .eq("id", reviewId)
     .maybeSingle();
 
+  if (reviewFetchError) {
+    console.error("[respond-to-review] review fetch failed:", reviewFetchError);
+    Sentry.captureException(reviewFetchError, {
+      extra: { context: "respond-to-review-review-fetch-failed", reviewId, organizerId: organizer.id },
+    });
+  }
   if (!review) return { error: "Review not found." };
   if (!organizerOwns(review.organizer_id, organizer.id)) {
     return { error: "You can only respond to reviews on your own trips." };
@@ -210,12 +244,18 @@ export async function respondToReview(
 
   if (error) return { error: error.message };
 
-  const { data: trip } = await admin
+  const { data: trip, error: tripFetchError } = await admin
     .from("trips")
     .select("slug")
     .eq("id", review.trip_id)
     .maybeSingle();
 
+  if (tripFetchError) {
+    console.error("[respond-to-review] trip slug fetch failed:", tripFetchError);
+    Sentry.captureException(tripFetchError, {
+      extra: { context: "respond-to-review-trip-fetch-failed", tripId: review.trip_id, reviewId },
+    });
+  }
   if (trip?.slug) {
     revalidatePath(`/trips/${trip.slug}`);
   }
