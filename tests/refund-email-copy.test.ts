@@ -86,7 +86,7 @@ describe("cancellationRefundLine", () => {
       { initial: { success: true }, balance: null },
       fmt,
     );
-    expect(line).toContain("has been processed and will reflect within 24 hours");
+    expect(line).toContain("has been processed and typically reflects within 24 hours");
     expect(line).toContain("PHP 5000.00");
   });
 

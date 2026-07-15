@@ -508,7 +508,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
           <div className="px-5 py-4">
             <p className="text-sm font-semibold text-stone-800">{policy.label}</p>
             <p className="mt-1 text-sm text-stone-600">{policyText}</p>
-            <p className="mt-2 text-sm text-stone-500">Refunds to GCash and Maya are processed automatically. QR Ph payments are processed manually — our team will reach out within 3–5 business days.</p>
+            <p className="mt-2 text-sm text-stone-500">Refunds to GCash and Maya are processed automatically. QR Ph payments are processed manually — our team will reach out within 3 to 5 business days.</p>
           </div>
         </section>
 

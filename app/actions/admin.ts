@@ -326,7 +326,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
       const refundLine = !hasPaid
         ? `<p>If you have any questions, please contact us at <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`
         : (initialSucceeded && balanceSucceeded
-            ? `<p>A full refund of your payment has been processed and will reflect automatically within 3 to 5 business days.</p>`
+            ? `<p>A full refund of your payment has been processed and reflects automatically, typically within 24 hours.</p>`
             : (initialSucceeded && !balanceSucceeded
                 ? `<p>Your downpayment has been refunded. Your balance payment could not be refunded automatically. Sama will process it manually within 3 to 5 business days.</p>`
                 : `<p>Sama will process your refund manually within 3 to 5 business days. If you haven't received it after that time, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${booking.id}</strong></p>`));

@@ -57,7 +57,7 @@ export function CancelBookingButton({
             <p className="mt-3 text-sm text-stone-600">
               {refundAmount != null && refundAmount > 0
                 ? (paymentMethod === "gcash" || paymentMethod === "paymaya")
-                  ? <>You will receive a <strong>{formatPeso(refundAmount)}</strong> refund to your e-wallet, typically within a few days.</>
+                  ? <>You will receive a <strong>{formatPeso(refundAmount)}</strong> refund to your e-wallet, typically within 24 hours.</>
                   : <>You will receive a <strong>{formatPeso(refundAmount)}</strong> refund, processed manually by our team within 3 to 5 business days.</>
                 : "No refund is available based on the cancellation policy."
               }

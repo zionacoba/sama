@@ -79,7 +79,7 @@ export function cancellationRefundLine(
     classifyRefundResult(refundResults?.initial) === "manual" ||
     classifyRefundResult(refundResults?.balance) === "manual";
   if (refundSucceeded) {
-    return `<p>A full refund of <strong>${fmtCurrency(amountPaid)}</strong> has been processed and will reflect within 24 hours.</p>`;
+    return `<p>A full refund of <strong>${fmtCurrency(amountPaid)}</strong> has been processed and typically reflects within 24 hours.</p>`;
   }
   if (refundManual) {
     return `<p>You will receive a full refund of <strong>${fmtCurrency(amountPaid)}</strong>. It is being processed manually. ${MANUAL_REFUND_FOLLOWUP}</p>`;
