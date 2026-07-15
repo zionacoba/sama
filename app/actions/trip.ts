@@ -1015,7 +1015,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   const refundResultMap = new Map<number, { initial: RefundResult | null, balance: RefundResult | null }>();
   const manualRefundList: Array<{ id: number, full_name: string, email: string, amount: number }> = [];
 
-  await Promise.allSettled((bookings ?? []).map(async (booking) => {
+  const refundSettlements = await Promise.allSettled((bookings ?? []).map(async (booking) => {
     // Organizer cancellation is a full (100%) refund of what the joiner paid
     // online, split across the downpayment and balance payment sources. Using
     // amountJoinerPaid here (rather than a raw amount_due fallback) is what keeps
@@ -1045,6 +1045,9 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
         } as never) as unknown as Promise<{ error: { message: string } | null }>);
       if (deductionError) {
         console.error("[deduction] failed to record organizer deduction", booking.id, deductionError.message);
+        Sentry.captureException(new Error(deductionError.message), {
+          extra: { context: "cancel-trip-deduction-insert-failed", bookingId: booking.id, tripId: trip.id, organizerId: trip.organizer_id },
+        });
       }
     }
 
@@ -1125,6 +1128,15 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
 
     refundResultMap.set(booking.id, { initial: initialResult, balance: balanceResult });
   }));
+
+  refundSettlements.forEach((settlement, index) => {
+    if (settlement.status === "rejected") {
+      console.error("[cancel-trip] refund settlement rejected", (bookings ?? [])[index]?.id, settlement.reason);
+      Sentry.captureException(settlement.reason ?? new Error("cancelTrip refund settlement rejected with no reason"), {
+        extra: { context: "cancel-trip-refund-settlement-rejected", bookingId: (bookings ?? [])[index]?.id, tripId: trip.id },
+      });
+    }
+  });
 
   await sendInChunks(bookings ?? [], async (booking) => {
     const bookingRefundResults = refundResultMap.get(booking.id);
