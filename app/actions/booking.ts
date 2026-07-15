@@ -770,23 +770,35 @@ export async function markBalanceCollected(bookingId: number) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerFetchError } = await supabase
     .from("organizers")
     .select("id")
     .eq("user_id", user.id)
     .eq("status", "approved")
     .maybeSingle();
 
+  if (organizerFetchError) {
+    console.error("[markBalanceCollected] organizer fetch failed:", organizerFetchError);
+    Sentry.captureException(organizerFetchError, {
+      extra: { context: "markBalanceCollected-organizer-fetch-failed", userId: user.id },
+    });
+  }
   if (!organizer) return { error: "Not an approved organizer." };
 
   const admin = createSupabaseAdminClient();
 
-  const { data: booking } = await admin
+  const { data: booking, error: bookingFetchError } = await admin
     .from("bookings")
     .select("id, trip_id, full_name, email, total_amount, amount_due, payment_option, balance_collected, status")
     .eq("id", bookingId)
     .maybeSingle();
 
+  if (bookingFetchError) {
+    console.error("[markBalanceCollected] booking fetch failed:", bookingFetchError);
+    Sentry.captureException(bookingFetchError, {
+      extra: { context: "markBalanceCollected-booking-fetch-failed", bookingId },
+    });
+  }
   if (!booking) return { error: "Booking not found." };
   if (booking.status !== "confirmed") {
     return { error: "Balance can only be collected on a confirmed booking." };
@@ -798,12 +810,18 @@ export async function markBalanceCollected(bookingId: number) {
     return { error: "Balance has already been marked as collected." };
   }
 
-  const { data: trip } = await admin
+  const { data: trip, error: tripFetchError } = await admin
     .from("trips")
     .select("id, title, organizer_id")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
+  if (tripFetchError) {
+    console.error("[markBalanceCollected] trip fetch failed:", tripFetchError);
+    Sentry.captureException(tripFetchError, {
+      extra: { context: "markBalanceCollected-trip-fetch-failed", bookingId, tripId: booking.trip_id },
+    });
+  }
   if (!trip || !organizerOwns(trip.organizer_id, organizer.id)) {
     return { error: "You don't have permission to update this booking." };
   }
@@ -815,6 +833,12 @@ export async function markBalanceCollected(bookingId: number) {
     .eq("status", "confirmed")
     .select("id");
 
+  if (error) {
+    console.error("[markBalanceCollected] balance update failed:", error);
+    Sentry.captureException(error, {
+      extra: { context: "markBalanceCollected-update-failed", bookingId },
+    });
+  }
   if (error) return { error: error.message };
   if (!updated || updated.length !== 1) {
     return { error: "Balance can only be collected on a confirmed booking." };
@@ -839,6 +863,9 @@ export async function markBalanceCollected(bookingId: number) {
     });
   } catch (err) {
     console.error("[email] failed to send balance collected confirmation", err);
+    Sentry.captureException(err, {
+      extra: { context: "markBalanceCollected-confirmation-email-failed", bookingId },
+    });
   }
 
   revalidatePath("/organizer/trips/[slug]/bookings", "page");
@@ -853,12 +880,18 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
 
   const admin = createSupabaseAdminClient();
 
-  const { data: booking } = await admin
+  const { data: booking, error: bookingFetchError } = await admin
     .from("bookings")
     .select("id, user_id, trip_id, full_name, total_amount, amount_due, payment_option, balance_collected, status, balance_payment_id, balance_payment_gateway_status")
     .eq("id", bookingId)
     .maybeSingle();
 
+  if (bookingFetchError) {
+    console.error("[createBalancePaymentLink] booking fetch failed:", bookingFetchError);
+    Sentry.captureException(bookingFetchError, {
+      extra: { context: "createBalancePaymentLink-booking-fetch-failed", bookingId },
+    });
+  }
   if (!booking) return { error: "Booking not found." };
   if (booking.user_id !== user.id) return { error: "You don't have permission to access this booking." };
   if (booking.status !== "confirmed") return { error: "Only confirmed bookings can pay the remaining balance." };
@@ -889,30 +922,66 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
           }
           // Expired, paid, or any other terminal state: clear and generate a fresh session.
           if (sessionStatus !== "active" || sessionPaid) {
-            await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
+            const { error: clearStaleError } = await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
+            if (clearStaleError) {
+              console.error("[createBalancePaymentLink] stale link clear failed:", clearStaleError);
+              Sentry.captureException(clearStaleError, {
+                extra: { context: "createBalancePaymentLink-stale-link-clear-failed", bookingId },
+              });
+            }
           }
         } else if (pmRes.status === 404) {
-          await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
+          const { error: clearStale404Error } = await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
+          if (clearStale404Error) {
+            console.error("[createBalancePaymentLink] stale link clear (404) failed:", clearStale404Error);
+            Sentry.captureException(clearStale404Error, {
+              extra: { context: "createBalancePaymentLink-stale-link-clear-404-failed", bookingId },
+            });
+          }
         } else {
           // PayMongo API error — allow re-generation rather than permanently blocking.
           console.error("[createBalancePaymentLink] PayMongo link status check failed:", pmRes.status);
-          await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
+          Sentry.captureException(new Error(`PayMongo link status check failed: ${pmRes.status}`), {
+            extra: { context: "createBalancePaymentLink-status-check-failed", bookingId },
+          });
+          const { error: clearStaleApiError } = await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
+          if (clearStaleApiError) {
+            console.error("[createBalancePaymentLink] stale link clear (API error) failed:", clearStaleApiError);
+            Sentry.captureException(clearStaleApiError, {
+              extra: { context: "createBalancePaymentLink-stale-link-clear-api-error-failed", bookingId },
+            });
+          }
         }
       } catch (err) {
         // Network error — allow re-generation.
         console.error("[createBalancePaymentLink] PayMongo link status check error:", err);
-        await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
+        Sentry.captureException(err, {
+          extra: { context: "createBalancePaymentLink-status-check-network-error", bookingId },
+        });
+        const { error: clearStaleNetworkError } = await admin.from("bookings").update({ balance_payment_id: null }).eq("id", bookingId);
+        if (clearStaleNetworkError) {
+          console.error("[createBalancePaymentLink] stale link clear (network error) failed:", clearStaleNetworkError);
+          Sentry.captureException(clearStaleNetworkError, {
+            extra: { context: "createBalancePaymentLink-stale-link-clear-network-failed", bookingId },
+          });
+        }
       }
     }
     // No secret key: fall through and generate a new link.
   }
 
-  const { data: trip } = await admin
+  const { data: trip, error: tripFetchError } = await admin
     .from("trips")
     .select("id, title, date_start")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
+  if (tripFetchError) {
+    console.error("[createBalancePaymentLink] trip fetch failed:", tripFetchError);
+    Sentry.captureException(tripFetchError, {
+      extra: { context: "createBalancePaymentLink-trip-fetch-failed", bookingId },
+    });
+  }
   if (!trip) return { error: "Trip not found." };
   if (trip.date_start < new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date())) {
     return { error: "This trip has already taken place." };
@@ -931,6 +1000,9 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
 
     if ("error" in linkResult) {
       console.error("[createBalancePaymentLink] payment link creation failed:", linkResult.error);
+      Sentry.captureException(new Error(`Payment link creation failed: ${linkResult.error}`), {
+        extra: { context: "createBalancePaymentLink-link-creation-failed", bookingId },
+      });
       return { error: "Failed to create payment link. Please try again." };
     }
 
@@ -942,6 +1014,9 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
     return { success: true, checkoutUrl: linkResult.checkoutUrl };
   } catch (err) {
     console.error("[createBalancePaymentLink] error:", err);
+    Sentry.captureException(err, {
+      extra: { context: "createBalancePaymentLink-error", bookingId },
+    });
     return { error: "Failed to create payment link. Please try again." };
   }
 }
@@ -963,12 +1038,18 @@ export async function resumeBookingPayment(bookingId: number): Promise<{ success
 
   const admin = createSupabaseAdminClient();
 
-  const { data: booking } = await admin
+  const { data: booking, error: bookingFetchError } = await admin
     .from("bookings")
     .select("id, user_id, trip_id, total_amount, amount_due, status, payment_id, payment_gateway_status")
     .eq("id", bookingId)
     .maybeSingle();
 
+  if (bookingFetchError) {
+    console.error("[resumeBookingPayment] booking fetch failed:", bookingFetchError);
+    Sentry.captureException(bookingFetchError, {
+      extra: { context: "resumeBookingPayment-booking-fetch-failed", bookingId },
+    });
+  }
   if (!booking) return { error: "Booking not found." };
   if (booking.user_id !== user.id) return { error: "You don't have permission to access this booking." };
   if (booking.payment_gateway_status === "paid") return { error: "This booking has already been paid." };
@@ -976,12 +1057,18 @@ export async function resumeBookingPayment(bookingId: number): Promise<{ success
     return { error: "This booking is no longer awaiting payment." };
   }
 
-  const { data: trip } = await admin
+  const { data: trip, error: tripFetchError } = await admin
     .from("trips")
     .select("id, title, date_start, status")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
+  if (tripFetchError) {
+    console.error("[resumeBookingPayment] trip fetch failed:", tripFetchError);
+    Sentry.captureException(tripFetchError, {
+      extra: { context: "resumeBookingPayment-trip-fetch-failed", bookingId },
+    });
+  }
   if (!trip) return { error: "Trip not found." };
   if (trip.status !== "active") {
     return { error: "This trip is no longer available. Your slot hold has been released." };
@@ -1014,19 +1101,49 @@ export async function resumeBookingPayment(bookingId: number): Promise<{ success
           }
           // Expired, paid, or any other terminal state: clear and generate a fresh session.
           if (sessionStatus !== "active" || sessionPaid) {
-            await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
+            const { error: clearStaleError } = await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
+            if (clearStaleError) {
+              console.error("[resumeBookingPayment] stale link clear failed:", clearStaleError);
+              Sentry.captureException(clearStaleError, {
+                extra: { context: "resumeBookingPayment-stale-link-clear-failed", bookingId },
+              });
+            }
           }
         } else if (pmRes.status === 404) {
-          await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
+          const { error: clearStale404Error } = await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
+          if (clearStale404Error) {
+            console.error("[resumeBookingPayment] stale link clear (404) failed:", clearStale404Error);
+            Sentry.captureException(clearStale404Error, {
+              extra: { context: "resumeBookingPayment-stale-link-clear-404-failed", bookingId },
+            });
+          }
         } else {
           // PayMongo API error: allow re-generation rather than permanently blocking.
           console.error("[resumeBookingPayment] PayMongo link status check failed:", pmRes.status);
-          await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
+          Sentry.captureException(new Error(`PayMongo link status check failed: ${pmRes.status}`), {
+            extra: { context: "resumeBookingPayment-status-check-failed", bookingId },
+          });
+          const { error: clearStaleApiError } = await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
+          if (clearStaleApiError) {
+            console.error("[resumeBookingPayment] stale link clear (API error) failed:", clearStaleApiError);
+            Sentry.captureException(clearStaleApiError, {
+              extra: { context: "resumeBookingPayment-stale-link-clear-api-error-failed", bookingId },
+            });
+          }
         }
       } catch (err) {
         // Network error: allow re-generation.
         console.error("[resumeBookingPayment] PayMongo link status check error:", err);
-        await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
+        Sentry.captureException(err, {
+          extra: { context: "resumeBookingPayment-status-check-network-error", bookingId },
+        });
+        const { error: clearStaleNetworkError } = await admin.from("bookings").update({ payment_id: null }).eq("id", bookingId);
+        if (clearStaleNetworkError) {
+          console.error("[resumeBookingPayment] stale link clear (network error) failed:", clearStaleNetworkError);
+          Sentry.captureException(clearStaleNetworkError, {
+            extra: { context: "resumeBookingPayment-stale-link-clear-network-failed", bookingId },
+          });
+        }
       }
     }
     // No secret key: fall through and generate a new link.
@@ -1047,6 +1164,9 @@ export async function resumeBookingPayment(bookingId: number): Promise<{ success
 
     if ("error" in linkResult) {
       console.error("[resumeBookingPayment] payment link creation failed:", linkResult.error);
+      Sentry.captureException(new Error(`Payment link creation failed: ${linkResult.error}`), {
+        extra: { context: "resumeBookingPayment-link-creation-failed", bookingId },
+      });
       return { error: "Failed to create payment link. Please try again." };
     }
 
@@ -1058,6 +1178,9 @@ export async function resumeBookingPayment(bookingId: number): Promise<{ success
     return { success: true, checkoutUrl: linkResult.checkoutUrl };
   } catch (err) {
     console.error("[resumeBookingPayment] error:", err);
+    Sentry.captureException(err, {
+      extra: { context: "resumeBookingPayment-error", bookingId },
+    });
     return { error: "Failed to create payment link. Please try again." };
   }
 }
