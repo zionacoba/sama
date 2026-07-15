@@ -21,9 +21,8 @@ Last updated: June 30, 2026. Living document; update as items close.
 - Decision: keep demo trips (serving PayMongo review) vs re-wipe before real beta.
 
 ## PAYMENTS / POST-LAUNCH PaymENT WORK
-- Migrate PayMongo checkout from Links API to Checkout Sessions API. Fixes the post-payment redirect (Links does not reliably auto-redirect to /payment/success; customer lands on PayMongo receipt) AND moves payment-method control into code. Touches create-payment-link.ts, the link-id reads in booking.ts and confirm-paid-booking.ts, and the webhook event shape. Own session + full regression audit. Plan for any in-flight Links.
 - Quick polish (no code): brand the PayMongo receipt page in the dashboard (logo/colors); add a post-payment expectation note in the booking flow ("you'll get a confirmation email; view your booking in your profile").
-- Note: payment methods are dashboard-controlled (Links API). Card disabled by PayMongo support; only GCash + QR Ph enabled. There is no payment-method list in code.
+- Note: since the Checkout Sessions migration (032c052), payment methods are set in code: lib/create-payment-link.ts passes payment_method_types: ["gcash", "paymaya", "qrph"]. Card remains disabled by PayMongo support.
 
 ## SECURITY / RELIABILITY FAST-FOLLOWS
 - Cron reference: the eight live pg_cron schedules are documented in supabase/functions/CRON_SCHEDULES.md (dashboard remains source of truth; the 4 remaining non-money jobs still lack a Healthchecks dead-mans-switch, see that file for current coverage).
@@ -49,7 +48,7 @@ Last updated: June 30, 2026. Living document; update as items close.
 - Joiner audit: L1-L5; fullRefundable uses trip.cancellation_policy vs server booking.cancellation_policy ?? trip.
 - Align createTrip/updateTrip past-date check to Manila timezone (booking/cancel/transfer/publish already Manila).
 - Public /organizers page: claim-by-claim accuracy pass before public launch.
-- Personalize refund timing by payment method (GCash auto/fast vs QR Ph manual); add refund timing to the partial-cancel modal.
+- Refund timing by payment method: partially shipped in ae2cf99 (joiner-facing copy now names Maya and treats GCash/Maya as automatic e-wallet refunds vs manual QR Ph). Remaining: refund-timing copy harmonization, including adding refund timing to the partial-cancel modal, queued with the settlement-gap spec.
 - Photo-uploader: confirm touch controls render correctly on a real phone (never device-verified); optional one-tap "Set as cover".
 
 ## FEATURE FOLLOW-UPS (designed, deferrable)
