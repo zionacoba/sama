@@ -877,11 +877,11 @@ export function BookingModal({
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
                     <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
                   </svg>
-                  Payments secured by PayMongo. Pay via GCash or QR Ph.
+                  Payments secured by PayMongo. Pay via GCash, Maya, or QR Ph.
                 </p>
                 {amountDue > 0 && (
                   <p className="mb-2 text-center text-xs text-stone-500">
-                    If a refund is ever due, GCash refunds are automatic; QR Ph refunds are processed manually by our team and take 3 to 5 business days.
+                    If a refund is ever due, GCash and Maya refunds are automatic; QR Ph refunds are processed manually by our team and take 3 to 5 business days.
                   </p>
                 )}
                 <div className="flex gap-2">

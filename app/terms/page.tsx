@@ -63,7 +63,7 @@ export default function TermsPage() {
               <h2 className="text-lg font-bold text-stone-900">5. Booking and Payments</h2>
               <ul className="mt-2 space-y-1.5 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Bookings are made directly through the platform.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Payments are processed via PayMongo (GCash and QR Ph).</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Payments are processed via PayMongo (GCash, Maya, and QR Ph).</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama charges a platform commission on each booking as agreed with the organizer.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>No hidden fees are charged to participants — the price shown is the price you pay.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama absorbs all payment processing fees on behalf of organizers.</span></li>
@@ -112,7 +112,7 @@ export default function TermsPage() {
 
               <h3 className="mt-5 text-base font-semibold text-stone-800">Refund processing</h3>
               <p className="mt-2 leading-relaxed">
-                Refunds are returned to the original payment method. GCash refunds typically reflect within 24 hours. QR Ph payments cannot be refunded automatically and will be processed manually. Our team will contact you at{" "}
+                Refunds are returned to the original payment method. GCash and Maya refunds typically reflect within 24 hours. QR Ph payments cannot be refunded automatically and will be processed manually. Our team will contact you at{" "}
                 <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a>{" "}
                 within 3 to 5 business days to arrange the refund.
               </p>

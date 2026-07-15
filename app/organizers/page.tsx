@@ -29,7 +29,7 @@ const lookingFor = [
 ];
 
 const handles = [
-  "Online booking and payment collection (GCash and QR Ph)",
+  "Online booking and payment collection (GCash, Maya, and QR Ph)",
   "Automatic booking confirmations and reminders sent to joiners",
   "Digital waivers signed and recorded at every booking",
   "Emergency contact and medical info collected at booking",
