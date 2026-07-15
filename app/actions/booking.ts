@@ -92,6 +92,9 @@ export async function createBooking(input: CreateBookingInput) {
 
   if (tripFetchError) {
     console.error("[createBooking] trip fetch error:", tripFetchError.code, tripFetchError.message, tripFetchError.details);
+    Sentry.captureException(tripFetchError, {
+      extra: { context: "createBooking-trip-fetch-failed", userId: user.id },
+    });
   }
   if (!trip) return { error: "Trip not found." };
 
@@ -239,6 +242,9 @@ export async function createBooking(input: CreateBookingInput) {
     if (bookingError?.code === "23505") {
       return { error: "You already have an active booking for this trip." };
     }
+    Sentry.captureException(bookingError ?? new Error("book_slot_and_create_booking returned null id with no error"), {
+      extra: { context: "createBooking-book-slot-rpc-failed", tripId: trip.id, userId: user.id },
+    });
     return { error: "Booking failed. Please try again or contact support." };
   }
 
@@ -283,6 +289,9 @@ export async function createBooking(input: CreateBookingInput) {
     const { error: delErr } = await admin.from("bookings").delete().eq("id", newBooking.id);
     if (delErr) {
       console.error("[createBooking] rollback delete failed; leaving for cleanup:", delErr);
+      Sentry.captureException(delErr, {
+        extra: { context: "createBooking-participant-rollback-delete-failed", bookingId: newBooking.id, tripId: trip.id },
+      });
       // Do NOT restore the slot; cleanup-abandoned-payments owns slot restore for surviving payment_pending rows.
     } else {
       await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
@@ -299,6 +308,9 @@ export async function createBooking(input: CreateBookingInput) {
     .eq("user_id", user.id);
   if (waitlistDeleteError) {
     console.error("[createBooking] failed to remove waitlist entry after booking:", waitlistDeleteError);
+    Sentry.captureException(waitlistDeleteError, {
+      extra: { context: "createBooking-waitlist-delete-failed", bookingId: newBooking.id, tripId: trip.id, userId: user.id },
+    });
   }
 
   // Snapshot the cancellation policy at booking time so later trip changes don't affect this booking.
@@ -309,6 +321,9 @@ export async function createBooking(input: CreateBookingInput) {
     .eq("id", newBooking.id);
   if (policyUpdateError) {
     console.error("[createBooking] failed to snapshot cancellation policy:", policyUpdateError);
+    Sentry.captureException(policyUpdateError, {
+      extra: { context: "createBooking-cancellation-policy-snapshot-failed", bookingId: newBooking.id, tripId: trip.id },
+    });
   }
 
   const participantTokens =
@@ -353,6 +368,9 @@ export async function createBooking(input: CreateBookingInput) {
         });
       } catch (err) {
         console.error("[email] failed to send free booking confirmation", err);
+        Sentry.captureException(err, {
+          extra: { context: "createBooking-free-confirmation-email-failed", bookingId: newBooking.id, tripId: trip.id },
+        });
       }
     }
 
@@ -382,6 +400,9 @@ export async function createBooking(input: CreateBookingInput) {
         });
       } catch (err) {
         console.error("[email] failed to send participant join links to booker", err);
+        Sentry.captureException(err, {
+          extra: { context: "createBooking-join-links-email-failed", bookingId: newBooking.id, tripId: trip.id },
+        });
         await sendAdminAlert(
           "Action needed: participant join links failed to send",
           `
@@ -398,11 +419,18 @@ export async function createBooking(input: CreateBookingInput) {
 
     // Notify organizer of new free booking.
     try {
-      const { data: orgRow } = await admin
+      const { data: orgRow, error: orgRowError } = await admin
         .from("organizers")
         .select("email")
         .eq("id", trip.organizer_id)
         .maybeSingle();
+
+      if (orgRowError) {
+        console.error("[createBooking] organizer fetch for booking notification failed:", orgRowError);
+        Sentry.captureException(orgRowError, {
+          extra: { context: "createBooking-organizer-notify-fetch-failed", bookingId: newBooking.id, tripId: trip.id, organizerId: trip.organizer_id },
+        });
+      }
 
       if (orgRow?.email) {
         await resend.emails.send({
@@ -429,6 +457,9 @@ export async function createBooking(input: CreateBookingInput) {
       }
     } catch (err) {
       console.error("[email] failed to send free booking organizer notification", err);
+      Sentry.captureException(err, {
+        extra: { context: "createBooking-organizer-notify-email-failed", bookingId: newBooking.id, tripId: trip.id },
+      });
     }
 
     revalidatePath(`/trips/${input.tripSlug}`);
@@ -461,6 +492,9 @@ export async function createBooking(input: CreateBookingInput) {
       const { error: delErr } = await admin.from("bookings").delete().eq("id", newBooking.id);
       if (delErr) {
         console.error("[createBooking] rollback delete failed; leaving for cleanup:", delErr);
+        Sentry.captureException(delErr, {
+          extra: { context: "createBooking-payment-link-rollback-delete-failed", bookingId: newBooking.id, tripId: trip.id },
+        });
         // Do NOT restore the slot; cleanup-abandoned-payments owns slot restore for surviving payment_pending rows.
       } else {
         await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
@@ -496,6 +530,9 @@ export async function createBooking(input: CreateBookingInput) {
     const { error: delErr } = await admin.from("bookings").delete().eq("id", newBooking.id);
     if (delErr) {
       console.error("[createBooking] rollback delete failed; leaving for cleanup:", delErr);
+      Sentry.captureException(delErr, {
+        extra: { context: "createBooking-checkout-url-missing-rollback-delete-failed", bookingId: newBooking.id, tripId: trip.id },
+      });
       // Do NOT restore the slot; cleanup-abandoned-payments owns slot restore for surviving payment_pending rows.
     } else {
       await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
@@ -593,6 +630,12 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     .select("id")
     .maybeSingle();
 
+  if (error) {
+    console.error("[update-booking-status] status update failed:", error);
+    Sentry.captureException(error, {
+      extra: { context: "update-booking-status-status-update-failed", bookingId },
+    });
+  }
   if (error) return { error: error.message };
   if (!updatedBooking) {
     return { error: "This booking has already been updated by another action." };
@@ -648,6 +691,12 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
       console.error("[refund] updateBookingStatus reject refund failed", bookingId, rejectRefundResult.error);
       Sentry.captureException(new Error(`updateBookingStatus reject refund failed: ${rejectRefundResult.error ?? "Unknown error"}`), {
         extra: { context: "reject-refund-failed", bookingId, source: "downpayment", amount: rejectRefundAmount },
+      });
+    }
+    if (rejectRefundResult && !rejectRefundResult.success && rejectRefundResult.requiresManualProcessing) {
+      console.error("[refund] updateBookingStatus reject refund requires manual processing", bookingId, rejectRefundResult.error);
+      Sentry.captureException(new Error(`updateBookingStatus reject refund requires manual processing: ${rejectRefundResult.error ?? "Unknown error"}`), {
+        extra: { context: "reject-refund-manual-required", bookingId },
       });
     }
   }
