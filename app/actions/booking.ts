@@ -515,6 +515,9 @@ export async function createBooking(input: CreateBookingInput) {
     const { error: delErr } = await admin.from("bookings").delete().eq("id", newBooking.id);
     if (delErr) {
       console.error("[createBooking] rollback delete failed; leaving for cleanup:", delErr);
+      Sentry.captureException(delErr, {
+        extra: { context: "createBooking-payment-link-catch-rollback-delete-failed", bookingId: newBooking.id, tripId: trip.id },
+      });
       // Do NOT restore the slot; cleanup-abandoned-payments owns slot restore for surviving payment_pending rows.
     } else {
       await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
