@@ -1190,35 +1190,53 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerFetchError } = await supabase
     .from("organizers")
     .select("id")
     .eq("user_id", user.id)
     .eq("status", "approved")
     .maybeSingle();
 
+  if (organizerFetchError) {
+    console.error("[markAsTransferred] organizer fetch failed:", organizerFetchError);
+    Sentry.captureException(organizerFetchError, {
+      extra: { context: "markAsTransferred-organizer-fetch-failed", userId: user.id },
+    });
+  }
   if (!organizer) return { error: "Not an approved organizer." };
 
   const admin = createSupabaseAdminClient();
 
-  const { data: booking } = await admin
+  const { data: booking, error: bookingFetchError } = await admin
     .from("bookings")
     .select("id, trip_id, status, email, full_name, slots")
     .eq("id", bookingId)
     .maybeSingle();
 
+  if (bookingFetchError) {
+    console.error("[markAsTransferred] booking fetch failed:", bookingFetchError);
+    Sentry.captureException(bookingFetchError, {
+      extra: { context: "markAsTransferred-booking-fetch-failed", bookingId },
+    });
+  }
   if (!booking) return { error: "Booking not found." };
   if (booking.status !== "confirmed") return { error: "Only confirmed bookings can be marked as transferred." };
   if (booking.slots > 1) {
     return { error: "Transfers are only available for single-slot bookings right now. For group bookings, please contact support." };
   }
 
-  const { data: trip } = await admin
+  const { data: trip, error: tripFetchError } = await admin
     .from("trips")
     .select("id, slug, title, date_start, organizer_id, waiver_text")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
+  if (tripFetchError) {
+    console.error("[markAsTransferred] trip fetch failed:", tripFetchError);
+    Sentry.captureException(tripFetchError, {
+      extra: { context: "markAsTransferred-trip-fetch-failed", bookingId, tripId: booking.trip_id },
+    });
+  }
   if (!trip || !organizerOwns(trip.organizer_id, organizer.id)) {
     return { error: "You don't have permission to manage this booking." };
   }
@@ -1245,8 +1263,18 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
     .eq("status", "confirmed")
     .select("id");
 
+  if (error) {
+    console.error("[markAsTransferred] transfer update failed:", error);
+    Sentry.captureException(error, {
+      extra: { context: "markAsTransferred-update-failed", bookingId },
+    });
+  }
   if (error) return { error: error.message };
   if (!updated || updated.length !== 1) {
+    console.error("[markAsTransferred] transfer update matched no rows", bookingId);
+    Sentry.captureException(new Error("markAsTransferred update matched no rows"), {
+      extra: { context: "markAsTransferred-update-no-rows", bookingId },
+    });
     return { error: "This booking is no longer confirmed and could not be transferred." };
   }
 
@@ -1254,11 +1282,17 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
 
   // Resolve the organizer once: reused for the waiver snapshot below and the
   // organizer notification email further down.
-  const { data: org } = await admin
+  const { data: org, error: orgFetchError } = await admin
     .from("organizers")
     .select("email, full_name, display_name")
     .eq("id", organizer.id)
     .maybeSingle();
+  if (orgFetchError) {
+    console.error("[markAsTransferred] organizer details fetch failed:", orgFetchError);
+    Sentry.captureException(orgFetchError, {
+      extra: { context: "markAsTransferred-organizer-details-fetch-failed", bookingId, organizerId: organizer.id },
+    });
+  }
   const organizerName = org?.display_name ?? org?.full_name ?? "";
 
   // Prepare the slot-0 participant row so the replacement can complete their own
@@ -1277,13 +1311,19 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
     );
     const newToken = randomUUID();
 
-    const { data: existingSlotZero } = await admin
+    const { data: existingSlotZero, error: slotZeroFetchError } = await admin
       .from("booking_participants")
       .select("id")
       .eq("booking_id", bookingId)
       .eq("slot_number", 0)
       .maybeSingle();
 
+    if (slotZeroFetchError) {
+      console.error("[markAsTransferred] slot-0 participant fetch failed:", slotZeroFetchError);
+      Sentry.captureException(slotZeroFetchError, {
+        extra: { context: "markAsTransferred-slot0-fetch-failed", bookingId },
+      });
+    }
     if (existingSlotZero) {
       const { error: prepError } = await admin
         .from("booking_participants")
@@ -1366,6 +1406,9 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
     });
   } catch (err) {
     console.error("[email] failed to send transfer notice to participant", err);
+    Sentry.captureException(err, {
+      extra: { context: "markAsTransferred-participant-email-failed", bookingId },
+    });
   }
 
   // If the organizer supplied the replacement's email and we have a working
@@ -1388,6 +1431,9 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
       });
     } catch (err) {
       console.error("[email] failed to send transfer link to replacement", err);
+      Sentry.captureException(err, {
+        extra: { context: "markAsTransferred-replacement-email-failed", bookingId },
+      });
     }
   }
 
@@ -1412,6 +1458,9 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
     }
   } catch (err) {
     console.error("[email] failed to send transfer confirmation to organizer", err);
+    Sentry.captureException(err, {
+      extra: { context: "markAsTransferred-organizer-email-failed", bookingId, organizerId: organizer.id },
+    });
   }
 
   revalidatePath("/organizer/trips/[slug]/bookings", "page");
@@ -1425,32 +1474,50 @@ export async function markAsNoShow(bookingId: number) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: organizer } = await supabase
+  const { data: organizer, error: organizerFetchError } = await supabase
     .from("organizers")
     .select("id")
     .eq("user_id", user.id)
     .eq("status", "approved")
     .maybeSingle();
 
+  if (organizerFetchError) {
+    console.error("[markAsNoShow] organizer fetch failed:", organizerFetchError);
+    Sentry.captureException(organizerFetchError, {
+      extra: { context: "markAsNoShow-organizer-fetch-failed", userId: user.id },
+    });
+  }
   if (!organizer) return { error: "Not an approved organizer." };
 
   const admin = createSupabaseAdminClient();
 
-  const { data: booking } = await admin
+  const { data: booking, error: bookingFetchError } = await admin
     .from("bookings")
     .select("id, trip_id, status, full_name")
     .eq("id", bookingId)
     .maybeSingle();
 
+  if (bookingFetchError) {
+    console.error("[markAsNoShow] booking fetch failed:", bookingFetchError);
+    Sentry.captureException(bookingFetchError, {
+      extra: { context: "markAsNoShow-booking-fetch-failed", bookingId },
+    });
+  }
   if (!booking) return { error: "Booking not found." };
   if (booking.status !== "confirmed") return { error: "Only confirmed bookings can be marked as no show." };
 
-  const { data: trip } = await admin
+  const { data: trip, error: tripFetchError } = await admin
     .from("trips")
     .select("id, slug, date_start, organizer_id")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
+  if (tripFetchError) {
+    console.error("[markAsNoShow] trip fetch failed:", tripFetchError);
+    Sentry.captureException(tripFetchError, {
+      extra: { context: "markAsNoShow-trip-fetch-failed", bookingId, tripId: booking.trip_id },
+    });
+  }
   if (!trip || !organizerOwns(trip.organizer_id, organizer.id)) {
     return { error: "You don't have permission to manage this booking." };
   }
@@ -1466,6 +1533,12 @@ export async function markAsNoShow(bookingId: number) {
     .eq("id", bookingId)
     .eq("status", "confirmed");
 
+  if (error) {
+    console.error("[markAsNoShow] no-show update failed:", error);
+    Sentry.captureException(error, {
+      extra: { context: "markAsNoShow-update-failed", bookingId },
+    });
+  }
   if (error) return { error: error.message };
 
   revalidatePath("/organizer/trips/[slug]/bookings", "page");
@@ -1483,12 +1556,18 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
 
   const admin = createSupabaseAdminClient();
 
-  const { data: booking } = await admin
+  const { data: booking, error: bookingFetchError } = await admin
     .from("bookings")
     .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, payment_method, payout_status, payout_id, cancellation_policy, platform_commission, commission_rate_used, balance_payment_gateway_status, balance_paymongo_payment_id")
     .eq("id", bookingId)
     .maybeSingle();
 
+  if (bookingFetchError) {
+    console.error("[partialCancelBooking] booking fetch failed:", bookingFetchError);
+    Sentry.captureException(bookingFetchError, {
+      extra: { context: "partialCancel-booking-fetch-failed", bookingId },
+    });
+  }
   if (!booking) return { error: "Booking not found." };
   if (booking.user_id !== user.id) return { error: "You don't have permission to modify this booking." };
   if (!["confirmed", "pending"].includes(booking.status)) {
@@ -1561,8 +1640,20 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     .in("status", [...SLOT_HOLDING_STATUSES])
     .select("id");
 
+  if (updateError) {
+    console.error("[partialCancelBooking] partial cancel update failed:", updateError);
+    Sentry.captureException(updateError, {
+      extra: { context: "partialCancel-update-failed", bookingId },
+    });
+  }
   if (updateError) return { error: updateError.message };
-  if (!updatedRows || updatedRows.length === 0) return { error: "This booking is no longer in a cancellable state. It may have been cancelled or modified by another request. Please refresh and try again." };
+  if (!updatedRows || updatedRows.length === 0) {
+    console.error("[partialCancelBooking] partial cancel update matched no rows", bookingId);
+    Sentry.captureException(new Error("partialCancelBooking update matched no rows"), {
+      extra: { context: "partialCancel-update-no-rows", bookingId },
+    });
+    return { error: "This booking is no longer in a cancellable state. It may have been cancelled or modified by another request. Please refresh and try again." };
+  }
 
   // Flag the associated payout for reconciliation whenever a partial cancel happens
   // after payout creation. Mirrors cancelBooking's condition and update exactly so
@@ -1688,6 +1779,9 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
       } as never) as unknown as Promise<{ error: { message: string } | null }>);
     if (deductionError) {
       console.error("[deduction] failed to record organizer deduction", bookingId, deductionError.message);
+      Sentry.captureException(new Error(deductionError.message), {
+        extra: { context: "partialCancel-deduction-insert-failed", bookingId, organizerId: tripDateCheck.organizer_id },
+      });
     }
   }
 
@@ -1698,6 +1792,9 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     const creditVoid = await voidBookingCredit(admin, bookingId, tripDateCheck.organizer_id, booking.payout_status);
     if (creditVoid.error) {
       console.error("[credit-void] failed to void organizer credit", bookingId, creditVoid.error);
+      Sentry.captureException(new Error(creditVoid.error), {
+        extra: { context: "partialCancel-credit-void-failed", bookingId, organizerId: tripDateCheck.organizer_id },
+      });
       await sendAdminAlert(
         "Action needed: failed to void organizer credit on partial cancellation",
         `
@@ -1763,12 +1860,18 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     }).format(new Date(tripDateCheck.date_start));
 
     if (tripDateCheck.organizer_id) {
-      const { data: organizer } = await admin
+      const { data: organizer, error: organizerFetchError } = await admin
         .from("organizers")
         .select("email")
         .eq("id", tripDateCheck.organizer_id)
         .maybeSingle();
 
+      if (organizerFetchError) {
+        console.error("[partialCancelBooking] organizer fetch failed:", organizerFetchError);
+        Sentry.captureException(organizerFetchError, {
+          extra: { context: "partialCancel-organizer-fetch-failed", bookingId, organizerId: tripDateCheck.organizer_id },
+        });
+      }
       if (organizer?.email) {
         try {
           await resend.emails.send({
@@ -1785,6 +1888,9 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
           });
         } catch (err) {
           console.error("[email] failed to notify organizer of partial cancellation", err);
+          Sentry.captureException(err, {
+            extra: { context: "partialCancel-organizer-email-failed", bookingId },
+          });
         }
       }
     }
@@ -1819,6 +1925,9 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
       });
     } catch (err) {
       console.error("[email] failed to send partial cancellation confirmation", err);
+      Sentry.captureException(err, {
+        extra: { context: "partialCancel-participant-email-failed", bookingId },
+      });
     }
 
     const needsManualRefund =
@@ -1855,12 +1964,18 @@ export async function cancelBooking(bookingId: number) {
 
   const admin = createSupabaseAdminClient();
 
-  const { data: booking } = await admin
+  const { data: booking, error: bookingFetchError } = await admin
     .from("bookings")
     .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status, payout_status, payout_id, cancellation_policy")
     .eq("id", bookingId)
     .maybeSingle();
 
+  if (bookingFetchError) {
+    console.error("[cancelBooking] booking fetch failed:", bookingFetchError);
+    Sentry.captureException(bookingFetchError, {
+      extra: { context: "cancelBooking-booking-fetch-failed", bookingId },
+    });
+  }
   if (!booking) return { error: "Booking not found." };
   if (booking.user_id !== user.id) return { error: "You don't have permission to cancel this booking." };
   if (["cancelled", "rejected", "transferred"].includes(booking.status)) return { error: "This booking is already cancelled or rejected." };
@@ -1888,6 +2003,10 @@ export async function cancelBooking(bookingId: number) {
     .single();
 
   if (cancelError || !cancelledBooking) {
+    console.error("[cancelBooking] cancel update failed:", cancelError);
+    Sentry.captureException(cancelError ?? new Error("cancelBooking update matched no rows"), {
+      extra: { context: "cancelBooking-update-failed", bookingId },
+    });
     return { error: "Booking could not be cancelled. It may have already been cancelled." };
   }
 
@@ -1956,10 +2075,16 @@ export async function cancelBooking(bookingId: number) {
       computeRefundSplit(booking, refundAmount);
 
     if (refundAmount !== null) {
-      await admin
+      const { error: refundAmountWriteError } = await admin
         .from("bookings")
         .update({ refund_amount: refundAmount })
         .eq("id", bookingId);
+      if (refundAmountWriteError) {
+        console.error("[cancelBooking] refund_amount write failed:", refundAmountWriteError);
+        Sentry.captureException(refundAmountWriteError, {
+          extra: { context: "cancelBooking-refund-amount-write-failed", bookingId },
+        });
+      }
     }
 
     // Record a deduction against the organizer when a refund is issued after their payout was already remitted.
@@ -1975,6 +2100,9 @@ export async function cancelBooking(bookingId: number) {
         } as never) as unknown as Promise<{ error: { message: string } | null }>);
       if (deductionError) {
         console.error("[deduction] failed to record organizer deduction", bookingId, deductionError.message);
+        Sentry.captureException(new Error(deductionError.message), {
+          extra: { context: "cancelBooking-deduction-insert-failed", bookingId, organizerId: trip.organizer_id },
+        });
       }
     }
 
@@ -1986,6 +2114,9 @@ export async function cancelBooking(bookingId: number) {
       const creditReversal = await reverseBookingCredit(admin, bookingId, trip.organizer_id, balanceRefundAmount);
       if (creditReversal.error) {
         console.error("[credit-reversal] failed to reverse organizer credit", bookingId, creditReversal.error);
+        Sentry.captureException(new Error(creditReversal.error), {
+          extra: { context: "cancelBooking-credit-reversal-failed", bookingId, organizerId: trip.organizer_id },
+        });
         await sendAdminAlert(
           "Action needed: failed to reverse organizer credit on cancellation",
           `
@@ -2106,12 +2237,18 @@ export async function cancelBooking(bookingId: number) {
       }).format(new Date(trip.date_start));
 
       if (trip.organizer_id) {
-        const { data: organizer } = await admin
+        const { data: organizer, error: organizerFetchError } = await admin
           .from("organizers")
           .select("email")
           .eq("id", trip.organizer_id)
           .maybeSingle();
 
+        if (organizerFetchError) {
+          console.error("[cancelBooking] organizer fetch failed:", organizerFetchError);
+          Sentry.captureException(organizerFetchError, {
+            extra: { context: "cancelBooking-organizer-fetch-failed", bookingId, organizerId: trip.organizer_id },
+          });
+        }
         if (organizer?.email) {
           await resend.emails.send({
             from: FROM_ADDRESS,
@@ -2150,16 +2287,25 @@ export async function cancelBooking(bookingId: number) {
       );
     } catch (err) {
       console.error("[email] failed to send cancellation email", err);
+      Sentry.captureException(err, {
+        extra: { context: "cancelBooking-cancellation-email-failed", bookingId },
+      });
     }
 
     if (wasInIncludedPayout) {
       let organizerName = "Unknown";
       if (trip.organizer_id) {
-        const { data: org } = await admin
+        const { data: org, error: orgNameFetchError } = await admin
           .from("organizers")
           .select("display_name, full_name")
           .eq("id", trip.organizer_id)
           .maybeSingle();
+        if (orgNameFetchError) {
+          console.error("[cancelBooking] organizer name fetch failed:", orgNameFetchError);
+          Sentry.captureException(orgNameFetchError, {
+            extra: { context: "cancelBooking-organizer-name-fetch-failed", bookingId, organizerId: trip.organizer_id },
+          });
+        }
         organizerName = org?.display_name ?? org?.full_name ?? "Unknown";
       }
       const amountInPayout = booking.payment_option === "downpayment" && booking.amount_due != null
