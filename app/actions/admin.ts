@@ -111,16 +111,36 @@ export async function rejectOrganizer(id: string): Promise<void> {
   }
   if (!organizer) return;
 
-  await admin.from("organizers").update({ status: "rejected" }).eq("id", id);
-
-  // Unpublish all active trips for this organizer.
-  const { data: activeTrips } = await admin
+  // Fetch active trips before writing the rejection: if this fetch fails we
+  // return without marking the organizer rejected, so the unpublish/cancel
+  // cascade below can never be silently skipped on an already-rejected row.
+  const { data: activeTrips, error: activeTripsError } = await admin
     .from("trips")
     .select("id, title, slug")
     .eq("organizer_id", id)
     .eq("status", "active");
 
-  const tripIds = (activeTrips ?? []).map((t) => t.id);
+  if (activeTripsError || !activeTrips) {
+    console.error(
+      "[rejectOrganizer] active trips fetch failed:",
+      activeTripsError?.message ?? "no data returned",
+    );
+    Sentry.captureException(
+      activeTripsError ?? new Error("rejectOrganizer: active trips fetch returned null data without an error"),
+      {
+        extra: {
+          context: "rejectOrganizer-active-trips-fetch-failed",
+          failure: activeTripsError ? "fetch-error" : "missing-data",
+          organizerId: id,
+        },
+      },
+    );
+    return;
+  }
+
+  await admin.from("organizers").update({ status: "rejected" }).eq("id", id);
+
+  const tripIds = activeTrips.map((t) => t.id);
 
   if (tripIds.length > 0) {
     await admin
