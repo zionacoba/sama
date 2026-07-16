@@ -12,6 +12,8 @@ pg_cron evaluates all cron expressions in **UTC**. So `0 1 * * *` fires at 01:00
 operator is in Manila (UTC+8), so each row below also lists the Manila local time in parentheses
 for convenience.
 
+Edge function CODE is deployed manually via `supabase functions deploy <function-name>`; pushing to main deploys the Next.js app only, never edge functions.
+
 ## Schedules
 
 | Job | Cron expression | Cadence | UTC time | Manila time (UTC+8) | Active | Monitoring |
