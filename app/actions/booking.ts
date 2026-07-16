@@ -22,6 +22,7 @@ import { hasPaidPayment } from "@/lib/paymongo-checkout";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 import { resolveBookingCommissionRate } from "@/lib/commission";
+import { resolvePastTripGate } from "@/lib/past-trip-gate";
 import { DEFAULT_WAIVER_TEXT, PLATFORM_WAIVER_SNAPSHOT_TEXT } from "@/lib/constants";
 import { withParticipantAdultAttestation } from "@/lib/waiver-snapshot";
 
@@ -1596,16 +1597,28 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     return { error: "To cancel all slots, use the full cancellation option." };
   }
 
-  const { data: tripDateCheck } = await admin
+  const { data: tripDateCheckRow, error: tripDateCheckError } = await admin
     .from("trips")
     .select("date_start, slug, title, organizer_id, cancellation_policy")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
   const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
-  if (tripDateCheck && tripDateCheck.date_start < todayPH) {
-    return { error: "This trip has already taken place. Bookings can no longer be modified." };
+  const tripGate = resolvePastTripGate(tripDateCheckRow, tripDateCheckError, todayPH);
+  if ("failure" in tripGate) {
+    if (tripGate.failure === "trip-in-past") {
+      return { error: "This trip has already taken place. Bookings can no longer be modified." };
+    }
+    console.error("[partialCancelBooking] trip fetch failed:", tripDateCheckError ?? "no row returned");
+    Sentry.captureException(
+      tripDateCheckError ?? new Error(`trip row missing for trip ${booking.trip_id}`),
+      {
+        extra: { context: "partialCancel-trip-fetch-failed", failure: tripGate.failure, bookingId, tripId: booking.trip_id },
+      },
+    );
+    return { error: "Could not verify this trip, please retry." };
   }
+  const tripDateCheck = tripGate.trip;
 
   const originalSlots = booking.slots;
   const remainingSlots = originalSlots - slotsToCancel;
@@ -1614,7 +1627,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
 
   const todayManilaStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
   const todayManila = new Date(todayManilaStr);
-  const tripDay = new Date(tripDateCheck!.date_start);
+  const tripDay = new Date(tripDateCheck.date_start);
   const daysUntilTrip = Math.round((tripDay.getTime() - todayManila.getTime()) / 86_400_000);
 
   const fullRefundableAmount = calculateRefundAmount(
@@ -2001,14 +2014,25 @@ export async function cancelBooking(bookingId: number) {
   if (booking.status === "no_show") return { error: "This booking has been marked as no-show and cannot be cancelled." };
 
   // Block cancellation after the trip has already taken place.
-  const { data: tripDateCheck } = await admin
+  const { data: tripDateCheck, error: tripDateCheckError } = await admin
     .from("trips")
     .select("date_start")
     .eq("id", booking.trip_id)
     .maybeSingle();
   const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
-  if (tripDateCheck && tripDateCheck.date_start < todayPH) {
-    return { error: "This trip has already taken place. Bookings can no longer be cancelled." };
+  const tripGate = resolvePastTripGate(tripDateCheck, tripDateCheckError, todayPH);
+  if ("failure" in tripGate) {
+    if (tripGate.failure === "trip-in-past") {
+      return { error: "This trip has already taken place. Bookings can no longer be cancelled." };
+    }
+    console.error("[cancelBooking] trip fetch failed:", tripDateCheckError ?? "no row returned");
+    Sentry.captureException(
+      tripDateCheckError ?? new Error(`trip row missing for trip ${booking.trip_id}`),
+      {
+        extra: { context: "cancelBooking-trip-fetch-failed", failure: tripGate.failure, bookingId, tripId: booking.trip_id },
+      },
+    );
+    return { error: "Could not verify this trip, please retry." };
   }
 
   const { data: cancelledBooking, error: cancelError } = await admin
