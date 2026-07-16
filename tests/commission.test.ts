@@ -4,6 +4,7 @@ import {
   COMMISSION_RATE_MIN_PERCENT,
   DEFAULT_COMMISSION_RATE,
   parseCommissionRatePercent,
+  resolveBookingCommissionRate,
 } from "@/lib/commission";
 
 describe("commission constants", () => {
@@ -59,5 +60,32 @@ describe("parseCommissionRatePercent", () => {
     expect(parseCommissionRatePercent("4")).toBe(4);
     expect(parseCommissionRatePercent("10")).toBe(10);
     expect(parseCommissionRatePercent(" 4 ")).toBe(4);
+  });
+});
+
+describe("resolveBookingCommissionRate", () => {
+  it("fails with fetch-error when the organizer fetch errored", () => {
+    expect(resolveBookingCommissionRate(null, { message: "boom" })).toEqual({ failure: "fetch-error" });
+  });
+
+  it("fails with fetch-error even if a record is present alongside the error", () => {
+    expect(resolveBookingCommissionRate({ commission_rate: 0.04 }, { message: "boom" })).toEqual({ failure: "fetch-error" });
+  });
+
+  it("fails with missing-rate when the organizer record is null", () => {
+    expect(resolveBookingCommissionRate(null, null)).toEqual({ failure: "missing-rate" });
+  });
+
+  it("fails with missing-rate when commission_rate is null or undefined", () => {
+    expect(resolveBookingCommissionRate({ commission_rate: null }, null)).toEqual({ failure: "missing-rate" });
+    expect(resolveBookingCommissionRate({ commission_rate: undefined }, null)).toEqual({ failure: "missing-rate" });
+  });
+
+  it("returns the rate for a valid numeric commission_rate", () => {
+    expect(resolveBookingCommissionRate({ commission_rate: 0.04 }, null)).toEqual({ rate: 0.04 });
+  });
+
+  it("coerces DB numeric strings with Number()", () => {
+    expect(resolveBookingCommissionRate({ commission_rate: "0.04" }, null)).toEqual({ rate: 0.04 });
   });
 });

@@ -29,3 +29,18 @@ export function parseCommissionRatePercent(raw: unknown): number | null {
   if (value < COMMISSION_RATE_MIN_PERCENT || value > COMMISSION_RATE_MAX_PERCENT) return null;
   return value;
 }
+
+/**
+ * Resolve the commission rate to persist on a new booking from the organizer
+ * fetch result. Booking creation must fail loudly when the rate cannot be
+ * determined, so there is deliberately no default here: a fetch error or a
+ * missing rate returns a failure the caller must surface, never a fallback.
+ */
+export function resolveBookingCommissionRate(
+  organizer: { commission_rate: unknown } | null,
+  fetchError: unknown,
+): { rate: number } | { failure: "fetch-error" | "missing-rate" } {
+  if (fetchError != null) return { failure: "fetch-error" };
+  if (organizer == null || organizer.commission_rate == null) return { failure: "missing-rate" };
+  return { rate: Number(organizer.commission_rate) };
+}

@@ -21,6 +21,7 @@ import { createPaymentCheckout } from "@/lib/create-payment-link";
 import { hasPaidPayment } from "@/lib/paymongo-checkout";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
 import { formatPeso, formatBookingRef } from "@/lib/format";
+import { resolveBookingCommissionRate } from "@/lib/commission";
 import { DEFAULT_WAIVER_TEXT, PLATFORM_WAIVER_SNAPSHOT_TEXT } from "@/lib/constants";
 import { withParticipantAdultAttestation } from "@/lib/waiver-snapshot";
 
@@ -188,13 +189,28 @@ export async function createBooking(input: CreateBookingInput) {
   const computedAmountDue = input.paymentOption === "downpayment" && canDownpay
     ? Math.round(Math.min(Number(trip.min_downpayment) * input.slots, computedTotal) * 100) / 100
     : computedTotal;
-  const { data: tripOrganizer } = await admin
+  const { data: tripOrganizer, error: organizerFetchError } = await admin
     .from("organizers")
     .select("display_name, full_name, commission_rate")
     .eq("id", trip.organizer_id)
     .maybeSingle();
+  const rateResolution = resolveBookingCommissionRate(tripOrganizer, organizerFetchError);
+  if ("failure" in rateResolution) {
+    if (organizerFetchError) {
+      console.error("[createBooking] organizer commission fetch error:", organizerFetchError.code, organizerFetchError.message, organizerFetchError.details);
+    } else {
+      console.error("[createBooking] organizer commission rate missing for organizer:", trip.organizer_id);
+    }
+    Sentry.captureException(
+      organizerFetchError ?? new Error(`organizer commission_rate missing for organizer ${trip.organizer_id}`),
+      {
+        extra: { context: "createBooking-organizer-rate-failed", tripId: trip.id, userId: user.id, organizerId: trip.organizer_id },
+      },
+    );
+    return { error: "Booking failed. Please try again or contact support." };
+  }
   const organizerName = tripOrganizer?.display_name ?? tripOrganizer?.full_name ?? "";
-  const commissionRate = tripOrganizer?.commission_rate != null ? Number(tripOrganizer.commission_rate) : 0.05;
+  const commissionRate = rateResolution.rate;
   const platformCommission = Math.round(computedTotal * commissionRate * 100) / 100;
 
   const requestHeaders = await headers();
