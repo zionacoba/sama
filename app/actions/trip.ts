@@ -14,7 +14,7 @@ import { cancellationRefundLine } from "@/lib/refund-email-copy";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
 import { computeTripCancelSummary, type TripCancelSummary } from "@/lib/trip-cancel-summary";
-import { summarizeTripSlots, isActiveCapacityChange, type TripSlotSummary } from "@/lib/trip-slot-summary";
+import { resolveTripSlotSummary, isActiveCapacityChange, type TripSlotSummary } from "@/lib/trip-slot-summary";
 import { SLOT_CONSUMING_STATUSES, SLOT_HOLDING_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
 import { sendInChunks } from "@/lib/send-in-chunks";
@@ -491,23 +491,48 @@ export async function updateTrip(
 
   // Single booking query covers all five edge-case checks below. Queried over
   // SLOT_CONSUMING_STATUSES (not just ACTIVE) because transferred and no_show
-  // bookings still hold their slots; summarizeTripSlots splits the rows into
-  // the per-purpose counters (see lib/trip-slot-summary.ts for which counter
-  // uses which status set).
+  // bookings still hold their slots; resolveTripSlotSummary splits the rows
+  // into the per-purpose counters (see lib/trip-slot-summary.ts for which
+  // counter uses which status set).
+  //
+  // The gate includes the unpublish path: isDraft is true when moving an
+  // active trip back to draft, but the active-to-draft guard below needs a
+  // real liveBookingCount, so the summary must be fetched for that path too.
+  // The guards fail closed: if the summary cannot be determined the edit is
+  // rejected rather than evaluated against a zeroed summary that would let
+  // every guard pass.
   let slotSummary: TripSlotSummary = {
     consumedSlots: 0,
     activeBookingCount: 0,
     pendingBalanceCount: 0,
     liveBookingCount: 0,
   };
-  if (!isDraft && !is_template) {
+  const isUnpublishing = status === "draft" && existing.status === "active";
+  if ((!isDraft || isUnpublishing) && !is_template) {
     const adminForChecks = createSupabaseAdminClient();
-    const { data: consumingBookings } = await adminForChecks
+    const { data: consumingBookings, error: consumingBookingsError } = await adminForChecks
       .from("bookings")
       .select("status, slots, amount_due, total_amount")
       .eq("trip_id", tripId)
       .in("status", [...SLOT_CONSUMING_STATUSES]);
-    slotSummary = summarizeTripSlots(consumingBookings ?? []);
+    const resolvedSummary = resolveTripSlotSummary(consumingBookings, consumingBookingsError);
+    if ("failure" in resolvedSummary) {
+      console.error("[update-trip] slot-summary bookings fetch failed:", consumingBookingsError);
+      Sentry.captureException(
+        consumingBookingsError ?? new Error("update-trip slot-summary bookings query returned no data"),
+        {
+          extra: {
+            context: "update-trip-slot-summary-fetch-failed",
+            failure: resolvedSummary.failure,
+            tripId,
+            organizerId: organizer.id,
+            userId: user.id,
+          },
+        },
+      );
+      return { error: "Could not verify this trip's bookings, please retry." };
+    }
+    slotSummary = resolvedSummary.summary;
   }
   const { consumedSlots, activeBookingCount, pendingBalanceCount, liveBookingCount } = slotSummary;
 
@@ -837,14 +862,28 @@ export async function publishTrip(tripSlug: string): Promise<{ error: string } |
   }
   if (!organizer || organizer.status !== "approved") return { error: "Not authorized." };
 
-  const { data: tripData } = await supabase
+  const { data: tripData, error: tripFetchError } = await supabase
     .from("trips")
     .select("is_template, date_start")
     .eq("slug", tripSlug)
     .eq("organizer_id", organizer.id)
     .maybeSingle();
 
-  if (tripData?.is_template) {
+  // Fail closed: the template and past-date guards below must never run
+  // against a missing row. A fetch error or an unmatched slug rejects the
+  // publish instead of letting the guards pass vacuously.
+  if (tripFetchError || !tripData) {
+    console.error("[publish-trip] trip fetch failed:", tripFetchError);
+    Sentry.captureException(
+      tripFetchError ?? new Error("publish-trip trip fetch returned no row"),
+      {
+        extra: { context: "publish-trip-trip-fetch-failed", tripSlug, organizerId: organizer.id },
+      },
+    );
+    return { error: "Trip not found or you don't have permission to publish it." };
+  }
+
+  if (tripData.is_template) {
     return { error: "Templates can't be published directly. Go to your dashboard and create a run from this template to list a specific date." };
   }
 
@@ -854,7 +893,7 @@ export async function publishTrip(tripSlug: string): Promise<{ error: string } |
   // (Asia/Manila) past-date comparison used by the booking and cancel gates so a
   // past date is rejected uniformly.
   const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
-  if (tripData?.date_start && tripData.date_start < todayPH) {
+  if (tripData.date_start && tripData.date_start < todayPH) {
     return { error: "This trip's start date has already passed. Please update the date before publishing." };
   }
 

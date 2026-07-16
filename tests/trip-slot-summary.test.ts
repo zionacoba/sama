@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   summarizeTripSlots,
   isActiveCapacityChange,
+  resolveTripSlotSummary,
   type SlotSummaryBookingRow,
 } from "@/lib/trip-slot-summary";
 import { SLOT_CONSUMING_STATUSES } from "@/lib/booking-status";
@@ -171,5 +172,54 @@ describe("isActiveCapacityChange", () => {
         existingTotalSlots: 0,
       }),
     ).toBe(false);
+  });
+});
+
+describe("resolveTripSlotSummary", () => {
+  // Fail-closed resolution of the guard-feeding bookings fetch: a query error
+  // or anomalous missing data is a failure the caller must surface, never a
+  // zeroed summary that would let every edit guard pass.
+
+  it("returns fetch-error when the query errored", () => {
+    expect(resolveTripSlotSummary(null, { message: "connection reset" })).toEqual({
+      failure: "fetch-error",
+    });
+  });
+
+  it("fetch-error takes precedence even when rows are also present", () => {
+    expect(resolveTripSlotSummary([row({})], { message: "boom" })).toEqual({
+      failure: "fetch-error",
+    });
+  });
+
+  it("returns missing-data for null rows without an error", () => {
+    expect(resolveTripSlotSummary(null, null)).toEqual({ failure: "missing-data" });
+  });
+
+  it("returns missing-data for undefined rows without an error", () => {
+    expect(resolveTripSlotSummary(undefined, undefined)).toEqual({ failure: "missing-data" });
+  });
+
+  it("treats an empty result set as success with an all-zero summary, not a failure", () => {
+    expect(resolveTripSlotSummary([], null)).toEqual({
+      summary: {
+        consumedSlots: 0,
+        activeBookingCount: 0,
+        pendingBalanceCount: 0,
+        liveBookingCount: 0,
+      },
+    });
+  });
+
+  it("returns a summary matching summarizeTripSlots for the same rows", () => {
+    const rows = [
+      row({ slots: 2 }),
+      row({ status: "transferred" }),
+      row({ status: "no_show", slots: 3 }),
+      row({ status: "cancelled", slots: 5 }),
+    ];
+    expect(resolveTripSlotSummary(rows, null)).toEqual({
+      summary: summarizeTripSlots(rows),
+    });
   });
 });

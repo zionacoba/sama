@@ -99,3 +99,23 @@ export function isActiveCapacityChange(args: {
   if (isDraft || isTemplate) return false;
   return newTotalSlots !== existingTotalSlots;
 }
+
+/**
+ * Resolve the slot summary that feeds updateTrip's edit guards from the
+ * bookings fetch result. The guards must fail closed when the summary cannot
+ * be determined, so there is deliberately no empty-summary fallback here: a
+ * fetch error or anomalous missing data returns a failure the caller must
+ * surface, never a zeroed summary that would let every guard pass.
+ *
+ * A list select returns [] when no rows match, never null, so null or
+ * undefined rows without an error are anomalous ("missing-data") and must not
+ * be treated as "no bookings".
+ */
+export function resolveTripSlotSummary(
+  rows: SlotSummaryBookingRow[] | null | undefined,
+  fetchError: unknown,
+): { summary: TripSlotSummary } | { failure: "fetch-error" | "missing-data" } {
+  if (fetchError) return { failure: "fetch-error" };
+  if (rows == null) return { failure: "missing-data" };
+  return { summary: summarizeTripSlots(rows) };
+}
