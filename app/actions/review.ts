@@ -66,13 +66,13 @@ export async function submitReview(
   if (organizer) return { error: "Organizers cannot review their own trips." };
 
   // If a booking_id is provided, verify it represents a paid attendee of a
-  // trip that ran, and that it belongs to this user. Eligibility follows
-  // "paid for a trip that happened" (the same predicate as payout
-  // eligibility), so an organizer marking an attendee as no_show cannot
-  // strip their ability to review.
+  // trip that ran, and that it belongs to this user. Eligibility requires a
+  // "confirmed" or "no_show" status that was paid or free; "transferred" is
+  // excluded. Marking an attendee as no_show cannot strip their ability to
+  // review.
   let bookingFullName: string | null = null;
   if (bookingId) {
-    const { data: booking, error: bookingFetchError } = await supabase
+    const { data: booking, error: bookingFetchError } = await admin
       .from("bookings")
       .select("id, status, user_id, trip_id, payment_gateway_status, total_amount, full_name")
       .eq("id", bookingId)
