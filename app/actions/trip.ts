@@ -13,6 +13,7 @@ import { type RefundResult } from "@/lib/paymongo-refund";
 import { cancellationRefundLine } from "@/lib/refund-email-copy";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
+import { resolveCancellationCascade } from "@/lib/cancellation-cascade";
 import { computeTripCancelSummary, type TripCancelSummary } from "@/lib/trip-cancel-summary";
 import { resolveTripSlotSummary, isActiveCapacityChange, type TripSlotSummary } from "@/lib/trip-slot-summary";
 import { SLOT_CONSUMING_STATUSES, SLOT_HOLDING_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
@@ -1014,10 +1015,18 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
   if (trip.date_start < todayPH) return { error: "This trip has already taken place and cannot be cancelled." };
 
-  await admin
+  const { error: tripCancelError } = await admin
     .from("trips")
     .update({ status: "cancelled", remaining_slots: trip.total_slots })
     .eq("id", trip.id);
+
+  if (tripCancelError) {
+    console.error("[cancel-trip] trip status update failed:", tripCancelError);
+    Sentry.captureException(tripCancelError, {
+      extra: { context: "cancel-trip-status-update-failed", tripId: trip.id, organizerId: organizer.id },
+    });
+    return { error: "Could not cancel this trip, please retry." };
+  }
 
   // Only refund/notify bookings THIS call actually transitioned. The status-guarded
   // update returns exactly the rows still cancellable at update time, so a booking
@@ -1025,12 +1034,34 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   // excluded and never receives a second refund. Includes "transferred": on a whole-
   // trip cancellation the original payer is refunded and the booking leaves
   // ATTENDED_STATUSES payout eligibility.
-  const { data: bookings } = await admin
+  const { data: cancelledRows, error: bookingsCancelError } = await admin
     .from("bookings")
     .update({ status: "cancelled" })
     .eq("trip_id", trip.id)
     .in("status", [...TRIP_CANCELLATION_REFUND_STATUSES])
     .select("id, full_name, email, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status, payout_status, payout_id");
+
+  const cascade = resolveCancellationCascade(cancelledRows, bookingsCancelError);
+  if ("failure" in cascade) {
+    console.error("[cancel-trip] bookings cancel update failed:", bookingsCancelError ?? "no rows returned");
+    Sentry.captureException(
+      bookingsCancelError ?? new Error(`cancelTrip bookings update returned null rows for trip ${trip.id}`),
+      {
+        extra: { context: "cancel-trip-bookings-cancel-failed", failure: cascade.failure, tripId: trip.id, organizerId: organizer.id },
+      },
+    );
+    await sendAdminAlert(
+      `[Admin] Action needed: participant processing did not run for cancelled trip: ${escapeHtml(trip.title)}`,
+      `
+            <p>Trip <strong>${escapeHtml(trip.title)}</strong> was marked cancelled, but the follow-up update that cancels its bookings failed or returned no data. Refunds and notifications did not run for its participants or waitlist.</p>
+            <p><strong>Trip ID:</strong> ${trip.id}</p>
+            <p>Please review this trip's bookings and process cancellations, refunds, and notifications manually.</p>
+            <p>Sama System</p>
+          `,
+    );
+    return { error: "The trip was cancelled, but participant refunds and notifications could not be processed. Sama has been alerted." };
+  }
+  const bookings = cascade.rows;
 
   const tripDate = new Intl.DateTimeFormat("en-PH", {
     weekday: "long",
@@ -1040,12 +1071,32 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     timeZone: "Asia/Manila",
   }).format(new Date(trip.date_start));
 
-  const { data: waitlistEntries } = await admin
+  const { data: waitlistEntries, error: waitlistFetchError } = await admin
     .from("waitlist")
     .select("id, full_name, email")
     .eq("trip_id", trip.id);
 
-  await admin.from("waitlist").delete().eq("trip_id", trip.id);
+  if (waitlistFetchError) {
+    // Never delete entries we could not snapshot for notification; the rows
+    // stay so a retry or manual pass can still reach these users. Refunds
+    // below must not be blocked by this.
+    console.error("[cancel-trip] waitlist fetch failed:", waitlistFetchError);
+    Sentry.captureException(waitlistFetchError, {
+      extra: { context: "cancel-trip-waitlist-fetch-failed", tripId: trip.id },
+    });
+  } else {
+    const { error: waitlistDeleteError } = await admin.from("waitlist").delete().eq("trip_id", trip.id);
+    if (waitlistDeleteError) {
+      console.error("[cancel-trip] waitlist delete failed:", waitlistDeleteError);
+      Sentry.captureException(waitlistDeleteError, {
+        extra: {
+          context: "cancel-trip-waitlist-delete-failed",
+          tripId: trip.id,
+          residue: "waitlist rows linger on a cancelled trip",
+        },
+      });
+    }
+  }
 
   const fmtCurrency = (n: number) =>
     formatPeso(n);
@@ -1065,10 +1116,18 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
 
     // Flag the associated payout for reconciliation whenever cancellation happens after payout creation.
     if (booking.payout_id && (booking.payout_status === "remitted" || booking.payout_status === "included")) {
-      await admin
+      const { error: reconciliationFlagError } = await admin
         .from("payouts" as "trips")
         .update({ needs_reconciliation: true } as never)
         .eq("id", booking.payout_id);
+      if (reconciliationFlagError) {
+        // Bookkeeping-flag failure must never strand the joiner's refund;
+        // continue this booking's refund below.
+        console.error("[cancel-trip] payout reconciliation flag failed:", booking.id, reconciliationFlagError);
+        Sentry.captureException(reconciliationFlagError, {
+          extra: { context: "cancel-trip-payout-reconciliation-flag-failed", bookingId: booking.id, tripId: trip.id, payoutId: booking.payout_id },
+        });
+      }
     }
 
     // Record a deduction against the organizer when a refund is issued after their payout was already remitted.
