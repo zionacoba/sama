@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { ACTIVE_BOOKING_STATUSES } from "@/lib/booking-status";
+import { resolveOrganizerTripGate, resolveUpcomingBookingGate } from "@/lib/delete-account-gate";
 
 export async function deleteAccount(): Promise<{ success: true } | { error: string }> {
   const supabase = await createSupabaseServerClient();
@@ -12,47 +14,84 @@ export async function deleteAccount(): Promise<{ success: true } | { error: stri
 
   const admin = createSupabaseAdminClient();
 
-  // Block deletion if the user has upcoming confirmed bookings.
-  const { data: confirmedBookings } = await admin
+  // Block deletion if the user has upcoming bookings.
+  const { data: activeBookings, error: activeBookingsError } = await admin
     .from("bookings")
     .select("id, trip:trips!bookings_trip_id_fkey(date_start)")
     .eq("user_id", user.id)
-    .eq("status", "confirmed");
+    .in("status", [...ACTIVE_BOOKING_STATUSES]);
 
   const now = new Date().toISOString();
-  const upcoming = (confirmedBookings ?? []).filter((b) => {
-    const t = b.trip as unknown as { date_start: string } | null;
-    return t && t.date_start > now;
-  });
+  const bookingGate = resolveUpcomingBookingGate(
+    activeBookings == null
+      ? null
+      : activeBookings.map((b) => ({ trip: b.trip as unknown as { date_start: string } | null })),
+    activeBookingsError,
+    now,
+  );
 
-  if (upcoming.length > 0) {
-    return { error: "You have upcoming confirmed bookings. Please cancel them before deleting your account." };
+  if ("failure" in bookingGate) {
+    console.error("[delete-account] bookings fetch failed:", activeBookingsError ?? "no rows returned");
+    Sentry.captureException(activeBookingsError ?? new Error(`bookings fetch returned null for user ${user.id}`), {
+      extra: { context: "delete-account-bookings-fetch-failed", userId: user.id },
+    });
+    return { error: "Could not verify your account, please retry." };
+  }
+
+  if ("blocked" in bookingGate) {
+    return { error: "You have upcoming bookings. Please cancel them before deleting your account." };
   }
 
   // Block deletion if the user is an organizer with active trips.
-  const { data: organizerRow } = await admin
+  const { data: organizerRow, error: organizerError } = await admin
     .from("organizers")
     .select("id, photo_url, cover_image_url")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  let activeTripsError: unknown = null;
+  let activeTripsCount: number | null = null;
   if (organizerRow) {
-    const { count: activeTripsCount } = await admin
+    const { count, error } = await admin
       .from("trips")
       .select("id", { count: "exact", head: true })
       .eq("organizer_id", organizerRow.id)
       .eq("status", "active");
+    activeTripsError = error;
+    activeTripsCount = count;
+  }
 
-    if ((activeTripsCount ?? 0) > 0) {
-      return { error: "Please unpublish all your trips before deleting your account." };
-    }
+  const organizerGate = resolveOrganizerTripGate(organizerError, organizerRow, activeTripsError, activeTripsCount);
+
+  if ("failure" in organizerGate) {
+    const gateError = organizerError ?? activeTripsError;
+    const gateContext = organizerError
+      ? "delete-account-organizer-fetch-failed"
+      : "delete-account-active-trips-fetch-failed";
+    console.error("[delete-account] organizer gate fetch failed:", gateError ?? "no count returned");
+    Sentry.captureException(gateError ?? new Error(`active trips count returned null for user ${user.id}`), {
+      extra: { context: gateContext, userId: user.id },
+    });
+    return { error: "Could not verify your account, please retry." };
+  }
+
+  if ("blocked" in organizerGate) {
+    return { error: "Please unpublish all your trips before deleting your account." };
   }
 
   // Anonymize all booking records — retained for legal/financial purposes.
-  const { data: userBookings } = await admin
+  const { data: userBookings, error: userBookingsError } = await admin
     .from("bookings")
     .select("id")
     .eq("user_id", user.id);
+
+  if (userBookingsError || userBookings == null) {
+    console.error("[delete-account] user bookings fetch failed:", userBookingsError ?? "no rows returned");
+    Sentry.captureException(userBookingsError ?? new Error(`user bookings fetch returned null for user ${user.id}`), {
+      extra: { context: "delete-account-user-bookings-fetch-failed", userId: user.id },
+    });
+    return { error: "Could not verify your account, please retry." };
+  }
 
   await admin
     .from("bookings")
