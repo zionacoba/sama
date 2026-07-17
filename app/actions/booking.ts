@@ -2280,15 +2280,17 @@ export async function cancelBooking(bookingId: number) {
       }
     }
 
-    try {
-      const tripDate = new Intl.DateTimeFormat("en-PH", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        timeZone: "Asia/Manila",
-      }).format(new Date(trip.date_start));
+    // Shared by all three sends below. Safe outside a try: trip.date_start is
+    // gate-validated and non-null past resolvePastTripGate.
+    const tripDate = new Intl.DateTimeFormat("en-PH", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: "Asia/Manila",
+    }).format(new Date(trip.date_start));
 
+    try {
       if (trip.organizer_id) {
         const { data: organizer, error: organizerFetchError } = await admin
           .from("organizers")
@@ -2316,7 +2318,14 @@ export async function cancelBooking(bookingId: number) {
           });
         }
       }
+    } catch (err) {
+      console.error("[email] failed to notify organizer of cancellation", err);
+      Sentry.captureException(err, {
+        extra: { context: "cancelBooking-organizer-email-failed", bookingId, organizerId: trip.organizer_id },
+      });
+    }
 
+    try {
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: booking.email,
@@ -2329,7 +2338,15 @@ export async function cancelBooking(bookingId: number) {
           <p>Sama</p>
         `,
       });
+    } catch (err) {
+      console.error("[email] failed to send cancellation email", err);
+      Sentry.captureException(err, {
+        extra: { context: "cancelBooking-cancellation-email-failed", bookingId },
+      });
+    }
 
+    // sendAdminAlert never throws; this try is a defensive backstop.
+    try {
       await sendAdminAlert(
         `[Admin] Booking cancelled: ${escapeHtml(booking.full_name)}, ${trip.title}`,
         `
@@ -2339,9 +2356,9 @@ export async function cancelBooking(bookingId: number) {
           `,
       );
     } catch (err) {
-      console.error("[email] failed to send cancellation email", err);
+      console.error("[admin-alert] failed to send cancellation alert", err);
       Sentry.captureException(err, {
-        extra: { context: "cancelBooking-cancellation-email-failed", bookingId },
+        extra: { context: "cancelBooking-admin-alert-failed", bookingId },
       });
     }
 
