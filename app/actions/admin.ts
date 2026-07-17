@@ -12,6 +12,7 @@ import { type RefundResult } from "@/lib/paymongo-refund";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountSamaHolds, isPayoutEligible, payoutTimingGate, todayManilaDate, computeAppliedNet } from "@/lib/booking-finance";
 import { reverseBookingCredit } from "@/lib/organizer-credits";
+import { resolveCancellationCascade } from "@/lib/cancellation-cascade";
 import { ATTENDED_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { formatPeso } from "@/lib/format";
@@ -143,10 +144,28 @@ export async function rejectOrganizer(id: string): Promise<void> {
   const tripIds = activeTrips.map((t) => t.id);
 
   if (tripIds.length > 0) {
-    await admin
+    const { error: unpublishError } = await admin
       .from("trips")
       .update({ status: "draft" })
       .in("id", tripIds);
+
+    if (unpublishError) {
+      console.error("[rejectOrganizer] trips unpublish failed:", unpublishError.message);
+      Sentry.captureException(unpublishError, {
+        extra: { context: "rejectOrganizer-trips-unpublish-failed", organizerId: id, tripIds },
+      });
+      await sendAdminAlert(
+        `[Admin] Action needed: trips still live for rejected organizer ${escapeHtml(organizer.full_name)}`,
+        `
+            <p>Organizer <strong>${escapeHtml(organizer.full_name)}</strong> was marked rejected, but the update that unpublishes their active trips failed. The trips remain live and bookable. Bookings were not touched: no cancellations, refunds, or participant notifications ran. The organizer rejection email was not sent.</p>
+            <p><strong>Organizer ID:</strong> ${id}</p>
+            <p><strong>Trip IDs:</strong> ${tripIds.join(", ")}</p>
+            <p>Please unpublish these trips and process the cascade manually.</p>
+            <p>Sama System</p>
+          `,
+      );
+      return;
+    }
 
     // Cancel all confirmed/pending/payment_pending/transferred bookings for affected trips.
     // The status-guarded update returns exactly the rows THIS call transitioned, so a
@@ -154,12 +173,35 @@ export async function rejectOrganizer(id: string): Promise<void> {
     // is excluded and never gets a double slot-restore, redundant refund, or duplicate email.
     // Includes "transferred": on a whole-trip cancellation the original payer is refunded
     // and the booking leaves ATTENDED_STATUSES payout eligibility.
-    const { data: affectedBookings } = await admin
+    const { data: cancelledRows, error: bookingsCancelError } = await admin
       .from("bookings")
       .update({ status: "cancelled" })
       .in("trip_id", tripIds)
       .in("status", [...TRIP_CANCELLATION_REFUND_STATUSES])
       .select("id, email, full_name, trip_id, slots, payment_option, amount_due, total_amount, paymongo_payment_id, payment_method, balance_paymongo_payment_id, balance_payment_gateway_status, payout_status, payout_id");
+
+    const cascade = resolveCancellationCascade(cancelledRows, bookingsCancelError);
+    if ("failure" in cascade) {
+      console.error("[rejectOrganizer] bookings cancel update failed:", bookingsCancelError?.message ?? "no rows returned");
+      Sentry.captureException(
+        bookingsCancelError ?? new Error(`rejectOrganizer bookings update returned null rows for organizer ${id}`),
+        {
+          extra: { context: "rejectOrganizer-bookings-cancel-failed", failure: cascade.failure, organizerId: id, tripIds },
+        },
+      );
+      await sendAdminAlert(
+        `[Admin] Action needed: participant processing did not run for rejected organizer ${escapeHtml(organizer.full_name)}`,
+        `
+            <p>Organizer <strong>${escapeHtml(organizer.full_name)}</strong> was rejected and their trips were unpublished, but the follow-up update that cancels the trips' bookings failed or returned no data. Refunds and notifications did not run for their participants. The organizer rejection email was not sent.</p>
+            <p><strong>Organizer ID:</strong> ${id}</p>
+            <p><strong>Trip IDs:</strong> ${tripIds.join(", ")}</p>
+            <p>Please review these trips' bookings and process cancellations, refunds, and notifications manually.</p>
+            <p>Sama System</p>
+          `,
+      );
+      return;
+    }
+    const affectedBookings = cascade.rows;
 
     if ((affectedBookings ?? []).length > 0) {
       // Restore slots for each cancelled booking.
@@ -201,10 +243,18 @@ export async function rejectOrganizer(id: string): Promise<void> {
 
       // Flag the associated payout for reconciliation whenever cancellation happens after payout creation.
       if (booking.payout_id && (booking.payout_status === "remitted" || booking.payout_status === "included")) {
-        await admin
+        const { error: reconciliationFlagError } = await admin
           .from("payouts" as "trips")
           .update({ needs_reconciliation: true } as never)
           .eq("id", booking.payout_id);
+        if (reconciliationFlagError) {
+          // Bookkeeping-flag failure must never strand the joiner's refund;
+          // continue this booking's refund below.
+          console.error("[rejectOrganizer] payout reconciliation flag failed:", booking.id, reconciliationFlagError.message);
+          Sentry.captureException(reconciliationFlagError, {
+            extra: { context: "rejectOrganizer-payout-reconciliation-flag-failed", bookingId: booking.id, organizerId: id, payoutId: booking.payout_id },
+          });
+        }
       }
 
       // Record a deduction against the organizer when a refund is issued after their payout was already remitted.
