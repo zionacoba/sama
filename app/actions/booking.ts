@@ -2016,7 +2016,7 @@ export async function cancelBooking(bookingId: number) {
   // Block cancellation after the trip has already taken place.
   const { data: tripDateCheck, error: tripDateCheckError } = await admin
     .from("trips")
-    .select("date_start")
+    .select("id, slug, title, date_start, organizer_id, cancellation_policy")
     .eq("id", booking.trip_id)
     .maybeSingle();
   const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
@@ -2034,6 +2034,10 @@ export async function cancelBooking(bookingId: number) {
     );
     return { error: "Could not verify this trip, please retry." };
   }
+
+  // The gate fetch now doubles as the refund pipeline's trip row: past the
+  // gate it is validated and non-null.
+  const trip = tripGate.trip;
 
   const { data: cancelledBooking, error: cancelError } = await admin
     .from("bookings")
@@ -2056,25 +2060,31 @@ export async function cancelBooking(bookingId: number) {
   // Flag the associated payout for reconciliation whenever cancellation happens after payout creation.
   const wasInIncludedPayout = booking.payout_status === "included" && !!booking.payout_id;
   if (booking.payout_id && (booking.payout_status === "remitted" || booking.payout_status === "included")) {
-    await admin
+    const { error: reconciliationFlagError } = await admin
       .from("payouts" as "trips")
       .update({ needs_reconciliation: true } as never)
       .eq("id", booking.payout_id);
+    if (reconciliationFlagError) {
+      // Bookkeeping-flag failure must never strand the joiner's refund; continue.
+      console.error("[cancelBooking] payout reconciliation flag failed:", reconciliationFlagError);
+      Sentry.captureException(reconciliationFlagError, {
+        extra: { context: "cancelBooking-payout-reconciliation-flag-failed", bookingId, tripId: booking.trip_id, payoutId: booking.payout_id },
+      });
+    }
   }
 
-  // Restore the slot unconditionally — we have everything we need from the
-  // booking row. Doing this before the trip fetch ensures the slot is always
-  // returned even if the trip has been deleted or the fetch fails.
-  await admin.rpc("restore_slot", {
+  // Restore the slot from the booking row alone. A failure here is captured
+  // to Sentry for manual remediation and does not block the refund below.
+  const { error: restoreSlotError } = await admin.rpc("restore_slot", {
     p_trip_id: booking.trip_id,
     p_slots_requested: booking.slots,
   });
-
-  const { data: trip } = await admin
-    .from("trips")
-    .select("id, slug, title, date_start, organizer_id, cancellation_policy")
-    .eq("id", booking.trip_id)
-    .maybeSingle();
+  if (restoreSlotError) {
+    console.error("[cancelBooking] restore_slot failed:", restoreSlotError);
+    Sentry.captureException(restoreSlotError, {
+      extra: { context: "cancelBooking-restore-slot-failed", bookingId, tripId: booking.trip_id, slots: booking.slots },
+    });
+  }
 
   if (trip) {
 
