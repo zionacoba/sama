@@ -1719,13 +1719,20 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   }
 
   // Flag the associated payout for reconciliation whenever a partial cancel happens
-  // after payout creation. Mirrors cancelBooking's condition and update exactly so
-  // the two stay consistent.
+  // after payout creation. Mirrors cancelBooking's flag handling (condition, update,
+  // and log-and-continue error capture) so the two stay consistent.
   if (booking.payout_id && (booking.payout_status === "remitted" || booking.payout_status === "included")) {
-    await admin
+    const { error: reconciliationFlagError } = await admin
       .from("payouts" as "trips")
       .update({ needs_reconciliation: true } as never)
       .eq("id", booking.payout_id);
+    if (reconciliationFlagError) {
+      // Bookkeeping-flag failure must never strand the joiner's refund; continue.
+      console.error("[partialCancelBooking] payout reconciliation flag failed:", reconciliationFlagError);
+      Sentry.captureException(reconciliationFlagError, {
+        extra: { context: "partialCancel-payout-reconciliation-flag-failed", bookingId, tripId: booking.trip_id, payoutId: booking.payout_id },
+      });
+    }
   }
 
   const { error: restoreSlotError } = await admin.rpc("restore_slot", {
