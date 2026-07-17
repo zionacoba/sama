@@ -311,7 +311,13 @@ export async function createBooking(input: CreateBookingInput) {
       });
       // Do NOT restore the slot; cleanup-abandoned-payments owns slot restore for surviving payment_pending rows.
     } else {
-      await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+      const { error: restoreSlotError } = await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+      if (restoreSlotError) {
+        console.error("[createBooking] restore_slot failed:", restoreSlotError);
+        Sentry.captureException(restoreSlotError, {
+          extra: { context: "createBooking-participant-rollback-restore-failed", bookingId: newBooking.id, tripId: trip.id, slots: input.slots },
+        });
+      }
     }
     return { error: "Booking failed. Please try again or contact support." };
   }
@@ -514,7 +520,13 @@ export async function createBooking(input: CreateBookingInput) {
         });
         // Do NOT restore the slot; cleanup-abandoned-payments owns slot restore for surviving payment_pending rows.
       } else {
-        await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+        const { error: restoreSlotError } = await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+        if (restoreSlotError) {
+          console.error("[createBooking] restore_slot failed:", restoreSlotError);
+          Sentry.captureException(restoreSlotError, {
+            extra: { context: "createBooking-payment-link-rollback-restore-failed", bookingId: newBooking.id, tripId: trip.id, slots: input.slots },
+          });
+        }
       }
       return { error: "We could not create your payment link. Please try again." };
     }
@@ -537,7 +549,13 @@ export async function createBooking(input: CreateBookingInput) {
       });
       // Do NOT restore the slot; cleanup-abandoned-payments owns slot restore for surviving payment_pending rows.
     } else {
-      await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+      const { error: restoreSlotError } = await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+      if (restoreSlotError) {
+        console.error("[createBooking] restore_slot failed:", restoreSlotError);
+        Sentry.captureException(restoreSlotError, {
+          extra: { context: "createBooking-payment-link-error-rollback-restore-failed", bookingId: newBooking.id, tripId: trip.id, slots: input.slots },
+        });
+      }
     }
     return { error: "We could not create your payment link. Please try again." };
   }
@@ -555,7 +573,13 @@ export async function createBooking(input: CreateBookingInput) {
       });
       // Do NOT restore the slot; cleanup-abandoned-payments owns slot restore for surviving payment_pending rows.
     } else {
-      await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+      const { error: restoreSlotError } = await admin.rpc("restore_slot", { p_trip_id: trip.id, p_slots_requested: input.slots });
+      if (restoreSlotError) {
+        console.error("[createBooking] restore_slot failed:", restoreSlotError);
+        Sentry.captureException(restoreSlotError, {
+          extra: { context: "createBooking-checkout-url-missing-rollback-restore-failed", bookingId: newBooking.id, tripId: trip.id, slots: input.slots },
+        });
+      }
     }
     return { error: "We could not create your payment link. Please try again." };
   }
@@ -663,16 +687,23 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
 
   // Restore slots when rejecting.
   if (status === "rejected") {
-    await admin.rpc("restore_slot", {
+    const { error: restoreSlotError } = await admin.rpc("restore_slot", {
       p_trip_id: trip.id,
       p_slots_requested: booking.slots,
     });
+    // A restore failure is captured for manual remediation and must not strand the refund below.
+    if (restoreSlotError) {
+      console.error("[updateBookingStatus] restore_slot failed:", restoreSlotError);
+      Sentry.captureException(restoreSlotError, {
+        extra: { context: "updateBookingStatus-restore-slot-failed", bookingId: booking.id, tripId: trip.id, slots: booking.slots },
+      });
+    }
 
-    // A slot genuinely opened (restore_slot above), so notify the waitlist.
-    // Wrapped defensively: a notify failure must never throw past the refund
-    // logic below, so the reject, slot restore, and refund all still complete.
-    // (cancelBooking calls this unguarded and has the same latent risk - a
-    // pre-existing issue worth a separate follow-up; not changed in this stage.)
+    // The slot restore was attempted above (a failure is captured separately),
+    // so notify the waitlist. Wrapped defensively: a notify failure must never
+    // throw past the refund logic below, so the reject, slot restore, and
+    // refund all still complete. All three notify call sites (here,
+    // partialCancelBooking, cancelBooking) are wrapped the same way.
     try {
       await notifyWaitlistSlotOpened(trip.id, {
         title: trip.title,
@@ -1697,17 +1728,22 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
       .eq("id", booking.payout_id);
   }
 
-  await admin.rpc("restore_slot", {
+  const { error: restoreSlotError } = await admin.rpc("restore_slot", {
     p_trip_id: booking.trip_id,
     p_slots_requested: slotsToCancel,
   });
+  // A restore failure is captured for manual remediation and must not strand the refund below.
+  if (restoreSlotError) {
+    console.error("[partialCancelBooking] restore_slot failed:", restoreSlotError);
+    Sentry.captureException(restoreSlotError, {
+      extra: { context: "partialCancel-restore-slot-failed", bookingId, tripId: booking.trip_id, slots: slotsToCancel },
+    });
+  }
 
-  // A slot genuinely opened (restore_slot above), so notify the waitlist.
-  // Wrapped defensively: a notify failure must never throw past the refund and
-  // participant cleanup below, so the partial cancel, slot restore, and refund
-  // all still complete. (cancelBooking calls this unguarded and has the same
-  // latent risk - a pre-existing issue worth a separate follow-up; not changed
-  // in this stage.)
+  // The slot restore was attempted above (a failure is captured separately),
+  // so notify the waitlist. Wrapped defensively: a notify failure must never
+  // throw past the refund and participant cleanup below, so the partial
+  // cancel, slot restore, and refund all still complete.
   if (tripDateCheck) {
     try {
       await notifyWaitlistSlotOpened(booking.trip_id, {
