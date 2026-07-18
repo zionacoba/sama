@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { amountSamaHolds, isPayoutEligible, payoutTimingGate, todayManilaDate } from "@/lib/booking-finance";
 import { ATTENDED_STATUSES } from "@/lib/booking-status";
+import { organizerOwns } from "@/lib/authz";
 import { DashboardFilters } from "./dashboard-filters";
 import { TripRow, TripRunRow, type OrganizerTrip, type TripCounts } from "./trip-row";
 import { RespondToReviewForm } from "@/app/organizers/[id]/respond-to-review-form";
@@ -131,9 +132,10 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     const [{ data: unpaidRaw }, { data: payoutsRaw }, { data: deductionsRaw }] = await Promise.all([
       admin
         .from("bookings")
-        .select("id, slots, status, total_amount, amount_due, platform_commission, commission_rate_used, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, created_at, trip:trips!bookings_trip_id_fkey(title, date_start, organizer_id)")
+        .select("id, slots, status, total_amount, amount_due, platform_commission, commission_rate_used, payment_option, balance_collected, payment_gateway_status, balance_payment_gateway_status, created_at, trip:trips!bookings_trip_id_fkey!inner(title, date_start, organizer_id)")
         .in("status", [...ATTENDED_STATUSES])
-        .eq("payout_status", "unpaid") as unknown as Promise<{
+        .eq("payout_status", "unpaid")
+        .eq("trip.organizer_id", organizer.id) as unknown as Promise<{
           data: Array<{
             id: number;
             slots: number;
@@ -184,8 +186,10 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
     // and confirmed bookings whose payment was never received online are not.
     const myUnpaid = (unpaidRaw ?? []).filter(
       (b) =>
+        // Tenancy is already scoped at the DB via .eq("trip.organizer_id").
+        // This repeats the check by design: defense-in-depth on a money surface.
         b.trip != null &&
-        b.trip.organizer_id === organizer.id &&
+        organizerOwns(b.trip.organizer_id, organizer.id) &&
         payoutTimingGate(b, todayStr).payable &&
         isPayoutEligible(b),
     );
