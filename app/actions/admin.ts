@@ -58,7 +58,16 @@ export async function approveOrganizer(id: string, ratePercent: number): Promise
   }
 
   const rate = Number((commissionRatePercent / 100).toFixed(4));
-  await admin.from("organizers").update({ status: "approved", commission_rate: rate }).eq("id", id);
+  const { error: statusUpdateError } = await admin.from("organizers").update({ status: "approved", commission_rate: rate }).eq("id", id);
+
+  if (statusUpdateError) {
+    console.error("[approveOrganizer] status update failed:", statusUpdateError);
+    Sentry.captureException(statusUpdateError, {
+      extra: { context: "approveOrganizer-status-update-failed", organizerId: id },
+    });
+    redirect("/admin?tab=organizers&orgActionError=approve_failed");
+  }
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
   try {
@@ -110,7 +119,12 @@ export async function rejectOrganizer(id: string): Promise<void> {
       extra: { context: "rejectOrganizer-organizer-fetch-failed", organizerId: id },
     });
   }
-  if (!organizer) return;
+  if (!organizer) {
+    Sentry.captureException(new Error("rejectOrganizer: organizer not found"), {
+      extra: { context: "rejectOrganizer-organizer-missing", organizerId: id },
+    });
+    redirect("/admin?tab=organizers&orgActionError=organizer_missing");
+  }
 
   // Fetch active trips before writing the rejection: if this fetch fails we
   // return without marking the organizer rejected, so the unpublish/cancel
@@ -136,10 +150,18 @@ export async function rejectOrganizer(id: string): Promise<void> {
         },
       },
     );
-    return;
+    redirect("/admin?tab=organizers&orgActionError=reject_failed");
   }
 
-  await admin.from("organizers").update({ status: "rejected" }).eq("id", id);
+  const { error: rejectStatusError } = await admin.from("organizers").update({ status: "rejected" }).eq("id", id);
+
+  if (rejectStatusError) {
+    console.error("[rejectOrganizer] status update failed:", rejectStatusError);
+    Sentry.captureException(rejectStatusError, {
+      extra: { context: "rejectOrganizer-status-update-failed", organizerId: id },
+    });
+    redirect("/admin?tab=organizers&orgActionError=reject_failed");
+  }
 
   const tripIds = activeTrips.map((t) => t.id);
 
@@ -485,7 +507,15 @@ export async function updateCommissionRate(formData: FormData): Promise<void> {
 
   const rate = Number((ratePercent / 100).toFixed(4));
   const admin = createSupabaseAdminClient();
-  await admin.from("organizers").update({ commission_rate: rate }).eq("id", organizerId);
+  const { error: rateUpdateError } = await admin.from("organizers").update({ commission_rate: rate }).eq("id", organizerId);
+
+  if (rateUpdateError) {
+    console.error("[updateCommissionRate] rate update failed:", rateUpdateError);
+    Sentry.captureException(rateUpdateError, {
+      extra: { context: "updateCommissionRate-rate-update-failed", organizerId, rate },
+    });
+    redirect("/admin?tab=organizers&orgActionError=rate_update_failed");
+  }
 
   revalidatePath("/admin");
   redirect("/admin?tab=organizers&_r=" + Date.now());

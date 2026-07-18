@@ -30,7 +30,7 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 const PAGE_SIZE = 20;
 
 type PageProps = {
-  searchParams: Promise<{ tab?: string; page?: string; commissionError?: string; payoutError?: string; orgFilter?: string; reviewError?: string; opsError?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string; commissionError?: string; orgActionError?: string; payoutError?: string; orgFilter?: string; reviewError?: string; opsError?: string }>;
 };
 
 type OrganizerApplication = {
@@ -338,7 +338,7 @@ function PayoutHistoryTable({ history }: { history: PayoutHistoryEntry[] }) {
 }
 
 export default async function AdminPage({ searchParams }: PageProps) {
-  const { tab = "summary", page: pageParam, commissionError, payoutError, orgFilter = "pending", reviewError, opsError } = await searchParams;
+  const { tab = "summary", page: pageParam, commissionError, orgActionError, payoutError, orgFilter = "pending", reviewError, opsError } = await searchParams;
   const activeTab = tab === "bookings" ? "bookings" : tab === "organizers" ? "organizers" : tab === "payouts" ? "payouts" : tab === "reviews" ? "reviews" : tab === "operations" ? "operations" : "summary";
   const page = Math.max(1, Number(pageParam) || 1);
 
@@ -694,6 +694,19 @@ export default async function AdminPage({ searchParams }: PageProps) {
             {commissionError && (
               <p role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                 Invalid commission rate. Must be between {COMMISSION_RATE_MIN_PERCENT}% and {COMMISSION_RATE_MAX_PERCENT}%.
+              </p>
+            )}
+            {orgActionError && (
+              <p role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {orgActionError === "approve_failed"
+                  ? "Approving the organizer failed. They were not approved and no email was sent. Please retry."
+                  : orgActionError === "reject_failed"
+                    ? "Rejecting the organizer failed before any trips or bookings were changed. Nothing was modified. Please retry."
+                    : orgActionError === "organizer_missing"
+                      ? "That organizer could not be found. No action was taken."
+                      : orgActionError === "rate_update_failed"
+                        ? "Updating the commission rate failed. The rate was not changed. Please retry."
+                        : "An error occurred. Please try again."}
               </p>
             )}
             {orgError && (
