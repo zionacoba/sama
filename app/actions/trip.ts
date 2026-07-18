@@ -1157,6 +1157,9 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
       const creditReversal = await reverseBookingCredit(admin, booking.id, trip.organizer_id, balanceRefund);
       if (creditReversal.error) {
         console.error("[credit-reversal] failed to reverse organizer credit", booking.id, creditReversal.error);
+        Sentry.captureException(new Error(creditReversal.error), {
+          extra: { context: "cancel-trip-credit-reversal-failed", bookingId: booking.id, tripId: trip.id, organizerId: trip.organizer_id },
+        });
         await sendAdminAlert(
           "Action needed: failed to reverse organizer credit on trip cancellation",
           `
