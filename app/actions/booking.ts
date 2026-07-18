@@ -359,10 +359,19 @@ export async function createBooking(input: CreateBookingInput) {
   // Free trips: skip PayMongo and confirm immediately.
   if (computedAmountDue === 0) {
     const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
-    await admin
+    // Fail closed: an unconfirmed booking is reclaimed by cleanup-abandoned-payments.
+    const { error: confirmError } = await admin
       .from("bookings")
       .update({ status: autoApprove ? "confirmed" : "pending" })
       .eq("id", newBooking.id);
+
+    if (confirmError) {
+      console.error("[createBooking] free-trip confirm update failed:", confirmError);
+      Sentry.captureException(confirmError, {
+        extra: { context: "createBooking-free-trip-confirm-failed", bookingId: newBooking.id, tripId: trip.id },
+      });
+      return { error: "Booking failed. Please try again or contact support." };
+    }
 
     const tripDate = new Intl.DateTimeFormat("en-PH", {
       weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila",
