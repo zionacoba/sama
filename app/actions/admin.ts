@@ -1295,6 +1295,23 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
   if (!payout) redirect("/admin?tab=payouts&payoutError=notfound");
 
   const now = new Date().toISOString();
+
+  // Stamp bookings first so a failure here leaves the payout pending and
+  // retryable. The re-stamp is idempotent, and the pending guard on the
+  // payout flip below makes the retry exact.
+  const { error: bookingStampError } = await admin
+    .from("bookings")
+    .update({ payout_status: "remitted" })
+    .in("id", payout.booking_ids);
+
+  if (bookingStampError) {
+    console.error("[markPayoutRemitted] booking stamp failed:", bookingStampError);
+    Sentry.captureException(bookingStampError, {
+      extra: { context: "markPayoutRemitted-booking-stamp-failed", payoutId, booking_ids: payout.booking_ids },
+    });
+    redirect("/admin?tab=payouts&payoutError=stamp_failed");
+  }
+
   const { data: updatedPayout, error: updateError } = await admin
     .from("payouts" as "trips")
     .update({ status: "remitted", remitted_at: now, remittance_reference: remittanceReference, notes, updated_at: now })
@@ -1310,11 +1327,6 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
     });
     redirect("/admin?tab=payouts&payoutError=already_remitted");
   }
-
-  await admin
-    .from("bookings")
-    .update({ payout_status: "remitted" })
-    .in("id", payout.booking_ids);
 
   // Fetch trip date range for the email.
   const { data: tripRows, error: tripRowsError } = await admin
