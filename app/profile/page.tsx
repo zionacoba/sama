@@ -301,7 +301,7 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
 
   let reviewedBookingIds = new Set<number>();
   if (pastConfirmedBookingIds.length > 0) {
-    const { data: reviewsData } = await supabase
+    const { data: reviewsData } = await admin
       .from("reviews")
       .select("booking_id")
       .eq("user_id", user.id)

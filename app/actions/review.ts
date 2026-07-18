@@ -57,12 +57,19 @@ export async function submitReview(
     return { error: "You can only leave a review after the trip has taken place." };
   }
 
-  const { data: organizer } = await admin
+  const { data: organizer, error: selfReviewError } = await admin
     .from("organizers")
     .select("id")
     .eq("user_id", user.id)
     .eq("id", tripForDate.organizer_id)
     .maybeSingle();
+  if (selfReviewError) {
+    console.error("[submit-review] self-review guard failed:", selfReviewError);
+    Sentry.captureException(selfReviewError, {
+      extra: { context: "submit-review-self-review-guard-failed", tripId, userId: user.id },
+    });
+    return { error: "Something went wrong submitting your review. Please try again." };
+  }
   if (organizer) return { error: "Organizers cannot review their own trips." };
 
   // If a booking_id is provided, verify it represents a paid attendee of a
@@ -99,12 +106,19 @@ export async function submitReview(
   }
 
   // Check for duplicate review on this trip by this user
-  const { data: existing } = await supabase
+  const { data: existing, error: duplicateCheckError } = await admin
     .from("reviews")
     .select("id")
     .eq("user_id", user.id)
     .eq("trip_id", tripId)
     .maybeSingle();
+  if (duplicateCheckError) {
+    console.error("[submit-review] duplicate guard failed:", duplicateCheckError);
+    Sentry.captureException(duplicateCheckError, {
+      extra: { context: "submit-review-duplicate-guard-failed", tripId, userId: user.id },
+    });
+    return { error: "Something went wrong submitting your review. Please try again." };
+  }
   if (existing) return { error: "You've already reviewed this trip." };
 
   const metadataFullName =
@@ -125,7 +139,10 @@ export async function submitReview(
     ...(bookingId ? { booking_id: bookingId } : {}),
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505") return { error: "You've already reviewed this trip." };
+    return { error: "Something went wrong submitting your review. Please try again." };
+  }
 
   // Notify the organizer of the new review.
   try {
