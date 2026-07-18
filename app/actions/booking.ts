@@ -758,6 +758,15 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
       Sentry.captureException(new Error(`updateBookingStatus reject refund requires manual processing: ${rejectRefundResult.error ?? "Unknown error"}`), {
         extra: { context: "reject-refund-manual-required", bookingId },
       });
+      await sendAdminAlert(
+        "Action needed: manual refund required on a rejected booking",
+        `
+              <p>A rejected booking's refund could not be processed automatically and requires manual handling.</p>
+              <p><strong>Booking ID:</strong> ${bookingId}</p>
+              <p><strong>Error:</strong> ${escapeHtml(String(rejectRefundResult.error ?? "Unknown error"))}</p>
+              <p>This also appears in the admin operations tab and the daily digest.</p>
+            `,
+      );
     }
   }
 
