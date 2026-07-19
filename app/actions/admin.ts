@@ -1130,6 +1130,10 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
     }
   }
 
+  // These branches capture-and-flag instead of failing closed. The payout
+  // already exists, so surfacing an error would invite an admin retry that
+  // creates a second payout. The pending rows stay re-appliable into the next
+  // payout until a human reconciles the flagged payout.
   // Mark applied deductions now that the payout was created successfully.
   if (deductionIdsToApply.length > 0 && payoutId) {
     const { error: deductionUpdateError } = await (admin
@@ -1139,6 +1143,19 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
       .in("id", deductionIdsToApply) as unknown as Promise<{ error: { message: string } | null }>);
     if (deductionUpdateError) {
       console.error("[createPayout] failed to mark deductions as applied:", deductionUpdateError.message);
+      Sentry.captureException(deductionUpdateError, {
+        extra: { context: "createPayout-mark-deductions-applied-failed", payoutId, deductionIds: deductionIdsToApply },
+      });
+      const { error: flagError } = await (admin
+        .from("payouts" as "trips")
+        .update({ needs_reconciliation: true } as never)
+        .eq("id", payoutId) as unknown as Promise<{ error: { message: string } | null }>);
+      if (flagError) {
+        console.error("[createPayout] failed to flag payout for reconciliation:", flagError.message);
+        Sentry.captureException(flagError, {
+          extra: { context: "createPayout-reconciliation-flag-failed", payoutId },
+        });
+      }
     }
   }
 
@@ -1153,6 +1170,19 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
       .in("id", creditIdsToApply) as unknown as Promise<{ error: { message: string } | null }>);
     if (creditUpdateError) {
       console.error("[createPayout] failed to mark credits as applied:", creditUpdateError.message);
+      Sentry.captureException(creditUpdateError, {
+        extra: { context: "createPayout-mark-credits-applied-failed", payoutId, creditIds: creditIdsToApply },
+      });
+      const { error: flagError } = await (admin
+        .from("payouts" as "trips")
+        .update({ needs_reconciliation: true } as never)
+        .eq("id", payoutId) as unknown as Promise<{ error: { message: string } | null }>);
+      if (flagError) {
+        console.error("[createPayout] failed to flag payout for reconciliation:", flagError.message);
+        Sentry.captureException(flagError, {
+          extra: { context: "createPayout-reconciliation-flag-failed", payoutId },
+        });
+      }
     }
   }
 
