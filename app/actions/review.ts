@@ -259,7 +259,7 @@ export async function respondToReview(
     })
     .eq("id", reviewId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: "Something went wrong saving your response. Please try again." };
 
   const { data: trip, error: tripFetchError } = await admin
     .from("trips")
