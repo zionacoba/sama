@@ -959,7 +959,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
                         ? "Your selection contained bookings that are no longer eligible for payout (the trip has not yet taken place, payment was not received, or they were already paid out). The list may be out of date. Please refresh and try again."
                         : payoutError === "stamp_failed"
                           ? "Marking remitted failed before the payout was flipped. The payout is still pending. Fix the error and retry; no money state was changed."
-                          : "An error occurred. Please try again."}
+                          : payoutError === "adjustments_changed"
+                            ? "The organizer's deductions or credits changed while the payout was being created. Nothing was created. Please review the adjustments and try again."
+                            : "An error occurred. Please try again."}
               </p>
             )}
 

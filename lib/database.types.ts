@@ -895,6 +895,8 @@ export type Database = {
       create_payout_atomic: {
         Args: {
           p_booking_ids: number[]
+          p_credit_ids: string[]
+          p_deduction_ids: string[]
           p_net_amount: number
           p_organizer_id: string
           p_platform_commission: number

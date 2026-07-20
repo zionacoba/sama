@@ -1078,9 +1078,18 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
     p_total_amount: totalAmount,
     p_platform_commission: totalCommission,
     p_net_amount: adjustedNetAmount,
+    p_deduction_ids: deductionIdsToApply,
+    p_credit_ids: creditIdsToApply,
   }) as unknown as { data: string | null; error: { message: string } | null };
 
   if (error || !payoutId) {
+    if (error?.message?.includes("adjustment_state_changed")) {
+      console.error("[createPayout] adjustment state changed under the payout; rolled back:", error.message);
+      Sentry.captureException(error, {
+        extra: { context: "createPayoutAction-adjustment-state-changed", organizerId },
+      });
+      redirect("/admin?tab=payouts&payoutError=adjustments_changed");
+    }
     console.error("[createPayout] RPC failed:", error?.message);
     Sentry.captureException(error ?? new Error("create_payout_atomic returned no payout id"), {
       extra: { context: "createPayoutAction-rpc-failed", organizerId },
@@ -1127,62 +1136,6 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
             <p>Please update the payout_destination field manually via the database console.</p>
           `,
       );
-    }
-  }
-
-  // These branches capture-and-flag instead of failing closed. The payout
-  // already exists, so surfacing an error would invite an admin retry that
-  // creates a second payout. The pending rows stay re-appliable into the next
-  // payout until a human reconciles the flagged payout.
-  // Mark applied deductions now that the payout was created successfully.
-  if (deductionIdsToApply.length > 0 && payoutId) {
-    const { error: deductionUpdateError } = await (admin
-      .from("organizer_deductions" as "trips")
-      .update({ status: "applied", applied_payout_id: payoutId } as never)
-      .eq("status", "pending")
-      .in("id", deductionIdsToApply) as unknown as Promise<{ error: { message: string } | null }>);
-    if (deductionUpdateError) {
-      console.error("[createPayout] failed to mark deductions as applied:", deductionUpdateError.message);
-      Sentry.captureException(deductionUpdateError, {
-        extra: { context: "createPayout-mark-deductions-applied-failed", payoutId, deductionIds: deductionIdsToApply },
-      });
-      const { error: flagError } = await (admin
-        .from("payouts" as "trips")
-        .update({ needs_reconciliation: true } as never)
-        .eq("id", payoutId) as unknown as Promise<{ error: { message: string } | null }>);
-      if (flagError) {
-        console.error("[createPayout] failed to flag payout for reconciliation:", flagError.message);
-        Sentry.captureException(flagError, {
-          extra: { context: "createPayout-reconciliation-flag-failed", payoutId },
-        });
-      }
-    }
-  }
-
-  // Mark applied credits now that the payout was created successfully. Mirrors
-  // the deduction marking exactly so an applied credit cannot be double-counted
-  // in a later payout.
-  if (creditIdsToApply.length > 0 && payoutId) {
-    const { error: creditUpdateError } = await (admin
-      .from("organizer_credits" as "trips")
-      .update({ status: "applied", applied_payout_id: payoutId } as never)
-      .eq("status", "pending")
-      .in("id", creditIdsToApply) as unknown as Promise<{ error: { message: string } | null }>);
-    if (creditUpdateError) {
-      console.error("[createPayout] failed to mark credits as applied:", creditUpdateError.message);
-      Sentry.captureException(creditUpdateError, {
-        extra: { context: "createPayout-mark-credits-applied-failed", payoutId, creditIds: creditIdsToApply },
-      });
-      const { error: flagError } = await (admin
-        .from("payouts" as "trips")
-        .update({ needs_reconciliation: true } as never)
-        .eq("id", payoutId) as unknown as Promise<{ error: { message: string } | null }>);
-      if (flagError) {
-        console.error("[createPayout] failed to flag payout for reconciliation:", flagError.message);
-        Sentry.captureException(flagError, {
-          extra: { context: "createPayout-reconciliation-flag-failed", payoutId },
-        });
-      }
     }
   }
 
