@@ -14,6 +14,7 @@ import { cancellationRefundLine } from "@/lib/refund-email-copy";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
 import { resolveCancellationCascade } from "@/lib/cancellation-cascade";
+import { resolvePayoutRemittedGate } from "@/lib/payout-remitted-gate";
 import { computeTripCancelSummary, type TripCancelSummary } from "@/lib/trip-cancel-summary";
 import { resolveTripSlotSummary, isActiveCapacityChange, type TripSlotSummary } from "@/lib/trip-slot-summary";
 import { SLOT_CONSUMING_STATUSES, SLOT_HOLDING_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
@@ -1014,6 +1015,32 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
   if (trip.status !== "active") return { error: "Only active trips can be cancelled." };
   const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
   if (trip.date_start < todayPH) return { error: "This trip has already taken place and cannot be cancelled." };
+
+  // Block self-serve cancellation once any booking on this trip has been paid
+  // out to the organizer. A remitted payout is money already sent, so it needs
+  // manual handling. Only 'remitted' gates here: a pending (included) payout is
+  // not yet disbursed and is covered by the per-booking reconciliation flag below.
+  const { data: remittedRows, error: remittedGateError } = await admin
+    .from("bookings")
+    .select("id")
+    .eq("trip_id", trip.id)
+    .eq("payout_status", "remitted")
+    .limit(1);
+
+  const payoutGate = resolvePayoutRemittedGate(remittedRows, remittedGateError);
+  if (payoutGate.kind === "fetch-error" || payoutGate.kind === "missing-data") {
+    console.error("[cancel-trip] payout gate fetch failed:", remittedGateError ?? "no rows returned");
+    Sentry.captureException(
+      remittedGateError ?? new Error(`cancelTrip payout gate returned null rows for trip ${trip.id}`),
+      {
+        extra: { context: "cancel-trip-payout-gate-fetch-failed", tripId: trip.id },
+      },
+    );
+    return { error: "Could not verify this trip's payout status. Please try again." };
+  }
+  if (payoutGate.kind === "payout-remitted") {
+    return { error: "This trip has a payout that has already been sent, so it cannot be cancelled here. Please email hello@sama.com.ph and we will help you cancel it." };
+  }
 
   const { error: tripCancelError } = await admin
     .from("trips")
