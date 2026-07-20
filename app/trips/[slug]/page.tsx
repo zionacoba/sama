@@ -21,6 +21,9 @@ import { DifficultyInfoButton } from "@/app/components/difficulty-info";
 
 export const revalidate = 30;
 
+// Identifies the Sama Adventures demonstration profile
+const DEMO_ORGANIZER_ID = "170435a9-dd67-46d7-b744-6448d8e422e8";
+
 type TripDetail = {
   id: number;
   title: string;
@@ -491,6 +494,11 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
           {/* Main column */}
           <div className="space-y-4 pb-20 lg:pb-0">
+            {tripData.organizer_id === DEMO_ORGANIZER_ID && (
+              <div className="rounded-xl border border-stone-100 bg-stone-50 px-4 py-3 text-sm text-stone-500">
+                This is a demonstration trip by Sama to show how listings work.
+              </div>
+            )}
             <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
               <h2 className="text-base font-bold text-stone-900">Overview</h2>
               <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-stone-600">{tripData.description}</p>
