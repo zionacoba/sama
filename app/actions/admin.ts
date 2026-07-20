@@ -50,7 +50,12 @@ export async function approveOrganizer(id: string, ratePercent: number): Promise
       extra: { context: "approveOrganizer-organizer-fetch-failed", organizerId: id },
     });
   }
-  if (!organizer) return;
+  if (!organizer) {
+    Sentry.captureException(new Error("approveOrganizer: organizer not found"), {
+      extra: { context: "approveOrganizer-organizer-missing", organizerId: id },
+    });
+    redirect("/admin?tab=organizers&orgActionError=organizer_missing");
+  }
 
   // Idempotency guard - skip DB write and email if already approved.
   if (organizer.status === "approved") {
@@ -127,8 +132,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
   }
 
   // Fetch active trips before writing the rejection: if this fetch fails we
-  // return without marking the organizer rejected, so the unpublish/cancel
-  // cascade below can never be silently skipped on an already-rejected row.
+  // redirect without marking the organizer rejected, so the unpublish/cancel cascade below is never silently skipped on an already-rejected row.
   const { data: activeTrips, error: activeTripsError } = await admin
     .from("trips")
     .select("id, title, slug")
