@@ -902,7 +902,7 @@ export async function publishTrip(tripSlug: string): Promise<{ error: string } |
   const hasGcash = organizer.payout_method === "gcash" && !!organizer.gcash_number;
   const hasBank = organizer.payout_method === "bank_transfer" && !!organizer.bank_account_number;
   if (!hasGcash && !hasBank) {
-    return { error: "Please add your payout details (GCash or bank account) in your organizer profile before publishing." };
+    return { error: "Please add your payout details (GCash or bank account) in your organizer profile before publishing a trip. This is required to receive payments from bookings." };
   }
 
   // Write through the admin client. Authorization is enforced in code: the
