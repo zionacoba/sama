@@ -166,10 +166,26 @@ export async function confirmPaidBooking(
           });
           if (refundInsertError) {
             console.error(`[confirm-paid-booking] failed to record manual refund row for booking ${booking.id}:`, refundInsertError.message);
+            Sentry.captureException(refundInsertError, {
+              extra: {
+                context: "confirm-paid-manual-refund-insert-failed",
+                bookingId: booking.id,
+                linkId,
+                amount: booking.amount_due,
+              },
+            });
           }
         }
       } catch (refundErr) {
         console.error(`[confirm-paid-booking] error recording manual refund row for booking ${booking.id}:`, refundErr);
+        Sentry.captureException(refundErr, {
+          extra: {
+            context: "confirm-paid-manual-refund-insert-failed",
+            bookingId: booking.id,
+            linkId,
+            amount: booking.amount_due,
+          },
+        });
       }
 
       await sendAdminAlert(
