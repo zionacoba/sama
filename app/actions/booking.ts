@@ -541,10 +541,20 @@ export async function createBooking(input: CreateBookingInput) {
     }
 
     checkoutUrl = linkResult.checkoutUrl;
-    await admin
+    // The checkout session is already live and the joiner holds its URL before
+    // this write, so a failed store is logged for observability only. We do not
+    // fail closed or change the return value; the webhook-side bookingId
+    // fallback in confirmPaidBooking is the recovery path if this id is lost.
+    const { error: paymentIdStoreError } = await admin
       .from("bookings")
       .update({ payment_id: linkResult.linkId })
       .eq("id", newBooking.id);
+    if (paymentIdStoreError) {
+      console.error("[createBooking] payment_id store failed:", paymentIdStoreError);
+      Sentry.captureException(paymentIdStoreError, {
+        extra: { context: "createBooking-payment-id-store-failed", bookingId: newBooking.id, checkoutSessionId: linkResult.linkId },
+      });
+    }
   } catch (err) {
     console.error("[createBooking] payment link error:", err);
     Sentry.captureException(err, {
@@ -1075,10 +1085,20 @@ export async function createBalancePaymentLink(bookingId: number): Promise<{ suc
       return { error: "Failed to create payment link. Please try again." };
     }
 
-    await admin
+    // The checkout session is already live and the joiner holds its URL before
+    // this write, so a failed store is logged for observability only. We do not
+    // fail closed or change the return value; the webhook-side bookingId
+    // fallback in confirmPaidBalance is the recovery path if this id is lost.
+    const { error: balancePaymentIdStoreError } = await admin
       .from("bookings")
       .update({ balance_payment_id: linkResult.linkId })
       .eq("id", bookingId);
+    if (balancePaymentIdStoreError) {
+      console.error("[createBalancePaymentLink] balance_payment_id store failed:", balancePaymentIdStoreError);
+      Sentry.captureException(balancePaymentIdStoreError, {
+        extra: { context: "createBalancePaymentLink-balance-payment-id-store-failed", bookingId, checkoutSessionId: linkResult.linkId },
+      });
+    }
 
     return { success: true, checkoutUrl: linkResult.checkoutUrl };
   } catch (err) {
@@ -1239,10 +1259,20 @@ export async function resumeBookingPayment(bookingId: number): Promise<{ success
       return { error: "Failed to create payment link. Please try again." };
     }
 
-    await admin
+    // The checkout session is already live and the joiner holds its URL before
+    // this write, so a failed store is logged for observability only. We do not
+    // fail closed or change the return value; the webhook-side bookingId
+    // fallback in confirmPaidBooking is the recovery path if this id is lost.
+    const { error: paymentIdStoreError } = await admin
       .from("bookings")
       .update({ payment_id: linkResult.linkId })
       .eq("id", bookingId);
+    if (paymentIdStoreError) {
+      console.error("[resumeBookingPayment] payment_id store failed:", paymentIdStoreError);
+      Sentry.captureException(paymentIdStoreError, {
+        extra: { context: "resumeBookingPayment-payment-id-store-failed", bookingId, checkoutSessionId: linkResult.linkId },
+      });
+    }
 
     return { success: true, checkoutUrl: linkResult.checkoutUrl };
   } catch (err) {

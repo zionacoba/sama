@@ -165,16 +165,23 @@ async function handleCheckoutSessionPaymentPaid(attrs: Record<string, unknown>) 
   // failed attempt earlier in the array can never supply the details.
   const payments = sessionAttrs?.payments as unknown[] | undefined;
   const paidPayments = filterPaidPayments(payments);
-  const { paymentMethod, paymentTransactionId } = extractPaymentDetails(
+  const { paymentMethod, paymentTransactionId, paidAmountCentavos } = extractPaymentDetails(
     paidPayments.length > 0 ? paidPayments : payments,
   );
 
+  // metadata.bookingId is stamped on the session at mint time
+  // (createPaymentCheckout). It is the recovery key when a paid event's cs_ id
+  // was never stored on the booking row, so the confirm chain can still resolve
+  // the booking and route the payment to the correct leg.
+  const sessionMetadata = sessionAttrs?.metadata as Record<string, unknown> | undefined;
+  const metadataBookingId = (sessionMetadata?.bookingId as string) ?? null;
+
   // Same idempotent confirm chain as the link handler: initial payment first,
   // then fall back to the balance payment when no initial booking matches.
-  const result = await confirmPaidBooking(sessionId, paymentMethod, paymentTransactionId);
+  const result = await confirmPaidBooking(sessionId, paymentMethod, paymentTransactionId, metadataBookingId, paidAmountCentavos);
 
   if (result.outcome === "not_found") {
-    const balanceResult = await confirmPaidBalance(sessionId, paymentTransactionId);
+    const balanceResult = await confirmPaidBalance(sessionId, paymentTransactionId, undefined, metadataBookingId, paidAmountCentavos);
     if (balanceResult.outcome === "not_found") {
       console.error("[webhook] no booking found for checkout session (initial or balance):", sessionId);
     }

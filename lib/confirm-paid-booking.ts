@@ -6,6 +6,7 @@ import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 import { filterPaidPayments, deriveCheckoutPaymentStatus } from "@/lib/paymongo-checkout";
+import { resolvePaidSessionFallback } from "@/lib/confirm-fallback-resolver";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
@@ -14,11 +15,12 @@ export type ConfirmOutcome =
   | "already_paid"
   | "cancelled_needs_refund"
   | "not_found"
+  | "held_needs_review"
   | "skipped";
 
 export type ConfirmResult = { outcome: ConfirmOutcome };
 
-export type ConfirmBalanceOutcome = "confirmed" | "already_paid" | "not_found";
+export type ConfirmBalanceOutcome = "confirmed" | "already_paid" | "not_found" | "held_needs_review";
 
 export type ConfirmBalanceResult = { outcome: ConfirmBalanceOutcome };
 
@@ -32,9 +34,10 @@ export type ConfirmBalanceResult = { outcome: ConfirmBalanceOutcome };
  */
 export function extractPaymentDetails(
   payments: unknown[] | undefined,
-): { paymentMethod: string | null; paymentTransactionId: string | null } {
+): { paymentMethod: string | null; paymentTransactionId: string | null; paidAmountCentavos: number | null } {
   let paymentMethod: string | null = null;
   let paymentTransactionId: string | null = null;
+  let paidAmountCentavos: number | null = null;
   if (payments && payments.length > 0) {
     const first = payments[0] as Record<string, unknown>;
     const resource = (first.data ?? first) as Record<string, unknown>;
@@ -42,8 +45,13 @@ export function extractPaymentDetails(
     const pAttrs = resource.attributes as Record<string, unknown> | undefined;
     const source = pAttrs?.source as Record<string, unknown> | undefined;
     paymentMethod = (source?.type as string) ?? null;
+    // Amount in centavos, read from the same payment resource the transaction
+    // id came from. Null when absent or non-numeric so the amount belt holds
+    // rather than confirms on an unreadable amount.
+    const rawAmount = pAttrs?.amount;
+    paidAmountCentavos = typeof rawAmount === "number" && Number.isFinite(rawAmount) ? rawAmount : null;
   }
-  return { paymentMethod, paymentTransactionId };
+  return { paymentMethod, paymentTransactionId, paidAmountCentavos };
 }
 
 export type PaymongoCheckoutPayment = {
@@ -103,19 +111,85 @@ export async function confirmPaidBooking(
   linkId: string,
   paymentMethod: string | null,
   paymentTransactionId: string | null,
+  metadataBookingId: string | null = null,
+  paidAmountCentavos: number | null = null,
 ): Promise<ConfirmResult> {
   const admin = createSupabaseAdminClient();
 
-  const { data: booking } = await admin
+  let { data: booking } = await admin
     .from("bookings")
     .select("id, trip_id, full_name, email, slots, total_amount, amount_due, payment_option, meeting_point, payment_gateway_status, status, cancellation_policy")
     .eq("payment_id", linkId)
     .maybeSingle();
 
   if (!booking) {
-    // No initial-payment booking matches this link. The caller decides what to
-    // do next (e.g. the webhook checks for a balance payment).
-    return { outcome: "not_found" };
+    // Stored-id miss. Before giving up, try the metadata.bookingId recovery
+    // path: a paid event whose cs_ id was never stored (the store-write is
+    // best-effort) can still be matched to its booking by the id stamped on the
+    // session at mint time. Fail toward today's not-found on any doubt, never
+    // toward a blind confirm.
+    if (metadataBookingId === null) {
+      // No initial-payment booking matches this link. The caller decides what to
+      // do next (e.g. the webhook checks for a balance payment).
+      return { outcome: "not_found" };
+    }
+    const { data: fallbackBooking, error: fallbackError } = await admin
+      .from("bookings")
+      .select("id, trip_id, full_name, email, slots, total_amount, amount_due, payment_option, meeting_point, payment_gateway_status, balance_payment_gateway_status, status, cancellation_policy")
+      .eq("id", metadataBookingId)
+      .maybeSingle();
+    if (fallbackError) {
+      console.error(`[confirm-paid-booking] fallback fetch failed for booking ${metadataBookingId}:`, fallbackError.message);
+      Sentry.captureException(fallbackError, {
+        extra: { context: "confirm-paid-fallback-fetch-failed", bookingId: metadataBookingId, sessionId: linkId },
+      });
+      return { outcome: "not_found" };
+    }
+    if (!fallbackBooking) {
+      return { outcome: "not_found" };
+    }
+    const decision = resolvePaidSessionFallback({
+      paymentGatewayStatus: fallbackBooking.payment_gateway_status,
+      balancePaymentGatewayStatus: fallbackBooking.balance_payment_gateway_status,
+      amountDue: fallbackBooking.amount_due,
+      totalAmount: fallbackBooking.total_amount,
+      paidAmountCentavos,
+    });
+    if (decision.route === "confirm-initial") {
+      // A rescue firing means a store-write was lost and must be visible, not
+      // just silently healed. Continue into the normal confirmation flow below
+      // with the recovered row (its atomic guard still race-protects).
+      Sentry.captureException(
+        new Error(`confirmPaidBooking recovered a paid session via metadata fallback for booking ${fallbackBooking.id}`),
+        { extra: { context: "confirm-paid-fallback-recovered", bookingId: fallbackBooking.id, sessionId: linkId, leg: "initial" } },
+      );
+      booking = fallbackBooking;
+    } else if (decision.route === "hold" && decision.leg === "initial") {
+      // Money was received but the paid amount does not match (or is not
+      // readable for) the initial leg. Do NOT auto-confirm. Alert a human and
+      // return a handled result so the webhook does not retry.
+      console.warn(`[confirm-paid-booking] fallback held for booking ${fallbackBooking.id} (initial leg, ${decision.reason})`);
+      Sentry.captureException(
+        new Error(`confirmPaidBooking held a paid session via metadata fallback for booking ${fallbackBooking.id}: ${decision.reason}`),
+        { extra: { context: "confirm-paid-fallback-held", bookingId: fallbackBooking.id, sessionId: linkId, leg: "initial", reason: decision.reason } },
+      );
+      await sendAdminAlert(
+        "Action needed: paid session held, initial payment not auto-confirmed",
+        `
+              <p>A PayMongo payment was received but was NOT auto-confirmed because its amount did not match, or could not be read against, the expected initial payment for this booking.</p>
+              <p><strong>Booking ID:</strong> ${fallbackBooking.id}</p>
+              <p><strong>Checkout session ID:</strong> ${escapeHtml(linkId)}</p>
+              <p><strong>Leg:</strong> initial</p>
+              <p><strong>Reason:</strong> ${escapeHtml(decision.reason)}</p>
+              <p>Please review this payment in the PayMongo dashboard and confirm or refund the booking manually.</p>
+            `,
+      );
+      return { outcome: "held_needs_review" };
+    } else {
+      // route "none", "confirm-balance", or a balance-leg hold: not this
+      // function's leg. Let the chain's balance path own it.
+      return { outcome: "not_found" };
+    }
   }
 
   // Idempotency: skip if already processed.
@@ -515,16 +589,80 @@ export async function confirmPaidBalance(
   linkId: string,
   paymentTransactionId: string | null,
   admin: ReturnType<typeof createSupabaseAdminClient> = createSupabaseAdminClient(),
+  metadataBookingId: string | null = null,
+  paidAmountCentavos: number | null = null,
 ): Promise<ConfirmBalanceResult> {
-  const { data: booking } = await admin
+  let { data: booking } = await admin
     .from("bookings")
     .select("id, trip_id, full_name, email, total_amount, amount_due, balance_payment_gateway_status, payout_status")
     .eq("balance_payment_id", linkId)
     .maybeSingle();
 
   if (!booking) {
-    // No booking matches this balance link.
-    return { outcome: "not_found" };
+    // Stored-id miss. Try the metadata.bookingId recovery path before giving up
+    // (mirror of confirmPaidBooking). Fail toward not-found on any doubt, never
+    // toward a blind confirm.
+    if (metadataBookingId === null) {
+      // No booking matches this balance link.
+      return { outcome: "not_found" };
+    }
+    const { data: fallbackBooking, error: fallbackError } = await admin
+      .from("bookings")
+      .select("id, trip_id, full_name, email, total_amount, amount_due, payment_gateway_status, balance_payment_gateway_status, payout_status")
+      .eq("id", metadataBookingId)
+      .maybeSingle();
+    if (fallbackError) {
+      console.error(`[confirm-paid-balance] fallback fetch failed for booking ${metadataBookingId}:`, fallbackError.message);
+      Sentry.captureException(fallbackError, {
+        extra: { context: "confirm-paid-fallback-fetch-failed", bookingId: metadataBookingId, sessionId: linkId },
+      });
+      return { outcome: "not_found" };
+    }
+    if (!fallbackBooking) {
+      return { outcome: "not_found" };
+    }
+    const decision = resolvePaidSessionFallback({
+      paymentGatewayStatus: fallbackBooking.payment_gateway_status,
+      balancePaymentGatewayStatus: fallbackBooking.balance_payment_gateway_status,
+      amountDue: fallbackBooking.amount_due,
+      totalAmount: fallbackBooking.total_amount,
+      paidAmountCentavos,
+    });
+    if (decision.route === "confirm-balance") {
+      // A rescue firing means a store-write was lost and must be visible, not
+      // just silently healed. Continue into the normal flow below with the
+      // recovered row (its atomic guard still race-protects).
+      Sentry.captureException(
+        new Error(`confirmPaidBalance recovered a paid session via metadata fallback for booking ${fallbackBooking.id}`),
+        { extra: { context: "confirm-paid-fallback-recovered", bookingId: fallbackBooking.id, sessionId: linkId, leg: "balance" } },
+      );
+      booking = fallbackBooking;
+    } else if (decision.route === "hold" && decision.leg === "balance") {
+      // Money was received but the paid amount does not match (or is not
+      // readable for) the balance leg. Do NOT auto-confirm. Alert a human and
+      // return a handled result so the webhook does not retry.
+      console.warn(`[confirm-paid-balance] fallback held for booking ${fallbackBooking.id} (balance leg, ${decision.reason})`);
+      Sentry.captureException(
+        new Error(`confirmPaidBalance held a paid session via metadata fallback for booking ${fallbackBooking.id}: ${decision.reason}`),
+        { extra: { context: "confirm-paid-fallback-held", bookingId: fallbackBooking.id, sessionId: linkId, leg: "balance", reason: decision.reason } },
+      );
+      await sendAdminAlert(
+        "Action needed: paid session held, balance payment not auto-confirmed",
+        `
+              <p>A PayMongo payment was received but was NOT auto-confirmed because its amount did not match, or could not be read against, the expected balance payment for this booking.</p>
+              <p><strong>Booking ID:</strong> ${fallbackBooking.id}</p>
+              <p><strong>Checkout session ID:</strong> ${escapeHtml(linkId)}</p>
+              <p><strong>Leg:</strong> balance</p>
+              <p><strong>Reason:</strong> ${escapeHtml(decision.reason)}</p>
+              <p>Please review this payment in the PayMongo dashboard and confirm or refund the booking manually.</p>
+            `,
+      );
+      return { outcome: "held_needs_review" };
+    } else {
+      // route "none", "confirm-initial", or an initial-leg hold: not this
+      // function's leg. The chain's initial path owns it.
+      return { outcome: "not_found" };
+    }
   }
 
   // Idempotency: skip if already processed.
