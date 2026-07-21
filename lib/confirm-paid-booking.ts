@@ -122,11 +122,17 @@ export async function confirmPaidBooking(
 ): Promise<ConfirmResult> {
   const admin = createSupabaseAdminClient();
 
-  let { data: booking } = await admin
+  let { data: booking, error: bookingError } = await admin
     .from("bookings")
     .select("id, trip_id, full_name, email, slots, total_amount, amount_due, payment_option, meeting_point, payment_gateway_status, status, cancellation_policy")
     .eq("payment_id", linkId)
     .maybeSingle();
+
+  if (bookingError) {
+    Sentry.captureException(bookingError, {
+      extra: { context: "confirm-paid-booking-fetch-failed", linkId },
+    });
+  }
 
   if (!booking) {
     // Stored-id miss. Before giving up, try the metadata.bookingId recovery
@@ -289,11 +295,17 @@ export async function confirmPaidBooking(
     return { outcome: "skipped" };
   }
 
-  const { data: trip } = await admin
+  const { data: trip, error: tripError } = await admin
     .from("trips")
     .select("id, slug, title, date_start, difficulty, organizer_id, messenger_gc_link")
     .eq("id", booking.trip_id)
     .maybeSingle();
+
+  if (tripError) {
+    Sentry.captureException(tripError, {
+      extra: { context: "confirm-paid-trip-fetch-failed", bookingId: booking.id },
+    });
+  }
 
   if (!trip) {
     console.error("[confirm-paid-booking] trip not found for booking:", booking.id);
@@ -515,6 +527,9 @@ export async function confirmPaidBooking(
 
     if (participantsError) {
       console.error(`[confirm-paid-booking] participants fetch error for booking ${booking.id}:`, participantsError.message);
+      Sentry.captureException(participantsError, {
+        extra: { context: "confirm-paid-participants-fetch-failed", bookingId: booking.id },
+      });
     }
 
     if (incompleteParticipants && incompleteParticipants.length > 0) {
@@ -598,11 +613,17 @@ export async function confirmPaidBalance(
   metadataBookingId: string | null = null,
   paidAmountCentavos: number | null = null,
 ): Promise<ConfirmBalanceResult> {
-  let { data: booking } = await admin
+  let { data: booking, error: bookingError } = await admin
     .from("bookings")
     .select("id, trip_id, full_name, email, total_amount, amount_due, balance_payment_gateway_status, payout_status, status")
     .eq("balance_payment_id", linkId)
     .maybeSingle();
+
+  if (bookingError) {
+    Sentry.captureException(bookingError, {
+      extra: { context: "confirm-paid-balance-booking-fetch-failed", linkId },
+    });
+  }
 
   if (!booking) {
     // Stored-id miss. Try the metadata.bookingId recovery path before giving up
@@ -778,11 +799,17 @@ export async function confirmPaidBalance(
     return { outcome: "already_paid" };
   }
 
-  const { data: trip } = await admin
+  const { data: trip, error: tripError } = await admin
     .from("trips")
     .select("id, slug, title, date_start, organizer_id")
     .eq("id", booking.trip_id)
     .maybeSingle();
+
+  if (tripError) {
+    Sentry.captureException(tripError, {
+      extra: { context: "confirm-paid-balance-trip-fetch-failed", bookingId: booking.id },
+    });
+  }
 
   if (!trip) {
     console.error("[confirm-paid-balance] trip not found for balance booking:", booking.id);
@@ -803,6 +830,18 @@ export async function confirmPaidBalance(
 
   if (updateError) {
     console.error(`[confirm-paid-balance] balance payment DB update failed for booking ${booking.id}:`, updateError);
+    Sentry.captureException(updateError, {
+      extra: { context: "confirm-paid-balance-update-failed", bookingId: booking.id },
+    });
+    await sendAdminAlert(
+      "Action needed: balance payment received but marking it collected failed",
+      `
+            <p>A balance payment was received, but the database write marking it collected failed. The booking is not yet recorded as balance-paid.</p>
+            <p><strong>Booking ID:</strong> ${booking.id}</p>
+            <p><strong>Error:</strong> ${escapeHtml(updateError.message)}</p>
+            <p>The cleanup sweep will retry this automatically. If this alert repeats, human action is needed.</p>
+          `,
+    );
     // Could not act — report not_found so callers do not treat this as confirmed.
     return { outcome: "not_found" };
   }
