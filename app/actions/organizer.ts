@@ -9,6 +9,7 @@ import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { safeExternalUrl } from "@/lib/safe-url";
+import { resolveGuardCount, resolveGuardRows } from "@/lib/payout-details-guard";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
@@ -296,13 +297,20 @@ export async function updateOrganizerProfile(
 
   const admin = createSupabaseAdminClient();
 
-  const { data: takenName } = await admin
+  const { data: takenName, error: takenNameError } = await admin
     .from("organizers")
     .select("id")
     .ilike("display_name", display_name)
     .in("status", ["approved", "pending"])
     .neq("id", organizer.id)
     .maybeSingle();
+
+  if (takenNameError) {
+    Sentry.captureException(takenNameError, {
+      extra: { context: "update-organizer-profile-display-name-check-failed", organizerId: organizer.id },
+    });
+    return { error: "Something went wrong updating your profile. Please try again." };
+  }
 
   if (takenName) {
     return { error: "This display name is already taken. Please choose a different one." };
@@ -315,13 +323,22 @@ export async function updateOrganizerProfile(
     (payout_method === "bank_transfer" && !bank_account_number);
 
   if (wouldHaveNoPayout) {
-    const { count: pendingPayoutCount } = await (admin
+    const { count: pendingPayoutCount, error: pendingPayoutError } = await (admin
       .from("payouts" as "trips")
       .select("id", { count: "exact", head: true })
       .eq("organizer_id", organizer.id)
-      .eq("status", "pending") as unknown as Promise<{ count: number | null }>);
+      .eq("status", "pending") as unknown as Promise<{ count: number | null; error: unknown }>);
 
-    if ((pendingPayoutCount ?? 0) > 0) {
+    const pendingPayoutGate = resolveGuardCount(pendingPayoutCount, pendingPayoutError);
+    if (pendingPayoutGate.kind === "fetch-error") {
+      Sentry.captureException(
+        pendingPayoutError ?? new Error("update-organizer-profile-pending-payout-count-failed with no error object (anomalous null result)"),
+        { extra: { context: "update-organizer-profile-pending-payout-count-failed", organizerId: organizer.id } },
+      );
+      return { error: "Something went wrong updating your profile. Please try again." };
+    }
+
+    if (pendingPayoutGate.count > 0) {
       return { error: "You have a pending payout. Please keep your payout details active until it has been sent." };
     }
   }
@@ -329,22 +346,40 @@ export async function updateOrganizerProfile(
   // Prevent removing payout details while confirmed bookings on upcoming trips exist.
   if (!payout_method) {
     const now = new Date().toISOString();
-    const { data: upcomingTrips } = await admin
+    const { data: upcomingTrips, error: upcomingTripsError } = await admin
       .from("trips")
       .select("id")
       .eq("organizer_id", organizer.id)
       .eq("status", "active")
       .gt("date_start", now);
 
-    const tripIds = (upcomingTrips ?? []).map((t) => t.id);
+    const upcomingTripsGate = resolveGuardRows(upcomingTrips, upcomingTripsError);
+    if (upcomingTripsGate.kind === "fetch-error") {
+      Sentry.captureException(
+        upcomingTripsError ?? new Error("update-organizer-profile-upcoming-trips-fetch-failed with no error object (anomalous null result)"),
+        { extra: { context: "update-organizer-profile-upcoming-trips-fetch-failed", organizerId: organizer.id } },
+      );
+      return { error: "Something went wrong updating your profile. Please try again." };
+    }
+
+    const tripIds = upcomingTripsGate.rows.map((t) => t.id);
     if (tripIds.length > 0) {
-      const { count } = await admin
+      const { count, error: confirmedBookingsError } = await admin
         .from("bookings")
         .select("id", { count: "exact", head: true })
         .in("trip_id", tripIds)
         .eq("status", "confirmed");
 
-      if ((count ?? 0) > 0) {
+      const confirmedBookingsGate = resolveGuardCount(count, confirmedBookingsError);
+      if (confirmedBookingsGate.kind === "fetch-error") {
+        Sentry.captureException(
+          confirmedBookingsError ?? new Error("update-organizer-profile-confirmed-bookings-count-failed with no error object (anomalous null result)"),
+          { extra: { context: "update-organizer-profile-confirmed-bookings-count-failed", organizerId: organizer.id } },
+        );
+        return { error: "Something went wrong updating your profile. Please try again." };
+      }
+
+      if (confirmedBookingsGate.count > 0) {
         return { error: "You cannot remove your payout details while you have active confirmed bookings." };
       }
     }
@@ -364,7 +399,7 @@ export async function updateOrganizerProfile(
     if (error.code === "23505" && error.message?.includes("organizers_display_name_unique")) {
       return { error: "This display name is already taken. Please choose a different one." };
     }
-    return { error: error.message };
+    return { error: "Something went wrong updating your profile. Please try again." };
   }
 
   revalidatePath("/trips");
