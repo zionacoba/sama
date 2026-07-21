@@ -879,11 +879,6 @@ export function BookingModal({
                   </svg>
                   Payments secured by PayMongo. Pay via GCash, Maya, or QR Ph.
                 </p>
-                {amountDue > 0 && (
-                  <p className="mb-2 text-center text-xs text-stone-500">
-                    If a refund is ever due, GCash and Maya refunds are automatic; QR Ph refunds are processed manually by our team and take 3 to 5 business days.
-                  </p>
-                )}
                 <div className="flex gap-2">
                   <button
                     type="button"
