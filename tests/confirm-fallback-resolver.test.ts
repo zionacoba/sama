@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   resolvePaidSessionFallback,
+  resolveBalanceCancelledRefund,
   type PaidSessionFallbackInput,
+  type BalanceCancelledRefundInput,
 } from "../lib/confirm-fallback-resolver";
 
 // Base row: an unpaid downpayment booking. Individual tests override only the
@@ -112,5 +114,86 @@ describe("resolvePaidSessionFallback: null coercions", () => {
     expect(
       resolve({ amountDue: null, totalAmount: null, paidAmountCentavos: 0 }).route,
     ).toBe("none");
+  });
+});
+
+// Base row for the balance cancelled-refund resolver: a cancelled booking whose
+// balance leg was never confirmed. Individual tests override only the keys under
+// test so each case reads as a single-variable change.
+const balanceBase: BalanceCancelledRefundInput = {
+  status: "cancelled",
+  balancePaymentGatewayStatus: null,
+  paidAmountCentavos: 150000,
+  totalAmount: 2000,
+  amountDue: 500,
+};
+
+const resolveBalance = (over: Partial<BalanceCancelledRefundInput>) =>
+  resolveBalanceCancelledRefund({ ...balanceBase, ...over });
+
+describe("resolveBalanceCancelledRefund", () => {
+  it("cancelled + null balance with a finite positive paid amount refunds pesos = centavos/100", () => {
+    expect(resolveBalance({ paidAmountCentavos: 150000 })).toEqual({
+      action: "refund",
+      amountPesos: 1500,
+    });
+  });
+
+  it("cancelled + null balance with null paid amount refunds the computed balance (total - due)", () => {
+    // 2000 - 500 = 1500 pesos.
+    expect(resolveBalance({ paidAmountCentavos: null })).toEqual({
+      action: "refund",
+      amountPesos: 1500,
+    });
+  });
+
+  it("cancelled + null balance with null paid amount AND zero computed balance holds", () => {
+    // amountDue === totalAmount => computed balance 0 => no amount to invent.
+    expect(
+      resolveBalance({ paidAmountCentavos: null, totalAmount: 2000, amountDue: 2000 }),
+    ).toEqual({ action: "hold" });
+  });
+
+  it("cancelled + null balance with null paid amount AND negative computed balance holds", () => {
+    expect(
+      resolveBalance({ paidAmountCentavos: null, totalAmount: 500, amountDue: 2000 }),
+    ).toEqual({ action: "hold" });
+  });
+
+  it("cancelled + null balance with paidAmountCentavos 0 falls back to computed balance", () => {
+    // 0 is not > 0, so the computed balance 1500 is used.
+    expect(resolveBalance({ paidAmountCentavos: 0 })).toEqual({
+      action: "refund",
+      amountPesos: 1500,
+    });
+  });
+
+  it("cancelled + null balance with non-finite paid amount falls back to computed balance", () => {
+    expect(resolveBalance({ paidAmountCentavos: NaN })).toEqual({
+      action: "refund",
+      amountPesos: 1500,
+    });
+  });
+
+  it("transferred status skips", () => {
+    expect(resolveBalance({ status: "transferred" })).toEqual({ action: "skip" });
+  });
+
+  it("rejected status skips", () => {
+    expect(resolveBalance({ status: "rejected" })).toEqual({ action: "skip" });
+  });
+
+  it("cancelled with a NON-null balance gateway status skips", () => {
+    expect(
+      resolveBalance({ status: "cancelled", balancePaymentGatewayStatus: "paid" }),
+    ).toEqual({ action: "skip" });
+  });
+
+  it("confirmed status proceeds", () => {
+    expect(resolveBalance({ status: "confirmed" })).toEqual({ action: "proceed" });
+  });
+
+  it("null status proceeds", () => {
+    expect(resolveBalance({ status: null })).toEqual({ action: "proceed" });
   });
 });

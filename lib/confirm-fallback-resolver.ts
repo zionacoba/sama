@@ -72,3 +72,64 @@ export function resolvePaidSessionFallback(
 
   return { route: "hold", leg: target, reason: "amount-mismatch" };
 }
+
+export type BalanceCancelledRefundInput = {
+  status: string | null;
+  balancePaymentGatewayStatus: string | null;
+  paidAmountCentavos: number | null;
+  totalAmount: number | null;
+  amountDue: number | null;
+};
+
+export type BalanceCancelledRefundResult =
+  | { action: "refund"; amountPesos: number }
+  | { action: "skip" }
+  | { action: "proceed" }
+  | { action: "hold" };
+
+// Pure decision for a balance payment that lands on a booking which is no
+// longer in a confirmable state. This mirrors the initial leg's cancelled-path
+// polarity, adapted to the balance column: it keys on
+// balancePaymentGatewayStatus (the balance leg's gateway column), NOT
+// payment_gateway_status, because on a balance event the downpayment is by
+// definition already paid, so the initial column tells us nothing about whether
+// the balance leg was confirmed. A null balance column on a cancelled booking
+// means the balance money arrived but was never confirmed, so a refund is owed.
+export function resolveBalanceCancelledRefund(
+  input: BalanceCancelledRefundInput,
+): BalanceCancelledRefundResult {
+  const {
+    status,
+    balancePaymentGatewayStatus,
+    paidAmountCentavos,
+    totalAmount,
+    amountDue,
+  } = input;
+
+  if (status === "cancelled" && balancePaymentGatewayStatus === null) {
+    // Money arrived on a cancelled booking and the balance was never confirmed.
+    // Prefer the amount actually received; fall back to the expected balance
+    // computed from the row. If neither yields a positive amount, hold rather
+    // than invent a figure.
+    if (
+      paidAmountCentavos !== null &&
+      Number.isFinite(paidAmountCentavos) &&
+      paidAmountCentavos > 0
+    ) {
+      return { action: "refund", amountPesos: paidAmountCentavos / 100 };
+    }
+    const expectedBalancePesos = (totalAmount ?? 0) - (amountDue ?? 0);
+    if (expectedBalancePesos > 0) {
+      return { action: "refund", amountPesos: expectedBalancePesos };
+    }
+    return { action: "hold" };
+  }
+
+  if (status === "cancelled" || status === "rejected" || status === "transferred") {
+    // Matches the outer status gate but not the refund condition: rejected,
+    // transferred, or cancelled with an already-confirmed balance.
+    return { action: "skip" };
+  }
+
+  return { action: "proceed" };
+}

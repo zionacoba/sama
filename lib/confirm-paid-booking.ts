@@ -6,7 +6,7 @@ import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 import { filterPaidPayments, deriveCheckoutPaymentStatus } from "@/lib/paymongo-checkout";
-import { resolvePaidSessionFallback } from "@/lib/confirm-fallback-resolver";
+import { resolvePaidSessionFallback, resolveBalanceCancelledRefund } from "@/lib/confirm-fallback-resolver";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
@@ -20,7 +20,13 @@ export type ConfirmOutcome =
 
 export type ConfirmResult = { outcome: ConfirmOutcome };
 
-export type ConfirmBalanceOutcome = "confirmed" | "already_paid" | "not_found" | "held_needs_review";
+export type ConfirmBalanceOutcome =
+  | "confirmed"
+  | "already_paid"
+  | "not_found"
+  | "held_needs_review"
+  | "cancelled_needs_refund"
+  | "skipped";
 
 export type ConfirmBalanceResult = { outcome: ConfirmBalanceOutcome };
 
@@ -594,7 +600,7 @@ export async function confirmPaidBalance(
 ): Promise<ConfirmBalanceResult> {
   let { data: booking } = await admin
     .from("bookings")
-    .select("id, trip_id, full_name, email, total_amount, amount_due, balance_payment_gateway_status, payout_status")
+    .select("id, trip_id, full_name, email, total_amount, amount_due, balance_payment_gateway_status, payout_status, status")
     .eq("balance_payment_id", linkId)
     .maybeSingle();
 
@@ -608,7 +614,7 @@ export async function confirmPaidBalance(
     }
     const { data: fallbackBooking, error: fallbackError } = await admin
       .from("bookings")
-      .select("id, trip_id, full_name, email, total_amount, amount_due, payment_gateway_status, balance_payment_gateway_status, payout_status")
+      .select("id, trip_id, full_name, email, total_amount, amount_due, payment_gateway_status, balance_payment_gateway_status, payout_status, status")
       .eq("id", metadataBookingId)
       .maybeSingle();
     if (fallbackError) {
@@ -663,6 +669,108 @@ export async function confirmPaidBalance(
       // function's leg. The chain's initial path owns it.
       return { outcome: "not_found" };
     }
+  }
+
+  // Balance money that lands on a booking no longer in a confirmable state.
+  // Mirror the initial leg's cancelled path (Writer 2), adapted to the balance
+  // column: record a durable 'manual' refund row instead of confirming, so a
+  // human processes the refund in the PayMongo dashboard. This runs for both the
+  // stored-id path and the recovered-row path, since `booking` is finalized above.
+  const refundDecision = resolveBalanceCancelledRefund({
+    status: booking.status,
+    balancePaymentGatewayStatus: booking.balance_payment_gateway_status,
+    paidAmountCentavos,
+    totalAmount: booking.total_amount,
+    amountDue: booking.amount_due,
+  });
+  if (refundDecision.action === "refund") {
+    const refundAmount = refundDecision.amountPesos;
+    try {
+      // Lightweight duplicate guard mirroring the initial leg: pre-check for an
+      // existing manual row so a retry does not double-insert. Not fully
+      // race-proof; a rare duplicate is acceptable and an admin will see it.
+      let existingQuery = admin
+        .from("refunds")
+        .select("id")
+        .eq("booking_id", booking.id)
+        .eq("source", "balance");
+      existingQuery = paymentTransactionId
+        ? existingQuery.eq("payment_id", paymentTransactionId)
+        : existingQuery.is("payment_id", null);
+      const { data: existingRefund } = await existingQuery.maybeSingle();
+
+      if (!existingRefund) {
+        const { error: refundInsertError } = await admin.from("refunds").insert({
+          booking_id: booking.id,
+          source: "balance",
+          payment_id: paymentTransactionId,
+          amount: refundAmount,
+          status: "manual",
+          reason: "others",
+          last_error: "Balance payment received for booking already cancelled",
+        });
+        if (refundInsertError) {
+          console.error(`[confirm-paid-balance] failed to record manual refund row for booking ${booking.id}:`, refundInsertError.message);
+          Sentry.captureException(refundInsertError, {
+            extra: {
+              context: "confirm-paid-balance-manual-refund-insert-failed",
+              bookingId: booking.id,
+              linkId,
+              amount: refundAmount,
+            },
+          });
+        }
+      }
+    } catch (refundErr) {
+      console.error(`[confirm-paid-balance] error recording manual refund row for booking ${booking.id}:`, refundErr);
+      Sentry.captureException(refundErr, {
+        extra: {
+          context: "confirm-paid-balance-manual-refund-insert-failed",
+          bookingId: booking.id,
+          linkId,
+          amount: refundAmount,
+        },
+      });
+    }
+
+    await sendAdminAlert(
+      "Action needed: balance payment received for cancelled booking, manual refund required",
+      `
+            <p>A balance payment was received for a booking that was already cancelled.</p>
+            <p><strong>Booking ID:</strong> ${booking.id}</p>
+            <p><strong>Amount:</strong> ${formatPeso(refundAmount)}</p>
+            <p><strong>Participant email:</strong> ${escapeHtml(booking.email)}</p>
+            <p>Please issue a manual refund via the PayMongo dashboard.</p>
+          `,
+    );
+    console.warn(`[confirm-paid-balance] booking ${booking.id} has status 'cancelled' with no balance gateway status — manual refund recorded`);
+    Sentry.captureException(
+      new Error(`Balance payment received for cancelled booking ${booking.id} — manual refund required`),
+      { extra: { context: "paid-but-cancelled", bookingId: booking.id, linkId, amount: refundAmount } },
+    );
+    return { outcome: "cancelled_needs_refund" };
+  }
+  if (refundDecision.action === "hold") {
+    // Cancelled booking with money received but no readable amount to refund.
+    // Do not invent a figure; alert a human to resolve it manually.
+    await sendAdminAlert(
+      "Action needed: balance payment received for cancelled booking, amount unreadable",
+      `
+            <p>A balance payment was received for a booking that was already cancelled, but the refund amount could not be determined from the payment or the booking row.</p>
+            <p><strong>Booking ID:</strong> ${booking.id}</p>
+            <p><strong>Participant email:</strong> ${escapeHtml(booking.email)}</p>
+            <p>Please review this payment in the PayMongo dashboard and issue a manual refund.</p>
+          `,
+    );
+    Sentry.captureException(
+      new Error(`Balance payment received for cancelled booking ${booking.id} — refund amount unreadable`),
+      { extra: { context: "confirm-paid-balance-cancelled-amount-unreadable", bookingId: booking.id, linkId } },
+    );
+    return { outcome: "held_needs_review" };
+  }
+  if (refundDecision.action === "skip") {
+    console.warn(`[confirm-paid-balance] booking ${booking.id} has status '${booking.status}' — skipping paid event`);
+    return { outcome: "skipped" };
   }
 
   // Idempotency: skip if already processed.
