@@ -44,15 +44,28 @@ function buildBaseSlug(title: string, dateStart: string): string {
   return `${base}-${MONTHS[d.getMonth()]}-${d.getFullYear()}`;
 }
 
-type SupabaseClientForSlug = Awaited<ReturnType<typeof createSupabaseServerClient>>;
-
-async function makeUniqueSlug(base: string, client: SupabaseClientForSlug, excludeId?: number): Promise<string> {
+async function makeUniqueSlug(base: string, excludeId?: number): Promise<string> {
+  const admin = createSupabaseAdminClient();
   let candidate = base;
   for (let suffix = 2; ; suffix++) {
-    const query = client.from("trips").select("id").eq("slug", candidate).limit(1);
-    const { data } = excludeId !== undefined
+    const query = admin.from("trips").select("id").eq("slug", candidate).limit(1);
+    const { data, error } = excludeId !== undefined
       ? await query.neq("id", excludeId).maybeSingle()
       : await query.maybeSingle();
+    // The check now runs on the admin client because the session client could not
+    // see other organizers' non active trips and returned zero rows with no error,
+    // so a collision against them was invisible. A failed read still proceeds because
+    // the unique index trips_slug_idx backstops the write, which means the worst case
+    // is a database error at insert rather than two trips sharing a URL.
+    if (error) {
+      console.error("[make-unique-slug] uniqueness check failed:", error);
+      Sentry.captureException(error, {
+        extra: {
+          context: "make-unique-slug-check-failed",
+          ...(excludeId !== undefined ? { excludeId } : {}),
+        },
+      });
+    }
     if (!data) return candidate;
     candidate = `${base}-${suffix}`;
   }
@@ -228,7 +241,7 @@ export async function createTrip(
   const effectivePaymentType = safePrice === 0 ? "full" : payment_type;
   const effectiveMinDownpayment = safePrice === 0 ? null : min_downpayment;
 
-  const slug = await makeUniqueSlug(buildBaseSlug(title, safeDateStart), supabase);
+  const slug = await makeUniqueSlug(buildBaseSlug(title, safeDateStart));
 
   // Write through the admin client. Authorization is enforced in code above:
   // the organizer row is looked up by the current user's id and must be
@@ -609,7 +622,7 @@ export async function updateTrip(
   const startDateChanged = (safeDateStart ?? "").slice(0, 10) !== (existing.date_start ?? "").slice(0, 10);
   let newSlug: string | undefined;
   if (titleChanged || startDateChanged) {
-    newSlug = await makeUniqueSlug(buildBaseSlug(title, safeDateStart), supabase, tripId);
+    newSlug = await makeUniqueSlug(buildBaseSlug(title, safeDateStart), tripId);
     const adminForRedirect = createSupabaseAdminClient();
     const { error: slugRedirectError } = await adminForRedirect.from("trip_slug_redirects").upsert(
       { old_slug: existing.slug, new_slug: newSlug, trip_id: tripId },
