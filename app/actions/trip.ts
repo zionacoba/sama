@@ -279,6 +279,9 @@ export async function createTrip(
     template_id: template_id || null,
   }).select("id").single();
 
+  if (error?.code === "23505") {
+    return { error: "A trip with this name and date already exists. Please change the title or the date." };
+  }
   if (error || !insertedRow) {
     return { error: error?.message ?? "Failed to create trip." };
   }
@@ -677,6 +680,9 @@ export async function updateTrip(
     })
     .eq("id", tripId);
 
+  if (error?.code === "23505") {
+    return { error: "A trip with this name and date already exists. Please change the title or the date." };
+  }
   if (error) return { error: error.message };
 
   // On a capacity change the slot fields were omitted from the update above;
