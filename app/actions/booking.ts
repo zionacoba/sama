@@ -22,6 +22,7 @@ import { hasPaidPayment } from "@/lib/paymongo-checkout";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 import { resolveBookingCommissionRate } from "@/lib/commission";
+import { resolveGuardCount } from "@/lib/payout-details-guard";
 import { resolvePastTripGate } from "@/lib/past-trip-gate";
 import { DEFAULT_WAIVER_TEXT, PLATFORM_WAIVER_SNAPSHOT_TEXT } from "@/lib/constants";
 import { withParticipantAdultAttestation } from "@/lib/waiver-snapshot";
@@ -119,7 +120,7 @@ export async function createBooking(input: CreateBookingInput) {
   }
 
   // Prevent duplicate bookings for the same trip (cancelled/rejected/transferred bookings allow re-booking).
-  const { data: existingBooking } = await admin
+  const { data: existingBooking, error: existingBookingError } = await admin
     .from("bookings")
     .select("id")
     .eq("trip_id", trip.id)
@@ -127,30 +128,56 @@ export async function createBooking(input: CreateBookingInput) {
     .not("status", "in", '("cancelled","rejected","transferred")')
     .maybeSingle();
 
+  if (existingBookingError) {
+    console.error("[createBooking] duplicate guard error:", existingBookingError.code, existingBookingError.message, existingBookingError.details);
+    Sentry.captureException(existingBookingError, {
+      extra: { context: "createBooking-duplicate-guard-failed", userId: user.id },
+    });
+    return { error: "Booking failed. Please try again or contact support." };
+  }
+
   if (existingBooking) {
     return { error: "You already have a booking for this trip." };
   }
 
   // Prevent organizers from booking their own trips.
-  const { data: selfOrganizer } = await admin
+  const { data: selfOrganizer, error: selfOrganizerError } = await admin
     .from("organizers")
     .select("id")
     .eq("user_id", user.id)
     .eq("id", trip.organizer_id)
     .maybeSingle();
 
+  if (selfOrganizerError) {
+    console.error("[createBooking] self-booking guard error:", selfOrganizerError.code, selfOrganizerError.message, selfOrganizerError.details);
+    Sentry.captureException(selfOrganizerError, {
+      extra: { context: "createBooking-self-booking-guard-failed", userId: user.id },
+    });
+    return { error: "Booking failed. Please try again or contact support." };
+  }
+
   if (selfOrganizer) {
     return { error: "Organizers cannot book their own trips." };
   }
 
   const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
-  const { count: recentCount } = await admin
+  const { count: recentCount, error: recentCountError } = await admin
     .from("bookings")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
     .gte("created_at", oneMinuteAgo);
 
-  if ((recentCount ?? 0) >= 3) {
+  const rateLimitGate = resolveGuardCount(recentCount, recentCountError);
+  if (rateLimitGate.kind === "fetch-error") {
+    console.error("[createBooking] rate-limit guard error:", recentCountError?.code, recentCountError?.message, recentCountError?.details);
+    Sentry.captureException(
+      recentCountError ?? new Error("createBooking rate-limit count returned null with no error object (anomalous null result)"),
+      { extra: { context: "createBooking-rate-limit-guard-failed", userId: user.id } },
+    );
+    return { error: "Booking failed. Please try again or contact support." };
+  }
+
+  if (rateLimitGate.count >= 3) {
     return { error: "Too many booking attempts. Please wait a moment and try again." };
   }
 
