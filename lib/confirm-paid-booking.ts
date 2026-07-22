@@ -877,6 +877,9 @@ export async function confirmPaidBalance(
         // This is the organizer's money. Never swallow: log and alert a human so
         // the credit can be recorded manually.
         console.error(`[confirm-paid-balance] failed to insert organizer credit for booking ${booking.id}:`, creditError.message);
+        Sentry.captureException(creditError, {
+          extra: { context: "confirm-paid-balance-credit-insert-failed", bookingId: booking.id },
+        });
         await sendAdminAlert(
           "Action needed: organizer credit insert failed after balance payment",
           `
