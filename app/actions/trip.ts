@@ -967,13 +967,34 @@ export async function getTripCancelSummary(tripSlug: string): Promise<
   // old ACTIVE_BOOKING_STATUSES query) makes the confirmation dialog undercount
   // what the cancellation actually does; transferred bookings in particular are
   // refunded to the original payer and drop out of payout eligibility.
-  const { data: bookings } = await admin
+  const { data: bookings, error: bookingsError } = await admin
     .from("bookings")
     .select("paymongo_payment_id, balance_paymongo_payment_id, payment_method, status, payout_status, total_amount, amount_due, payment_option, balance_payment_gateway_status, platform_commission")
     .eq("trip_id", trip.id)
     .in("status", [...TRIP_CANCELLATION_REFUND_STATUSES]);
 
-  return computeTripCancelSummary(bookings ?? []);
+  // Fail closed: this summary is the confirmation dialog's only description of
+  // what cancelling will do. A discarded read error previously produced an
+  // all-zero summary telling the organizer that no bookings were affected,
+  // while the cancellation itself would still cancel and refund every one of
+  // them. A list select returns an empty array on no match, never null.
+  if (bookingsError || bookings == null) {
+    console.error("[get-trip-cancel-summary] bookings fetch failed:", bookingsError);
+    Sentry.captureException(
+      bookingsError ?? new Error("bookings fetch returned null without an error"),
+      {
+        extra: {
+          context: "get-trip-cancel-summary-bookings-fetch-failed",
+          tripId: trip.id,
+          organizerId: organizer.id,
+          userId: user.id,
+        },
+      },
+    );
+    return { error: "Could not load the cancellation details. Please try again." };
+  }
+
+  return computeTripCancelSummary(bookings);
 }
 
 export async function cancelTrip(tripSlug: string): Promise<{ error: string } | void> {
