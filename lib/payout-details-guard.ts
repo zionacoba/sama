@@ -7,8 +7,10 @@ export type GuardRowsResult<T> =
   | { kind: "rows"; rows: T[] };
 
 /**
- * Resolve a head:true count query that feeds a payout-details removal guard in
- * updateOrganizerProfile (pending-payout count, confirmed-bookings count).
+ * Resolve a head:true count query that feeds a guard which must fail closed,
+ * for example the payout-details removal guard in updateOrganizerProfile
+ * (pending-payout count, confirmed-bookings count) or the rate-limit count
+ * guard in createBooking.
  *
  * The guard exists to BLOCK removal when the count is positive, so it must fail
  * closed: if the query cannot be read, the caller must not be allowed to strand
