@@ -12,9 +12,11 @@ export type GuardRowsResult<T> =
  * (pending-payout count, confirmed-bookings count) or the rate-limit count
  * guard in createBooking.
  *
- * The guard exists to BLOCK removal when the count is positive, so it must fail
- * closed: if the query cannot be read, the caller must not be allowed to strand
- * a pending payout or confirmed bookings by clearing its payout destination.
+ * A guard reading this count must not be allowed to proceed when the count
+ * cannot be read: an unreadable count is indistinguishable from a zero and would
+ * let the guarded action through. In the payout-details case that action is a
+ * removal that would strand a pending payout, but the same rule protects any
+ * guard fed by this resolver.
  *
  * A present fetchError is reported first, before the count is inspected, so an
  * error that arrives alongside a stale count still fails closed. A null count
