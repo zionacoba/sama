@@ -59,23 +59,41 @@ export async function applyToBeOrganizer(
     return { error: "Please enter a valid Facebook or Instagram link starting with http:// or https://" };
   }
 
-  const { data: takenName } = await supabase
+  const admin = createSupabaseAdminClient();
+
+  const { data: takenName, error: takenNameError } = await admin
     .from("organizers")
     .select("id")
     .ilike("display_name", displayName)
     .in("status", ["approved", "pending"])
     .maybeSingle();
 
+  if (takenNameError) {
+    console.error("[organizer] display name check failed", takenNameError);
+    Sentry.captureException(takenNameError, {
+      extra: { context: "apply-to-be-organizer-display-name-check-failed", userId: user.id },
+    });
+    return { error: "Something went wrong. Please try again." };
+  }
+
   if (takenName) {
     return { error: "This display name is already taken. Please choose a different one." };
   }
 
   // Check if this user already has an organizer row.
-  const { data: existingOrganizer } = await supabase
+  const { data: existingOrganizer, error: existingOrganizerError } = await supabase
     .from("organizers")
     .select("id, status")
     .eq("user_id", user.id)
     .maybeSingle();
+
+  if (existingOrganizerError) {
+    console.error("[organizer] duplicate application check failed", existingOrganizerError);
+    Sentry.captureException(existingOrganizerError, {
+      extra: { context: "apply-to-be-organizer-duplicate-check-failed", userId: user.id },
+    });
+    return { error: "Something went wrong. Please try again." };
+  }
 
   if (existingOrganizer) {
     if (existingOrganizer.status !== "rejected") {
@@ -83,7 +101,6 @@ export async function applyToBeOrganizer(
     }
 
     // Rejected — allow reapplication by updating the existing row and resetting to pending.
-    const admin = createSupabaseAdminClient();
     const { data: reapplyData, error: reapplyError } = await admin
       .from("organizers")
       .update({
