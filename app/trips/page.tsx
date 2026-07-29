@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { Navbar } from "@/app/components/navbar";
 import { Footer } from "@/app/components/footer";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { TripFilters } from "./trip-filters";
 import { FilterDisclosure } from "./filter-disclosure";
 import { FilterDropdown } from "./filter-dropdown";
@@ -168,10 +170,19 @@ export default async function TripsPage({ searchParams }: PageProps) {
   if (search) {
     const escapedSearch = search.replace(/%/g, "\\%").replace(/_/g, "\\_");
     const term = `%${escapedSearch}%`;
-    const { data: matchingOrgs } = await supabase
+    const admin = createSupabaseAdminClient();
+    const { data: matchingOrgs, error: orgLookupError } = await admin
       .from("organizers")
       .select("id")
-      .or(`display_name.ilike.${term},full_name.ilike.${term}`);
+      .eq("status", "approved")
+      .ilike("display_name", term);
+    if (orgLookupError) {
+      // A failed lookup degrades to a search without the organizer filter rather than failing the public trips page.
+      console.error("[trips-search] organizer lookup failed:", orgLookupError);
+      Sentry.captureException(orgLookupError, {
+        extra: { context: "trips-search-organizer-lookup-failed" },
+      });
+    }
     const orgIds = (matchingOrgs ?? []).map((o: { id: string }) => o.id);
     if (orgIds.length > 0) {
       const orgFilters = orgIds.map((id: string) => `organizer_id.eq.${id}`).join(",");
