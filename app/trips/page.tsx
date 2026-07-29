@@ -462,23 +462,9 @@ export default async function TripsPage({ searchParams }: PageProps) {
                       )}
                       <p className="text-sm text-stone-500">{trip.destination}</p>
                       {isGrouped ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs text-stone-500">Pick a date:</span>
-                          {runs.slice(0, 3).map((run) => (
-                            <Link
-                              key={run.id}
-                              href={`/trips/${run.slug}`}
-                              className="inline-flex min-h-[40px] items-center rounded-full border border-stone-200 px-3 py-2 text-xs font-medium text-stone-700 transition hover:border-trailhead hover:text-trailhead"
-                            >
-                              {formatDate(run.date_start)}
-                            </Link>
-                          ))}
-                          {runs.length > 3 && (
-                            <span className="inline-flex min-h-[40px] items-center rounded-full border border-stone-100 px-3 py-2 text-xs text-stone-500">
-                              +{runs.length - 3} more
-                            </span>
-                          )}
-                        </div>
+                        <p className="text-xs text-stone-500">
+                          {formatDate(trip.date_start)} · {runs.length} dates available
+                        </p>
                       ) : (
                         <p className="text-xs text-stone-500">
                           {formatDateRange(trip.date_start, trip.date_end)}{trip.duration && ` · ${trip.duration}`}
