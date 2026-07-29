@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { escapeHtml } from "@/lib/escape-html";
@@ -31,12 +32,20 @@ export async function notifyWaitlistSlotOpened(
   const admin = createSupabaseAdminClient();
   const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
-  const { data: waitlistEntries } = await admin
+  const { data: waitlistEntries, error: waitlistFetchError } = await admin
     .from("waitlist")
     .select("id, full_name, email")
     .eq("trip_id", tripId)
     .or(`notified_at.is.null,notified_at.lt.${twelveHoursAgo}`)
     .order("created_at", { ascending: true });
+
+  if (waitlistFetchError) {
+    console.error("[waitlist-notify] waitlist fetch failed:", waitlistFetchError);
+    Sentry.captureException(waitlistFetchError, {
+      extra: { context: "notify-waitlist-slot-opened-fetch-failed", tripId },
+    });
+    return;
+  }
 
   if (!waitlistEntries || waitlistEntries.length === 0) return;
 
@@ -71,9 +80,17 @@ export async function notifyWaitlistSlotOpened(
   const sentIds = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
 
   if (sentIds.length > 0) {
-    await admin
+    const { error: stampError } = await admin
       .from("waitlist")
       .update({ notified: true, notified_at: new Date().toISOString() })
       .in("id", sentIds);
+    // Polarity is log-and-continue: the sends above are irreversible and precede
+    // this write, so a stamp failure must not abort or retry.
+    if (stampError) {
+      console.error("[waitlist-notify] notified_at stamp failed:", stampError);
+      Sentry.captureException(stampError, {
+        extra: { context: "notify-waitlist-slot-opened-stamp-failed", tripId, waitlistIds: sentIds },
+      });
+    }
   }
 }

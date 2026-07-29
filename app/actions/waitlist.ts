@@ -206,10 +206,18 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
 
   // Stamp notified_at so this manual notify counts toward the 12-hour debounce
   // used by the automatic paths and isn't immediately re-sent by them.
-  await admin
+  // Polarity is log-and-continue: the email above is irreversible and precedes
+  // this write, so a stamp failure must not abort or retry.
+  const { error: stampError } = await admin
     .from("waitlist")
     .update({ notified: true, notified_at: new Date().toISOString() })
     .eq("id", id);
+  if (stampError) {
+    console.error("[notify-waitlist-entry] notified_at stamp failed:", stampError);
+    Sentry.captureException(stampError, {
+      extra: { context: "notify-waitlist-entry-stamp-failed", entryId: id, tripSlug: trip.slug },
+    });
+  }
 
   revalidatePath(`/organizer/trips/${trip.slug}/bookings`);
 }
