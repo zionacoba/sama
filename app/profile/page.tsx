@@ -284,7 +284,7 @@ export default async function AccountPage({ searchParams }: PageProps) {
       .select("birthdate, emergency_contact_name, emergency_contact_phone, phone, facebook_url, first_name, last_name, nickname, pronouns, address")
       .eq("id", user.id)
       .maybeSingle(),
-    supabase
+    admin
       .from("waitlist")
       .select("id, slots, created_at, trips(id, title, slug, date_start)")
       .eq("user_id", user.id)

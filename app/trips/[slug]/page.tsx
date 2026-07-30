@@ -325,7 +325,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
           .order("date_start", { ascending: true })
       : Promise.resolve({ data: null }),
     user && tripData.remaining_slots === 0
-      ? supabase.from("waitlist").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).maybeSingle()
+      ? admin.from("waitlist").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).maybeSingle()
       : Promise.resolve({ data: null }),
     user
       ? admin.from("bookings").select("id").eq("trip_id", tripData.id).eq("user_id", user.id).in("status", [...SLOT_HOLDING_STATUSES]).maybeSingle()
