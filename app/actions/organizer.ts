@@ -63,7 +63,7 @@ export async function applyToBeOrganizer(
 
   const { data: takenName, error: takenNameError } = await admin
     .from("organizers")
-    .select("id")
+    .select("id, user_id")
     .ilike("display_name", displayName)
     .in("status", ["approved", "pending"])
     .maybeSingle();
@@ -76,7 +76,7 @@ export async function applyToBeOrganizer(
     return { error: "Something went wrong. Please try again." };
   }
 
-  if (takenName) {
+  if (takenName && takenName.user_id !== user.id) {
     return { error: "This display name is already taken. Please choose a different one." };
   }
 
