@@ -101,32 +101,6 @@ function DifficultyBadge({ level, className = "" }: { level: string; className?:
   );
 }
 
-type TripGroup = { key: string; representative: Trip; runs: Trip[] };
-
-function groupByTemplate(trips: Trip[]): TripGroup[] {
-  const grouped = new Map<string, Trip[]>();
-  const standalone: Trip[] = [];
-  for (const trip of trips) {
-    if (trip.template_id) {
-      const arr = grouped.get(trip.template_id) ?? [];
-      arr.push(trip);
-      grouped.set(trip.template_id, arr);
-    } else {
-      standalone.push(trip);
-    }
-  }
-  const result: TripGroup[] = [];
-  for (const [templateId, runs] of grouped) {
-    runs.sort((a, b) => a.date_start.localeCompare(b.date_start));
-    result.push({ key: `tmpl-${templateId}`, representative: runs[0], runs });
-  }
-  for (const trip of standalone) {
-    result.push({ key: String(trip.id), representative: trip, runs: [trip] });
-  }
-  result.sort((a, b) => a.representative.date_start.localeCompare(b.representative.date_start));
-  return result;
-}
-
 function filterUrl(
   base: FilterParams,
   key: "activity" | "duration" | "difficulty" | "region",
@@ -215,7 +189,6 @@ export default async function TripsPage({ searchParams }: PageProps) {
   const currentDifficulty = difficulty ?? "All";
   const currentRegion = region ?? "All";
   const current = { activity, duration, difficulty, region, search, date_from, date_to, sort };
-  const groups = groupByTemplate(trips);
 
   // Readable summary of non-default filters for the collapsed Filters button.
   const sortLabels: Record<string, string> = {
@@ -388,7 +361,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
         </section>
 
         <section className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
-          {groups.length === 0 ? (
+          {trips.length === 0 ? (
             <div className="py-24 text-center">
               <p className="text-4xl" aria-hidden>🏔️</p>
               <p className="mt-4 text-lg font-semibold text-stone-800">No trips found</p>
@@ -403,11 +376,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
           ) : (
             <>
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-              {groups.map(({ key, representative: trip, runs }, index) => {
-                const isGrouped = runs.length > 1;
-                const minPrice = isGrouped
-                  ? Math.min(...runs.map((r) => Number(r.price)))
-                  : Number(trip.price);
+              {trips.map((trip, index) => {
                 const photoEl = (
                   <div className="relative aspect-[3/1] overflow-hidden bg-gradient-to-br from-trailhead/20 via-trailhead-muted to-emerald-100/80 sm:aspect-[4/3]">
                     {trip.photos?.[0] && (
@@ -434,11 +403,7 @@ export default async function TripsPage({ searchParams }: PageProps) {
                 );
                 const cardContent = (
                   <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
-                    {isGrouped ? (
-                      <Link href={`/trips/${trip.slug}`} className="block overflow-hidden">
-                        {photoEl}
-                      </Link>
-                    ) : photoEl}
+                    {photoEl}
                     <div className="flex flex-1 flex-col gap-1.5 p-3 md:gap-2 md:p-4">
                       <div className="hidden flex-wrap items-center gap-1.5 md:flex">
                         {trip.activity_type && (
@@ -448,31 +413,14 @@ export default async function TripsPage({ searchParams }: PageProps) {
                         )}
                         <DifficultyBadge level={trip.difficulty} />
                       </div>
-                      {isGrouped ? (
-                        <h3>
-                          <Link
-                            href={`/trips/${trip.slug}`}
-                            className="font-bold text-stone-900 underline-offset-2 hover:text-trailhead hover:underline"
-                          >
-                            {trip.title}
-                          </Link>
-                        </h3>
-                      ) : (
-                        <h3 className="font-bold text-stone-900">{trip.title}</h3>
-                      )}
+                      <h3 className="font-bold text-stone-900">{trip.title}</h3>
                       <p className="text-sm text-stone-500">{trip.destination}</p>
-                      {isGrouped ? (
-                        <p className="text-xs text-stone-500">
-                          {formatDate(trip.date_start)} · {runs.length} dates available
-                        </p>
-                      ) : (
-                        <p className="text-xs text-stone-500">
-                          {formatDateRange(trip.date_start, trip.date_end)}{trip.duration && ` · ${trip.duration}`}
-                        </p>
-                      )}
+                      <p className="text-xs text-stone-500">
+                        {formatDateRange(trip.date_start, trip.date_end)}{trip.duration && ` · ${trip.duration}`}
+                      </p>
                       <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-2.5 md:pt-3">
                         <p className="text-base font-bold text-trailhead md:text-lg">
-                          {isGrouped ? `From ${formatPrice(minPrice)}` : formatPrice(trip.price)}
+                          {formatPrice(trip.price)}
                         </p>
                         <span className={`text-xs font-medium ${trip.remaining_slots < 5 ? "text-red-600" : "text-stone-500"}`}>
                           {trip.remaining_slots} slot{trip.remaining_slots !== 1 ? "s" : ""} left
@@ -482,15 +430,13 @@ export default async function TripsPage({ searchParams }: PageProps) {
                   </article>
                 );
                 return (
-                  <li key={key}>
-                    {isGrouped ? cardContent : (
-                      <Link
-                        href={`/trips/${trip.slug}`}
-                        className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
-                      >
-                        {cardContent}
-                      </Link>
-                    )}
+                  <li key={trip.id}>
+                    <Link
+                      href={`/trips/${trip.slug}`}
+                      className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trailhead focus-visible:ring-offset-2"
+                    >
+                      {cardContent}
+                    </Link>
                   </li>
                 );
               })}
