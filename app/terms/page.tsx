@@ -82,21 +82,21 @@ export default function TermsPage() {
               <p className="mt-3 font-medium text-stone-700">Flexible Policy</p>
               <ul className="mt-1.5 space-y-1.5 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>7 or more days before trip: Full refund</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>3 to 7 days before trip: 50% refund</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>3 to 6 days before trip: 50% refund</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Less than 3 days before trip: No refund</span></li>
               </ul>
 
               <p className="mt-3 font-medium text-stone-700">Moderate Policy</p>
               <ul className="mt-1.5 space-y-1.5 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>14 or more days before trip: Full refund</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>7 to 14 days before trip: 50% refund</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>7 to 13 days before trip: 50% refund</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Less than 7 days before trip: No refund</span></li>
               </ul>
 
               <p className="mt-3 font-medium text-stone-700">Strict Policy</p>
               <ul className="mt-1.5 space-y-1.5 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>30 or more days before trip: Full refund</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>7 to 30 days before trip: 50% refund</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>7 to 29 days before trip: 50% refund</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Less than 7 days before trip: No refund</span></li>
               </ul>
 

@@ -1,20 +1,20 @@
 export const CANCELLATION_POLICIES = {
   flexible: {
     label: "Flexible",
-    short: "Full refund 7+ days before, 50% within 3–7 days, no refund within 3 days",
-    text: "Full refund if cancelled 7 or more days before the trip. 50% refund of amount paid if cancelled 3–7 days before. No refund within 3 days.",
+    short: "Full refund 7+ days before, 50% refund 3 to 6 days before, no refund less than 3 days before",
+    text: "Full refund if cancelled 7 or more days before the trip. 50% refund of amount paid if cancelled 3 to 6 days before. No refund if cancelled less than 3 days before.",
     color: "bg-emerald-100 text-emerald-800",
   },
   moderate: {
     label: "Moderate",
-    short: "Full refund 14+ days before, 50% within 7–14 days, no refund within 7 days",
-    text: "Full refund if cancelled 14 or more days before the trip. 50% refund of amount paid if cancelled 7–14 days before. No refund within 7 days.",
+    short: "Full refund 14+ days before, 50% refund 7 to 13 days before, no refund less than 7 days before",
+    text: "Full refund if cancelled 14 or more days before the trip. 50% refund of amount paid if cancelled 7 to 13 days before. No refund if cancelled less than 7 days before.",
     color: "bg-amber-100 text-amber-900",
   },
   strict: {
     label: "Strict",
-    short: "Full refund 30+ days before, 50% within 7–30 days, no refund within 7 days",
-    text: "Full refund if cancelled 30 or more days before the trip. 50% refund of amount paid if cancelled 7–30 days before. No refund within 7 days.",
+    short: "Full refund 30+ days before, 50% refund 7 to 29 days before, no refund less than 7 days before",
+    text: "Full refund if cancelled 30 or more days before the trip. 50% refund of amount paid if cancelled 7 to 29 days before. No refund if cancelled less than 7 days before.",
     color: "bg-red-100 text-red-800",
   },
   custom: {

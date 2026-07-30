@@ -574,9 +574,9 @@ export function EditTripForm({
             </select>
             <p className="mt-1.5 text-xs text-stone-500">
               {({
-                flexible: "Full refund up to 7 days before the trip. 50% refund between 3 and 7 days. No refund within 3 days.",
-                moderate: "Full refund up to 14 days before the trip. 50% refund between 7 and 14 days. No refund within 7 days.",
-                strict: "Full refund up to 30 days before the trip. 50% refund between 7 and 30 days. No refund within 7 days.",
+                flexible: "Full refund 7 or more days before the trip. 50% refund 3 to 6 days before. No refund less than 3 days before.",
+                moderate: "Full refund 14 or more days before the trip. 50% refund 7 to 13 days before. No refund less than 7 days before.",
+                strict: "Full refund 30 or more days before the trip. 50% refund 7 to 29 days before. No refund less than 7 days before.",
               } as Record<string, string>)[cancellationPolicy]}
             </p>
           </div>
