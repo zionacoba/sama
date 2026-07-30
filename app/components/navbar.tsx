@@ -7,6 +7,7 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 
 const navLinks = [
   { label: "Explore", href: "/trips" },
+  { label: "About", href: "/about" },
 ] as const;
 
 type AuthLinksProps = {

@@ -104,6 +104,14 @@ export function MobileMenu({ isLoggedIn, isAdmin, email, displayName, organizerS
               Explore
             </Link>
 
+            <Link
+              href="/about"
+              onClick={close}
+              className="px-4 py-3 font-medium text-stone-700 transition hover:bg-trailhead-muted hover:text-trailhead"
+            >
+              About
+            </Link>
+
             {isLoggedIn ? (
               <>
                 {displayName && (
