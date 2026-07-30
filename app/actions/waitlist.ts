@@ -73,7 +73,11 @@ export async function joinWaitlist(
     if (error.code === "23505") {
       return { error: "You're already on the waitlist for this trip." };
     }
-    return { error: error.message };
+    console.error("[join-waitlist] insert failed:", error);
+    Sentry.captureException(new Error(error.message), {
+      extra: { context: "join-waitlist-insert-failed", tripId: input.tripId, userId: user.id },
+    });
+    return { error: "Something went wrong joining the waitlist. Please try again." };
   }
 
   // Notify the organizer of the new waitlist entry.
