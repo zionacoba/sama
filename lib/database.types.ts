@@ -437,7 +437,6 @@ export type Database = {
           id: string
           is_founding_partner: boolean
           operating_locations: string | null
-          past_trips_evidence: string | null
           payout_method: string | null
           phone: string
           photo_url: string | null
@@ -467,7 +466,6 @@ export type Database = {
           id?: string
           is_founding_partner?: boolean
           operating_locations?: string | null
-          past_trips_evidence?: string | null
           payout_method?: string | null
           phone: string
           photo_url?: string | null
@@ -497,7 +495,6 @@ export type Database = {
           id?: string
           is_founding_partner?: boolean
           operating_locations?: string | null
-          past_trips_evidence?: string | null
           payout_method?: string | null
           phone?: string
           photo_url?: string | null
