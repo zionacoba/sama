@@ -375,13 +375,13 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
         </h1>
         <p className="mt-1 text-stone-500">{fullName || user.email}</p>
 
-        {(!profileData?.phone || !profileData?.emergency_contact_name || !profileData?.facebook_url) && (
+        {(!profileData?.phone || !profileData?.emergency_contact_name || !profileData?.emergency_contact_phone) && (
           <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
             <span className="mt-0.5 text-amber-500" aria-hidden>⚠️</span>
             <p className="text-sm text-amber-800">
-              Complete your profile before booking — add your emergency contact and Facebook profile URL.{" "}
+              Add your phone number and emergency contact to speed up booking.{" "}
               <Link href="/profile?tab=profile" className="font-semibold underline underline-offset-2 hover:text-amber-900">
-                Complete your profile →
+                Update your profile →
               </Link>
             </p>
           </div>
