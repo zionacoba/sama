@@ -45,6 +45,7 @@ type OrganizerApplication = {
   activity_types: string[] | null;
   years_experience: number | null;
   emergency_certified: boolean;
+  certifications: string | null;
   status: string;
   is_founding_partner: boolean;
   commission_rate: number | null;
@@ -410,7 +411,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
       .range(from, to),
     adminClient
       .from("organizers")
-      .select("id, full_name, display_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_experience, emergency_certified, status, is_founding_partner, commission_rate, created_at, trips_per_month, operating_locations, social_links")
+      .select("id, full_name, display_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_experience, emergency_certified, status, is_founding_partner, commission_rate, created_at, trips_per_month, operating_locations, social_links, certifications")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -829,6 +830,14 @@ export default async function AdminPage({ searchParams }: PageProps) {
                           <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Emergency certified</dt>
                             <dd className="mt-0.5 text-stone-900">{app.emergency_certified ? "Yes" : "No"}</dd>
+                          </div>
+                          <div className="sm:col-span-2 lg:col-span-3">
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Certifications</dt>
+                            <dd className="mt-0.5 whitespace-pre-line text-stone-900">
+                              {app.certifications
+                                ? app.certifications
+                                : <span className="text-stone-300">—</span>}
+                            </dd>
                           </div>
                           <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Applied</dt>

@@ -203,6 +203,23 @@ export function ApplyForm({
       </div>
 
       <div>
+        <label htmlFor="certifications" className={labelClass}>
+          Certifications or registrations <span className="font-normal text-stone-500">(optional)</span>
+        </label>
+        <p className="mt-0.5 text-xs text-stone-500 flex items-start gap-1">
+          <span>ℹ</span>
+          <span>Private, only used by Sama when reviewing your application and never shown publicly. We may follow up to confirm details.</span>
+        </p>
+        <textarea
+          id="certifications"
+          name="certifications"
+          rows={3}
+          className={`${inputClass} resize-none`}
+          placeholder="e.g. Basic Mountaineering Course, Wilderness First Aid, PADI Divemaster, DOT accreditation no. 12345"
+        />
+      </div>
+
+      <div>
         <label htmlFor="personal_facebook_url" className={labelClass}>
           Personal Facebook profile <span className="text-red-500">*</span>
         </label>

@@ -36,6 +36,7 @@ export async function applyToBeOrganizer(
   const activityTypes = formData.getAll("activity_types") as string[];
   const yearsOfExperience = Number((formData.get("years_of_experience") as string)?.trim());
   const emergencyCertified = formData.get("emergency_certified") === "on";
+  const certifications = (formData.get("certifications") as string)?.trim() || null;
   const termsAgreed = formData.get("terms_agreed") === "on";
   const accuracyConfirmed = formData.get("accuracy_confirmed") === "on";
 
@@ -113,6 +114,7 @@ export async function applyToBeOrganizer(
         activity_types: activityTypes,
         years_experience: yearsOfExperience,
         emergency_certified: emergencyCertified,
+        certifications,
         trips_per_month: tripsPerMonth,
         operating_locations: operatingLocations,
         status: "pending",
@@ -188,6 +190,7 @@ export async function applyToBeOrganizer(
       activity_types: activityTypes,
       years_experience: yearsOfExperience,
       emergency_certified: emergencyCertified,
+      certifications,
       trips_per_month: tripsPerMonth,
       operating_locations: operatingLocations,
     });
