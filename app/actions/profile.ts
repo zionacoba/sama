@@ -230,7 +230,13 @@ export async function saveProfile(
       updated_at: new Date().toISOString(),
     });
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[save-profile] profile upsert failed:", error);
+    Sentry.captureException(new Error(error.message), {
+      extra: { context: "save-profile-upsert-failed", userId: user.id },
+    });
+    return { error: "Something went wrong saving your details. Please try again." };
+  }
   revalidatePath("/profile");
   return { success: true };
 }
@@ -258,7 +264,13 @@ export async function saveEmergencyContact(
       updated_at: new Date().toISOString(),
     });
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[save-emergency-contact] emergency contact upsert failed:", error);
+    Sentry.captureException(new Error(error.message), {
+      extra: { context: "save-emergency-contact-upsert-failed", userId: user.id },
+    });
+    return { error: "Something went wrong saving your emergency contact. Please try again." };
+  }
   return { success: true };
 }
 
@@ -293,7 +305,7 @@ export async function saveUserProfile(
 
   const full_name = `${first_name} ${last_name}`;
   const { error: authError } = await supabase.auth.updateUser({ data: { full_name, first_name, last_name } });
-  if (authError) return { error: authError.message };
+  if (authError) return { error: "Something went wrong saving your name. Please try again." };
 
   const admin = createSupabaseAdminClient();
   const { error: profileError } = await admin
@@ -310,7 +322,13 @@ export async function saveUserProfile(
       updated_at: new Date().toISOString(),
     });
 
-  if (profileError) return { error: profileError.message };
+  if (profileError) {
+    console.error("[save-user-profile] profile upsert failed:", profileError);
+    Sentry.captureException(new Error(profileError.message), {
+      extra: { context: "save-user-profile-upsert-failed", userId: user.id },
+    });
+    return { error: "Something went wrong saving your profile. Please try again." };
+  }
 
   revalidatePath("/profile");
   return { success: true };
