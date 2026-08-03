@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { createBooking } from "@/app/actions/booking";
-import { formatDateRange, formatPeso } from "@/lib/format";
+import { formatPeso } from "@/lib/format";
 import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
 import { useFocusTrap } from "@/app/hooks/use-focus-trap";
 
