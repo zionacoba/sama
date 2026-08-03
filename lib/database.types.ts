@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       app_config: {
@@ -281,6 +306,61 @@ export type Database = {
           },
         ]
       }
+      organizer_credits: {
+        Row: {
+          amount: number
+          applied_payout_id: string | null
+          booking_id: number
+          created_at: string | null
+          id: string
+          organizer_id: string
+          reason: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          applied_payout_id?: string | null
+          booking_id: number
+          created_at?: string | null
+          id?: string
+          organizer_id: string
+          reason: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          applied_payout_id?: string | null
+          booking_id?: number
+          created_at?: string | null
+          id?: string
+          organizer_id?: string
+          reason?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizer_credits_applied_payout_id_fkey"
+            columns: ["applied_payout_id"]
+            isOneToOne: false
+            referencedRelation: "payouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organizer_credits_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organizer_credits_organizer_id_fkey"
+            columns: ["organizer_id"]
+            isOneToOne: false
+            referencedRelation: "organizers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizer_deductions: {
         Row: {
           amount: number
@@ -343,6 +423,7 @@ export type Database = {
           bank_account_number: string | null
           bank_name: string | null
           bio: string
+          certifications: string | null
           commission_rate: number | null
           cover_image_url: string | null
           created_at: string
@@ -372,6 +453,7 @@ export type Database = {
           bank_account_number?: string | null
           bank_name?: string | null
           bio: string
+          certifications?: string | null
           commission_rate?: number | null
           cover_image_url?: string | null
           created_at?: string
@@ -401,6 +483,7 @@ export type Database = {
           bank_account_number?: string | null
           bank_name?: string | null
           bio?: string
+          certifications?: string | null
           commission_rate?: number | null
           cover_image_url?: string | null
           created_at?: string
@@ -428,7 +511,7 @@ export type Database = {
       }
       payouts: {
         Row: {
-          booking_ids: string[]
+          booking_ids: number[]
           created_at: string | null
           id: string
           needs_reconciliation: boolean
@@ -444,7 +527,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          booking_ids: string[]
+          booking_ids: number[]
           created_at?: string | null
           id?: string
           needs_reconciliation?: boolean
@@ -460,7 +543,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          booking_ids?: string[]
+          booking_ids?: number[]
           created_at?: string | null
           id?: string
           needs_reconciliation?: boolean
@@ -542,7 +625,7 @@ export type Database = {
           created_at: string
           id: number
           last_error: string | null
-          payment_id: string
+          payment_id: string | null
           paymongo_refund_id: string | null
           reason: string | null
           source: string
@@ -556,7 +639,7 @@ export type Database = {
           created_at?: string
           id?: never
           last_error?: string | null
-          payment_id: string
+          payment_id?: string | null
           paymongo_refund_id?: string | null
           reason?: string | null
           source: string
@@ -570,7 +653,7 @@ export type Database = {
           created_at?: string
           id?: never
           last_error?: string | null
-          payment_id?: string
+          payment_id?: string | null
           paymongo_refund_id?: string | null
           reason?: string | null
           source?: string
@@ -635,6 +718,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_organizer_id_fkey"
+            columns: ["organizer_id"]
+            isOneToOne: false
+            referencedRelation: "organizers"
             referencedColumns: ["id"]
           },
           {
@@ -812,7 +902,7 @@ export type Database = {
           phone: string | null
           slots: number
           trip_id: number | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -824,7 +914,7 @@ export type Database = {
           phone?: string | null
           slots?: number
           trip_id?: number | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
@@ -836,7 +926,7 @@ export type Database = {
           phone?: string | null
           slots?: number
           trip_id?: number | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -906,8 +996,12 @@ export type Database = {
       }
       get_admin_email: { Args: never; Returns: string }
       restore_slot: {
-        Args: { p_slots_to_restore: number; p_trip_id: number }
+        Args: { p_slots_requested: number; p_trip_id: number }
         Returns: undefined
+      }
+      set_total_slots: {
+        Args: { p_new_total: number; p_trip_id: number }
+        Returns: number
       }
     }
     Enums: {
@@ -1037,6 +1131,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
