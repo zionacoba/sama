@@ -44,13 +44,13 @@ type OrganizerApplication = {
   past_trips_evidence: string | null;
   activity_types: string[] | null;
   years_experience: number | null;
-  emergency_certified: boolean;
+  emergency_certified: boolean | null;
   certifications: string | null;
   status: string;
   is_founding_partner: boolean;
   commission_rate: number | null;
   created_at: string;
-  trips_per_month: number | null;
+  trips_per_month: string | null;
   operating_locations: string | null;
   social_links: { facebook?: string | null; organizer_facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
 };
