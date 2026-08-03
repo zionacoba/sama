@@ -53,7 +53,6 @@ type OrganizerApplication = {
   bio: string;
   phone: string;
   facebook_url: string | null;
-  past_trips_evidence: string | null;
   activity_types: string[] | null;
   years_experience: number | null;
   emergency_certified: boolean | null;
@@ -423,7 +422,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
       .range(from, to),
     adminClient
       .from("organizers")
-      .select("id, full_name, display_name, email, bio, phone, facebook_url, past_trips_evidence, activity_types, years_experience, emergency_certified, status, is_founding_partner, commission_rate, created_at, trips_per_month, operating_locations, social_links, certifications")
+      .select("id, full_name, display_name, email, bio, phone, facebook_url, activity_types, years_experience, emergency_certified, status, is_founding_partner, commission_rate, created_at, trips_per_month, operating_locations, social_links, certifications")
       .order("created_at", { ascending: false }),
   ]);
 
