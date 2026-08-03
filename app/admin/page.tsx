@@ -29,6 +29,18 @@ import { COMMISSION_RATE_MIN_PERCENT, COMMISSION_RATE_MAX_PERCENT, DEFAULT_COMMI
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 const PAGE_SIZE = 20;
 
+const TRIPS_PER_MONTH_LABELS: Record<string, string> = {
+  "less_than_1": "Less than 1 (occasional, a few times a year)",
+  "1_to_2": "1 to 2 per month",
+  "3_to_5": "3 to 5 per month",
+  "6_to_10": "6 to 10 per month",
+  "more_than_10": "More than 10 per month",
+};
+
+function tripsPerMonthLabel(value: string) {
+  return TRIPS_PER_MONTH_LABELS[value] ?? value;
+}
+
 type PageProps = {
   searchParams: Promise<{ tab?: string; page?: string; commissionError?: string; orgActionError?: string; payoutError?: string; orgFilter?: string; reviewError?: string; opsError?: string }>;
 };
@@ -797,7 +809,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                           </div>
                           <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Trips per month</dt>
-                            <dd className="mt-0.5 text-stone-900">{app.trips_per_month ?? <span className="text-stone-300">—</span>}</dd>
+                            <dd className="mt-0.5 text-stone-900">{(app.trips_per_month && tripsPerMonthLabel(app.trips_per_month)) ?? <span className="text-stone-300">—</span>}</dd>
                           </div>
                           <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Operating locations</dt>
