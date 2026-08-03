@@ -67,20 +67,42 @@ export async function POST(req: NextRequest) {
   const attrs = eventData?.attributes as Record<string, unknown> | undefined;
   const eventType = attrs?.type as string | undefined;
 
-  // checkout_session.payment.paid is the Checkout Sessions replacement for
-  // link.payment.paid. The link branch is kept intact as transition insurance
-  // for payments still completing on pre-migration links; removing it is a
-  // later cleanup commit.
-  if (eventType !== "link.payment.paid" && eventType !== "checkout_session.payment.paid") {
+  // checkout_session.payment.paid is the only event this endpoint acts on.
+  // link.payment.paid was the pre-migration equivalent and its handler was
+  // removed once Checkout Sessions replaced Payment Links. No link event can
+  // legitimately arrive now, so one is treated as a structural alarm rather
+  // than as traffic: money moved and nothing here would write it down.
+  if (eventType === "link.payment.paid") {
+    const legacyData = attrs?.data as Record<string, unknown> | undefined;
+    const legacyId = (legacyData?.id as string | undefined) ?? "unknown";
+    console.error("[webhook] unexpected link.payment.paid received:", legacyId);
+    Sentry.captureException(
+      new Error("Unexpected link.payment.paid webhook received after the link branch was removed"),
+      {
+        extra: {
+          context: "paymongo-webhook-legacy-link-event",
+          linkId: legacyId,
+        },
+      },
+    );
+    await sendAdminAlert(
+      "Action needed: legacy PayMongo link payment received, booking unconfirmed",
+      `
+            <p>A PayMongo <strong>link.payment.paid</strong> webhook arrived after the legacy link handler was removed. Payment was taken but the booking was not confirmed, and PayMongo will not retry.</p>
+            <p><strong>PayMongo resource ID:</strong> ${escapeHtml(legacyId)}</p>
+            <p>Look up this resource in the PayMongo dashboard and confirm the booking manually.</p>
+          `,
+    );
+    // Return 200 to prevent PayMongo retries. This needs manual review.
+    return NextResponse.json({ received: true, warning: "legacy link event" });
+  }
+
+  if (eventType !== "checkout_session.payment.paid") {
     return NextResponse.json({ received: true });
   }
 
   try {
-    if (eventType === "link.payment.paid") {
-      await handleLinkPaymentPaid(attrs!);
-    } else {
-      await handleCheckoutSessionPaymentPaid(attrs!);
-    }
+    await handleCheckoutSessionPaymentPaid(attrs!);
   } catch (err) {
     console.error(`[webhook] handler error for ${eventType}:`, err);
     const droppedLinkData = attrs!.data as Record<string, unknown> | undefined;
@@ -112,43 +134,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
-async function handleLinkPaymentPaid(attrs: Record<string, unknown>) {
-  const linkData = attrs.data as Record<string, unknown> | undefined;
-  const linkId = linkData?.id as string | undefined;
-  const linkAttrs = linkData?.attributes as Record<string, unknown> | undefined;
-
-  if (!linkId) {
-    console.error("[webhook] link.payment.paid: missing link ID in event");
-    return;
-  }
-
-  // Extract payment method and transaction ID from the payments array on the link.
-  const { paymentMethod, paymentTransactionId } = extractPaymentDetails(
-    linkAttrs?.payments as unknown[] | undefined,
-  );
-
-  // Confirm the booking via the shared, idempotent helper. The helper applies
-  // every guard the webhook used to apply inline (idempotency, no-resurrect,
-  // refund alert, status transition, emails, revalidation).
-  const result = await confirmPaidBooking(linkId, paymentMethod, paymentTransactionId);
-
-  if (result.outcome === "not_found") {
-    // No initial-payment booking matched this link — it may be a balance payment.
-    // The shared helper applies the same idempotency guard, updates the three
-    // balance columns, sends the same participant + organizer emails, and
-    // revalidates the same paths the webhook used to inline here.
-    const balanceResult = await confirmPaidBalance(linkId, paymentTransactionId);
-    if (balanceResult.outcome === "not_found") {
-      console.error("[webhook] no booking found for link (initial or balance):", linkId);
-    }
-  }
-}
-
-// checkout_session.payment.paid mirrors link.payment.paid: the event's
-// attributes.data carries the checkout session resource (id "cs_...") whose
-// attributes.payments array holds the payment resources. The session id is
-// what createPaymentCheckout stores in bookings.payment_id /
-// balance_payment_id, so it routes through the same confirm chain as a link id.
+// checkout_session.payment.paid carries the checkout session resource (id
+// "cs_...") in attributes.data, whose attributes.payments array holds the
+// payment resources. The session id is what createPaymentCheckout stores in
+// bookings.payment_id / balance_payment_id, so it is the key the confirm
+// chain looks the booking up by.
 async function handleCheckoutSessionPaymentPaid(attrs: Record<string, unknown>) {
   const sessionData = attrs.data as Record<string, unknown> | undefined;
   const sessionId = sessionData?.id as string | undefined;
@@ -176,8 +166,8 @@ async function handleCheckoutSessionPaymentPaid(attrs: Record<string, unknown>) 
   const sessionMetadata = sessionAttrs?.metadata as Record<string, unknown> | undefined;
   const metadataBookingId = (sessionMetadata?.bookingId as string) ?? null;
 
-  // Same idempotent confirm chain as the link handler: initial payment first,
-  // then fall back to the balance payment when no initial booking matches.
+  // The idempotent confirm chain: initial payment first, then fall back to the
+  // balance payment when no initial booking matches.
   const result = await confirmPaidBooking(sessionId, paymentMethod, paymentTransactionId, metadataBookingId, paidAmountCentavos);
 
   if (result.outcome === "not_found") {
