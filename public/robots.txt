@@ -11,4 +11,4 @@ Allow: /
 User-agent: Twitterbot
 Allow: /
 
-Sitemap: https://sama.com.ph/sitemap.xml
+Sitemap: https://www.sama.com.ph/sitemap.xml
