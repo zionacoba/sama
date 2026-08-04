@@ -270,8 +270,8 @@ export async function rejectOrganizer(id: string): Promise<void> {
       // Flag the associated payout for reconciliation whenever cancellation happens after payout creation.
       if (booking.payout_id && (booking.payout_status === "remitted" || booking.payout_status === "included")) {
         const { error: reconciliationFlagError } = await admin
-          .from("payouts" as "trips")
-          .update({ needs_reconciliation: true } as never)
+          .from("payouts")
+          .update({ needs_reconciliation: true })
           .eq("id", booking.payout_id);
         if (reconciliationFlagError) {
           // Bookkeeping-flag failure must never strand the joiner's refund;
@@ -286,14 +286,14 @@ export async function rejectOrganizer(id: string): Promise<void> {
       // Record a deduction against the organizer when a refund is issued after their payout was already remitted.
       if (booking.payout_status === "remitted" && totalRefundAmount > 0) {
         const { error: deductionError } = await (admin
-          .from("organizer_deductions" as "trips")
+          .from("organizer_deductions")
           .insert({
             organizer_id: id,
             booking_id: booking.id,
             amount: initialRefundAmount,
             reason: "Organizer application rejected - refund after payout remitted",
             status: "pending",
-          } as never) as unknown as Promise<{ error: { message: string } | null }>);
+          }) as unknown as Promise<{ error: { message: string } | null }>);
         if (deductionError) {
           console.error("[deduction] failed to record organizer deduction", booking.id, deductionError.message);
           Sentry.captureException(deductionError, {
@@ -617,7 +617,7 @@ export async function getPendingPayouts(): Promise<{
 
   // Payouts already created but not yet remitted.
   const { data: pendingRaw, error: pendingError } = await admin
-    .from("payouts" as "trips")
+    .from("payouts")
     .select("id, organizer_id, total_amount, platform_commission, net_amount, booking_ids, created_at, payout_destination, needs_reconciliation, organizer:organizers(full_name, display_name, email)")
     .eq("status", "pending")
     .order("created_at", { ascending: false }) as unknown as {
@@ -709,7 +709,7 @@ export async function getPendingPayouts(): Promise<{
       .select("id, full_name, display_name, email, payout_method, gcash_number, gcash_name, bank_name, bank_account_number, bank_account_name")
       .in("id", organizerIds),
     admin
-      .from("organizer_deductions" as "trips")
+      .from("organizer_deductions")
       .select("id, organizer_id, booking_id, amount, created_at")
       .in("organizer_id", organizerIds)
       .eq("status", "pending")
@@ -717,7 +717,7 @@ export async function getPendingPayouts(): Promise<{
         data: Array<{ id: string; organizer_id: string; booking_id: number; amount: number; created_at: string }> | null;
       }>,
     admin
-      .from("organizer_credits" as "trips")
+      .from("organizer_credits")
       .select("id, organizer_id, booking_id, amount, created_at")
       .in("organizer_id", organizerIds)
       .eq("status", "pending")
@@ -832,7 +832,7 @@ export async function getPayoutHistory(): Promise<PayoutHistoryEntry[]> {
   const admin = createSupabaseAdminClient();
 
   const { data, error } = await admin
-    .from("payouts" as "trips")
+    .from("payouts")
     .select("id, total_amount, platform_commission, net_amount, booking_ids, remitted_at, remittance_reference, notes, needs_reconciliation, organizer:organizers(full_name, display_name)")
     .eq("status", "remitted")
     .order("remitted_at", { ascending: false }) as unknown as {
@@ -877,7 +877,7 @@ export async function exportPayoutHistoryCSV(): Promise<string> {
   const admin = createSupabaseAdminClient();
 
   const { data, error } = await admin
-    .from("payouts" as "trips")
+    .from("payouts")
     .select("id, total_amount, platform_commission, net_amount, booking_ids, remitted_at, remittance_reference, needs_reconciliation, payout_destination, organizer:organizers(full_name, display_name)")
     .eq("status", "remitted")
     .order("remitted_at", { ascending: false }) as unknown as {
@@ -1038,7 +1038,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
 
   // Fetch pending deductions and subtract from net amount before remitting.
   const { data: pendingDeductionsRaw } = await (admin
-    .from("organizer_deductions" as "trips")
+    .from("organizer_deductions")
     .select("id, amount")
     .eq("organizer_id", organizerId)
     .eq("status", "pending")
@@ -1049,7 +1049,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
   // Fetch pending credits and add to net amount before remitting. Same
   // organizer/status filter as deductions so both sides net as one balance.
   const { data: pendingCreditsRaw } = await (admin
-    .from("organizer_credits" as "trips")
+    .from("organizer_credits")
     .select("id, amount")
     .eq("organizer_id", organizerId)
     .eq("status", "pending")
@@ -1112,7 +1112,7 @@ export async function createPayoutAction(formData: FormData): Promise<void> {
 
   if (orgForSnapshot) {
     const { error: snapshotError } = await (admin
-      .from("payouts" as "trips")
+      .from("payouts")
       .update({
         payout_destination: {
           payout_method: orgForSnapshot.payout_method,
@@ -1157,7 +1157,7 @@ export async function updatePayoutReference(formData: FormData): Promise<void> {
   if (!payoutId || !remittanceReference) redirect("/admin?tab=payouts&payoutError=missing");
 
   const { error } = await (admin
-    .from("payouts" as "trips")
+    .from("payouts")
     .update({ remittance_reference: remittanceReference })
     .eq("id", payoutId)
     .eq("status", "remitted") as unknown as Promise<{ error: { message: string } | null }>);
@@ -1293,7 +1293,7 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
   if (!payoutId || !remittanceReference) redirect("/admin?tab=payouts&payoutError=missing");
 
   const { data: payout, error: payoutError } = await admin
-    .from("payouts" as "trips")
+    .from("payouts")
     .select("id, organizer_id, booking_ids, net_amount")
     .eq("id", payoutId)
     .eq("status", "pending")
@@ -1330,7 +1330,7 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
   }
 
   const { data: updatedPayout, error: updateError } = await admin
-    .from("payouts" as "trips")
+    .from("payouts")
     .update({ status: "remitted", remitted_at: now, remittance_reference: remittanceReference, notes, updated_at: now })
     .eq("id", payoutId)
     .eq("status", "pending")

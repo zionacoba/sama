@@ -153,7 +153,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
           }> | null;
         }>,
       admin
-        .from("payouts" as "trips")
+        .from("payouts")
         .select("id, total_amount, platform_commission, net_amount, booking_ids, remitted_at, remittance_reference")
         .eq("organizer_id", organizer.id)
         .eq("status", "remitted")
@@ -169,7 +169,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
           }> | null;
         }>,
       admin
-        .from("organizer_deductions" as "trips")
+        .from("organizer_deductions")
         .select("id, booking_id, amount, created_at")
         .eq("organizer_id", organizer.id)
         .eq("status", "pending")

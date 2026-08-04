@@ -1184,8 +1184,8 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     // Flag the associated payout for reconciliation whenever cancellation happens after payout creation.
     if (booking.payout_id && (booking.payout_status === "remitted" || booking.payout_status === "included")) {
       const { error: reconciliationFlagError } = await admin
-        .from("payouts" as "trips")
-        .update({ needs_reconciliation: true } as never)
+        .from("payouts")
+        .update({ needs_reconciliation: true })
         .eq("id", booking.payout_id);
       if (reconciliationFlagError) {
         // Bookkeeping-flag failure must never strand the joiner's refund;
@@ -1200,14 +1200,14 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     // Record a deduction against the organizer when a refund is issued after their payout was already remitted.
     if (booking.payout_status === "remitted" && trip.organizer_id && refundAmount > 0) {
       const { error: deductionError } = await (admin
-        .from("organizer_deductions" as "trips")
+        .from("organizer_deductions")
         .insert({
           organizer_id: trip.organizer_id,
           booking_id: booking.id,
           amount: downpaymentRefund ?? refundAmount,
           reason: "Trip cancelled by organizer - refund after payout remitted",
           status: "pending",
-        } as never) as unknown as Promise<{ error: { message: string } | null }>);
+        }) as unknown as Promise<{ error: { message: string } | null }>);
       if (deductionError) {
         console.error("[deduction] failed to record organizer deduction", booking.id, deductionError.message);
         Sentry.captureException(new Error(deductionError.message), {

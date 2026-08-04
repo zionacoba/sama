@@ -50,7 +50,7 @@ export async function voidBookingCredit(
   // At most one active credit per booking (Stage 5a partial unique index on
   // booking_id WHERE status <> 'void'), so maybeSingle is safe.
   const { data: credit, error: fetchError } = await (admin
-    .from("organizer_credits" as "trips")
+    .from("organizer_credits")
     .select("id, amount, status")
     .eq("booking_id", bookingId)
     .neq("status", "void")
@@ -69,8 +69,8 @@ export async function voidBookingCredit(
   // only the call that actually transitions the row proceeds to the offset, so a
   // concurrent void can never produce a duplicate offsetting deduction.
   const { data: voided, error: voidError } = await (admin
-    .from("organizer_credits" as "trips")
-    .update({ status: "void" } as never)
+    .from("organizer_credits")
+    .update({ status: "void" })
     .eq("id", credit.id)
     .neq("status", "void")
     .select("id") as unknown as Promise<{ data: Array<{ id: string }> | null; error: { message: string } | null }>);
@@ -81,14 +81,14 @@ export async function voidBookingCredit(
 
   if (action === "voided-and-offset") {
     const { error: offsetError } = await (admin
-      .from("organizer_deductions" as "trips")
+      .from("organizer_deductions")
       .insert({
         organizer_id: organizerId,
         booking_id: bookingId,
         amount: credit.amount,
         reason: "Reversal of balance credit after cancellation",
         status: "pending",
-      } as never) as unknown as Promise<{ error: { message: string } | null }>);
+      }) as unknown as Promise<{ error: { message: string } | null }>);
     if (offsetError) return { action: "voided", error: offsetError.message };
   }
 
@@ -151,7 +151,7 @@ export async function reverseBookingCredit(
   // At most one active credit per booking (Stage 5a partial unique index), so
   // maybeSingle is safe.
   const { data: credit, error: fetchError } = await (admin
-    .from("organizer_credits" as "trips")
+    .from("organizer_credits")
     .select("id, amount, status, applied_payout_id")
     .eq("booking_id", bookingId)
     .neq("status", "void")
@@ -169,7 +169,7 @@ export async function reverseBookingCredit(
   let creditPayoutRemitted = false;
   if (credit.status === "applied" && credit.applied_payout_id) {
     const { data: payout, error: payoutError } = await (admin
-      .from("payouts" as "trips")
+      .from("payouts")
       .select("status")
       .eq("id", credit.applied_payout_id)
       .maybeSingle() as unknown as Promise<{
@@ -189,8 +189,8 @@ export async function reverseBookingCredit(
   if (action.kind === "document") {
     if (credit.applied_payout_id) {
       const { error: flagError } = await (admin
-        .from("payouts" as "trips")
-        .update({ needs_reconciliation: true } as never)
+        .from("payouts")
+        .update({ needs_reconciliation: true })
         .eq("id", credit.applied_payout_id) as unknown as Promise<{ error: { message: string } | null }>);
       if (flagError) return { action, error: flagError.message };
     }
@@ -202,8 +202,8 @@ export async function reverseBookingCredit(
   // touched; zero rows changed -> we lost the race, report "none".
   if (action.kind === "shrink") {
     const { data: shrunk, error: shrinkError } = await (admin
-      .from("organizer_credits" as "trips")
-      .update({ amount: action.retained } as never)
+      .from("organizer_credits")
+      .update({ amount: action.retained })
       .eq("id", credit.id)
       .eq("status", "pending")
       .neq("status", "void")
@@ -217,8 +217,8 @@ export async function reverseBookingCredit(
   // transitions the row (via .neq guard + .select) proceeds to insert the offset, so
   // a concurrent void can never produce a duplicate offsetting deduction.
   const { data: voided, error: voidError } = await (admin
-    .from("organizer_credits" as "trips")
-    .update({ status: "void" } as never)
+    .from("organizer_credits")
+    .update({ status: "void" })
     .eq("id", credit.id)
     .neq("status", "void")
     .select("id") as unknown as Promise<{ data: Array<{ id: string }> | null; error: { message: string } | null }>);
@@ -227,14 +227,14 @@ export async function reverseBookingCredit(
 
   if (action.kind === "void-and-offset") {
     const { error: offsetError } = await (admin
-      .from("organizer_deductions" as "trips")
+      .from("organizer_deductions")
       .insert({
         organizer_id: organizerId,
         booking_id: bookingId,
         amount: action.amount,
         reason: "Reversal of refunded balance after cancellation",
         status: "pending",
-      } as never) as unknown as Promise<{ error: { message: string } | null }>);
+      }) as unknown as Promise<{ error: { message: string } | null }>);
     if (offsetError) return { action, error: offsetError.message };
   }
 

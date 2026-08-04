@@ -344,7 +344,7 @@ export async function updateOrganizerProfile(
 
   if (wouldHaveNoPayout) {
     const { count: pendingPayoutCount, error: pendingPayoutError } = await (admin
-      .from("payouts" as "trips")
+      .from("payouts")
       .select("id", { count: "exact", head: true })
       .eq("organizer_id", organizer.id)
       .eq("status", "pending") as unknown as Promise<{ count: number | null; error: unknown }>);
