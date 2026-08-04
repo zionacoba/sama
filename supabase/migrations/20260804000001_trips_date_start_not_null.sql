@@ -1,0 +1,12 @@
+-- Make public.trips.date_start NOT NULL.
+--
+-- WHY:
+--   The application already guarantees a non-null date_start at its only insert
+--   path (createTrip in app/actions/trip.ts, which coalesces to the 2099-12-31
+--   template sentinel), and no RPC or edge function writes the column at all.
+--   A live read confirms zero null rows. This moves that guarantee into the
+--   database, which closes two fail-open branches that a null would otherwise
+--   reach: the past-trip cancellation gate, which passes a date-unknown trip,
+--   and the publish guard at trip.ts:917, which skips its past-date check.
+--
+ALTER TABLE public.trips ALTER COLUMN date_start SET NOT NULL;
