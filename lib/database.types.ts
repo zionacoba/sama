@@ -771,7 +771,7 @@ export type Database = {
           custom_question: string | null
           custom_questions: Json | null
           date_end: string | null
-          date_start: string | null
+          date_start: string
           description: string | null
           destination: string | null
           difficulty: string | null
@@ -807,7 +807,7 @@ export type Database = {
           custom_question?: string | null
           custom_questions?: Json | null
           date_end?: string | null
-          date_start?: string | null
+          date_start: string
           description?: string | null
           destination?: string | null
           difficulty?: string | null
@@ -843,7 +843,7 @@ export type Database = {
           custom_question?: string | null
           custom_questions?: Json | null
           date_end?: string | null
-          date_start?: string | null
+          date_start?: string
           description?: string | null
           destination?: string | null
           difficulty?: string | null
