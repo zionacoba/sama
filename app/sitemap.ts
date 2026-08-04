@@ -9,12 +9,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [{ data: trips }, { data: organizers }] = await Promise.all([
     admin
       .from("trips")
-      .select("slug, updated_at")
+      .select("slug")
       .eq("status", "active")
-      .or("is_template.is.null,is_template.eq.false"),
+      .or("is_template.is.null,is_template.eq.false")
+      .not("slug", "is", null),
     admin
       .from("organizers")
-      .select("id, updated_at")
+      .select("id")
       .eq("status", "approved"),
   ]);
 
@@ -25,14 +26,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const tripRoutes: MetadataRoute.Sitemap = (trips ?? []).map((t) => ({
     url: `${BASE_URL}/trips/${t.slug}`,
-    lastModified: t.updated_at ? new Date(t.updated_at) : new Date(),
     changeFrequency: "weekly",
     priority: 0.8,
   }));
 
   const organizerRoutes: MetadataRoute.Sitemap = (organizers ?? []).map((o) => ({
     url: `${BASE_URL}/organizers/${o.id}`,
-    lastModified: o.updated_at ? new Date(o.updated_at) : new Date(),
     changeFrequency: "weekly",
     priority: 0.6,
   }));
