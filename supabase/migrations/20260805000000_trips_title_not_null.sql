@@ -1,0 +1,12 @@
+-- Make trips.title NOT NULL.
+--
+-- WHY: title is nullable in the schema but has never been null in production
+-- (10 rows, zero nulls, zero empties, zero blanks read live before this ran).
+-- All nine application write sites supply it, verified from source at v69.
+--
+-- Two live defects become structurally unreachable rather than merely dormant:
+-- organizer/dashboard/page.tsx calls title.toLowerCase() unguarded in the trip
+-- search, and lib/confirm-paid-booking.ts interpolates the title raw into the
+-- joiner confirmation subject line, which would send the word null to a paying
+-- joiner. bookings.phone and trips.slug are deliberately out of this change.
+ALTER TABLE public.trips ALTER COLUMN title SET NOT NULL;
