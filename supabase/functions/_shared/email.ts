@@ -15,8 +15,17 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
  * quote to &#039;), this edge version intentionally does not, to preserve the
  * exact output the functions have always produced. This is a pure dedup, not a
  * behavior change.
+ *
+ * A nullish argument returns an empty string and logs, rather than throwing:
+ * a throw inside an email template would silently prevent the send, since the
+ * per-booking catch swallows it and still returns 200.
  */
-export function escapeHtml(str: string): string {
+export function escapeHtml(str: string | null | undefined): string {
+  if (str === null || str === undefined) {
+    console.error("[escape-html] received a nullish argument");
+    return "";
+  }
+
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
