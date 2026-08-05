@@ -793,7 +793,7 @@ export type Database = {
           slug: string | null
           status: string | null
           template_id: number | null
-          title: string | null
+          title: string
           total_slots: number | null
           waitlist_enabled: boolean | null
           waiver_text: string | null
@@ -829,7 +829,7 @@ export type Database = {
           slug?: string | null
           status?: string | null
           template_id?: number | null
-          title?: string | null
+          title: string
           total_slots?: number | null
           waitlist_enabled?: boolean | null
           waiver_text?: string | null
@@ -865,7 +865,7 @@ export type Database = {
           slug?: string | null
           status?: string | null
           template_id?: number | null
-          title?: string | null
+          title?: string
           total_slots?: number | null
           waitlist_enabled?: boolean | null
           waiver_text?: string | null
