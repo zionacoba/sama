@@ -100,6 +100,10 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Less than 7 days before trip: No refund</span></li>
               </ul>
 
+              <p className="mt-4 leading-relaxed">
+                Days are counted as calendar days in Philippine time. We compare the current date in the Philippines with the trip's start date, so the time of day you cancel does not matter — a cancellation made at any hour of a given day falls in the same tier as one made at any other hour of that same day.
+              </p>
+
               <h3 className="mt-5 text-base font-semibold text-stone-800">What the refund percentage applies to</h3>
               <p className="mt-2 leading-relaxed">
                 Refund percentages apply to the amount you actually paid through Sama, not the full trip price. If you paid only a downpayment, your refund is calculated as a percentage of that downpayment. If you also paid your balance online through Sama, the refund is calculated on the total you paid online. Any amount paid in cash directly to the organizer is arranged and refunded with the organizer directly and is not processed through Sama.
@@ -127,10 +131,12 @@ export default function TermsPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">7. Waivers and Assumption of Risk</h2>
               <ul className="mt-2 space-y-1.5 leading-relaxed">
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>All participants must agree to the organizer's trip waiver before booking is confirmed.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>When you book, you accept the organizer's trip waiver and confirm that every participant in your booking is 18 or older.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>If your booking covers more than one slot, each additional participant receives a personal link and accepts the waiver in their own name before the trip.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Participants acknowledge the inherent risks of outdoor activities including physical injury, accidents, and unpredictable weather.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>By booking a trip, you voluntarily assume all risks associated with participation.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama is not liable for any injury, loss, or damage arising from participation in any trip listed on the platform.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Responsibility for the conduct and safety of each trip rests with the independent organizer who runs it, not with Sama.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Except in cases of Sama's own gross negligence or willful misconduct, Sama is not liable for any injury, loss, or damage arising from participation in any trip listed on the platform.</span></li>
               </ul>
             </section>
 
@@ -194,7 +200,10 @@ export default function TermsPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">13. Limitation of Liability</h2>
               <p className="mt-2 leading-relaxed">
-                To the maximum extent permitted by Philippine law, Sama and its operators shall not be liable for any indirect, incidental, or consequential damages arising from your use of the platform or participation in any trip listed on it.
+                To the maximum extent permitted by Philippine law, and except in cases of Sama's own gross negligence or willful misconduct, Sama and its operators shall not be liable for any indirect, incidental, consequential, or special damages arising from your use of the platform or participation in any trip listed on it.
+              </p>
+              <p className="mt-4 leading-relaxed">
+                Nothing in these Terms excludes or limits any liability that cannot lawfully be excluded or limited under Philippine law.
               </p>
             </section>
 
