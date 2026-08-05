@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
+import { CANCELLATION_POLICIES, resolveCancellationPolicy } from "@/lib/cancellation-policies";
 import { safeExternalUrl } from "@/lib/safe-url";
 import { CancelBookingButton } from "@/app/profile/cancel-booking-button";
 import { PayBalanceButton } from "./pay-balance-button";
@@ -47,6 +47,8 @@ type BookingDetail = {
   meeting_point: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
+  // Snapshot taken at booking time; wins over the trip's current policy.
+  cancellation_policy: string | null;
   trip: {
     title: string;
     slug: string;
@@ -147,7 +149,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
       payment_option, payment_method, balance_collected, balance_payment_gateway_status, status, transferred_at, created_at, waiver_agreed,
       waiver_agreed_at, waiver_text_snapshot, platform_waiver_snapshot,
       custom_question_answers, custom_question_answer, custom_questions_snapshot, notes, medical_notes, meeting_point,
-      emergency_contact_name, emergency_contact_phone,
+      emergency_contact_name, emergency_contact_phone, cancellation_policy,
       trip:trips!bookings_trip_id_fkey(
         title, slug, date_start, date_end, destination, region, difficulty,
         activity_type, duration, cancellation_policy, cancellation_policy_custom,
@@ -215,8 +217,13 @@ export default async function BookingDetailPage({ params }: PageProps) {
   const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
   const replacementLink = replacement?.token ? `${SITE_URL}/join/${replacement.token}` : null;
 
-  const policyKey = (trip.cancellation_policy ?? "flexible") as keyof typeof CANCELLATION_POLICIES;
+  // The booking's snapshot governs, not the trip's current setting — otherwise the
+  // tier we name here and the refund we quote below can differ from what
+  // cancelBooking actually pays after the organizer edits the trip.
+  const resolvedPolicy = resolveCancellationPolicy(booking.cancellation_policy, trip.cancellation_policy);
+  const policyKey = resolvedPolicy as keyof typeof CANCELLATION_POLICIES;
   const policy = CANCELLATION_POLICIES[policyKey] ?? CANCELLATION_POLICIES.flexible;
+  // Only the policy key is snapshotted, so custom wording still comes from the trip.
   const policyText = policyKey === "custom"
     ? (trip.cancellation_policy_custom ?? "Contact your organizer for details.")
     : policy.text;
@@ -234,7 +241,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
   const tripDay = new Date(trip.date_start);
   const daysUntilTrip = Math.round((tripDay.getTime() - todayManila.getTime()) / 86_400_000);
   const fullRefundable = amountPaid != null
-    ? calculateRefundAmount(trip.cancellation_policy ?? "flexible", amountPaid, daysUntilTrip)
+    ? calculateRefundAmount(resolvedPolicy, amountPaid, daysUntilTrip)
     : null;
   const refundRatio = (fullRefundable !== null && amountPaid != null && amountPaid > 0)
     ? fullRefundable / amountPaid

@@ -28,6 +28,24 @@ export const CANCELLATION_POLICIES = {
 export type CancellationPolicyKey = keyof typeof CANCELLATION_POLICIES;
 
 /**
+ * Resolves which cancellation policy governs a booking.
+ *
+ * The booking's own value is a snapshot taken at booking time (see createBooking)
+ * so that later trip edits cannot move an existing booking. It therefore wins over
+ * the trip's current value; the trip is only a fallback for bookings made before
+ * the snapshot column existed, and "flexible" is the final default.
+ *
+ * Every site that shows or pays a refund must resolve through this function, or
+ * the figure a joiner is shown can drift from the figure they are paid.
+ */
+export function resolveCancellationPolicy(
+  bookingPolicy: string | null | undefined,
+  tripPolicy: string | null | undefined,
+): string {
+  return bookingPolicy ?? tripPolicy ?? "flexible";
+}
+
+/**
  * Returns the refund amount based on the policy and days until the trip.
  * Returns null for "custom" policies (manual review required).
  */

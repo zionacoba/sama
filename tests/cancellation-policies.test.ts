@@ -1,10 +1,38 @@
 import { describe, expect, it } from "vitest";
-import { calculateRefundAmount } from "@/lib/cancellation-policies";
+import { calculateRefundAmount, resolveCancellationPolicy } from "@/lib/cancellation-policies";
 
 // Core refund-by-policy math. We test the exact day boundaries where the refund
 // tier changes (just inside vs just outside), plus the full/partial/no-refund
 // cases and edge inputs. Amounts assert the real numbers the function returns.
 const PAID = 10000;
+
+describe("resolveCancellationPolicy", () => {
+  it("prefers the booking snapshot over the trip's current policy", () => {
+    expect(resolveCancellationPolicy("strict", "flexible")).toBe("strict");
+    expect(resolveCancellationPolicy("moderate", "strict")).toBe("moderate");
+  });
+
+  it("falls back to the trip when the booking has no snapshot", () => {
+    expect(resolveCancellationPolicy(null, "strict")).toBe("strict");
+    expect(resolveCancellationPolicy(undefined, "moderate")).toBe("moderate");
+  });
+
+  it("defaults to flexible when neither side has a policy", () => {
+    expect(resolveCancellationPolicy(null, null)).toBe("flexible");
+    expect(resolveCancellationPolicy(undefined, undefined)).toBe("flexible");
+  });
+
+  // The regression this function exists for: a joiner books under flexible, the
+  // organizer later edits the trip to strict. The snapshot must keep governing,
+  // so what the booking page SHOWS matches what cancelBooking PAYS.
+  it("keeps a flexible booking flexible after the trip is edited to strict", () => {
+    const resolved = resolveCancellationPolicy("flexible", "strict");
+    expect(resolved).toBe("flexible");
+    // 10 days out: flexible refunds in full, strict would refund only 50%.
+    expect(calculateRefundAmount(resolved, PAID, 10)).toBe(10000);
+    expect(calculateRefundAmount("strict", PAID, 10)).toBe(5000);
+  });
+});
 
 describe("calculateRefundAmount", () => {
   describe("flexible (full >=7, 50% >=3, else 0)", () => {

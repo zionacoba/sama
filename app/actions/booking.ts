@@ -9,7 +9,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
-import { calculateRefundAmount } from "@/lib/cancellation-policies";
+import { calculateRefundAmount, resolveCancellationPolicy } from "@/lib/cancellation-policies";
 import { amountJoinerPaid, computeRefundSplit, shouldRefundOnReject } from "@/lib/booking-finance";
 import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
@@ -1737,7 +1737,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   const daysUntilTrip = Math.round((tripDay.getTime() - todayManila.getTime()) / 86_400_000);
 
   const fullRefundableAmount = calculateRefundAmount(
-    booking.cancellation_policy ?? tripDateCheck?.cancellation_policy ?? "flexible",
+    resolveCancellationPolicy(booking.cancellation_policy, tripDateCheck?.cancellation_policy),
     amountPaid,
     daysUntilTrip,
   );
@@ -2236,7 +2236,7 @@ export async function cancelBooking(bookingId: number) {
     const daysUntilTrip = Math.round((tripDay.getTime() - todayManila.getTime()) / 86_400_000);
     const amountPaid = amountJoinerPaid(booking);
     const refundAmount = calculateRefundAmount(
-      booking.cancellation_policy ?? trip.cancellation_policy ?? "flexible",
+      resolveCancellationPolicy(booking.cancellation_policy, trip.cancellation_policy),
       amountPaid,
       daysUntilTrip,
     );
