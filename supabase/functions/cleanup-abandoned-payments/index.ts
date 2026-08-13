@@ -57,10 +57,11 @@ Deno.serve(async (req) => {
 
   // Exclude rows already escalated (reconcile_escalated_at set): they have had
   // their one-time alert and must not be retried or re-alerted. reconcile_first_failed_at
-  // is selected so we can tell how long a booking has been unverifiable.
+  // is selected so we can tell how long a booking has been unverifiable. email,
+  // full_name and the embedded trip feed the joiner's slot-released notice below.
   const { data: staleBookings, error } = await supabase
     .from("bookings")
-    .select("id, trip_id, slots, reconcile_first_failed_at")
+    .select("id, trip_id, slots, reconcile_first_failed_at, email, full_name, trips!bookings_trip_id_fkey(title, date_start)")
     .eq("status", "payment_pending")
     .is("payment_gateway_status", null)
     .is("reconcile_escalated_at", null)
@@ -251,6 +252,44 @@ Deno.serve(async (req) => {
       }
     } catch (notifyErr) {
       console.warn(`[cleanup-abandoned-payments] notify-waitlist call failed for trip ${booking.trip_id} (booking ${booking.id}); waitlist will be notified on the next slot event:`, notifyErr);
+    }
+
+    // Tell the joiner their slot was released, so a booking does not simply
+    // vanish on them. Runs AFTER the waitlist ping: handing the freed slot to
+    // people actively waiting for it is the time-sensitive action and must not
+    // queue behind this courtesy send.
+    //
+    // The empty-email guard is mandatory, not defensive dressing: sendEmail
+    // throws on a null recipient and Deno.serve has NO top-level try/catch, so
+    // an unguarded throw would abort the whole run: skipping every remaining
+    // stale booking AND the balance sweep below. The try/catch mirrors the two
+    // admin sends above. On failure we log and continue and nothing more: the
+    // cancellation already succeeded and is irreversible, so there is no
+    // operator action to alert for and nothing to retry.
+    if (booking.email) {
+      try {
+        const tripTitle = booking.trips?.title ?? "";
+        const tripDate = new Intl.DateTimeFormat("en-PH", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          timeZone: "Asia/Manila",
+        }).format(new Date(booking.trips?.date_start ?? ""));
+
+        await sendEmail(
+          booking.email,
+          `Your booking was released: ${tripTitle}`,
+          `
+            <p>Hi ${escapeHtml(booking.full_name)},</p>
+            <p>We did not receive your payment for <strong>${escapeHtml(tripTitle)}</strong> on ${tripDate}, so we have released your slot.</p>
+            <p>You have not been charged. If you still want to join, you can book again on the trip page - slots are first come, first served and may no longer be available.</p>
+            <p>Sama</p>
+          `,
+        );
+      } catch (notifyJoinerErr) {
+        console.error(`[cleanup-abandoned-payments] failed to notify joiner of released booking ${booking.id}:`, notifyJoinerErr);
+      }
     }
 
     cleaned++;
