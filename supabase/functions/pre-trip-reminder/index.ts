@@ -74,6 +74,7 @@ Deno.serve(async (req) => {
     email: string;
     total_amount: number | null;
     amount_due: number | null;
+    balance_collected: boolean;
     meeting_point: string | null;
   };
   const candidates: Array<{ trip: TripRow; booking: BookingRow }> = [];
@@ -83,7 +84,7 @@ Deno.serve(async (req) => {
     const remaining = MAX_BOOKINGS_PER_RUN - candidates.length;
     const { data: bookings, error: bookingsError } = await supabase
       .from("bookings")
-      .select("id, full_name, email, total_amount, amount_due, meeting_point")
+      .select("id, full_name, email, total_amount, amount_due, balance_collected, meeting_point")
       .eq("trip_id", trip.id)
       .eq("status", "confirmed")
       .is("pre_trip_reminder_sent_at", null)
@@ -132,12 +133,14 @@ Deno.serve(async (req) => {
       timeZone: "Asia/Manila",
     }).format(new Date(trip.date_start));
 
-    const amountPaid =
-      booking.total_amount != null && booking.amount_due != null
-        ? booking.total_amount - booking.amount_due
-        : booking.total_amount;
+    const amountPaid = booking.amount_due;
     const balance =
-      booking.amount_due != null && booking.amount_due > 0 ? booking.amount_due : null;
+      booking.total_amount != null &&
+      booking.amount_due != null &&
+      !booking.balance_collected &&
+      booking.total_amount - booking.amount_due > 0
+        ? booking.total_amount - booking.amount_due
+        : null;
 
     const bookingUrl = `${SITE_URL}/profile/bookings/${booking.id}`;
 
