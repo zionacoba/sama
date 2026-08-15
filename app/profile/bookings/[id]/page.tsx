@@ -338,7 +338,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
             <DetailRow label="Destination">{trip.destination}{trip.region && <span className="ml-2 text-stone-500">{trip.region}</span>}</DetailRow>
             <DetailRow label="Date">
               {formatDate(trip.date_start)}
-              {trip.date_end && <> – {formatDate(trip.date_end)}</>}
+              {trip.date_end && trip.date_end !== trip.date_start && <> – {formatDate(trip.date_end)}</>}
               {trip.duration && <span className="ml-2 text-stone-500">({trip.duration})</span>}
             </DetailRow>
             <DetailRow label="Difficulty">

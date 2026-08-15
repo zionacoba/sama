@@ -81,7 +81,7 @@ function formatDate(date: string) {
 }
 
 function formatDateRange(start: string, end: string | null | undefined) {
-  if (!end) return formatDate(start);
+  if (!end || end === start) return formatDate(start);
   return `${formatDate(start)} – ${formatDate(end)}`;
 }
 

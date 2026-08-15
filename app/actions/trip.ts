@@ -747,8 +747,8 @@ export async function updateTrip(
 
         const changeLines: string[] = [];
         if (dateChanged) {
-          const oldRange = existing.date_end ? `${fmt(existing.date_start)} to ${fmt(existing.date_end)}` : fmt(existing.date_start);
-          const newRange = date_end ? `${fmt(date_start)} to ${fmt(date_end)}` : fmt(date_start);
+          const oldRange = existing.date_end && existing.date_end !== existing.date_start ? `${fmt(existing.date_start)} to ${fmt(existing.date_end)}` : fmt(existing.date_start);
+          const newRange = date_end && date_end !== date_start ? `${fmt(date_start)} to ${fmt(date_end)}` : fmt(date_start);
           changeLines.push(`<li><strong>Date:</strong> ${oldRange} → ${newRange}</li>`);
         }
         if (priceChanged) {
