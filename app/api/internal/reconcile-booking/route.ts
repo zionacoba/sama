@@ -6,6 +6,8 @@ export const maxDuration = 60;
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { confirmPaidBooking, confirmPaidBalance, fetchPaymongoCheckoutPayment } from "@/lib/confirm-paid-booking";
+import { expireCheckoutSession } from "@/lib/paymongo-expire-session";
+import { resolveExpireOutcome } from "@/lib/expire-session-gate";
 
 function constantTimeEqual(a: string, b: string): boolean {
   const aBuf = Buffer.from(a);
@@ -152,6 +154,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ canCancel: false, paid: true, outcome: result.outcome });
     }
     // PayMongo reports a definitive non-paid status — genuinely abandoned.
+    // Before handing back a cancel-safe verdict, ask PayMongo to expire this
+    // checkout session so the abandoned payment page cannot be paid after the
+    // booking is cancelled. expireCheckoutSession never throws, so this can
+    // never land in the enclosing catch and start the strand-escalation clock.
+    const expireResult = await expireCheckoutSession(booking.payment_id);
+    const expireOutcome = resolveExpireOutcome(expireResult);
+    if (expireOutcome.kind === "refused") {
+      // PayMongo answered and declined. Do NOT cancel: the page is still
+      // payable. Surface it, since a refusal we do not understand needs eyes.
+      const refusedStatus = expireResult.kind === "response" ? expireResult.httpStatus : null;
+      const refusedDetail = expireResult.kind === "response" ? expireResult.detail : null;
+      console.error(`[reconcile-booking] PayMongo refused to expire checkout session for booking ${booking.id}: status ${refusedStatus}, detail: ${refusedDetail}`);
+      Sentry.captureException(
+        new Error(`PayMongo refused to expire checkout session for booking ${booking.id}: status ${refusedStatus}, detail: ${refusedDetail}`),
+        { extra: { context: "reconcile-expire-refused", bookingId, linkId: booking.payment_id } },
+      );
+      return NextResponse.json({ canCancel: false });
+    }
+    if (expireOutcome.kind === "unreachable") {
+      // We never reached PayMongo, so the page's state is unknown. Do NOT
+      // cancel. No Sentry capture: transient unreachability is expected noise
+      // and a future cycle retries this booking.
+      console.error(`[reconcile-booking] could not reach PayMongo to expire checkout session for booking ${booking.id}`);
+      return NextResponse.json({ canCancel: false });
+    }
+    // "expired" or "already-expired": the page cannot be paid either way.
     return NextResponse.json({ canCancel: true, paid: false });
   } catch (err) {
     console.error("[reconcile-booking] PayMongo check failed:", err);
