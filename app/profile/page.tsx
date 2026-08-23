@@ -30,8 +30,6 @@ type Booking = {
   balance_payment_gateway_status: string | null;
   payment_gateway_status: string | null;
   status: string;
-  waiver_agreed: boolean;
-  waiver_agreed_at: string | null;
   created_at: string;
   trip: {
     id: number;
@@ -44,7 +42,6 @@ type Booking = {
     activity_type: string | null;
     duration: string | null;
     meeting_point: string;
-    waiver_text: string | null;
   };
 };
 
@@ -272,10 +269,8 @@ export default async function AccountPage({ searchParams }: PageProps) {
         balance_payment_gateway_status,
         payment_gateway_status,
         status,
-        waiver_agreed,
-        waiver_agreed_at,
         created_at,
-        trip:trips!bookings_trip_id_fkey(id, title, slug, date_start, destination, photos, difficulty, activity_type, duration, meeting_point, waiver_text)
+        trip:trips!bookings_trip_id_fkey(id, title, slug, date_start, destination, photos, difficulty, activity_type, duration, meeting_point)
       `)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
