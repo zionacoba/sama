@@ -14,7 +14,7 @@ export default function TermsPage() {
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
-          <p className="text-sm text-stone-500">Last updated: July 2026</p>
+          <p className="text-sm text-stone-500">Last updated: August 2026</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900">
             Terms of Service
           </h1>
@@ -55,7 +55,7 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers must apply and be approved by Sama before listing trips.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers are independent operators and are solely responsible for their trips, participants, safety, permits, and compliance with applicable laws.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Organizers must hold all required permits (DENR, LGU, etc.) for restricted trails and sites.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama reserves the right to suspend or remove any organizer who violates platform policies.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama may unpublish a trip, stop accepting new bookings on it, or hold a payout while looking into a safety concern, suspected fraud, or a suspected breach of these terms, and may end an organizer's access to the platform for a safety risk, dishonesty, or a serious breach.</span></li>
               </ul>
             </section>
 
@@ -144,7 +144,7 @@ export default function TermsPage() {
               <h2 className="text-lg font-bold text-stone-900">8. Participant Responsibilities</h2>
               <ul className="mt-2 space-y-1.5 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>You are responsible for ensuring you are physically fit to participate in any trip you book.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>You must disclose relevant medical conditions to the organizer. This information is collected through the booking process and handled in accordance with our <a href="/privacy" className="text-trailhead hover:underline">Privacy Policy</a>.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sharing relevant medical conditions or allergies with the organizer is optional but strongly recommended for your safety. This information is collected through the booking process and handled in accordance with our <a href="/privacy" className="text-trailhead hover:underline">Privacy Policy</a>.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>You are responsible for bringing appropriate gear and following organizer instructions.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>If booking on behalf of others, you confirm that all participants are aware of and agree to the trip risks and cancellation policy.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>All participants must be at least 18 years old. If you book on behalf of others, you confirm that every participant in the booking is 18 or older. Sama does not permit minors to participate in trips booked through the platform.</span></li>
