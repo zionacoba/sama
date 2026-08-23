@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { applyToBeOrganizer } from "@/app/actions/organizer";
+import { ORGANIZER_TERMS_TEXT } from "@/lib/constants";
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2";
@@ -262,6 +263,26 @@ export function ApplyForm({
           className={inputClass}
           placeholder="@yourhandle or https://instagram.com/yourhandle"
         />
+      </div>
+
+      <div>
+        <p className={`${labelClass} mb-1.5`}>
+          Organizer Agreement <span className="text-red-500">*</span>
+        </p>
+        <div className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-xs leading-relaxed text-stone-600">
+          {ORGANIZER_TERMS_TEXT}
+        </div>
+        <label className="mt-3 flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            name="organizer_terms_accepted"
+            required
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 accent-trailhead focus:ring-2 focus:ring-trailhead/30"
+          />
+          <span className="text-xs leading-relaxed text-stone-600">
+            I have read and agree to the Sama Organizer Terms above. <span className="text-red-500">*</span>
+          </span>
+        </label>
       </div>
 
       <div className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4">

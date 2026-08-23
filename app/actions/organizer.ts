@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -10,6 +11,7 @@ import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { safeExternalUrl } from "@/lib/safe-url";
 import { resolveGuardCount, resolveGuardRows } from "@/lib/payout-details-guard";
+import { ORGANIZER_TERMS_TEXT, ORGANIZER_TERMS_VERSION } from "@/lib/constants";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
@@ -39,12 +41,13 @@ export async function applyToBeOrganizer(
   const certifications = (formData.get("certifications") as string)?.trim() || null;
   const termsAgreed = formData.get("terms_agreed") === "on";
   const accuracyConfirmed = formData.get("accuracy_confirmed") === "on";
+  const organizerTermsAccepted = formData.get("organizer_terms_accepted") === "on";
 
   if (!displayName || !fullName || !bio || !phone || !personalFacebookUrl || !organizerFacebookUrl || !tripsPerMonth || !operatingLocations) {
     return { error: "All required fields must be filled in." };
   }
-  if (!termsAgreed || !accuracyConfirmed) {
-    return { error: "You must agree to the terms and confirm the accuracy of your application." };
+  if (!termsAgreed || !accuracyConfirmed || !organizerTermsAccepted) {
+    return { error: "You must accept all the agreements and confirm the accuracy of your application." };
   }
   if (activityTypes.length === 0) {
     return { error: "Please select at least one activity type." };
@@ -59,6 +62,10 @@ export async function applyToBeOrganizer(
   if (!validPersonalFacebookUrl || !validOrganizerFacebookUrl || (instagram && !validInstagram)) {
     return { error: "Please enter a valid Facebook or Instagram link starting with http:// or https://" };
   }
+
+  // Capture the applicant's IP the same way createBooking does for the booker.
+  const requestHeaders = await headers();
+  const termsIp = requestHeaders.get("x-forwarded-for")?.split(",")[0].trim() ?? null;
 
   const admin = createSupabaseAdminClient();
 
@@ -117,6 +124,10 @@ export async function applyToBeOrganizer(
         certifications,
         trips_per_month: tripsPerMonth,
         operating_locations: operatingLocations,
+        terms_accepted_at: new Date().toISOString(),
+        terms_ip: termsIp,
+        terms_version: ORGANIZER_TERMS_VERSION,
+        terms_text_snapshot: ORGANIZER_TERMS_TEXT,
         status: "pending",
       })
       .eq("id", existingOrganizer.id)
@@ -193,6 +204,10 @@ export async function applyToBeOrganizer(
       certifications,
       trips_per_month: tripsPerMonth,
       operating_locations: operatingLocations,
+      terms_accepted_at: new Date().toISOString(),
+      terms_ip: termsIp,
+      terms_version: ORGANIZER_TERMS_VERSION,
+      terms_text_snapshot: ORGANIZER_TERMS_TEXT,
     });
     insertError = error;
   } catch (err) {
