@@ -179,7 +179,7 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Any attempt to use the platform to process payments unrelated to a genuine outdoor trip listed on Sama.</span></li>
               </ul>
               <p className="mt-4 leading-relaxed">
-                Sama reviews every organizer before they are approved and reserves the right to remove any listing or organizer that violates these terms. Organizers are responsible for ensuring their trips comply with all applicable laws, permits, and safety standards.
+                Sama reviews every organizer before they are approved and reserves the right to remove any listing that violates these terms, and may act on an organizer's account as described in section 4. Organizers are responsible for ensuring their trips comply with all applicable laws, permits, and safety standards.
               </p>
             </section>
 
