@@ -629,11 +629,13 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
                       <p className="font-medium text-stone-700">Estimated next payout</p>
                       <p>
                         {(() => {
-                          const d = new Date();
-                          const day = d.getDay();
-                          const daysUntilTuesday = (2 - day + 7) % 7 || 7;
-                          const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + daysUntilTuesday);
-                          return new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(next);
+                          // Sama runs payouts on Thursday. The Manila date string is parsed as UTC
+                          // midnight so the weekday and the day arithmetic are both read in UTC and
+                          // stay on the Manila calendar day, whatever timezone the server runs in.
+                          const d = new Date(`${todayManilaDate()}T00:00:00Z`);
+                          const daysUntilThursday = (4 - d.getUTCDay() + 7) % 7 || 7;
+                          d.setUTCDate(d.getUTCDate() + daysUntilThursday);
+                          return new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(d);
                         })()}
                       </p>
                     </div>
