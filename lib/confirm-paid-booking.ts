@@ -483,10 +483,10 @@ export async function confirmPaidBooking(
             <p style="font-size:13px;color:#78716c;border-top:1px solid #e7e5e4;margin-top:16px;padding-top:12px;">
               <strong>When will you receive this payment?</strong><br/>
               ${isDownpay
-                ? `This downpayment will be remitted to you the following Tuesday after the booking date. The participant's balance will be remitted 24-48 hours after the trip date (if paid online through Sama), or you can collect it directly on the day.`
-                : `This full payment will be remitted to you the following Tuesday after the booking date.`
+                ? `This downpayment will be paid out to you about 2 days after the booking date. The participant's balance will be paid out after the trip has run if paid online through Sama, or you can collect it directly on the day.`
+                : `This full payment will be paid out to you about 2 days after the booking date.`
               }
-              If this booking was made less than 7 days before the trip, remittance happens the Tuesday after the trip date instead.
+              If this booking was made less than 7 days before the trip, it is paid out after the trip has run instead.
             </p>
             <p>Sama</p>
           `,
@@ -950,7 +950,7 @@ export async function confirmPaidBalance(
           html: `
             <p>Hi,</p>
             <p><strong>${escapeHtml(booking.full_name)}</strong> has paid their remaining balance of <strong>${fmt(balance)}</strong> for <strong>${escapeHtml(trip.title)}</strong> online through Sama.</p>
-            <p>This will be remitted to you 24 to 48 hours after the trip date.</p>
+            <p>This will be paid out to you after the trip has run.</p>
             <p>Sama</p>
           `,
         });

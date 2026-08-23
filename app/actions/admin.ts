@@ -92,7 +92,7 @@ export async function approveOrganizer(id: string, ratePercent: number): Promise
           <li>Create your first trip listing</li>
           <li>Share your trip link with your community</li>
         </ol>
-        <p>Your platform fee is <strong>${commissionRatePercent}%</strong> per booking. Payouts are sent every Tuesday via your preferred payout method.</p>
+        <p>Your platform fee is <strong>${commissionRatePercent}%</strong> per booking. Payouts are sent to your preferred payout method. We do a payout run every Thursday.</p>
         <p>If you have any questions, just reply to this email.</p>
         <p>Sama</p>
       `,

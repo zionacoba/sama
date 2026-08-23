@@ -498,7 +498,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                       participantName={b.full_name}
                                       balanceAmount={formatPeso(b.total_amount - b.amount_due)}
                                     />
-                                    <span className="text-xs text-stone-500">Participant can pay balance online or directly to you. Mark as collected once received. Balance payments made online are remitted 24-48 hours after the trip date.</span>
+                                    <span className="text-xs text-stone-500">Participant can pay balance online or directly to you. Mark as collected once received. Balance payments made online are paid out after the trip has run.</span>
                                   </>
                                 )}
                               </>
@@ -604,7 +604,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
                                           participantName={b.full_name}
                                           balanceAmount={formatPeso(b.total_amount - b.amount_due)}
                                         />
-                                        <span className="text-xs text-stone-500">Participant can pay balance online or directly to you. Mark as collected once received. Balance payments made online are remitted 24-48 hours after the trip date.</span>
+                                        <span className="text-xs text-stone-500">Participant can pay balance online or directly to you. Mark as collected once received. Balance payments made online are paid out after the trip has run.</span>
                                       </>
                                     )}
                                   </div>
