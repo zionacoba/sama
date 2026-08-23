@@ -442,6 +442,10 @@ export type Database = {
           photo_url: string | null
           social_links: Json | null
           status: string
+          terms_accepted_at: string | null
+          terms_ip: string | null
+          terms_text_snapshot: string | null
+          terms_version: string | null
           trips_per_month: string | null
           user_id: string
           years_experience: number | null
@@ -471,6 +475,10 @@ export type Database = {
           photo_url?: string | null
           social_links?: Json | null
           status?: string
+          terms_accepted_at?: string | null
+          terms_ip?: string | null
+          terms_text_snapshot?: string | null
+          terms_version?: string | null
           trips_per_month?: string | null
           user_id: string
           years_experience?: number | null
@@ -500,6 +508,10 @@ export type Database = {
           photo_url?: string | null
           social_links?: Json | null
           status?: string
+          terms_accepted_at?: string | null
+          terms_ip?: string | null
+          terms_text_snapshot?: string | null
+          terms_version?: string | null
           trips_per_month?: string | null
           user_id?: string
           years_experience?: number | null
