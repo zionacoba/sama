@@ -64,6 +64,9 @@ type OrganizerApplication = {
   trips_per_month: string | null;
   operating_locations: string | null;
   social_links: { facebook?: string | null; organizer_facebook?: string | null; instagram?: string | null; tiktok?: string | null } | null;
+  terms_accepted_at: string | null;
+  terms_ip: string | null;
+  terms_version: string | null;
 };
 
 type Booking = {
@@ -422,7 +425,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
       .range(from, to),
     adminClient
       .from("organizers")
-      .select("id, full_name, display_name, email, bio, phone, facebook_url, activity_types, years_experience, emergency_certified, status, is_founding_partner, commission_rate, created_at, trips_per_month, operating_locations, social_links, certifications")
+      .select("id, full_name, display_name, email, bio, phone, facebook_url, activity_types, years_experience, emergency_certified, status, is_founding_partner, commission_rate, created_at, trips_per_month, operating_locations, social_links, certifications, terms_accepted_at, terms_ip, terms_version")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -857,6 +860,18 @@ export default async function AdminPage({ searchParams }: PageProps) {
                           <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Status</dt>
                             <dd className="mt-0.5"><StatusBadge status={app.status} /></dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Terms accepted</dt>
+                            <dd className="mt-0.5 text-stone-900">
+                              {app.terms_accepted_at
+                                ? `${formatCreatedAt(app.terms_accepted_at)} (v${app.terms_version})`
+                                : <span className="text-stone-300">—</span>}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Terms IP</dt>
+                            <dd className="mt-0.5 text-stone-900">{app.terms_ip || <span className="text-stone-300">—</span>}</dd>
                           </div>
                         </dl>
 
