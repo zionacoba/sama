@@ -733,7 +733,7 @@ export function EditTripForm({
           placeholder="Enter waiver text…"
         />
         <p className="mt-1.5 text-xs text-stone-500">
-          This waiver will be shown to each participant when they confirm their spot. You can customize it or use the default template.
+          This waiver will be shown to each participant when they confirm their spot. You can customize it or use the default template. If your trip involves other activities, add their risks here too.
         </p>
       </div>
 
