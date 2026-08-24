@@ -7,6 +7,7 @@ import { PhotoUploader, type PhotoItem } from "@/app/components/photo-uploader";
 import { DifficultyInfoButton, RecurringTemplateInfoButton } from "@/app/components/difficulty-info";
 import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
 import { ACTIVITY_TYPES } from "@/lib/activities";
+import { WAIVER_TEMPLATES } from "@/lib/waiver-templates";
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2";
@@ -69,6 +70,15 @@ export function TripForm({
       ? defaultValues!.cancellation_policy
       : "flexible") as "flexible" | "moderate" | "strict",
   );
+  const [activityType, setActivityType] = useState<string>(defaultValues?.activity_type ?? "");
+  // A waiver stored on the template row wins: the organizer already customised
+  // it, so a generic per-activity template must not replace it.
+  const [waiverText, setWaiverText] = useState<string>(
+    defaultValues?.waiver_text ?? WAIVER_TEMPLATES[defaultValues?.activity_type ?? ""] ?? DEFAULT_WAIVER_TEXT,
+  );
+  // Waiver text from a saved template is wording the organizer already wrote
+  // deliberately, so start it touched and leave it alone from the first render.
+  const [waiverTouched, setWaiverTouched] = useState(Boolean(defaultValues?.waiver_text));
   const initialQuestions = defaultValues?.custom_questions ?? (defaultValues?.custom_question ? [defaultValues.custom_question] : []);
   const [customQuestions, setCustomQuestions] = useState<string[]>(initialQuestions);
   const isUploadingPhotos = photoItems.some((i) => i.kind === "uploading");
@@ -258,7 +268,19 @@ export function TripForm({
           <label htmlFor="activity_type" className={labelClass}>
             Activity type
           </label>
-          <select id="activity_type" name="activity_type" required defaultValue={defaultValues?.activity_type ?? ""} className={inputClass}>
+          <select
+            id="activity_type"
+            name="activity_type"
+            required
+            value={activityType}
+            onChange={(e) => {
+              const nextActivity = e.target.value;
+              setActivityType(nextActivity);
+              // Only while the organizer has left the waiver alone.
+              if (!waiverTouched) setWaiverText(WAIVER_TEMPLATES[nextActivity] ?? DEFAULT_WAIVER_TEXT);
+            }}
+            className={inputClass}
+          >
             <option value="">Select activity…</option>
             {ACTIVITY_TYPES.map((activity) => (
               <option key={activity} value={activity}>{activity}</option>
@@ -639,7 +661,11 @@ export function TripForm({
           id="waiver_text"
           name="waiver_text"
           rows={6}
-          defaultValue={defaultValues?.waiver_text ?? DEFAULT_WAIVER_TEXT}
+          value={waiverText}
+          onChange={(e) => {
+            setWaiverText(e.target.value);
+            setWaiverTouched(true);
+          }}
           className={`${inputClass} resize-y`}
           placeholder="Enter waiver text…"
         />
