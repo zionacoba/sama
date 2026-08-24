@@ -11,6 +11,7 @@ import { TripFilters } from "./trip-filters";
 import { FilterDisclosure } from "./filter-disclosure";
 import { FilterDropdown } from "./filter-dropdown";
 import { formatPeso } from "@/lib/format";
+import { ACTIVITY_TYPES } from "@/lib/activities";
 
 export const metadata: Metadata = {
   title: "Browse trips",
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
   },
 };
 
-const ACTIVITIES = ["All", "Hiking", "Freediving", "Beach & Island"] as const;
+const ACTIVITIES = ["All", ...ACTIVITY_TYPES] as const;
 const DURATIONS  = ["All", "Day tour", "2D1N", "3D2N", "4D3N+"] as const;
 const DIFFICULTIES = ["All", "Beginner", "Intermediate", "Advanced"] as const;
 const REGIONS = ["All", "Luzon", "Visayas", "Mindanao"] as const;

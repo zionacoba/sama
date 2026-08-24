@@ -5,6 +5,7 @@ import { Navbar } from "@/app/components/navbar";
 import { Footer } from "@/app/components/footer";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { formatPeso } from "@/lib/format";
+import { ACTIVITY_TYPES } from "@/lib/activities";
 
 export const revalidate = 300;
 
@@ -22,12 +23,9 @@ export const metadata: Metadata = {
   },
 };
 
-// Add entries here to expose more activity chips on the homepage
-const filterChips = [
-  "Hiking",
-  "Freediving",
-  "Beach & Island",
-] as const;
+// Add entries to ACTIVITY_TYPES in lib/activities.ts to expose more activity
+// chips on the homepage
+const filterChips = ACTIVITY_TYPES;
 
 type Trip = {
   id?: string | number;

@@ -6,6 +6,7 @@ import { CANCELLATION_POLICIES } from "@/lib/cancellation-policies";
 import { PhotoUploader, type PhotoItem } from "@/app/components/photo-uploader";
 import { DifficultyInfoButton, RecurringTemplateInfoButton } from "@/app/components/difficulty-info";
 import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
+import { ACTIVITY_TYPES } from "@/lib/activities";
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2";
@@ -259,9 +260,9 @@ export function TripForm({
           </label>
           <select id="activity_type" name="activity_type" required defaultValue={defaultValues?.activity_type ?? ""} className={inputClass}>
             <option value="">Select activity…</option>
-            <option value="Hiking">Hiking</option>
-            <option value="Freediving">Freediving</option>
-            <option value="Beach & Island">Beach &amp; Island</option>
+            {ACTIVITY_TYPES.map((activity) => (
+              <option key={activity} value={activity}>{activity}</option>
+            ))}
           </select>
         </div>
         <div>
