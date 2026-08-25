@@ -223,10 +223,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
   const resolvedPolicy = resolveCancellationPolicy(booking.cancellation_policy, trip.cancellation_policy);
   const policyKey = resolvedPolicy as keyof typeof CANCELLATION_POLICIES;
   const policy = CANCELLATION_POLICIES[policyKey] ?? CANCELLATION_POLICIES.flexible;
-  // Only the policy key is snapshotted, so custom wording still comes from the trip.
-  const policyText = policyKey === "custom"
-    ? (trip.cancellation_policy_custom ?? "Contact your organizer for details.")
-    : policy.text;
+  const policyText = policy.text;
 
   const balance = booking.total_amount != null && booking.amount_due != null
     ? Math.max(0, booking.total_amount - booking.amount_due)

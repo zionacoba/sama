@@ -132,10 +132,10 @@ function getUnitPrice(price: string | number): number {
 
 
 
-function CancellationPolicyCard({ policy, custom }: { policy: string | null; custom: string | null }) {
+function CancellationPolicyCard({ policy }: { policy: string | null }) {
   if (!policy) return null;
   const meta = CANCELLATION_POLICIES[policy as keyof typeof CANCELLATION_POLICIES] ?? CANCELLATION_POLICIES.flexible;
-  const text = policy === "custom" ? (custom ?? "") : meta.text;
+  const text = meta.text;
   if (!text) return null;
 
   return (
@@ -584,7 +584,6 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
             <CancellationPolicyCard
               policy={tripData.cancellation_policy}
-              custom={tripData.cancellation_policy_custom}
             />
 
             {organizer && (

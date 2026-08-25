@@ -17,12 +17,6 @@ export const CANCELLATION_POLICIES = {
     text: "Full refund if cancelled 30 or more days before the trip. 50% refund of amount paid if cancelled 7 to 29 days before. No refund if cancelled less than 7 days before.",
     color: "bg-red-100 text-red-800",
   },
-  custom: {
-    label: "Custom",
-    short: "Write your own policy",
-    text: "",
-    color: "bg-stone-100 text-stone-700",
-  },
 } as const;
 
 export type CancellationPolicyKey = keyof typeof CANCELLATION_POLICIES;
@@ -47,7 +41,7 @@ export function resolveCancellationPolicy(
 
 /**
  * Returns the refund amount based on the policy and days until the trip.
- * Returns null for "custom" policies (manual review required).
+ * Returns null for any policy key it does not recognise.
  */
 export function calculateRefundAmount(
   policy: string,

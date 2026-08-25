@@ -82,9 +82,6 @@ describe("calculateRefundAmount", () => {
   });
 
   describe("custom and unknown policies", () => {
-    it("returns null for custom (manual review)", () => {
-      expect(calculateRefundAmount("custom", PAID, 30)).toBeNull();
-    });
     it("returns null for an unrecognized policy", () => {
       expect(calculateRefundAmount("whatever", PAID, 30)).toBeNull();
     });
