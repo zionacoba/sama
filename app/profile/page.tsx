@@ -120,13 +120,11 @@ function BookingCard({
   past,
   reviewed,
   incompleteParticipants,
-  fullName,
 }: {
   booking: Booking;
   past: boolean;
   reviewed: boolean;
   incompleteParticipants: IncompleteParticipant[];
-  fullName: string;
 }) {
   const { trip } = booking;
   return (
@@ -419,7 +417,6 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
                         past={false}
                         reviewed={false}
                         incompleteParticipants={incompleteParticipantsMap.get(b.id) ?? []}
-                        fullName={fullName}
                       />
                     </li>
                   ))}
@@ -441,7 +438,6 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
                         past={true}
                         reviewed={reviewedBookingIds.has(b.id)}
                         incompleteParticipants={incompleteParticipantsMap.get(b.id) ?? []}
-                        fullName={fullName}
                       />
                     </li>
                   ))}
@@ -463,7 +459,6 @@ const bookings = (bookingsData ?? []) as unknown as Booking[];
                         past={false}
                         reviewed={false}
                         incompleteParticipants={[]}
-                        fullName={fullName}
                       />
                     </li>
                   ))}
