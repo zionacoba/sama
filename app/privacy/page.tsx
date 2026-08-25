@@ -71,6 +71,7 @@ export default function PrivacyPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Certifications or qualifications you choose to tell us about</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>How often you run trips and where you operate</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Payout details (bank account or GCash number) used to remit your earnings from completed trips.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Social media links you add to your organizer profile later (Facebook, Instagram, TikTok) — displayed publicly</span></li>
               </ul>
               <p className="mt-3 font-medium text-stone-700">Automatically collected:</p>
               <ul className="mt-1.5 space-y-1 leading-relaxed">
