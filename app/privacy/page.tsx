@@ -15,7 +15,7 @@ export default function PrivacyPage() {
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
-          <p className="text-sm text-stone-500">Last updated: July 2026</p>
+          <p className="text-sm text-stone-500">Last updated: August 2026</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900">
             Privacy Policy
           </h1>
@@ -65,10 +65,11 @@ export default function PrivacyPage() {
               <p className="mt-3 font-medium text-stone-700">When you apply as an organizer:</p>
               <ul className="mt-1.5 space-y-1 leading-relaxed">
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Full name, display name, phone, bio</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Social media profile URLs (Facebook, Instagram, TikTok) — displayed publicly on your organizer profile.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Evidence of past trips</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Social media profile URLs (Facebook, Instagram) — displayed publicly on your organizer profile.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Activity types and years of experience</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Emergency certification status</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Certifications or qualifications you choose to tell us about</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>How often you run trips and where you operate</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Payout details (bank account or GCash number) used to remit your earnings from completed trips.</span></li>
               </ul>
               <p className="mt-3 font-medium text-stone-700">Automatically collected:</p>

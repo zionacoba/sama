@@ -193,7 +193,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">12. Intellectual Property</h2>
               <p className="mt-2 leading-relaxed">
-                All content on Sama — including the platform design, logo, and features — is owned by Paul Zion Acoba. You may not reproduce, distribute, or create derivative works without written permission.
+                The Sama platform — including its design, logo, and features — is owned by Paul Zion Acoba. You may not reproduce, distribute, or create derivative works from it without written permission. Organizers own the photos and trip descriptions they upload; listing on Sama does not transfer them.
               </p>
             </section>
 
