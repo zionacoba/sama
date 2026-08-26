@@ -20,11 +20,10 @@ function escapeCsv(value: string | number | null | undefined): string {
 
 export function ExportEarningsCsvButton({ rows }: { rows: EarningsRow[] }) {
   function handleExport() {
-    const headers = ["Date", "Gross", "Commission Rate", "Commission", "Net Amount Received", "Number of Bookings", "Reference"];
+    const headers = ["Date", "Gross", "Commission", "Net Amount Received", "Number of Bookings", "Reference"];
     const csvRows = rows.map((p) => [
       escapeCsv(p.remittedAt.slice(0, 10)),
       escapeCsv(p.grossAmount),
-      escapeCsv(p.grossAmount > 0 ? `${Math.round((p.commissionAmount / p.grossAmount) * 100)}%` : ""),
       escapeCsv(p.commissionAmount),
       escapeCsv(p.netAmount),
       escapeCsv(p.bookingCount),
