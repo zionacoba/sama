@@ -34,7 +34,7 @@ const handles = [
   "Digital waivers signed and recorded at every booking",
   "Emergency contact and medical info collected at booking",
   "Waitlist management with automatic notifications when slots open",
-  "Your name and details shown on every trip you list",
+  "A public organizer profile where joiners can find and trust you",
 ];
 
 export default function OrganizersPage() {
