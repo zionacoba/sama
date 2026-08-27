@@ -314,7 +314,7 @@ export function ProfileForm({ organizer }: { organizer: OrganizerData }) {
       <div className="border-t border-stone-100 pt-5">
         <p className={`${labelClass} mb-1`}>Payout details (required to receive earnings)</p>
         <p className="mb-3 text-xs text-stone-500">
-          Used to remit your earnings. We do a payout run every Thursday.
+          Used to remit your earnings. We do a payout run every Wednesday.
         </p>
         <ul className="mb-4 space-y-1 text-xs text-stone-500">
           <li><span className="font-semibold text-stone-700">Downpayments and full payments</span> — paid out about 2 days after the booking, before your trip.</li>
