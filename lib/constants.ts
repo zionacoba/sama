@@ -15,7 +15,7 @@ export const PLATFORM_WAIVER_SNAPSHOT_TEXT = `By completing this booking, I agre
 
 // Snapshot of the organizer agreement shown on the apply form. Stored verbatim
 // on the organizer row at acceptance time, per Sections 1 and 28 of the terms.
-export const ORGANIZER_TERMS_VERSION = "1.0";
+export const ORGANIZER_TERMS_VERSION = "1.1";
 
 export const ORGANIZER_TERMS_TEXT = `SAMA ORGANIZER TERMS
 
@@ -106,7 +106,7 @@ We pay out to the payout details you give us after approval.
 
 Most bookings become payable about two days after the booking is made, before your trip runs. Two kinds wait until after the trip has run: bookings made in the final week before departure, and balances paid to us online.
 
-Payouts are prepared by hand. We run them regularly and will tell you when yours is on its way. There is no fixed payout day.
+Payouts are prepared by hand. We run them weekly and will tell you when yours is on its way.
 
 We take our commission before paying out.
 
