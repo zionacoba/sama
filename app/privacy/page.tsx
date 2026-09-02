@@ -15,7 +15,7 @@ export default function PrivacyPage() {
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
-          <p className="text-sm text-stone-500">Last updated: August 2026</p>
+          <p className="text-sm text-stone-500">Last updated: September 2026</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900">
             Privacy Policy
           </h1>
@@ -69,6 +69,8 @@ export default function PrivacyPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Activity types and years of experience</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Emergency certification status</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Certifications or qualifications you choose to tell us about</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Business registration you tell us about (BIR, DTI, SEC or DOT)</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Your business address</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>How often you run trips and where you operate</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Payout details (bank account or GCash number) used to remit your earnings from completed trips.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Social media links you add to your organizer profile later (Facebook, Instagram, TikTok) — displayed publicly</span></li>
