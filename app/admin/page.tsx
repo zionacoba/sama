@@ -57,6 +57,8 @@ type OrganizerApplication = {
   years_experience: number | null;
   emergency_certified: boolean | null;
   certifications: string | null;
+  business_registration: string | null;
+  business_address: string | null;
   status: string;
   is_founding_partner: boolean;
   commission_rate: number | null;
@@ -425,7 +427,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
       .range(from, to),
     adminClient
       .from("organizers")
-      .select("id, full_name, display_name, email, bio, phone, facebook_url, activity_types, years_experience, emergency_certified, status, is_founding_partner, commission_rate, created_at, trips_per_month, operating_locations, social_links, certifications, terms_accepted_at, terms_ip, terms_version")
+      .select("id, full_name, display_name, email, bio, phone, facebook_url, activity_types, years_experience, emergency_certified, status, is_founding_partner, commission_rate, created_at, trips_per_month, operating_locations, social_links, certifications, business_registration, business_address, terms_accepted_at, terms_ip, terms_version")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -850,6 +852,22 @@ export default async function AdminPage({ searchParams }: PageProps) {
                             <dd className="mt-0.5 whitespace-pre-line text-stone-900">
                               {app.certifications
                                 ? app.certifications
+                                : <span className="text-stone-300">—</span>}
+                            </dd>
+                          </div>
+                          <div className="sm:col-span-2 lg:col-span-3">
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Business registration</dt>
+                            <dd className="mt-0.5 whitespace-pre-line text-stone-900">
+                              {app.business_registration
+                                ? app.business_registration
+                                : <span className="text-stone-300">—</span>}
+                            </dd>
+                          </div>
+                          <div className="sm:col-span-2 lg:col-span-3">
+                            <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Business address</dt>
+                            <dd className="mt-0.5 whitespace-pre-line text-stone-900">
+                              {app.business_address
+                                ? app.business_address
                                 : <span className="text-stone-300">—</span>}
                             </dd>
                           </div>

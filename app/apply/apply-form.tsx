@@ -205,7 +205,7 @@ export function ApplyForm({
 
       <div>
         <label htmlFor="certifications" className={labelClass}>
-          Certifications or registrations <span className="font-normal text-stone-500">(optional)</span>
+          Certifications or qualifications <span className="font-normal text-stone-500">(optional)</span>
         </label>
         <p className="mt-0.5 text-xs text-stone-500 flex items-start gap-1">
           <span>ℹ</span>
@@ -216,7 +216,41 @@ export function ApplyForm({
           name="certifications"
           rows={3}
           className={`${inputClass} resize-none`}
-          placeholder="e.g. Basic Mountaineering Course, Wilderness First Aid, PADI Divemaster, DOT accreditation no. 12345"
+          placeholder="e.g. Basic Mountaineering Course, Wilderness First Aid, PADI Divemaster"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="business_registration" className={labelClass}>
+          Business registration <span className="font-normal text-stone-500">(optional)</span>
+        </label>
+        <p className="mt-0.5 text-xs text-stone-500 flex items-start gap-1">
+          <span>ℹ</span>
+          <span>Private, only used by Sama when reviewing your application and never shown publicly. If you have BIR, DTI, SEC or DOT registration, tell us which — it&apos;s fine if you don&apos;t have any yet.</span>
+        </p>
+        <textarea
+          id="business_registration"
+          name="business_registration"
+          rows={3}
+          className={`${inputClass} resize-none`}
+          placeholder="e.g. BIR Certificate of Registration (Form 2303), DTI business name registration, DOT accreditation no. 12345"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="business_address" className={labelClass}>
+          Business address <span className="font-normal text-stone-500">(optional)</span>
+        </label>
+        <p className="mt-0.5 text-xs text-stone-500 flex items-start gap-1">
+          <span>ℹ</span>
+          <span>Private, only used by Sama when reviewing your application and never shown publicly. Your registered business address, or where you&apos;re based if you don&apos;t have one.</span>
+        </p>
+        <textarea
+          id="business_address"
+          name="business_address"
+          rows={3}
+          className={`${inputClass} resize-none`}
+          placeholder="e.g. 123 Rizal St., Barangay Poblacion, Tacloban City, Leyte"
         />
       </div>
 

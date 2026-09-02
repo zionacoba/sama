@@ -39,6 +39,8 @@ export async function applyToBeOrganizer(
   const yearsOfExperience = Number((formData.get("years_of_experience") as string)?.trim());
   const emergencyCertified = formData.get("emergency_certified") === "on";
   const certifications = (formData.get("certifications") as string)?.trim() || null;
+  const businessRegistration = (formData.get("business_registration") as string)?.trim() || null;
+  const businessAddress = (formData.get("business_address") as string)?.trim() || null;
   const termsAgreed = formData.get("terms_agreed") === "on";
   const accuracyConfirmed = formData.get("accuracy_confirmed") === "on";
   const organizerTermsAccepted = formData.get("organizer_terms_accepted") === "on";
@@ -122,6 +124,8 @@ export async function applyToBeOrganizer(
         years_experience: yearsOfExperience,
         emergency_certified: emergencyCertified,
         certifications,
+        business_registration: businessRegistration,
+        business_address: businessAddress,
         trips_per_month: tripsPerMonth,
         operating_locations: operatingLocations,
         terms_accepted_at: new Date().toISOString(),
@@ -202,6 +206,8 @@ export async function applyToBeOrganizer(
       years_experience: yearsOfExperience,
       emergency_certified: emergencyCertified,
       certifications,
+      business_registration: businessRegistration,
+      business_address: businessAddress,
       trips_per_month: tripsPerMonth,
       operating_locations: operatingLocations,
       terms_accepted_at: new Date().toISOString(),
