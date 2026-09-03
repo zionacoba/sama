@@ -226,7 +226,7 @@ export function ApplyForm({
         </label>
         <p className="mt-0.5 text-xs text-stone-500 flex items-start gap-1">
           <span>ℹ</span>
-          <span>Private, only used by Sama when reviewing your application and never shown publicly. If you have BIR, DTI, SEC or DOT registration, tell us which — it&apos;s fine if you don&apos;t have any yet.</span>
+          <span>Private too. If you have BIR, DTI, SEC or DOT registration, tell us which — it&apos;s fine if you don&apos;t have any yet.</span>
         </p>
         <textarea
           id="business_registration"
@@ -243,7 +243,7 @@ export function ApplyForm({
         </label>
         <p className="mt-0.5 text-xs text-stone-500 flex items-start gap-1">
           <span>ℹ</span>
-          <span>Private, only used by Sama when reviewing your application and never shown publicly. Your registered business address, or where you&apos;re based if you don&apos;t have one.</span>
+          <span>Private too. Your registered business address, or where you&apos;re based if you don&apos;t have one.</span>
         </p>
         <textarea
           id="business_address"
