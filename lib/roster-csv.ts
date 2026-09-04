@@ -20,6 +20,9 @@ export type CsvBooking = {
   medical_notes: string | null;
   status: string;
   created_at: string;
+  custom_question_answers?: string[] | null;
+  custom_question_answer?: string | null;
+  custom_questions_snapshot?: string[] | null;
 };
 
 export type CsvParticipant = {
@@ -43,6 +46,7 @@ export const CSV_HEADERS = [
   "Medical notes",
   "Status",
   "Booking date",
+  "Custom questions",
 ];
 
 export function escapeCsv(value: string | number | null | undefined): string {
@@ -80,6 +84,23 @@ export function buildCsvRows(
     const anchorMedical =
       b.status === "transferred" ? (slotZero?.completed ? slotZero.medical_notes : null) : b.medical_notes;
 
+    // The snapshot is the only source for the question text: it is the booking's
+    // own copy of the questions as they were asked. Pairing the answers against
+    // the trip's current questions would print today's wording beside an older
+    // booking's answer, and that mislabeling is invisible in a spreadsheet. A
+    // booking predating the snapshot (nullable, never backfilled) exports blank.
+    const questions = b.custom_questions_snapshot ?? [];
+    const answers =
+      (b.custom_question_answers as string[] | null) ??
+      (b.custom_question_answer ? [b.custom_question_answer] : []);
+    // Iterate the questions, not the answers: a surplus answer has no question
+    // to label it and a missing one skips its question, and an empty answer is
+    // skipped by the same truthiness guard the on-screen renderers use.
+    const customQuestions = questions
+      .map((q, i) => (answers[i] ? `${q}: ${answers[i]}` : null))
+      .filter((pair): pair is string => pair !== null)
+      .join(" | ");
+
     const anchorRow = [
       escapeCsv(attendee.name),
       // A transferred booking's real attendee is the replacement, and /join
@@ -95,6 +116,7 @@ export function buildCsvRows(
       escapeCsv(anchorMedical),
       escapeCsv(b.status),
       escapeCsv(bookingDate),
+      escapeCsv(customQuestions),
     ];
 
     // Slots 1+ get their own rows. Email and phone exist only at booking level,
@@ -117,6 +139,7 @@ export function buildCsvRows(
         escapeCsv(p.medical_notes),
         escapeCsv(b.status),
         escapeCsv(bookingDate),
+        "",
       ]);
 
     return [anchorRow, ...participantRows];
