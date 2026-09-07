@@ -677,7 +677,7 @@ export function TripForm({
       {/* Custom questions */}
       <div>
         <p className={labelClass}>
-          Ask joiners questions <span className="font-normal text-stone-500">(optional, up to 3)</span>
+          Ask joiners questions <span className="font-normal text-stone-500">(optional, up to 5)</span>
         </p>
         <input type="hidden" name="custom_questions" value={JSON.stringify(customQuestions.filter((q) => q.trim()))} />
         <div className="mt-1.5 space-y-2">
@@ -706,7 +706,7 @@ export function TripForm({
             </div>
           ))}
         </div>
-        {customQuestions.length < 3 && (
+        {customQuestions.length < 5 && (
           <button
             type="button"
             onClick={() => setCustomQuestions([...customQuestions, ""])}
@@ -717,6 +717,7 @@ export function TripForm({
         )}
         <p className="mt-1.5 text-xs text-stone-500">
           If set, joiners must answer these when booking.
+          Please don&apos;t ask for medical or health details here — the booking form already collects medical notes.
         </p>
       </div>
 

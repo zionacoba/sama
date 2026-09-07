@@ -152,7 +152,7 @@ export async function createTrip(
   try {
     const parsed = JSON.parse(custom_questions_raw) as unknown;
     const arr = Array.isArray(parsed) ? (parsed as unknown[]).map(String).filter((q) => q.trim()) : [];
-    custom_questions = arr.length > 0 ? arr.slice(0, 3) : null;
+    custom_questions = arr.length > 0 ? arr.slice(0, 5) : null;
   } catch {
     custom_questions = null;
   }
@@ -423,7 +423,7 @@ export async function updateTrip(
   try {
     const parsed2 = JSON.parse(custom_questions_raw2) as unknown;
     const arr2 = Array.isArray(parsed2) ? (parsed2 as unknown[]).map(String).filter((q) => q.trim()) : [];
-    custom_questions = arr2.length > 0 ? arr2.slice(0, 3) : null;
+    custom_questions = arr2.length > 0 ? arr2.slice(0, 5) : null;
   } catch {
     custom_questions = null;
   }
