@@ -15,13 +15,13 @@ export const PLATFORM_WAIVER_SNAPSHOT_TEXT = `By completing this booking, I agre
 
 // Snapshot of the organizer agreement shown on the apply form. Stored verbatim
 // on the organizer row at acceptance time, per Sections 1 and 28 of the terms.
-export const ORGANIZER_TERMS_VERSION = "1.1";
+export const ORGANIZER_TERMS_VERSION = "1.2";
 
 export const ORGANIZER_TERMS_TEXT = `SAMA ORGANIZER TERMS
 
 1. What this is
 
-These are the terms between Sama (sama.com.ph), operated by Paul Zion Acoba, and you as an organizer.
+These are the terms between Sama (sama.com.ph) and you as an organizer. Sama is operated by Paul Zion Labrador Acoba, doing business under the name and style of ACPAM Web Portal Services, 2F SpaceMD, 489 Shaw Blvd., Addition Hills, City of Mandaluyong, NCR 1550, Philippines.
 
 You accept them when you tick the box on your application. They apply from that moment, and they continue until they end under Section 19.
 
@@ -96,9 +96,11 @@ We pay the payment processing fees ourselves. GCash and Maya charge us a fee on 
 
 As a founding partner, your rate will not go up. We may charge new organizers more in future; yours stays where it started.
 
-The one exception: if GCash or Maya raise the processing fees they charge us, we may pass that increase on. We would tell you before it took effect, and it would only ever be the amount their fees went up by. Nothing else changes your rate.
+The one exception: if GCash or Maya raise the processing fees they charge us, we may pass that increase on. We would tell you before it took effect, and it would only ever be the amount their fees went up by.
 
-Founding-partner terms apply to the first 20 organizers we approve, and only to organizers approved on or before 30 September 2026 — whichever limit is reached first. After that, our standard rate at the time applies.
+Your founding rate depends on you keeping to these terms and the Sama Terms of Service, and on the promises you make in Sections 3 and 21 staying true. If you seriously or repeatedly break these terms, we may move you to our standard rate at the time. We will tell you why before it takes effect. Nothing else changes your rate.
+
+Founding-partner terms apply to the first 20 organizers we approve, and only to organizers approved on or before 31 October 2026 — whichever limit is reached first. After that, our standard rate at the time applies.
 
 7. Getting paid
 
