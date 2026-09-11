@@ -37,7 +37,7 @@ export default function ContactPage() {
               <dl className="mt-3 space-y-3 leading-relaxed">
                 <div>
                   <dt className="text-sm font-semibold text-stone-700">Registered name</dt>
-                  <dd className="mt-0.5">ACPAM Web Portal Services (operating as Sama)</dd>
+                  <dd className="mt-0.5">Paul Zion Labrador Acoba, doing business under the name and style of ACPAM Web Portal Services</dd>
                 </div>
                 <div>
                   <dt className="text-sm font-semibold text-stone-700">Email</dt>
@@ -63,7 +63,7 @@ export default function ContactPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">Registered with the BIR</h2>
               <p className="mt-3 leading-relaxed">
-                Sama is operated by ACPAM Web Portal Services, a business registered with the Bureau of Internal
+                Sama is operated by Paul Zion Labrador Acoba, doing business under the name and style of ACPAM Web Portal Services, registered with the Bureau of Internal
                 Revenue (BIR) of the Philippines.
               </p>
               <a

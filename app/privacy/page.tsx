@@ -20,7 +20,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <div className="mt-2 space-y-0.5 text-sm text-stone-500">
-            <p>Operated by: Paul Zion Acoba</p>
+            <p>Sama is operated by Paul Zion Labrador Acoba, doing business under the name and style of ACPAM Web Portal Services, 2F SpaceMD, 489 Shaw Blvd., Addition Hills, City of Mandaluyong, NCR 1550, Philippines.</p>
             <p>Contact: <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a></p>
           </div>
 
@@ -193,7 +193,7 @@ export default function PrivacyPage() {
             </section>
 
             <p className="border-t border-stone-100 pt-6 text-sm text-stone-500">
-              Sama is operated as a sole proprietorship by Paul Zion Acoba, Philippines.
+              Paul Zion Labrador Acoba, doing business under the name and style of ACPAM Web Portal Services, is the personal information controller for the personal data Sama collects.
             </p>
 
           </div>

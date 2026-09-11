@@ -14,12 +14,12 @@ export default function TermsPage() {
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
-          <p className="text-sm text-stone-500">Last updated: August 2026</p>
+          <p className="text-sm text-stone-500">Last updated: September 2026</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900">
             Terms of Service
           </h1>
           <div className="mt-2 space-y-0.5 text-sm text-stone-500">
-            <p>Operated by: Paul Zion Acoba</p>
+            <p>Sama is operated by Paul Zion Labrador Acoba, doing business under the name and style of ACPAM Web Portal Services, 2F SpaceMD, 489 Shaw Blvd., Addition Hills, City of Mandaluyong, NCR 1550, Philippines.</p>
             <p>Contact: <a href="mailto:hello@sama.com.ph" className="text-trailhead hover:underline">hello@sama.com.ph</a></p>
           </div>
 
@@ -193,7 +193,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-lg font-bold text-stone-900">12. Intellectual Property</h2>
               <p className="mt-2 leading-relaxed">
-                The Sama platform — including its design, logo, and features — is owned by Paul Zion Acoba. You may not reproduce, distribute, or create derivative works from it without written permission. Organizers own the photos and trip descriptions they upload; listing on Sama does not transfer them.
+                The Sama platform — including its design, logo, and features — is owned by Paul Zion Labrador Acoba, doing business under the name and style of ACPAM Web Portal Services. You may not reproduce, distribute, or create derivative works from it without written permission. Organizers own the photos and trip descriptions they upload; listing on Sama does not transfer them.
               </p>
             </section>
 
