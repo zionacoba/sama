@@ -211,7 +211,8 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
   const confirmed = bookings.filter((b) => b.status === "confirmed" || b.status === "transferred");
   const rejected = bookings.filter((b) => b.status === "rejected" || b.status === "cancelled" || b.status === "no_show");
 
-  const needsManualApproval = trip.difficulty === "Advanced";
+  // Approve/Reject follow each booking's pending status, not the trip's current setting, so a waiting request is never stranded.
+  const needsManualApproval = bookings.some((b) => b.status === "pending");
   const awaitingPayment = bookings.filter((b) => b.status === "payment_pending");
   // Read the authoritative slot count straight from the DB (matches the main
   // dashboard trip-row), so the header/fill bar count every slot-holding
