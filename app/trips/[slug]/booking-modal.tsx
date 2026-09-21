@@ -742,6 +742,7 @@ export function BookingModal({
                       placeholder="Allergies, medications, dietary restrictions, or other health info"
                       className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                     />
+                    <p className="text-xs text-stone-500 mt-1">Share anything that helps the organizer plan for you, such as a medical condition, allergy, medication, or pregnancy.</p>
                   </div>
 
                   {/* Custom questions from organizer */}

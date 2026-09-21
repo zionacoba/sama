@@ -122,6 +122,7 @@ export function ParticipantForm({ token, meetingPoints, waiverText, defaultMeeti
           placeholder="Any conditions or allergies the organizer should know about?"
           className="mt-1.5 w-full resize-none rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
         />
+        <p className="text-xs text-stone-500 mt-1">Share anything that helps the organizer plan for you, such as a medical condition, allergy, medication, or pregnancy.</p>
       </div>
 
       <div>
