@@ -478,7 +478,7 @@ export async function confirmPaidBooking(
             </ul>
             ${
               autoApprove
-                ? `<p>This booking was <strong>automatically confirmed</strong> (${trip.difficulty} trip).</p>`
+                ? `<p>This booking was <strong>automatically confirmed</strong>.</p>`
                 : `<p>Log in to your <a href="${SITE_URL}/organizer/dashboard">organizer dashboard</a> to confirm or reject this booking.</p>`
             }
             <p style="font-size:13px;color:#78716c;border-top:1px solid #e7e5e4;margin-top:16px;padding-top:12px;">

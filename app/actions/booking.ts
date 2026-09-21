@@ -508,7 +508,7 @@ export async function createBooking(input: CreateBookingInput) {
               <li><strong>Payment:</strong> Free trip</li>
             </ul>
             ${autoApprove
-              ? `<p>This booking was <strong>automatically confirmed</strong> (${trip.difficulty} trip).</p>`
+              ? `<p>This booking was <strong>automatically confirmed</strong>.</p>`
               : `<p>This booking requires your approval. Log in to your <a href="${SITE_URL}/organizer/dashboard">organizer dashboard</a> to confirm or reject.</p>`
             }
             <p>Sama</p>

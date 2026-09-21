@@ -18,17 +18,17 @@ const ORGANIZER: Entry[] = [
   {
     level: "Beginner",
     description:
-      "No prior experience needed. Low physical demand, suitable for first-timers, typically a few hours. Bookings are auto-confirmed.",
+      "No prior experience needed. Low physical demand, suitable for first-timers, typically a few hours.",
   },
   {
     level: "Intermediate",
     description:
-      "Some experience recommended. Moderate physical demand, may involve a full day or overnight. Good fitness required. Bookings are auto-confirmed.",
+      "Some experience recommended. Moderate physical demand, may involve a full day or overnight. Good fitness required.",
   },
   {
     level: "Advanced",
     description:
-      "Prior experience required. High physical demand, may be multi-day or involve technical conditions. High fitness level needed. Each booking requires your manual approval.",
+      "Prior experience required. High physical demand, may be multi-day or involve technical conditions. High fitness level needed.",
   },
 ];
 
@@ -36,17 +36,17 @@ const JOINER: Entry[] = [
   {
     level: "Beginner",
     description:
-      "Low physical demand, typically a few hours. Great for first-timers. Booking is instant once you pay.",
+      "Low physical demand, typically a few hours. Great for first-timers.",
   },
   {
     level: "Intermediate",
     description:
-      "Moderate physical demand, may be a full day or overnight. You should be reasonably fit. Booking is instant once you pay.",
+      "Moderate physical demand, may be a full day or overnight. You should be reasonably fit.",
   },
   {
     level: "Advanced",
     description:
-      "High physical demand, may be multi-day or involve technical conditions. High fitness required. Your booking will be reviewed and approved by the organizer before it's confirmed.",
+      "High physical demand, may be multi-day or involve technical conditions. High fitness required.",
   },
 ];
 

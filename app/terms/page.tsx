@@ -67,7 +67,7 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama charges a platform commission on each booking as agreed with the organizer.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>No hidden fees are charged to participants — the price shown is the price you pay.</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Sama absorbs all payment processing fees on behalf of organizers.</span></li>
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Advanced difficulty trips require manual review and approval by the organizer before your booking is confirmed.</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Some trips require the organizer to review and approve your booking before it is confirmed. The trip page says so before you pay, and if the organizer declines, you are refunded in full.</span></li>
               </ul>
             </section>
 
