@@ -53,6 +53,7 @@ type TripDetail = {
   waiver_text: string | null;
   meeting_points: { location: string; time: string }[] | null;
   waitlist_enabled: boolean | null;
+  requires_approval: boolean | null;
   status: 'draft' | 'active' | 'cancelled';
   custom_questions: string[] | null;
   custom_question: string | null;
@@ -195,7 +196,7 @@ const getTripBySlug = cache(async (slug: string) => {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("trips")
-    .select("id, title, slug, destination, region, date_start, date_end, total_slots, remaining_slots, price, payment_type, min_downpayment, downpayment_cutoff_days, difficulty, activity_type, duration, meeting_points, meeting_point, description, photos, waiver_text, cancellation_policy, cancellation_policy_custom, messenger_gc_link, organizer_id, status, is_template, template_id, includes, what_to_bring, waitlist_enabled, custom_questions, custom_question, organizers!organizer_id(display_name, full_name, bio, photo_url, facebook_url, social_links, is_founding_partner, user_id)")
+    .select("id, title, slug, destination, region, date_start, date_end, total_slots, remaining_slots, price, payment_type, min_downpayment, downpayment_cutoff_days, difficulty, requires_approval, activity_type, duration, meeting_points, meeting_point, description, photos, waiver_text, cancellation_policy, cancellation_policy_custom, messenger_gc_link, organizer_id, status, is_template, template_id, includes, what_to_bring, waitlist_enabled, custom_questions, custom_question, organizers!organizer_id(display_name, full_name, bio, photo_url, facebook_url, social_links, is_founding_partner, user_id)")
     .eq("slug", slug)
     .maybeSingle();
   if (error) {
@@ -776,7 +777,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                   minDownpayment={tripData.min_downpayment ?? null}
                   downpaymentCutoffDays={tripData.downpayment_cutoff_days ?? 10}
                   meetingPoints={tripData.meeting_points ?? []}
-                  difficulty={tripData.difficulty}
+                  requiresApproval={tripData.requires_approval ?? false}
                   waiverText={tripData.waiver_text ?? null}
                   organizerName={organizerName}
                   customQuestions={tripData.custom_questions ?? (tripData.custom_question ? [tripData.custom_question] : null)}
@@ -872,7 +873,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                     minDownpayment={tripData.min_downpayment ?? null}
                     downpaymentCutoffDays={tripData.downpayment_cutoff_days ?? 10}
                     meetingPoints={tripData.meeting_points ?? []}
-                    difficulty={tripData.difficulty}
+                    requiresApproval={tripData.requires_approval ?? false}
                     waiverText={tripData.waiver_text ?? null}
                     organizerName={organizerName}
                     customQuestions={tripData.custom_questions ?? (tripData.custom_question ? [tripData.custom_question] : null)}

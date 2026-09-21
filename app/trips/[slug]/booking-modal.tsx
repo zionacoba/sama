@@ -24,7 +24,7 @@ type BookingModalProps = {
   minDownpayment: number | null;
   downpaymentCutoffDays: number;
   meetingPoints: MeetingPoint[];
-  difficulty: string;
+  requiresApproval: boolean;
   waiverText?: string | null;
   organizerName?: string | null;
   customQuestions?: string[] | null;
@@ -47,7 +47,7 @@ export function BookingModal({
   minDownpayment,
   downpaymentCutoffDays,
   meetingPoints,
-  difficulty,
+  requiresApproval,
   waiverText,
   organizerName,
   customQuestions,
@@ -384,15 +384,22 @@ export function BookingModal({
           Sold Out
         </button>
       ) : (
-        <button
-          type="button"
-          onClick={handleBookClick}
-          className={compact
-            ? "w-full rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
-            : "mt-10 w-full rounded-xl bg-trailhead px-6 py-4 text-base font-semibold text-white shadow-md transition hover:bg-trailhead-dark sm:w-auto sm:min-w-[240px]"}
-        >
-          {difficulty === "Advanced" ? "Apply to Join" : "Book This Trip"}
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={handleBookClick}
+            className={compact
+              ? "w-full rounded-xl bg-trailhead px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-trailhead-dark"
+              : "mt-10 w-full rounded-xl bg-trailhead px-6 py-4 text-base font-semibold text-white shadow-md transition hover:bg-trailhead-dark sm:w-auto sm:min-w-[240px]"}
+          >
+            {requiresApproval ? "Apply to Join" : "Book This Trip"}
+          </button>
+          {requiresApproval && (
+            <p className="mt-2 text-xs text-stone-500">
+              The organizer reviews each booking before confirming it. You pay now and usually hear back within 24 to 48 hours. If they decline, you&apos;re refunded in full.
+            </p>
+          )}
+        </>
       )}
 
       {showSignInPrompt && mounted && createPortal(
@@ -879,6 +886,11 @@ export function BookingModal({
                   </svg>
                   Payments secured by PayMongo. Pay via GCash, Maya, or QR Ph.
                 </p>
+                {requiresApproval && (
+                  <p className="mb-2 text-xs text-stone-500">
+                    The organizer reviews each booking before confirming it. You pay now and usually hear back within 24 to 48 hours. If they decline, you&apos;re refunded in full.
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <button
                     type="button"
