@@ -23,6 +23,7 @@ import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 import { resolveBookingCommissionRate } from "@/lib/commission";
 import { resolveGuardCount } from "@/lib/payout-details-guard";
+import { autoConfirms } from "@/lib/booking-approval";
 import { resolvePastTripGate } from "@/lib/past-trip-gate";
 import { DEFAULT_WAIVER_TEXT, PLATFORM_WAIVER_SNAPSHOT_TEXT } from "@/lib/constants";
 import { withParticipantAdultAttestation } from "@/lib/waiver-snapshot";
@@ -89,7 +90,7 @@ export async function createBooking(input: CreateBookingInput) {
 
   const { data: trip, error: tripFetchError } = await admin
     .from("trips")
-    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, downpayment_cutoff_days, messenger_gc_link, waiver_text, cancellation_policy, meeting_points, custom_questions, custom_question")
+    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, downpayment_cutoff_days, messenger_gc_link, waiver_text, cancellation_policy, meeting_points, custom_questions, custom_question, requires_approval")
     .eq("slug", input.tripSlug)
     .maybeSingle();
 
@@ -385,7 +386,7 @@ export async function createBooking(input: CreateBookingInput) {
 
   // Free trips: skip PayMongo and confirm immediately.
   if (computedAmountDue === 0) {
-    const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
+    const autoApprove = autoConfirms(trip.requires_approval);
     // Fail closed: an unconfirmed booking is reclaimed by cleanup-abandoned-payments.
     const { error: confirmError } = await admin
       .from("bookings")

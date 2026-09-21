@@ -7,6 +7,7 @@ import { escapeHtml } from "@/lib/escape-html";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 import { filterPaidPayments, deriveCheckoutPaymentStatus } from "@/lib/paymongo-checkout";
 import { resolvePaidSessionFallback, resolveBalanceCancelledRefund } from "@/lib/confirm-fallback-resolver";
+import { autoConfirms } from "@/lib/booking-approval";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
@@ -297,7 +298,7 @@ export async function confirmPaidBooking(
 
   const { data: trip, error: tripError } = await admin
     .from("trips")
-    .select("id, slug, title, date_start, difficulty, organizer_id, messenger_gc_link")
+    .select("id, slug, title, date_start, difficulty, organizer_id, messenger_gc_link, requires_approval")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -312,7 +313,7 @@ export async function confirmPaidBooking(
     return { outcome: "skipped" };
   }
 
-  const autoApprove = trip.difficulty === "Beginner" || trip.difficulty === "Intermediate";
+  const autoApprove = autoConfirms(trip.requires_approval);
   const newStatus = autoApprove ? "confirmed" : "pending";
 
   const { data: updatedBooking, error: updateError } = await admin
