@@ -10,15 +10,23 @@ export function CookieConsent() {
   const isOnTripPage = /^\/trips\/[^/]+/.test(pathname);
 
   useEffect(() => {
-    if (!localStorage.getItem("cookie_consent")) {
-      setVisible(true);
+    try {
+      if (!localStorage.getItem("cookie_consent")) {
+        setVisible(true);
+      }
+    } catch {
+      // Storage refused (e.g. Safari blocking site data): stay hidden rather than crash the page.
     }
   }, []);
 
   if (!visible) return null;
 
   function accept() {
-    localStorage.setItem("cookie_consent", "true");
+    try {
+      localStorage.setItem("cookie_consent", "true");
+    } catch {
+      // Storage refused: still dismiss for this page view.
+    }
     setVisible(false);
   }
 
