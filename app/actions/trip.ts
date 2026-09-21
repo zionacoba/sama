@@ -99,6 +99,7 @@ export async function createTrip(
   }
 
   const is_template = formData.get("is_template") === "true";
+  const requires_approval = formData.get("requires_approval") === "true";
   const template_id = (formData.get("template_id") as string) || null;
   const title = (formData.get("title") as string)?.trim();
   const activity_type = formData.get("activity_type") as string;
@@ -276,6 +277,7 @@ export async function createTrip(
     custom_questions,
     messenger_gc_link,
     is_template,
+    requires_approval,
     template_id: template_id || null,
   }).select("id").single();
 
@@ -347,6 +349,7 @@ export async function updateTrip(
   }
 
   const is_template = formData.get("is_template") === "true";
+  const requires_approval = formData.get("requires_approval") === "true";
   const template_id = (formData.get("template_id") as string) || null;
   const title = (formData.get("title") as string)?.trim();
   const activity_type = formData.get("activity_type") as string;
@@ -562,11 +565,6 @@ export async function updateTrip(
     }
   }
 
-  // 2. Block difficulty change to Advanced while bookings exist.
-  if (!isDraft && !is_template && difficulty === "Advanced" && existing.difficulty !== "Advanced" && activeBookingCount > 0) {
-    return { error: "Cannot change difficulty to Advanced while confirmed bookings exist. Advanced trips require organizer approval for new bookings, which would create an inconsistent experience for existing participants." };
-  }
-
   // Block moving a trip back to draft while anyone is still attending. Uses
   // liveBookingCount (ACTIVE plus transferred), not activeBookingCount: a trip
   // whose only booking is transferred still has a replacement participant on
@@ -676,6 +674,7 @@ export async function updateTrip(
       custom_questions,
       messenger_gc_link,
       is_template,
+      requires_approval,
       template_id: template_id || null,
     })
     .eq("id", tripId);

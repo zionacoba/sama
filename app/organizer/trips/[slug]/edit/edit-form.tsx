@@ -43,6 +43,7 @@ type TripForEdit = {
   messenger_gc_link: string | null;
   is_template: boolean | null;
   template_id: string | null;
+  requires_approval?: boolean | null;
   custom_questions: string[] | null;
   custom_question: string | null;
 };
@@ -68,6 +69,7 @@ export function EditTripForm({
   const [duration, setDuration] = useState<string>(trip.duration ?? "");
   const [dateStart, setDateStart] = useState<string>(trip.date_start.slice(0, 10));
   const [isTemplate, setIsTemplate] = useState(trip.is_template ?? false);
+  const [requiresApproval, setRequiresApproval] = useState(trip.requires_approval ?? false);
   // The recurring-template flag can only be validly set on a draft that is not
   // itself a run created from a template. updateTrip enforces this server-side
   // (is_template + non-draft is rejected); hiding the toggle elsewhere keeps the
@@ -358,6 +360,25 @@ export function EditTripForm({
           </select>
         </div>
       </div>
+      {/* Booking approval toggle */}
+      <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
+        <label className="flex cursor-pointer items-center gap-3">
+          <input
+            type="checkbox"
+            checked={requiresApproval}
+            onChange={(e) => setRequiresApproval(e.target.checked)}
+            className="h-4 w-4 rounded border-stone-300 text-trailhead accent-trailhead"
+          />
+          <input type="hidden" name="requires_approval" value={requiresApproval.toString()} />
+          <span className="flex items-center gap-1.5 text-sm font-medium text-stone-700">
+            Review each booking before it&apos;s confirmed
+          </span>
+        </label>
+        <p className="ml-7 mt-0.5 text-xs text-stone-500">
+          When this is off, bookings confirm as soon as the joiner pays. When it&apos;s on, joiners pay first and are told you&apos;ll review their booking; you approve or decline, and a declined joiner is refunded in full. Changing this only affects new bookings; requests already waiting stay for you to decide.
+        </p>
+      </div>
+
       {/* Duration */}
       <div>
         <label htmlFor="duration" className={labelClass}>
