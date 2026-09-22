@@ -2,7 +2,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // Data-retention purge: medical and emergency-contact data is only operationally
 // relevant up to and shortly after a trip runs. RETENTION_DAYS after a trip ends
-// we null the six sensitive columns below. Waiver consent proof, financial/payout
+// we null the sensitive columns below: three on bookings, seven on booking_participants (the permit details included). Waiver consent proof, financial/payout
 // data, and account basics (name/email/phone) are deliberately KEPT.
 const RETENTION_DAYS = 90;
 
@@ -179,9 +179,13 @@ Deno.serve(async (req) => {
           medical_notes: null,
           emergency_contact_name: null,
           emergency_contact_phone: null,
+          age: null,
+          sex: null,
+          home_address: null,
+          phone: null,
         })
         .in("booking_id", bookingIds)
-        .or("medical_notes.not.is.null,emergency_contact_name.not.is.null,emergency_contact_phone.not.is.null")
+        .or("medical_notes.not.is.null,emergency_contact_name.not.is.null,emergency_contact_phone.not.is.null,age.not.is.null,sex.not.is.null,home_address.not.is.null,phone.not.is.null")
         .select("id");
 
       if (participantsError) {
