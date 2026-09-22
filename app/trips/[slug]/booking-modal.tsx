@@ -25,6 +25,7 @@ type BookingModalProps = {
   downpaymentCutoffDays: number;
   meetingPoints: MeetingPoint[];
   requiresApproval: boolean;
+  requiresPermitDetails: boolean;
   waiverText?: string | null;
   organizerName?: string | null;
   customQuestions?: string[] | null;
@@ -48,6 +49,7 @@ export function BookingModal({
   downpaymentCutoffDays,
   meetingPoints,
   requiresApproval,
+  requiresPermitDetails,
   waiverText,
   organizerName,
   customQuestions,
@@ -82,6 +84,9 @@ export function BookingModal({
   const [participants, setParticipants] = useState<string[]>([]);
   const [emergencyContactName, setEmergencyContactName] = useState("");
   const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
+  const [age, setAge] = useState("");
+  const [sex, setSex] = useState("");
+  const [homeAddress, setHomeAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedMeetingPoint, setSelectedMeetingPoint] = useState(() =>
     meetingPoints.length === 1 ? meetingPoints[0].location : ""
@@ -254,6 +259,9 @@ export function BookingModal({
     setParticipants([]);
     setEmergencyContactName("");
     setEmergencyContactPhone("");
+    setAge("");
+    setSex("");
+    setHomeAddress("");
     setNotes("");
     setSelectedMeetingPoint(meetingPoints.length === 1 ? meetingPoints[0].location : "");
     setPhoneError(false);
@@ -328,6 +336,9 @@ export function BookingModal({
         platformWaiverAgreed: platformWaiverAccepted,
         adultConfirmed,
         medicalNotes: notes.trim() || null,
+        age: requiresPermitDetails ? age : null,
+        sex: requiresPermitDetails ? sex : null,
+        homeAddress: requiresPermitDetails ? homeAddress : null,
         meetingPoint: selectedMeetingPoint || null,
         customQuestionAnswers: activeQuestions.length > 0 ? customQuestionAnswers.map((a) => a.trim()) : null,
       });
@@ -685,6 +696,83 @@ export function BookingModal({
                       )}
                     </div>
                   </div>
+
+                  {/* Permit details — booker only; slots 1..n supply theirs at /join */}
+                  {requiresPermitDetails && (
+                    <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3.5 space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                        Permit details
+                      </p>
+                      <p className="text-xs text-stone-500">
+                        The organizer needs these for the trip permit. They are deleted 90 days after the trip.
+                      </p>
+                      <div>
+                        <label htmlFor="booking-age" className="block text-sm font-medium text-stone-700">
+                          Age on the trip date
+                        </label>
+                        <input
+                          id="booking-age"
+                          type="number"
+                          required
+                          min={18}
+                          max={120}
+                          step={1}
+                          value={age}
+                          disabled={loading}
+                          onChange={(e) => setAge(e.target.value)}
+                          className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
+                        />
+                      </div>
+                      <fieldset>
+                        <legend className="block text-sm font-medium text-stone-700">
+                          Sex <span className="text-xs text-stone-500">Needed for the trip permit</span>
+                        </legend>
+                        <div className="mt-1.5 flex gap-4">
+                          <label className="flex cursor-pointer items-center gap-2 text-sm text-stone-700">
+                            <input
+                              type="radio"
+                              name="booking-sex"
+                              value="male"
+                              required
+                              checked={sex === "male"}
+                              disabled={loading}
+                              onChange={(e) => setSex(e.target.value)}
+                              className="h-4 w-4 shrink-0 cursor-pointer border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
+                            />
+                            Male
+                          </label>
+                          <label className="flex cursor-pointer items-center gap-2 text-sm text-stone-700">
+                            <input
+                              type="radio"
+                              name="booking-sex"
+                              value="female"
+                              required
+                              checked={sex === "female"}
+                              disabled={loading}
+                              onChange={(e) => setSex(e.target.value)}
+                              className="h-4 w-4 shrink-0 cursor-pointer border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
+                            />
+                            Female
+                          </label>
+                        </div>
+                      </fieldset>
+                      <div>
+                        <label htmlFor="booking-home-address" className="block text-sm font-medium text-stone-700">
+                          Home address
+                        </label>
+                        <input
+                          id="booking-home-address"
+                          type="text"
+                          required
+                          value={homeAddress}
+                          disabled={loading}
+                          onChange={(e) => setHomeAddress(e.target.value)}
+                          placeholder="House no., street, barangay, city, province"
+                          className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Payment option */}
                   {canUseDownpayment && (

@@ -27,6 +27,7 @@ import { autoConfirms } from "@/lib/booking-approval";
 import { resolvePastTripGate } from "@/lib/past-trip-gate";
 import { DEFAULT_WAIVER_TEXT, PLATFORM_WAIVER_SNAPSHOT_TEXT } from "@/lib/constants";
 import { withParticipantAdultAttestation } from "@/lib/waiver-snapshot";
+import { validatePermitDetails, type PermitDetails } from "@/lib/permit-details";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
@@ -49,6 +50,9 @@ type CreateBookingInput = {
   medicalNotes: string | null;
   meetingPoint: string | null;
   customQuestionAnswers: string[] | null;
+  age: string | null;
+  sex: string | null;
+  homeAddress: string | null;
 };
 
 export async function createBooking(input: CreateBookingInput) {
@@ -90,7 +94,7 @@ export async function createBooking(input: CreateBookingInput) {
 
   const { data: trip, error: tripFetchError } = await admin
     .from("trips")
-    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, downpayment_cutoff_days, messenger_gc_link, waiver_text, cancellation_policy, meeting_points, custom_questions, custom_question, requires_approval")
+    .select("id, title, date_start, remaining_slots, organizer_id, difficulty, status, price, payment_type, min_downpayment, downpayment_cutoff_days, messenger_gc_link, waiver_text, cancellation_policy, meeting_points, custom_questions, custom_question, requires_approval, requires_permit_details")
     .eq("slug", input.tripSlug)
     .maybeSingle();
 
@@ -208,6 +212,20 @@ export async function createBooking(input: CreateBookingInput) {
     }
   }
 
+  // Permit details for slot 0 (the booker). Slots 1..n supply their own at /join.
+  // Same validator as confirmParticipant so the rules and error strings match.
+  let permitDetails: PermitDetails | null = null;
+  if (trip.requires_permit_details) {
+    const r = validatePermitDetails({
+      age: input.age,
+      sex: input.sex,
+      homeAddress: input.homeAddress,
+      phone: input.phone,
+    });
+    if (!r.ok) return { error: r.error };
+    permitDetails = r.value;
+  }
+
   // Compute amounts server-side — never trust client-provided values.
   const computedTotal = Math.round(Number(trip.price) * input.slots * 100) / 100;
   const daysUntil = Math.floor((new Date(trip.date_start).getTime() - Date.now()) / 86_400_000);
@@ -306,6 +324,10 @@ export async function createBooking(input: CreateBookingInput) {
     emergency_contact_phone: i === 0 ? input.emergencyContactPhone : null,
     medical_notes: i === 0 ? input.medicalNotes : null,
     meeting_point: i === 0 ? input.meetingPoint : null,
+    age: i === 0 ? permitDetails?.age ?? null : null,
+    sex: i === 0 ? permitDetails?.sex ?? null : null,
+    home_address: i === 0 ? permitDetails?.home_address ?? null : null,
+    phone: i === 0 ? permitDetails?.phone ?? null : null,
     waiver_accepted: i === 0,
     waiver_accepted_at: i === 0 ? now : null,
     // Snapshot the same resolved waiver text recorded on the bookings row so every
