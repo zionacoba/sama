@@ -5,6 +5,7 @@ import * as Sentry from "@sentry/nextjs";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
 import { withParticipantAdultAttestation } from "@/lib/waiver-snapshot";
+import { validatePermitDetails, type PermitDetails } from "@/lib/permit-details";
 
 type ParticipantState = { success: true } | { error: string } | null;
 
@@ -88,20 +89,11 @@ export async function confirmParticipant(
   // Whether permit details are collected is the trip's call, not the form's: a
   // hand-rolled POST could add or omit these fields either way, so the flag read
   // from the database above decides. When it is false the four fields are ignored.
+  let permitDetails: PermitDetails | null = null;
   if (trip.requires_permit_details) {
-    if (!age || !sex || !homeAddress || !phone) {
-      return { error: "Please fill in the permit details." };
-    }
-    const ageValue = Number(age);
-    if (!Number.isInteger(ageValue) || ageValue < 18 || ageValue > 120) {
-      return { error: "Please enter your age on the trip date (18 or older)." };
-    }
-    if (sex !== "male" && sex !== "female") {
-      return { error: "Please choose Male or Female." };
-    }
-    if (!/^(\+63|0)\d{9,10}$/.test(phone.replace(/\s/g, ""))) {
-      return { error: "Please enter a valid Philippine phone number (09XX or +63)." };
-    }
+    const result = validatePermitDetails({ age, sex, homeAddress, phone });
+    if (!result.ok) return { error: result.error };
+    permitDetails = result.value;
   }
 
   // Capture the submitter's IP the same way createBooking does for the booker.
@@ -120,11 +112,11 @@ export async function confirmParticipant(
     completed: true,
   };
 
-  if (trip.requires_permit_details) {
-    updatePayload.age = Number(age);
-    updatePayload.sex = sex;
-    updatePayload.home_address = homeAddress;
-    updatePayload.phone = phone;
+  if (permitDetails) {
+    updatePayload.age = permitDetails.age;
+    updatePayload.sex = permitDetails.sex;
+    updatePayload.home_address = permitDetails.home_address;
+    updatePayload.phone = permitDetails.phone;
   }
 
   // Snapshot the waiver text only when the row does not already have one. Rows
