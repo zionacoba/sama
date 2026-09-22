@@ -150,9 +150,10 @@ export function ParticipantForm({
               name="home_address"
               type="text"
               required
-              placeholder="House no., street, barangay, city, province"
+              placeholder="Pasig, NCR"
               className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
             />
+            <p className="mt-1 text-xs text-stone-500">City and province is enough.</p>
           </div>
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-stone-700">
