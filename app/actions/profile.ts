@@ -114,6 +114,10 @@ export async function deleteAccount(): Promise<{ success: true } | { error: stri
         emergency_contact_name: null,
         emergency_contact_phone: null,
         medical_notes: null,
+        age: null,
+        sex: null,
+        home_address: null,
+        phone: null,
       })
       .in("booking_id", bookingIds);
   }
