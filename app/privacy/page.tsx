@@ -52,6 +52,7 @@ export default function PrivacyPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Number of slots booked</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Emergency contact name and phone number</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Medical notes or allergies (optional)</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Permit details: age on the trip date, sex and home address, only on trips where the organizer needs them for a permit or pre-registration</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Selected pickup point</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Payment information (processed by PayMongo — we do not store card details)</span></li>
               </ul>
@@ -60,6 +61,7 @@ export default function PrivacyPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Full name</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Emergency contact details</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Medical notes</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Permit details: age on the trip date, sex, home address and your phone number, only on trips that require them</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Waiver acceptance and timestamp</span></li>
               </ul>
               <p className="mt-3 font-medium text-stone-700">When you apply as an organizer:</p>
@@ -102,7 +104,7 @@ export default function PrivacyPage() {
               <h2 className="text-lg font-bold text-stone-900">4. How We Share Your Information</h2>
               <p className="mt-2 leading-relaxed">We do not sell your personal data. We share your information only with:</p>
               <ul className="mt-2 space-y-1.5 leading-relaxed">
-                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Organizers</strong> — your name, email, phone, emergency contact, pickup point, and medical notes are shared with the organizer of trips you book</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Organizers</strong> — your name, email, phone, emergency contact, pickup point, medical notes, and any permit details are shared with the organizer of trips you book</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">PayMongo</strong> — payment processing. Their privacy policy applies to payment data</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Resend</strong> — transactional email delivery</span></li>
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span><strong className="font-semibold text-stone-800">Supabase</strong> — database and authentication infrastructure</span></li>
@@ -118,7 +120,7 @@ export default function PrivacyPage() {
                 We retain your personal data for as long as your account is active or as required by law. Personal data associated with cancelled bookings is retained for record-keeping purposes. You may request deletion of your personal data at any time by deleting your account or contacting <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>. Booking and payment records, including consent and waiver records, are retained for a minimum of 10 years for legal, financial, and dispute resolution purposes.
               </p>
               <p className="mt-3 leading-relaxed">
-                Health information (medical notes and allergies) and emergency-contact information attached to a specific booking are used only to support participant safety for that booked trip. This sensitive data is kept for a shorter retention period than the rest of the booking record: it is automatically deleted 90 days after the trip ends. The surrounding booking, payment, consent, and waiver records are retained for the longer legal and financial period described above, but the health and emergency-contact fields within them are permanently stripped once the 90-day window passes. This is why a booking record may persist for up to 10 years while its medical notes and emergency-contact details do not.
+                Health information (medical notes and allergies), emergency-contact information and permit details (age, sex, home address and phone number) attached to a specific booking are used only to support participant safety for that booked trip. This sensitive data is kept for a shorter retention period than the rest of the booking record: it is automatically deleted 90 days after the trip ends. The surrounding booking, payment, consent, and waiver records are retained for the longer legal and financial period described above, but the health, emergency-contact and permit fields within them are permanently stripped once the 90-day window passes. This is why a booking record may persist for up to 10 years while its medical notes, emergency-contact and permit details do not.
               </p>
               <p className="mt-3 leading-relaxed">
                 Separately, if you save a default emergency contact in your profile, that profile copy persists with your account until you remove it or delete your account, because it is reused to pre-fill your future bookings. You can edit or clear your profile emergency contact at any time in your profile settings.
