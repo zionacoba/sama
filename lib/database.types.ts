@@ -62,15 +62,19 @@ export type Database = {
       }
       booking_participants: {
         Row: {
+          age: number | null
           booking_id: number | null
           completed: boolean | null
           created_at: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           full_name: string | null
+          home_address: string | null
           id: string
           medical_notes: string | null
           meeting_point: string | null
+          phone: string | null
+          sex: string | null
           slot_number: number
           token: string
           waiver_accepted: boolean | null
@@ -79,15 +83,19 @@ export type Database = {
           waiver_text_snapshot: string | null
         }
         Insert: {
+          age?: number | null
           booking_id?: number | null
           completed?: boolean | null
           created_at?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           full_name?: string | null
+          home_address?: string | null
           id?: string
           medical_notes?: string | null
           meeting_point?: string | null
+          phone?: string | null
+          sex?: string | null
           slot_number: number
           token?: string
           waiver_accepted?: boolean | null
@@ -96,15 +104,19 @@ export type Database = {
           waiver_text_snapshot?: string | null
         }
         Update: {
+          age?: number | null
           booking_id?: number | null
           completed?: boolean | null
           created_at?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           full_name?: string | null
+          home_address?: string | null
           id?: string
           medical_notes?: string | null
           meeting_point?: string | null
+          phone?: string | null
+          sex?: string | null
           slot_number?: number
           token?: string
           waiver_accepted?: boolean | null
@@ -809,6 +821,7 @@ export type Database = {
           region: string | null
           remaining_slots: number | null
           requires_approval: boolean
+          requires_permit_details: boolean
           slug: string | null
           status: string | null
           template_id: number | null
@@ -846,6 +859,7 @@ export type Database = {
           region?: string | null
           remaining_slots?: number | null
           requires_approval?: boolean
+          requires_permit_details?: boolean
           slug?: string | null
           status?: string | null
           template_id?: number | null
@@ -883,6 +897,7 @@ export type Database = {
           region?: string | null
           remaining_slots?: number | null
           requires_approval?: boolean
+          requires_permit_details?: boolean
           slug?: string | null
           status?: string | null
           template_id?: number | null
