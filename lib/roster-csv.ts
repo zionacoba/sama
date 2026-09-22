@@ -33,7 +33,22 @@ export type CsvParticipant = {
   emergency_contact_phone: string | null;
   medical_notes: string | null;
   meeting_point: string | null;
+  // Permit details: collected per participant only when the trip sets
+  // requires_permit_details, so they are null on every other trip. There is no
+  // booking-level copy, so even the anchor row reads its slot-0 row.
+  age?: number | null;
+  sex?: string | null;
+  home_address?: string | null;
+  phone?: string | null;
 };
+
+// The DB stores sex as lowercase "male"/"female"; the roster is read by permit
+// offices, so print it capitalised. Null (or a trip that collects no permit
+// details) exports as a blank cell.
+function formatSex(sex: string | null | undefined): string {
+  if (!sex) return "";
+  return sex.charAt(0).toUpperCase() + sex.slice(1);
+}
 
 export const CSV_HEADERS = [
   "Full name",
@@ -44,6 +59,10 @@ export const CSV_HEADERS = [
   "Emergency contact name",
   "Emergency contact phone",
   "Medical notes",
+  "Age",
+  "Sex",
+  "Home address",
+  "Participant phone",
   "Status",
   "Booking date",
   "Custom questions",
@@ -114,6 +133,10 @@ export function buildCsvRows(
       escapeCsv(attendee.emergencyContactName),
       escapeCsv(attendee.emergencyContactPhone),
       escapeCsv(anchorMedical),
+      escapeCsv(slotZero?.age ?? ""),
+      escapeCsv(formatSex(slotZero?.sex)),
+      escapeCsv(slotZero?.home_address ?? ""),
+      escapeCsv(slotZero?.phone ?? ""),
       escapeCsv(b.status),
       escapeCsv(bookingDate),
       escapeCsv(customQuestions),
@@ -137,6 +160,10 @@ export function buildCsvRows(
         escapeCsv(p.emergency_contact_name),
         escapeCsv(p.emergency_contact_phone),
         escapeCsv(p.medical_notes),
+        escapeCsv(p.age ?? ""),
+        escapeCsv(formatSex(p.sex)),
+        escapeCsv(p.home_address ?? ""),
+        escapeCsv(p.phone ?? ""),
         escapeCsv(b.status),
         escapeCsv(bookingDate),
         "",

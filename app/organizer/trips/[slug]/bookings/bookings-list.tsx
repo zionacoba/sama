@@ -48,6 +48,12 @@ type BookingParticipant = {
   emergency_contact_phone: string | null;
   medical_notes: string | null;
   meeting_point: string | null;
+  // Permit details: collected per participant only when the trip sets
+  // requires_permit_details, so they are null on every other trip.
+  age?: number | null;
+  sex?: string | null;
+  home_address?: string | null;
+  phone?: string | null;
 };
 
 type Tab = "confirmed" | "pending" | "awaiting_payment" | "all" | "cancelled";

@@ -27,6 +27,12 @@ type ManifestParticipant = {
   emergency_contact_phone: string | null;
   medical_notes: string | null;
   meeting_point: string | null;
+  // Permit details: collected per participant only when the trip sets
+  // requires_permit_details, so they are null on every other trip.
+  age?: number | null;
+  sex?: string | null;
+  home_address?: string | null;
+  phone?: string | null;
 };
 
 export function ParticipantManifest({
@@ -66,6 +72,15 @@ export function ParticipantManifest({
           // "Awaiting replacement details"), slots 1+ are awaiting until their
           // /join is completed.
           const awaiting = attendee ? attendee.awaiting : !p.completed;
+          // Permit details live only on the participant row (no booking-level
+          // copy), and are null on trips that do not require them. Render one
+          // short line of whichever parts exist, nothing when all four are null.
+          const permit = [
+            p.age != null ? String(p.age) : null,
+            p.sex ? p.sex.charAt(0).toUpperCase() + p.sex.slice(1) : null,
+            p.home_address,
+            p.phone,
+          ].filter((part): part is string => Boolean(part));
           return (
             <li key={p.slot_number} className="flex items-start gap-1 text-xs">
               <span className={p.completed ? "text-emerald-500" : "text-stone-300"}>●</span>
@@ -89,6 +104,9 @@ export function ParticipantManifest({
                       )}
                     </span>
                     {medical && <span className="block text-stone-600">🏥 {medical}</span>}
+                    {permit.length > 0 && (
+                      <span className="block text-stone-500">Permit: {permit.join(" · ")}</span>
+                    )}
                   </>
                 )}
               </span>

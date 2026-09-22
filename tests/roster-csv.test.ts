@@ -26,6 +26,10 @@ function participant(overrides: Partial<CsvParticipant> & { slot_number: number 
     emergency_contact_phone: null,
     medical_notes: null,
     meeting_point: null,
+    age: null,
+    sex: null,
+    home_address: null,
+    phone: null,
     ...overrides,
   };
 }
@@ -208,6 +212,48 @@ describe("buildCsvRows", () => {
     // Names survive the purge (only the six sensitive columns are nulled).
     expect(rows[0][COL["Full name"]]).toBe("Ana Booker");
     expect(rows[1][COL["Full name"]]).toBe("Carla Second");
+  });
+
+  it("exports a participant's permit details in their own row", () => {
+    const booking = { ...baseBooking, slots: 2 };
+    const rows = buildCsvRows([booking], {
+      "42": [
+        participant({ slot_number: 0, full_name: "Ana Booker", completed: true }),
+        participant({
+          slot_number: 1,
+          full_name: "Carla Second",
+          completed: true,
+          age: 34,
+          sex: "female",
+          home_address: "12 Kanlaon St, Quezon City",
+          phone: "0917 123 4567",
+        }),
+      ],
+    });
+
+    expect(rows[1][COL["Age"]]).toBe("34");
+    // Stored lowercase, printed capitalised for the permit office.
+    expect(rows[1][COL["Sex"]]).toBe("Female");
+    // Commas in the address come back CSV-quoted by escapeCsv.
+    expect(rows[1][COL["Home address"]]).toBe('"12 Kanlaon St, Quezon City"');
+    expect(rows[1][COL["Participant phone"]]).toBe("0917 123 4567");
+  });
+
+  it("exports blank permit cells for a participant with no permit details", () => {
+    const booking = { ...baseBooking, slots: 2 };
+    const rows = buildCsvRows([booking], {
+      "42": [
+        participant({ slot_number: 0, full_name: "Ana Booker", completed: true }),
+        participant({ slot_number: 1, full_name: "Carla Second", completed: true }),
+      ],
+    });
+
+    for (const row of rows) {
+      expect(row[COL["Age"]]).toBe("");
+      expect(row[COL["Sex"]]).toBe("");
+      expect(row[COL["Home address"]]).toBe("");
+      expect(row[COL["Participant phone"]]).toBe("");
+    }
   });
 
   it("escapes commas, quotes, and newlines in medical notes", () => {

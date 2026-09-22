@@ -64,6 +64,12 @@ type BookingParticipant = {
   emergency_contact_phone: string | null;
   medical_notes: string | null;
   meeting_point: string | null;
+  // Permit details: collected per participant only when the trip sets
+  // requires_permit_details, so they are null on every other trip.
+  age?: number | null;
+  sex?: string | null;
+  home_address?: string | null;
+  phone?: string | null;
 };
 
 function formatDate(date: string) {
@@ -129,7 +135,7 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
 
   const { data: trip, error: tripError } = await supabase
     .from("trips")
-    .select("id, title, slug, difficulty, activity_type, date_start, total_slots, remaining_slots, price, payment_type, min_downpayment, custom_questions, custom_question")
+    .select("id, title, slug, difficulty, activity_type, date_start, total_slots, remaining_slots, price, payment_type, min_downpayment, custom_questions, custom_question, requires_permit_details")
     .eq("slug", slug)
     .eq("organizer_id", organizer.id)
     .maybeSingle();
@@ -183,15 +189,18 @@ export default async function TripBookingsPage({ params, searchParams }: PagePro
   // Load per-slot participant rows for multi-slot bookings (the {done}/{slots}
   // manifest) and also for transferred bookings, whose repurposed slot-0 row
   // carries the replacement's completion status shown in the organizer view.
+  // On a permit-details trip every booking is included, single-slot ones too,
+  // because the permit fields live only on participant rows and the organizer
+  // needs them for all attendees.
   const participantBookingIds = bookings
-    .filter((b) => b.slots > 1 || b.status === "transferred")
+    .filter((b) => b.slots > 1 || b.status === "transferred" || trip.requires_permit_details === true)
     .map((b) => b.id);
   const participantsMap = new Map<number, BookingParticipant[]>();
 
   if (participantBookingIds.length > 0) {
     const { data: participantsData } = await admin
       .from("booking_participants")
-      .select("booking_id, slot_number, full_name, completed, emergency_contact_name, emergency_contact_phone, medical_notes, meeting_point")
+      .select("booking_id, slot_number, full_name, completed, emergency_contact_name, emergency_contact_phone, medical_notes, meeting_point, age, sex, home_address, phone")
       .in("booking_id", participantBookingIds)
       .order("slot_number");
 
