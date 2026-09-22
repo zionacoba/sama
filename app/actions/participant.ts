@@ -19,6 +19,10 @@ export async function confirmParticipant(
   const medicalNotes = (formData.get("medical_notes") as string)?.trim() || null;
   const meetingPoint = (formData.get("meeting_point") as string) || null;
   const waiverAccepted = formData.get("waiver_accepted") === "on";
+  const age = (formData.get("age") as string)?.trim();
+  const sex = (formData.get("sex") as string)?.trim();
+  const homeAddress = (formData.get("home_address") as string)?.trim();
+  const phone = (formData.get("phone") as string)?.trim();
 
   if (!token) return { error: "Invalid link." };
   if (!fullName || !emergencyContactName || !emergencyContactPhone) {
@@ -62,7 +66,7 @@ export async function confirmParticipant(
 
   const { data: trip, error: tripError } = await admin
     .from("trips")
-    .select("date_start, waiver_text, organizer_id")
+    .select("date_start, waiver_text, organizer_id, requires_permit_details")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -81,6 +85,25 @@ export async function confirmParticipant(
     return { error: "This trip has already taken place, so this form can no longer be completed." };
   }
 
+  // Whether permit details are collected is the trip's call, not the form's: a
+  // hand-rolled POST could add or omit these fields either way, so the flag read
+  // from the database above decides. When it is false the four fields are ignored.
+  if (trip.requires_permit_details) {
+    if (!age || !sex || !homeAddress || !phone) {
+      return { error: "Please fill in the permit details." };
+    }
+    const ageValue = Number(age);
+    if (!Number.isInteger(ageValue) || ageValue < 18 || ageValue > 120) {
+      return { error: "Please enter your age on the trip date (18 or older)." };
+    }
+    if (sex !== "male" && sex !== "female") {
+      return { error: "Please choose Male or Female." };
+    }
+    if (!/^(\+63|0)\d{9,10}$/.test(phone.replace(/\s/g, ""))) {
+      return { error: "Please enter a valid Philippine phone number (09XX or +63)." };
+    }
+  }
+
   // Capture the submitter's IP the same way createBooking does for the booker.
   const requestHeaders = await headers();
   const waiverIp = requestHeaders.get("x-forwarded-for")?.split(",")[0].trim() ?? null;
@@ -96,6 +119,13 @@ export async function confirmParticipant(
     waiver_ip: waiverIp,
     completed: true,
   };
+
+  if (trip.requires_permit_details) {
+    updatePayload.age = Number(age);
+    updatePayload.sex = sex;
+    updatePayload.home_address = homeAddress;
+    updatePayload.phone = phone;
+  }
 
   // Snapshot the waiver text only when the row does not already have one. Rows
   // prepped by a transfer (Phase 2) already carry their snapshot and keep it;

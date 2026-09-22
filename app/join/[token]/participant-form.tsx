@@ -10,9 +10,16 @@ type Props = {
   meetingPoints: MeetingPoint[];
   waiverText: string;
   defaultMeetingPoint: string | null;
+  requiresPermitDetails?: boolean;
 };
 
-export function ParticipantForm({ token, meetingPoints, waiverText, defaultMeetingPoint }: Props) {
+export function ParticipantForm({
+  token,
+  meetingPoints,
+  waiverText,
+  defaultMeetingPoint,
+  requiresPermitDetails = false,
+}: Props) {
   const [state, action, pending] = useActionState(confirmParticipant, null);
 
   if (state && "success" in state) {
@@ -83,6 +90,85 @@ export function ParticipantForm({ token, meetingPoints, waiverText, defaultMeeti
           />
         </div>
       </div>
+
+      {requiresPermitDetails && (
+        <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3.5 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+            Permit details
+          </p>
+          <p className="text-xs text-stone-500">
+            The organizer needs these for the trip permit. They are deleted 90 days after the trip.
+          </p>
+          <div>
+            <label htmlFor="age" className="block text-sm font-medium text-stone-700">
+              Age on the trip date
+            </label>
+            <input
+              id="age"
+              name="age"
+              type="number"
+              required
+              min={18}
+              max={120}
+              step={1}
+              className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+            />
+          </div>
+          <fieldset>
+            <legend className="block text-sm font-medium text-stone-700">
+              Sex <span className="text-xs text-stone-500">Needed for the trip permit</span>
+            </legend>
+            <div className="mt-1.5 flex gap-4">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-stone-700">
+                <input
+                  type="radio"
+                  name="sex"
+                  value="male"
+                  required
+                  className="h-4 w-4 shrink-0 cursor-pointer border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
+                />
+                Male
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-stone-700">
+                <input
+                  type="radio"
+                  name="sex"
+                  value="female"
+                  required
+                  className="h-4 w-4 shrink-0 cursor-pointer border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30"
+                />
+                Female
+              </label>
+            </div>
+          </fieldset>
+          <div>
+            <label htmlFor="home_address" className="block text-sm font-medium text-stone-700">
+              Home address
+            </label>
+            <input
+              id="home_address"
+              name="home_address"
+              type="text"
+              required
+              placeholder="House no., street, barangay, city, province"
+              className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+            />
+          </div>
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-stone-700">
+              Your phone number
+            </label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              required
+              placeholder="09XX XXX XXXX"
+              className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-trailhead focus:ring-2 focus:ring-trailhead/30"
+            />
+          </div>
+        </div>
+      )}
 
       {meetingPoints.length > 0 && (
         <div>

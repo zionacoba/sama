@@ -62,7 +62,7 @@ export default async function JoinPage({ params }: PageProps) {
 
   const { data: trip, error: tripError } = await admin
     .from("trips")
-    .select("title, date_start, meeting_points, waiver_text, organizer_id")
+    .select("title, date_start, meeting_points, waiver_text, organizer_id, requires_permit_details")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -161,6 +161,7 @@ export default async function JoinPage({ params }: PageProps) {
               meetingPoints={meetingPoints}
               waiverText={waiverText}
               defaultMeetingPoint={(booking.meeting_point as string | null) ?? null}
+              requiresPermitDetails={trip.requires_permit_details ?? false}
             />
           </div>
         )}
