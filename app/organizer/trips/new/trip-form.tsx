@@ -35,6 +35,7 @@ type TripDefaults = {
   waiver_text?: string | null;
   messenger_gc_link?: string | null;
   requires_approval?: boolean | null;
+  requires_permit_details?: boolean | null;
   custom_questions?: string[] | null;
   custom_question?: string | null;
 };
@@ -60,6 +61,7 @@ export function TripForm({
   type MeetingPoint = { location: string; time: string };
   const [isTemplate, setIsTemplate] = useState(defaultIsTemplate);
   const [requiresApproval, setRequiresApproval] = useState(defaultValues?.requires_approval ?? false);
+  const [requiresPermitDetails, setRequiresPermitDetails] = useState(defaultValues?.requires_permit_details ?? false);
   const [meetingPoints, setMeetingPoints] = useState<MeetingPoint[]>([{ location: "", time: "" }]);
   const [duration, setDuration] = useState<string>(defaultValues?.duration ?? "");
   const [dateStart, setDateStart] = useState<string>("");
@@ -320,6 +322,25 @@ export function TripForm({
         </label>
         <p className="ml-7 mt-0.5 text-xs text-stone-500">
           When this is off, bookings confirm as soon as the joiner pays. When it&apos;s on, joiners pay first and are told you&apos;ll review their booking; you approve or decline, and a declined joiner is refunded in full.
+        </p>
+      </div>
+
+      {/* Permit details toggle */}
+      <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
+        <label className="flex cursor-pointer items-center gap-3">
+          <input
+            type="checkbox"
+            checked={requiresPermitDetails}
+            onChange={(e) => setRequiresPermitDetails(e.target.checked)}
+            className="h-4 w-4 rounded border-stone-300 text-trailhead accent-trailhead"
+          />
+          <input type="hidden" name="requires_permit_details" value={requiresPermitDetails.toString()} />
+          <span className="flex items-center gap-1.5 text-sm font-medium text-stone-700">
+            Collect permit details from every joiner
+          </span>
+        </label>
+        <p className="ml-7 mt-0.5 text-xs text-stone-500">
+          Turn this on if your trip needs a permit or pre-registration. Every joiner will be asked for their age on the trip date, sex, home address and phone number before they can confirm their spot. These appear on your roster and export, and are deleted 90 days after the trip.
         </p>
       </div>
 

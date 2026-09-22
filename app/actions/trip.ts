@@ -100,6 +100,7 @@ export async function createTrip(
 
   const is_template = formData.get("is_template") === "true";
   const requires_approval = formData.get("requires_approval") === "true";
+  const requires_permit_details = formData.get("requires_permit_details") === "true";
   const template_id = (formData.get("template_id") as string) || null;
   const title = (formData.get("title") as string)?.trim();
   const activity_type = formData.get("activity_type") as string;
@@ -278,6 +279,7 @@ export async function createTrip(
     messenger_gc_link,
     is_template,
     requires_approval,
+    requires_permit_details,
     template_id: template_id || null,
   }).select("id").single();
 
@@ -350,6 +352,7 @@ export async function updateTrip(
 
   const is_template = formData.get("is_template") === "true";
   const requires_approval = formData.get("requires_approval") === "true";
+  const requires_permit_details = formData.get("requires_permit_details") === "true";
   const template_id = (formData.get("template_id") as string) || null;
   const title = (formData.get("title") as string)?.trim();
   const activity_type = formData.get("activity_type") as string;
@@ -675,6 +678,7 @@ export async function updateTrip(
       messenger_gc_link,
       is_template,
       requires_approval,
+      requires_permit_details,
       template_id: template_id || null,
     })
     .eq("id", tripId);

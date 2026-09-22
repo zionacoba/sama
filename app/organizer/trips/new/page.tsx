@@ -49,7 +49,7 @@ export default async function NewTripPage({ searchParams }: PageProps) {
         ? supabase
             .from("trips")
             .select(
-              "id, title, activity_type, difficulty, destination, region, duration, description, includes, what_to_bring, photos, payment_type, min_downpayment, downpayment_cutoff_days, cancellation_policy, cancellation_policy_custom, waiver_text, messenger_gc_link, requires_approval, custom_questions, custom_question",
+              "id, title, activity_type, difficulty, destination, region, duration, description, includes, what_to_bring, photos, payment_type, min_downpayment, downpayment_cutoff_days, cancellation_policy, cancellation_policy_custom, waiver_text, messenger_gc_link, requires_approval, requires_permit_details, custom_questions, custom_question",
             )
             .eq("id", template_id)
             .eq("organizer_id", organizer.id)
