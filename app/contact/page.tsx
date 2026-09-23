@@ -67,17 +67,18 @@ export default function ContactPage() {
                 Revenue (BIR) of the Philippines.
               </p>
               <a
-                href="https://www.bir.gov.ph"
+                href="https://verify.bir.gov.ph/correspondence/90a065ef539143b3b004976f55facf24"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-4 inline-block"
               >
                 <img
-                  src="/bir-seal.png"
-                  alt="BIR Registered Business"
-                  className="h-10 w-auto"
+                  src="/bir-seal-contact.jpg"
+                  alt="Verify our BIR registration"
+                  className="h-40 w-40"
                 />
               </a>
+              <p className="mt-2 text-sm text-stone-500">Scan or tap the code to verify our registration with the BIR.</p>
             </section>
           </div>
         </div>

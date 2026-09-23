@@ -61,13 +61,13 @@ export async function Footer({ hideBecomeOrganizer = false }: { hideBecomeOrgani
       </Link>
       {" · "}
       <a
-        href="https://www.bir.gov.ph"
+        href="https://verify.bir.gov.ph/correspondence/90a065ef539143b3b004976f55facf24"
         target="_blank"
         rel="noopener noreferrer"
       >
         <img
-          src="/bir-seal.png"
-          alt="BIR Registered Business"
+          src="/bir-seal-footer.jpg"
+          alt="Verify our BIR registration"
           className="h-5 w-auto inline-block"
         />
       </a>
