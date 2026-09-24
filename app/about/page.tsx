@@ -42,7 +42,7 @@ export default function AboutPage() {
               Adventure, together.
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/80">
-              A booking platform built exclusively for Philippine outdoor adventures. We connect people to trusted organizers, protect the places they love, and build the professional backbone of the outdoor industry.
+              A booking platform built exclusively for Philippine outdoor adventures. Small and Filipino-built: organizers run the trips, and we handle the bookings, payments and waivers.
             </p>
             <div className="mt-8">
               <Link
