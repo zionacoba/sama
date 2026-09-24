@@ -122,7 +122,7 @@ export default function AboutPage() {
                 <h3 className="mt-1.5 text-xl font-bold text-stone-900">Responsibility</h3>
                 <p className="mt-3 text-base leading-relaxed text-stone-500">
                   The trails and mountains of the Philippines are not ours to use carelessly. We
-                  promote responsible outdoor activity that respects nature and leaves every
+                  believe in responsible outdoor activity that respects nature and leaves every
                   destination better than we found it.
                 </p>
               </div>
