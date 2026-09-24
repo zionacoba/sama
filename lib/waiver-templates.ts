@@ -10,7 +10,9 @@ type ActivityType = (typeof ACTIVITY_TYPES)[number];
 // The `satisfies` clause keeps the keys honest against lib/activities.ts while
 // the annotation lets callers look up with a plain string.
 export const WAIVER_TEMPLATES: Record<string, string | undefined> = {
-  Hiking: `I understand that hiking and trekking involve inherent risks including physical injury, falls on uneven or steep terrain, cold exposure and changeable weather, altitude, and physical exertion beyond what I am used to. I voluntarily participate in this trip organized by [Organizer Name] and assume all risks associated with it.
+  Hiking: `I understand that hiking and trekking involve inherent risks including physical injury, falls on uneven, steep or muddy terrain, cold exposure and changeable weather, altitude, and physical exertion beyond what I am used to. I voluntarily participate in this trip organized by [Organizer Name] and assume all risks associated with it.
+
+Where this trip includes river crossings, waterfalls or swimming, I understand the added risks of slipping, drowning, and sudden rises in water after rain. I will not swim alone, and I will swim only where the organizer allows it. Where this trip includes vehicle transfers, such as 4x4 rides over rough roads, I understand the added risk of road accidents, and I will follow the driver's and guide's instructions.
 
 I confirm that I am physically fit for the difficulty level described in this listing. I understand that sharing any relevant medical conditions with the organizer is optional but strongly recommended for my safety.
 
