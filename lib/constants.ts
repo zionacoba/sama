@@ -11,7 +11,7 @@ export const ADULT_ATTESTATION_PARTICIPANT_TEXT =
   "I confirm I am 18 years of age or older.";
 
 // Snapshot of the platform terms stored on every booking row at creation time.
-export const PLATFORM_WAIVER_SNAPSHOT_TEXT = `By completing this booking, I agree that Sama is a technology marketplace that connects participants with independent trip organizers. Sama is not responsible for the conduct, acts, or omissions of organizers. I voluntarily assume all risks associated with outdoor activities. ${ADULT_ATTESTATION_BOOKING_TEXT}`;
+export const PLATFORM_WAIVER_SNAPSHOT_TEXT = `By completing this booking, I agree that Sama is a technology marketplace that connects participants with independent trip organizers. Sama is not responsible for the conduct, acts, or omissions of organizers. I voluntarily assume all risks associated with outdoor activities. I release Sama from liability for any injury, loss, or damage arising from my participation in any trip, except in cases of Sama's own gross negligence or willful misconduct. ${ADULT_ATTESTATION_BOOKING_TEXT}`;
 
 // Snapshot of the organizer agreement shown on the apply form. Stored verbatim
 // on the organizer row at acceptance time, per Sections 1 and 28 of the terms.

@@ -19,6 +19,9 @@ describe("PLATFORM_WAIVER_SNAPSHOT_TEXT", () => {
     expect(PLATFORM_WAIVER_SNAPSHOT_TEXT).toContain(
       "I voluntarily assume all risks associated with outdoor activities.",
     );
+    expect(PLATFORM_WAIVER_SNAPSHOT_TEXT).toContain(
+      "I release Sama from liability for any injury, loss, or damage arising from my participation in any trip, except in cases of Sama's own gross negligence or willful misconduct.",
+    );
   });
 });
 
