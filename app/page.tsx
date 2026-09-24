@@ -124,7 +124,7 @@ export default async function Home() {
             aria-hidden
           />
           <div className="relative mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl text-center">
-            <h1 className="text-balance text-3xl font-bold tracking-tight text-trailhead! sm:text-4xl md:text-5xl xl:text-[5rem]">
+            <h1 className="text-balance text-[2rem] font-medium tracking-tight text-trailhead! sm:text-4xl md:text-5xl xl:text-[5rem]">
               Pinoy-made,<br /> for the Pinoy joiner.
             </h1>
             <p className="mt-3 text-pretty text-stone-700 sm:text-lg">
