@@ -154,8 +154,8 @@ export default function AboutPage() {
             </p>
             <p className="text-base leading-relaxed text-stone-500 sm:text-lg">
               For experienced adventurers who want to explore more of the Philippines with
-              organizers who know what they are doing. Every organizer on Sama is vetted, named,
-              and accountable.
+              organizers who know what they are doing. Every organizer on Sama is approved by hand,
+              and their name is on every trip.
             </p>
             <p className="text-base leading-relaxed text-stone-500 sm:text-lg">
               For organizers who care about doing this right. Sama is not for everyone. It is for
