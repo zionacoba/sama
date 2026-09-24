@@ -1009,7 +1009,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                     : payoutError === "notfound"
                       ? "Payout not found or already remitted."
                       : payoutError === "ineligible"
-                        ? "Your selection contained bookings that are no longer eligible for payout (the trip has not yet taken place, payment was not received, or they were already paid out). The list may be out of date. Please refresh and try again."
+                        ? "Your selection contained bookings that are no longer eligible for payout (not yet payable, payment was not received, or they were already paid out). The list may be out of date. Please refresh and try again."
                         : payoutError === "stamp_failed"
                           ? "Marking remitted failed before the payout was flipped. The payout is still pending. Fix the error and retry; no money state was changed."
                           : payoutError === "adjustments_changed"
@@ -1022,7 +1022,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
             <div>
               <div className="mb-4">
                 <h2 className="text-xl font-bold text-stone-900">Unpaid Bookings</h2>
-                <p className="mt-0.5 text-sm text-stone-500">Confirmed bookings from completed trips not yet included in a payout</p>
+                <p className="mt-0.5 text-sm text-stone-500">Confirmed bookings that are payable now and not yet included in a payout</p>
               </div>
               {pendingPayouts?.unpaid.length === 0 ? (
                 <div className="rounded-2xl border border-stone-200 bg-white px-6 py-12 text-center shadow-sm">

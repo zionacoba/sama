@@ -616,7 +616,7 @@ export default async function OrganizerDashboardPage({ searchParams }: PageProps
               {/* Pending earnings */}
               <div>
                 <h2 className="text-lg font-bold text-stone-900">Pending Earnings</h2>
-                <p className="mt-0.5 text-sm text-stone-500">Confirmed bookings from completed trips not yet remitted to you</p>
+                <p className="mt-0.5 text-sm text-stone-500">Confirmed bookings ready for your next payout. Most are ready about two days after booking.</p>
                 <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-100 bg-stone-50 px-5 py-4">
                     <div>
