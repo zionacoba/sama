@@ -125,7 +125,7 @@ export default async function Home() {
           />
           <div className="relative mx-auto max-w-3xl lg:max-w-4xl xl:max-w-5xl text-center">
             <h1 className="text-balance text-3xl font-medium tracking-tight text-trailhead-dark sm:text-4xl md:text-5xl xl:text-6xl">
-              Discover trips. Book your slot. Join the group.
+              Pinoy-made, for the Pinoy joiner.
             </h1>
             <p className="mt-3 text-pretty text-stone-700 sm:text-lg">
               Find guided hikes, freediving weekends, and beach trips across the Philippines, led by trusted local organizers.
