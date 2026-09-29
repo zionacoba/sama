@@ -7,7 +7,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { createBooking } from "@/app/actions/booking";
 import { formatPeso } from "@/lib/format";
-import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
+import { DEFAULT_WAIVER_TEXT, PLATFORM_WAIVER_SNAPSHOT_TEXT } from "@/lib/constants";
 import { useFocusTrap } from "@/app/hooks/use-focus-trap";
 
 type MeetingPoint = { location: string; time: string };
@@ -863,6 +863,9 @@ export function BookingModal({
                       <p className="mb-1.5 text-sm font-medium text-stone-700">
                         Platform terms
                       </p>
+                      <div className="mb-2 rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs leading-relaxed text-stone-700">
+                        {PLATFORM_WAIVER_SNAPSHOT_TEXT}
+                      </div>
                       <label className="flex cursor-pointer items-start gap-3">
                         <input
                           type="checkbox"
