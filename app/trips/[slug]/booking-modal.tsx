@@ -97,8 +97,6 @@ export function BookingModal({
   const [waiverError, setWaiverError] = useState(false);
   const [platformWaiverAccepted, setPlatformWaiverAccepted] = useState(false);
   const [platformWaiverError, setPlatformWaiverError] = useState(false);
-  const [adultConfirmed, setAdultConfirmed] = useState(false);
-  const [adultError, setAdultError] = useState(false);
   const [paymentOption, setPaymentOption] = useState<"full" | "downpayment">("full");
   const activeQuestions = (customQuestions ?? []).filter((q) => q.trim());
   const [customQuestionAnswers, setCustomQuestionAnswers] = useState<string[]>(() => activeQuestions.map(() => ""));
@@ -271,8 +269,6 @@ export function BookingModal({
     setWaiverExpanded(false);
     setPlatformWaiverAccepted(false);
     setPlatformWaiverError(false);
-    setAdultConfirmed(false);
-    setAdultError(false);
     setError(null);
     setSuccess(false);
     setPaymentOption("full");
@@ -304,12 +300,11 @@ export function BookingModal({
     if (!phoneValid) setPhoneError(true);
     const isSamePhone = phone.replace(/\s/g, "") === emergencyContactPhone.replace(/\s/g, "") && phone.trim() !== "";
     if (isSamePhone) setSamePhoneError(true);
-    const hasErrors = !platformWaiverAccepted || !waiverAccepted || !adultConfirmed || !phoneValid || isSamePhone;
+    const hasErrors = !platformWaiverAccepted || !waiverAccepted || !phoneValid || isSamePhone;
     if (!platformWaiverAccepted) setPlatformWaiverError(true);
     if (!waiverAccepted) setWaiverError(true);
-    if (!adultConfirmed) setAdultError(true);
     if (hasErrors) {
-      const onlyWaiversBlocking = phoneValid && !isSamePhone && (!platformWaiverAccepted || !waiverAccepted || !adultConfirmed);
+      const onlyWaiversBlocking = phoneValid && !isSamePhone && (!platformWaiverAccepted || !waiverAccepted);
       setError(onlyWaiversBlocking
         ? "Please accept the required confirmations at the bottom of the form to continue."
         : "Please fix the highlighted fields before continuing.");
@@ -334,7 +329,7 @@ export function BookingModal({
         emergencyContactPhone,
         waiverAgreed: waiverAccepted,
         platformWaiverAgreed: platformWaiverAccepted,
-        adultConfirmed,
+        adultConfirmed: platformWaiverAccepted,
         medicalNotes: notes.trim() || null,
         age: requiresPermitDetails ? age : null,
         sex: requiresPermitDetails ? sex : null,
@@ -878,7 +873,7 @@ export function BookingModal({
                           className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
                         />
                         <span className="text-xs leading-relaxed text-stone-600">
-                          I understand that Sama is a technology marketplace connecting independent trip organizers with participants. Sama does not operate or take responsibility for any trip. By booking, I agree to Sama&apos;s{" "}
+                          I have read and agree to the platform terms above, including that everyone in this booking is 18 or older, and to Sama&apos;s{" "}
                           <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-trailhead">Terms of Service</a>
                           {" "}and{" "}
                           <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-trailhead">Privacy Policy</a>.
@@ -931,32 +926,6 @@ export function BookingModal({
                       {waiverError && (
                         <p role="alert" className="mt-1.5 text-xs text-red-600">
                           You must accept the organizer waiver before confirming your booking.
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="mb-1.5 text-sm font-medium text-stone-700">
-                        Age requirement
-                      </p>
-                      <label className="flex cursor-pointer items-start gap-3">
-                        <input
-                          type="checkbox"
-                          checked={adultConfirmed}
-                          disabled={loading}
-                          onChange={(e) => {
-                            setAdultConfirmed(e.target.checked);
-                            if (e.target.checked) setAdultError(false);
-                          }}
-                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-stone-300 text-trailhead accent-trailhead focus:ring-2 focus:ring-trailhead/30 disabled:opacity-50"
-                        />
-                        <span className="text-xs leading-relaxed text-stone-600">
-                          I confirm that I and all other participants in this booking are 18 years of age or older.
-                        </span>
-                      </label>
-                      {adultError && (
-                        <p role="alert" className="mt-1.5 text-xs text-red-600">
-                          You must confirm that all participants in this booking are 18 years of age or older.
                         </p>
                       )}
                     </div>
