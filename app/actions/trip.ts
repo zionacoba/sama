@@ -16,7 +16,7 @@ import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
 import { resolveCancellationCascade } from "@/lib/cancellation-cascade";
 import { resolvePayoutRemittedGate } from "@/lib/payout-remitted-gate";
 import { computeTripCancelSummary, type TripCancelSummary } from "@/lib/trip-cancel-summary";
-import { resolveTripSlotSummary, isActiveCapacityChange, type TripSlotSummary } from "@/lib/trip-slot-summary";
+import { resolveTripSlotSummary, isActiveCapacityChange, isDownpaymentLocked, type TripSlotSummary } from "@/lib/trip-slot-summary";
 import { SLOT_CONSUMING_STATUSES, SLOT_HOLDING_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
 import { sendInChunks } from "@/lib/send-in-chunks";
@@ -534,13 +534,14 @@ export async function updateTrip(
     activeBookingCount: 0,
     pendingBalanceCount: 0,
     liveBookingCount: 0,
+    liveNonRefundableDownpaymentCount: 0,
   };
   const isUnpublishing = status === "draft" && existing.status === "active";
   if ((!isDraft || isUnpublishing) && !is_template) {
     const adminForChecks = createSupabaseAdminClient();
     const { data: consumingBookings, error: consumingBookingsError } = await adminForChecks
       .from("bookings")
-      .select("status, slots, amount_due, total_amount")
+      .select("status, slots, amount_due, total_amount, cancellation_policy")
       .eq("trip_id", tripId)
       .in("status", [...SLOT_CONSUMING_STATUSES]);
     const resolvedSummary = resolveTripSlotSummary(consumingBookings, consumingBookingsError);
@@ -582,14 +583,16 @@ export async function updateTrip(
     }
   }
 
-  // Once anyone has booked a trip under the non-refundable downpayment policy, its
-  // downpayment amount and payment type are locked (organizer terms 1.3, section 8):
-  // a full payer's kept amount is the trip's minimum downpayment times slots.
-  if (existing.cancellation_policy === "non_refundable_downpayment" && liveBookingCount > 0) {
+  // Once anyone has booked a trip that uses the non-refundable downpayment policy,
+  // its downpayment amount and payment type are locked (organizer terms 1.3,
+  // section 8): a full payer's kept amount is the trip's minimum downpayment times
+  // slots. isDownpaymentLocked checks the bookings' own stored policy as well as
+  // the trip's current one, so switching the policy first does not unlock it.
+  if (isDownpaymentLocked(existing.cancellation_policy, slotSummary)) {
     const paymentTypeChanged = payment_type !== existing.payment_type;
     const downpaymentChanged = Number(min_downpayment ?? 0) !== Number(existing.min_downpayment ?? 0);
     if (paymentTypeChanged || downpaymentChanged) {
-      return { error: "This trip uses the non-refundable downpayment policy and already has bookings, so its downpayment and payment type can't be changed." };
+      return { error: "This trip has bookings and uses, or was booked under, the non-refundable downpayment policy, so its downpayment and payment type can't be changed." };
     }
   }
 

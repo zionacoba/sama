@@ -3,6 +3,7 @@ import {
   summarizeTripSlots,
   isActiveCapacityChange,
   resolveTripSlotSummary,
+  isDownpaymentLocked,
   type SlotSummaryBookingRow,
 } from "@/lib/trip-slot-summary";
 import { SLOT_CONSUMING_STATUSES } from "@/lib/booking-status";
@@ -107,7 +108,38 @@ describe("summarizeTripSlots", () => {
       activeBookingCount: 0,
       pendingBalanceCount: 0,
       liveBookingCount: 0,
+      liveNonRefundableDownpaymentCount: 0,
     });
+  });
+
+  it("counts live bookings made under the non-refundable downpayment policy, including payment_pending and transferred", () => {
+    const summary = summarizeTripSlots([
+      row({ status: "confirmed", cancellation_policy: "non_refundable_downpayment" }),
+      row({ status: "payment_pending", cancellation_policy: "non_refundable_downpayment" }),
+      row({ status: "transferred", cancellation_policy: "non_refundable_downpayment" }),
+    ]);
+    expect(summary.liveNonRefundableDownpaymentCount).toBe(3);
+    expect(summary.liveBookingCount).toBe(3);
+  });
+
+  it("does not count non-refundable downpayment bookings that are cancelled, rejected or no_show", () => {
+    const summary = summarizeTripSlots([
+      row({ status: "cancelled", cancellation_policy: "non_refundable_downpayment" }),
+      row({ status: "rejected", cancellation_policy: "non_refundable_downpayment" }),
+      row({ status: "no_show", cancellation_policy: "non_refundable_downpayment" }),
+    ]);
+    expect(summary.liveNonRefundableDownpaymentCount).toBe(0);
+  });
+
+  it("does not count live bookings under other policies or with no stored policy", () => {
+    const summary = summarizeTripSlots([
+      row({ cancellation_policy: "flexible" }),
+      row({ status: "pending", cancellation_policy: "strict" }),
+      row({ cancellation_policy: null }),
+      row({}),
+    ]);
+    expect(summary.liveBookingCount).toBe(4);
+    expect(summary.liveNonRefundableDownpaymentCount).toBe(0);
   });
 });
 
@@ -207,6 +239,7 @@ describe("resolveTripSlotSummary", () => {
         activeBookingCount: 0,
         pendingBalanceCount: 0,
         liveBookingCount: 0,
+        liveNonRefundableDownpaymentCount: 0,
       },
     });
   });
@@ -221,5 +254,46 @@ describe("resolveTripSlotSummary", () => {
     expect(resolveTripSlotSummary(rows, null)).toEqual({
       summary: summarizeTripSlots(rows),
     });
+  });
+});
+
+describe("isDownpaymentLocked", () => {
+  // Organizer terms 1.3, section 8: once anyone has booked a trip that uses the
+  // non-refundable downpayment policy, its downpayment amount and payment type
+  // cannot be changed. Either condition locks.
+  const nrd = "non_refundable_downpayment";
+
+  it("locks a trip that switched off the policy while a live booking made under it remains (the two-step edit)", () => {
+    const summary = summarizeTripSlots([row({ cancellation_policy: nrd })]);
+    expect(isDownpaymentLocked("flexible", summary)).toBe(true);
+  });
+
+  it("locks a trip on the policy that has any live booking, even one made under another policy", () => {
+    const summary = summarizeTripSlots([row({ cancellation_policy: "flexible" })]);
+    expect(isDownpaymentLocked(nrd, summary)).toBe(true);
+  });
+
+  it("does not lock a trip off the policy whose live bookings are all under other policies", () => {
+    const summary = summarizeTripSlots([
+      row({ cancellation_policy: "flexible" }),
+      row({ cancellation_policy: "moderate" }),
+    ]);
+    expect(isDownpaymentLocked("flexible", summary)).toBe(false);
+  });
+
+  it("does not lock a trip on the policy with no live bookings", () => {
+    expect(isDownpaymentLocked(nrd, summarizeTripSlots([]))).toBe(false);
+  });
+
+  it("does not lock when the only booking made under the policy is cancelled", () => {
+    const summary = summarizeTripSlots([row({ status: "cancelled", cancellation_policy: nrd })]);
+    expect(isDownpaymentLocked("flexible", summary)).toBe(false);
+    expect(isDownpaymentLocked(nrd, summary)).toBe(false);
+  });
+
+  it("treats a missing trip policy as not on the policy", () => {
+    const summary = summarizeTripSlots([row({})]);
+    expect(isDownpaymentLocked(null, summary)).toBe(false);
+    expect(isDownpaymentLocked(undefined, summary)).toBe(false);
   });
 });

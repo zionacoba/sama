@@ -22,6 +22,9 @@
 //     still attending, so the trip must not be hidden as a draft even when no
 //     ACTIVE bookings remain. no_show is excluded because it only exists on
 //     past trips and does not represent someone expecting the listing.
+//   - liveNonRefundableDownpaymentCount: the liveBookingCount rows whose own
+//     stored cancellation_policy (snapshotted at booking) is
+//     non_refundable_downpayment. Feeds isDownpaymentLocked below.
 
 import { ACTIVE_BOOKING_STATUSES, SLOT_CONSUMING_STATUSES } from "@/lib/booking-status";
 
@@ -30,6 +33,7 @@ export type SlotSummaryBookingRow = {
   slots: number | null;
   amount_due: number | string | null;
   total_amount: number | string | null;
+  cancellation_policy?: string | null;
 };
 
 export type TripSlotSummary = {
@@ -37,6 +41,7 @@ export type TripSlotSummary = {
   activeBookingCount: number;
   pendingBalanceCount: number;
   liveBookingCount: number;
+  liveNonRefundableDownpaymentCount: number;
 };
 
 export function summarizeTripSlots(
@@ -46,6 +51,7 @@ export function summarizeTripSlots(
   let activeBookingCount = 0;
   let pendingBalanceCount = 0;
   let liveBookingCount = 0;
+  let liveNonRefundableDownpaymentCount = 0;
 
   for (const b of bookings) {
     if (!(SLOT_CONSUMING_STATUSES as readonly string[]).includes(b.status)) continue;
@@ -65,10 +71,19 @@ export function summarizeTripSlots(
     }
     if (isActive || b.status === "transferred") {
       liveBookingCount += 1;
+      if (b.cancellation_policy === "non_refundable_downpayment") {
+        liveNonRefundableDownpaymentCount += 1;
+      }
     }
   }
 
-  return { consumedSlots, activeBookingCount, pendingBalanceCount, liveBookingCount };
+  return {
+    consumedSlots,
+    activeBookingCount,
+    pendingBalanceCount,
+    liveBookingCount,
+    liveNonRefundableDownpaymentCount,
+  };
 }
 
 // Whether an updateTrip edit is a capacity change on an active trip: total_slots
@@ -118,4 +133,23 @@ export function resolveTripSlotSummary(
   if (fetchError) return { failure: "fetch-error" };
   if (rows == null) return { failure: "missing-data" };
   return { summary: summarizeTripSlots(rows) };
+}
+
+// Whether updateTrip must refuse a change to the trip's downpayment amount or
+// payment type. Organizer terms 1.3, section 8: once anyone has booked a trip
+// that uses the non-refundable downpayment policy, those two fields cannot be
+// changed, because a full payer's kept amount is the trip's minimum downpayment
+// times slots. Either condition locks:
+//   - a live booking was made under the policy (its own stored policy), even if
+//     the trip has since switched to another one. Keying only on the trip's
+//     current policy let a two-step edit (switch the policy, then change the
+//     downpayment) move a booked joiner's kept amount.
+//   - the trip uses the policy now and has any live booking. This is the
+//     original rule, kept so the lock never allows a change it refused before.
+export function isDownpaymentLocked(
+  existingPolicy: string | null | undefined,
+  summary: Pick<TripSlotSummary, "liveBookingCount" | "liveNonRefundableDownpaymentCount">,
+): boolean {
+  if (summary.liveNonRefundableDownpaymentCount > 0) return true;
+  return existingPolicy === "non_refundable_downpayment" && summary.liveBookingCount > 0;
 }
