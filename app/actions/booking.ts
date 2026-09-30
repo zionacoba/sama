@@ -10,13 +10,14 @@ import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { calculateRefundAmount, resolveCancellationPolicy } from "@/lib/cancellation-policies";
-import { amountJoinerPaid, computeRefundSplit, shouldRefundOnReject } from "@/lib/booking-finance";
+import { amountJoinerPaid, shouldRefundOnReject } from "@/lib/booking-finance";
 import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { classifyRefundResult, MANUAL_REFUND_FOLLOWUP } from "@/lib/refund-email-copy";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { voidBookingCredit, reverseBookingCredit } from "@/lib/organizer-credits";
+import { cancelledSlotsShare, keptDownpaymentAmount, keptDownpaymentCredit, recordKeptDownpaymentCredit, splitRefundForPolicy, usesKeptDownpaymentCredit } from "@/lib/non-refundable-downpayment";
 import { createPaymentCheckout } from "@/lib/create-payment-link";
 import { hasPaidPayment } from "@/lib/paymongo-checkout";
 import { notifyWaitlistSlotOpened } from "@/lib/waitlist-notify";
@@ -1711,7 +1712,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
 
   const { data: booking, error: bookingFetchError } = await admin
     .from("bookings")
-    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, payment_method, payout_status, payout_id, cancellation_policy, platform_commission, commission_rate_used, balance_payment_gateway_status, balance_paymongo_payment_id")
+    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, payment_method, payout_status, payout_id, cancellation_policy, platform_commission, commission_rate_used, balance_payment_gateway_status, balance_paymongo_payment_id, payment_gateway_status")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -1732,7 +1733,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
 
   const { data: tripDateCheckRow, error: tripDateCheckError } = await admin
     .from("trips")
-    .select("date_start, slug, title, organizer_id, cancellation_policy")
+    .select("date_start, slug, title, organizer_id, cancellation_policy, min_downpayment")
     .eq("id", booking.trip_id)
     .maybeSingle();
 
@@ -1763,20 +1764,28 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   const tripDay = new Date(tripDateCheck.date_start);
   const daysUntilTrip = Math.round((tripDay.getTime() - todayManila.getTime()) / 86_400_000);
 
-  const fullRefundableAmount = calculateRefundAmount(
-    resolveCancellationPolicy(booking.cancellation_policy, tripDateCheck?.cancellation_policy),
-    amountPaid,
-    daysUntilTrip,
-  );
+  const cancelPolicy = resolveCancellationPolicy(booking.cancellation_policy, tripDateCheck?.cancellation_policy);
+  // Only the non-refundable downpayment policy reads the kept amount. It is for the
+  // whole booking; the refund below scales it to the cancelled slots.
+  const keptAmount = keptDownpaymentAmount({
+    paymentOption: booking.payment_option,
+    amountDue: booking.amount_due,
+    totalAmount: booking.total_amount,
+    slots: originalSlots,
+    tripMinDownpayment: tripDateCheck?.min_downpayment,
+  });
+  const fullRefundableAmount = calculateRefundAmount(cancelPolicy, amountPaid, daysUntilTrip, keptAmount);
 
   // Scale the policy refund down to just the cancelled slots before splitting it.
   const refundAmount = fullRefundableAmount !== null
     ? Math.round((slotsToCancel / originalSlots) * fullRefundableAmount * 100) / 100
     : null;
 
-  // Split refund proportionally between downpayment and balance payment sources
+  // Split the refund between the downpayment and balance payments. Every policy but
+  // the non-refundable downpayment splits proportionally; that one refunds the
+  // online balance first.
   const { downpaymentRefund: downpaymentRefundAmount, balanceRefund: partialBalanceRefundAmount } =
-    computeRefundSplit(booking, refundAmount);
+    splitRefundForPolicy(cancelPolicy, booking, refundAmount);
 
   const newTotalAmount = Math.round((booking.total_amount ?? 0) * (remainingSlots / originalSlots) * 100) / 100;
   const newAmountDue = booking.amount_due != null
@@ -1965,7 +1974,15 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   // Stage 5d: void the organizer credit for this booking. A partial cancel still
   // voids the FULL credit (no proportional shrinking); when payout_status is
   // 'remitted' the deduction above already recovers the balance, so no offset.
-  if (tripDateCheck?.organizer_id) {
+  // Under the non-refundable downpayment policy, before the booking enters a payout,
+  // any live credit on it is this policy's kept credit (see usesKeptDownpaymentCredit),
+  // so the balance-credit void must not touch it.
+  const keptCreditPath = usesKeptDownpaymentCredit({
+    policy: cancelPolicy,
+    paymentGatewayStatus: booking.payment_gateway_status,
+    payoutStatus: booking.payout_status,
+  });
+  if (tripDateCheck?.organizer_id && !keptCreditPath) {
     const creditVoid = await voidBookingCredit(admin, bookingId, tripDateCheck.organizer_id, booking.payout_status);
     if (creditVoid.error) {
       console.error("[credit-void] failed to void organizer credit", bookingId, creditVoid.error);
@@ -1979,6 +1996,36 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
               <p><strong>Booking ID:</strong> ${bookingId}</p>
               <p><strong>Action reached:</strong> ${creditVoid.action}</p>
               <p><strong>Error:</strong> ${escapeHtml(creditVoid.error)}</p>
+            `,
+      );
+    }
+  }
+
+  // Pay the organizer the kept downpayment for the cancelled slots (organizer
+  // terms section 8). The remaining slots stay in the booking and reach the normal
+  // payout; the cancelled slots' share never would, so it becomes a credit.
+  if (keptCreditPath && tripDateCheck?.organizer_id) {
+    const creditAmount = keptAmount === null || booking.platform_commission == null
+      ? null
+      : keptDownpaymentCredit(
+          cancelledSlotsShare(keptAmount, remainingSlots, originalSlots),
+          cancelledSlotsShare(Number(booking.platform_commission), remainingSlots, originalSlots),
+        );
+    const keptCredit = creditAmount === null
+      ? { action: "none" as const, error: "the kept downpayment or commission could not be worked out" }
+      : await recordKeptDownpaymentCredit(admin, { bookingId, organizerId: tripDateCheck.organizer_id, amount: creditAmount });
+    if (keptCredit.error) {
+      console.error("[kept-credit] failed to record kept downpayment credit", bookingId, keptCredit.error);
+      Sentry.captureException(new Error(keptCredit.error), {
+        extra: { context: "partialCancel-kept-credit-failed", bookingId, organizerId: tripDateCheck.organizer_id },
+      });
+      await sendAdminAlert(
+        "Action needed: kept downpayment credit not recorded on partial cancellation",
+        `
+              <p>A booking under the non-refundable downpayment policy was partially cancelled, but the organizer credit for the kept downpayment was not recorded. The organizer is owed this amount and it will NOT reach their payout until it is recorded by hand.</p>
+              <p><strong>Booking ID:</strong> ${bookingId}</p>
+              <p><strong>Amount owed:</strong> ${creditAmount === null ? "could not be worked out" : formatPeso(creditAmount)}</p>
+              <p><strong>Error:</strong> ${escapeHtml(keptCredit.error)}</p>
             `,
       );
     }
@@ -2143,7 +2190,7 @@ export async function cancelBooking(bookingId: number) {
 
   const { data: booking, error: bookingFetchError } = await admin
     .from("bookings")
-    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status, payout_status, payout_id, cancellation_policy")
+    .select("id, trip_id, slots, status, email, full_name, user_id, total_amount, amount_due, payment_option, paymongo_payment_id, balance_paymongo_payment_id, payment_method, balance_payment_gateway_status, payout_status, payout_id, cancellation_policy, payment_gateway_status, platform_commission")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -2161,7 +2208,7 @@ export async function cancelBooking(bookingId: number) {
   // Block cancellation after the trip has already taken place.
   const { data: tripDateCheck, error: tripDateCheckError } = await admin
     .from("trips")
-    .select("id, slug, title, date_start, organizer_id, cancellation_policy")
+    .select("id, slug, title, date_start, organizer_id, cancellation_policy, min_downpayment")
     .eq("id", booking.trip_id)
     .maybeSingle();
   const todayPH = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
@@ -2262,15 +2309,23 @@ export async function cancelBooking(bookingId: number) {
     const tripDay = new Date(trip.date_start);
     const daysUntilTrip = Math.round((tripDay.getTime() - todayManila.getTime()) / 86_400_000);
     const amountPaid = amountJoinerPaid(booking);
-    const refundAmount = calculateRefundAmount(
-      resolveCancellationPolicy(booking.cancellation_policy, trip.cancellation_policy),
-      amountPaid,
-      daysUntilTrip,
-    );
+    const cancelPolicy = resolveCancellationPolicy(booking.cancellation_policy, trip.cancellation_policy);
+    // Only the non-refundable downpayment policy reads the kept amount; every
+    // other policy ignores it.
+    const keptAmount = keptDownpaymentAmount({
+      paymentOption: booking.payment_option,
+      amountDue: booking.amount_due,
+      totalAmount: booking.total_amount,
+      slots: booking.slots,
+      tripMinDownpayment: trip.min_downpayment,
+    });
+    const refundAmount = calculateRefundAmount(cancelPolicy, amountPaid, daysUntilTrip, keptAmount);
 
-    // Split refund proportionally between downpayment and balance payment sources
+    // Split the refund between the downpayment and balance payments. Every policy but
+    // the non-refundable downpayment splits proportionally; that one refunds the
+    // online balance first.
     const { downpaymentRefund: downpaymentRefundAmount, balanceRefund: balanceRefundAmount } =
-      computeRefundSplit(booking, refundAmount);
+      splitRefundForPolicy(cancelPolicy, booking, refundAmount);
 
     if (refundAmount !== null) {
       const { error: refundAmountWriteError } = await admin
@@ -2308,7 +2363,15 @@ export async function cancelBooking(bookingId: number) {
     // above claws back only the downpayment; the online balance is owned by the
     // credit ledger, so reverseBookingCredit voids/shrinks/offsets the credit
     // against the balance actually refunded to the joiner (balanceRefundAmount).
-    if (trip.organizer_id) {
+    // Under the non-refundable downpayment policy, before the booking enters a payout,
+    // any live credit on it is this policy's kept credit (see usesKeptDownpaymentCredit),
+    // so the balance-credit reversal must not touch it.
+    const keptCreditPath = usesKeptDownpaymentCredit({
+      policy: cancelPolicy,
+      paymentGatewayStatus: booking.payment_gateway_status,
+      payoutStatus: booking.payout_status,
+    });
+    if (trip.organizer_id && !keptCreditPath) {
       const creditReversal = await reverseBookingCredit(admin, bookingId, trip.organizer_id, balanceRefundAmount);
       if (creditReversal.error) {
         console.error("[credit-reversal] failed to reverse organizer credit", bookingId, creditReversal.error);
@@ -2330,6 +2393,31 @@ export async function cancelBooking(bookingId: number) {
           `
                 <p>A booking was cancelled whose balance credit had already been applied into an organizer payout that has not yet been disbursed. The payout has been flagged for reconciliation; please review and adjust it before it is remitted.</p>
                 <p><strong>Booking ID:</strong> ${bookingId}</p>
+              `,
+        );
+      }
+    }
+
+    // Pay the organizer the kept downpayment (organizer terms section 8: a refund
+    // made before they are paid leaves them the reduced amount). A cancelled
+    // booking never enters a payout, so this pending credit is how it reaches them.
+    if (keptCreditPath && trip.organizer_id) {
+      const creditAmount = keptDownpaymentCredit(keptAmount, booking.platform_commission);
+      const keptCredit = creditAmount === null
+        ? { action: "none" as const, error: "the kept downpayment or commission could not be worked out" }
+        : await recordKeptDownpaymentCredit(admin, { bookingId, organizerId: trip.organizer_id, amount: creditAmount });
+      if (keptCredit.error) {
+        console.error("[kept-credit] failed to record kept downpayment credit", bookingId, keptCredit.error);
+        Sentry.captureException(new Error(keptCredit.error), {
+          extra: { context: "cancelBooking-kept-credit-failed", bookingId, organizerId: trip.organizer_id },
+        });
+        await sendAdminAlert(
+          "Action needed: kept downpayment credit not recorded on cancellation",
+          `
+                <p>A booking under the non-refundable downpayment policy was cancelled, but the organizer credit for the kept downpayment was not recorded. The organizer is owed this amount and it will NOT reach their payout until it is recorded by hand.</p>
+                <p><strong>Booking ID:</strong> ${bookingId}</p>
+                <p><strong>Amount owed:</strong> ${creditAmount === null ? "could not be worked out" : formatPeso(creditAmount)}</p>
+                <p><strong>Error:</strong> ${escapeHtml(keptCredit.error)}</p>
               `,
         );
       }

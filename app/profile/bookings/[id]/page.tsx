@@ -11,6 +11,7 @@ import { PayBalanceButton } from "./pay-balance-button";
 import { PartialCancelButton } from "./partial-cancel-button";
 import { CopyLinkButton } from "./copy-link-button";
 import { calculateRefundAmount } from "@/lib/cancellation-policies";
+import { keptDownpaymentAmount } from "@/lib/non-refundable-downpayment";
 import { amountJoinerPaid } from "@/lib/booking-finance";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 import { Footer } from "@/app/components/footer";
@@ -60,6 +61,7 @@ type BookingDetail = {
     activity_type: string | null;
     duration: string | null;
     cancellation_policy: string | null;
+    min_downpayment: number | null;
     cancellation_policy_custom: string | null;
     messenger_gc_link: string | null;
     organizer_id: string | null;
@@ -152,7 +154,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
       emergency_contact_name, emergency_contact_phone, cancellation_policy,
       trip:trips!bookings_trip_id_fkey(
         title, slug, date_start, date_end, destination, region, difficulty,
-        activity_type, duration, cancellation_policy, cancellation_policy_custom,
+        activity_type, duration, cancellation_policy, cancellation_policy_custom, min_downpayment,
         messenger_gc_link, organizer_id, what_to_bring, custom_questions, custom_question
       )
     `)
@@ -237,8 +239,17 @@ export default async function BookingDetailPage({ params }: PageProps) {
   const todayManila = new Date(todayManilaStr);
   const tripDay = new Date(trip.date_start);
   const daysUntilTrip = Math.round((tripDay.getTime() - todayManila.getTime()) / 86_400_000);
+  // Only the non-refundable downpayment policy reads the kept amount, worked out
+  // exactly as the cancel paths work it out, so the estimate matches the refund.
+  const keptAmount = keptDownpaymentAmount({
+    paymentOption: booking.payment_option,
+    amountDue: booking.amount_due,
+    totalAmount: booking.total_amount,
+    slots: booking.slots,
+    tripMinDownpayment: trip.min_downpayment,
+  });
   const fullRefundable = amountPaid != null
-    ? calculateRefundAmount(resolvedPolicy, amountPaid, daysUntilTrip)
+    ? calculateRefundAmount(resolvedPolicy, amountPaid, daysUntilTrip, keptAmount)
     : null;
   const refundRatio = (fullRefundable !== null && amountPaid != null && amountPaid > 0)
     ? fullRefundable / amountPaid
