@@ -17,6 +17,12 @@ export const CANCELLATION_POLICIES = {
     text: "Full refund if cancelled 30 or more days before the trip. 50% refund of amount paid if cancelled 7 to 29 days before. No refund if cancelled less than 7 days before.",
     color: "bg-red-100 text-red-800",
   },
+  non_refundable_downpayment: {
+    label: "Non-refundable downpayment",
+    short: "Downpayment kept whenever the joiner cancels; anything paid above it is refunded",
+    text: "The downpayment is non-refundable, whenever you cancel. If you paid more than the downpayment, everything above it is refunded. If the organizer cancels the trip, you get everything back.",
+    color: "bg-stone-200 text-stone-800",
+  },
 } as const;
 
 export type CancellationPolicyKey = keyof typeof CANCELLATION_POLICIES;
@@ -42,11 +48,17 @@ export function resolveCancellationPolicy(
 /**
  * Returns the refund amount based on the policy and days until the trip.
  * Returns null for any policy key it does not recognise.
+ *
+ * keptAmount is used only by non_refundable_downpayment: the downpayment the
+ * organizer keeps whenever the joiner cancels. The refund is everything paid
+ * above it. Without a usable keptAmount that policy returns null, which sends
+ * the cancellation to manual review rather than guessing a refund.
  */
 export function calculateRefundAmount(
   policy: string,
   amountPaid: number,
   daysUntilTrip: number,
+  keptAmount?: number | null,
 ): number | null {
   const days = Math.max(0, daysUntilTrip);
   if (policy === "flexible") {
@@ -63,6 +75,10 @@ export function calculateRefundAmount(
     if (days >= 30) return amountPaid;
     if (days >= 7) return Math.round(amountPaid * 0.5 * 100) / 100;
     return 0;
+  }
+  if (policy === "non_refundable_downpayment") {
+    if (keptAmount == null || !Number.isFinite(keptAmount) || keptAmount < 0) return null;
+    return Math.round(Math.max(0, amountPaid - keptAmount) * 100) / 100;
   }
   return null;
 }

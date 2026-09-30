@@ -81,6 +81,38 @@ describe("calculateRefundAmount", () => {
     });
   });
 
+  describe("non_refundable_downpayment (downpayment kept at any time)", () => {
+    it("keeps the whole payment when the joiner paid only the downpayment", () => {
+      expect(calculateRefundAmount("non_refundable_downpayment", 500, 40, 500)).toBe(0);
+      expect(calculateRefundAmount("non_refundable_downpayment", 500, 1, 500)).toBe(0);
+    });
+    it("refunds everything paid above the downpayment", () => {
+      expect(calculateRefundAmount("non_refundable_downpayment", 1500, 40, 500)).toBe(1000);
+    });
+    it("gives the same refund on every day, including day-of and past trips", () => {
+      for (const days of [60, 30, 14, 7, 3, 0, -5]) {
+        expect(calculateRefundAmount("non_refundable_downpayment", 1500, days, 500)).toBe(1000);
+      }
+    });
+    it("never refunds a negative amount when the kept amount exceeds what was paid", () => {
+      expect(calculateRefundAmount("non_refundable_downpayment", 400, 10, 500)).toBe(0);
+    });
+    it("rounds the refund to two decimals", () => {
+      // 1234.567 - 234 = 1000.567 -> rounds to 1000.57
+      expect(calculateRefundAmount("non_refundable_downpayment", 1234.567, 10, 234)).toBe(1000.57);
+    });
+    it("returns null without a usable kept amount, so the cancellation goes to manual review", () => {
+      expect(calculateRefundAmount("non_refundable_downpayment", 1500, 10)).toBeNull();
+      expect(calculateRefundAmount("non_refundable_downpayment", 1500, 10, null)).toBeNull();
+      expect(calculateRefundAmount("non_refundable_downpayment", 1500, 10, -1)).toBeNull();
+      expect(calculateRefundAmount("non_refundable_downpayment", 1500, 10, Number.NaN)).toBeNull();
+    });
+    it("leaves the other policies unchanged when a kept amount is passed", () => {
+      expect(calculateRefundAmount("strict", PAID, 10, 500)).toBe(5000);
+      expect(calculateRefundAmount("flexible", PAID, 7, 500)).toBe(10000);
+    });
+  });
+
   describe("custom and unknown policies", () => {
     it("returns null for an unrecognized policy", () => {
       expect(calculateRefundAmount("whatever", PAID, 30)).toBeNull();
