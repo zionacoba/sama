@@ -16,7 +16,7 @@ import { amountJoinerPaid, computeRefundSplit } from "@/lib/booking-finance";
 import { resolveCancellationCascade } from "@/lib/cancellation-cascade";
 import { resolvePayoutRemittedGate } from "@/lib/payout-remitted-gate";
 import { computeTripCancelSummary, type TripCancelSummary } from "@/lib/trip-cancel-summary";
-import { resolveTripSlotSummary, isActiveCapacityChange, isDownpaymentLocked, type TripSlotSummary } from "@/lib/trip-slot-summary";
+import { resolveTripSlotSummary, isActiveCapacityChange, downpaymentLockRefusesSave, type TripSlotSummary } from "@/lib/trip-slot-summary";
 import { SLOT_CONSUMING_STATUSES, SLOT_HOLDING_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
 import { sendInChunks } from "@/lib/send-in-chunks";
@@ -583,19 +583,6 @@ export async function updateTrip(
     }
   }
 
-  // Once anyone has booked a trip that uses the non-refundable downpayment policy,
-  // its downpayment amount and payment type are locked (organizer terms 1.3,
-  // section 8): a full payer's kept amount is the trip's minimum downpayment times
-  // slots. isDownpaymentLocked checks the bookings' own stored policy as well as
-  // the trip's current one, so switching the policy first does not unlock it.
-  if (isDownpaymentLocked(existing.cancellation_policy, slotSummary)) {
-    const paymentTypeChanged = payment_type !== existing.payment_type;
-    const downpaymentChanged = Number(min_downpayment ?? 0) !== Number(existing.min_downpayment ?? 0);
-    if (paymentTypeChanged || downpaymentChanged) {
-      return { error: "This trip has bookings and uses, or was booked under, the non-refundable downpayment policy, so its downpayment and payment type can't be changed." };
-    }
-  }
-
   // 3+4. Collect warnings for price change and downpayment-to-full switch.
   let saveWarning: string | undefined;
   let downpaymentDisabled = false;
@@ -642,6 +629,23 @@ export async function updateTrip(
   // The non-refundable downpayment policy keeps a downpayment, so the trip must take one.
   if (cancellation_policy === "non_refundable_downpayment" && effectivePaymentType !== "downpayment") {
     return { error: "The non-refundable downpayment policy is only available on trips that take a downpayment." };
+  }
+
+  // Once anyone has booked a trip that uses the non-refundable downpayment policy,
+  // its downpayment amount and payment type are locked (organizer terms 1.3,
+  // section 8): a full payer's kept amount is the trip's minimum downpayment times
+  // slots. The check keys on the bookings' own stored policy as well as the trip's
+  // current one, and compares the values this save will actually write, so neither
+  // switching the policy first nor a price of 0 unlocks it. Nothing above writes.
+  if (
+    downpaymentLockRefusesSave(
+      existing.cancellation_policy,
+      slotSummary,
+      { paymentType: effectivePaymentType, minDownpayment: effectiveMinDownpayment },
+      { paymentType: existing.payment_type, minDownpayment: existing.min_downpayment },
+    )
+  ) {
+    return { error: "This trip has bookings and uses, or was booked under, the non-refundable downpayment policy, so its downpayment and payment type can't be changed." };
   }
 
   const titleChanged = title !== existing.title;

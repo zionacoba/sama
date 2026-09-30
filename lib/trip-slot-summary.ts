@@ -153,3 +153,20 @@ export function isDownpaymentLocked(
   if (summary.liveNonRefundableDownpaymentCount > 0) return true;
   return existingPolicy === "non_refundable_downpayment" && summary.liveBookingCount > 0;
 }
+
+// Whether updateTrip must refuse this save: the downpayment lock applies and the
+// payment type or minimum downpayment this save would WRITE differs from what is
+// stored. Callers pass the values updateTrip actually writes (after a price of 0
+// forces full payment and clears the downpayment), not the raw form values, so a
+// price of 0 cannot slip past the lock.
+export function downpaymentLockRefusesSave(
+  existingPolicy: string | null | undefined,
+  summary: Pick<TripSlotSummary, "liveBookingCount" | "liveNonRefundableDownpaymentCount">,
+  saved: { paymentType: string | null | undefined; minDownpayment: number | string | null | undefined },
+  stored: { paymentType: string | null | undefined; minDownpayment: number | string | null | undefined },
+): boolean {
+  if (!isDownpaymentLocked(existingPolicy, summary)) return false;
+  const paymentTypeChanged = saved.paymentType !== stored.paymentType;
+  const downpaymentChanged = Number(saved.minDownpayment ?? 0) !== Number(stored.minDownpayment ?? 0);
+  return paymentTypeChanged || downpaymentChanged;
+}

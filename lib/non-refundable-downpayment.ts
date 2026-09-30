@@ -26,7 +26,8 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 // calculator turns into manual review rather than a guessed refund.
 //
 // - Downpayment payers: their amount_due, which createBooking set to the trip's
-//   minimum downpayment times slots, fixed at booking time.
+//   minimum downpayment times slots, fixed at booking time, capped at that figure
+//   (a booking can be stored as a downpayment while charged in full).
 // - Full payers: nothing on the booking records the downpayment, so it is the
 //   trip's current min_downpayment times slots, capped at the total, mirroring
 //   createBooking. Trips on this policy cannot change min_downpayment once booked.
@@ -40,7 +41,18 @@ export function keptDownpaymentAmount(input: {
   if (input.paymentOption === "downpayment") {
     if (input.amountDue == null) return null;
     const due = Number(input.amountDue);
-    return Number.isFinite(due) && due >= 0 ? round2(due) : null;
+    if (!Number.isFinite(due) || due < 0) return null;
+    // createBooking stores the booking form's choice even after the downpayment
+    // cutoff has passed and the joiner was charged in full (amount_due is then the
+    // total), so the kept amount never exceeds the trip's minimum downpayment
+    // times slots. On a normal downpayment booking amount_due is already at or
+    // below that figure, so the cap changes nothing there.
+    const perSlot = Number(input.tripMinDownpayment);
+    const slots = Number(input.slots);
+    if (input.tripMinDownpayment != null && Number.isFinite(perSlot) && perSlot > 0 && Number.isInteger(slots) && slots > 0) {
+      return round2(Math.min(due, perSlot * slots));
+    }
+    return round2(due);
   }
   if (input.paymentOption === "full") {
     if (input.tripMinDownpayment == null || input.totalAmount == null) return null;

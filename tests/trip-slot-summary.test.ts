@@ -4,6 +4,7 @@ import {
   isActiveCapacityChange,
   resolveTripSlotSummary,
   isDownpaymentLocked,
+  downpaymentLockRefusesSave,
   type SlotSummaryBookingRow,
 } from "@/lib/trip-slot-summary";
 import { SLOT_CONSUMING_STATUSES } from "@/lib/booking-status";
@@ -295,5 +296,30 @@ describe("isDownpaymentLocked", () => {
     const summary = summarizeTripSlots([row({})]);
     expect(isDownpaymentLocked(null, summary)).toBe(false);
     expect(isDownpaymentLocked(undefined, summary)).toBe(false);
+  });
+});
+
+describe("downpaymentLockRefusesSave", () => {
+  // The lock compares what the save will WRITE: a price of 0 forces full payment
+  // and clears the downpayment, so it must be refused like any other change.
+  const nrd = "non_refundable_downpayment";
+  const lockedSummary = summarizeTripSlots([row({ cancellation_policy: nrd })]);
+  const stored = { paymentType: "downpayment", minDownpayment: 500 };
+
+  it("refuses a save that would write full payment and no downpayment (a price of 0 with the policy switched)", () => {
+    expect(downpaymentLockRefusesSave("flexible", lockedSummary, { paymentType: "full", minDownpayment: null }, stored)).toBe(true);
+  });
+
+  it("refuses a changed downpayment amount", () => {
+    expect(downpaymentLockRefusesSave(nrd, lockedSummary, { paymentType: "downpayment", minDownpayment: 600 }, stored)).toBe(true);
+  });
+
+  it("allows a save that keeps both values, including a numeric string", () => {
+    expect(downpaymentLockRefusesSave(nrd, lockedSummary, { paymentType: "downpayment", minDownpayment: "500" }, stored)).toBe(false);
+  });
+
+  it("allows any change when the lock does not apply", () => {
+    const unlocked = summarizeTripSlots([row({ cancellation_policy: "flexible" })]);
+    expect(downpaymentLockRefusesSave("flexible", unlocked, { paymentType: "full", minDownpayment: null }, stored)).toBe(false);
   });
 });

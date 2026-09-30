@@ -40,6 +40,13 @@ describe("keptDownpaymentAmount", () => {
     expect(keptDownpaymentAmount({ paymentOption: "downpayment", amountDue: null, totalAmount: 1500, slots: 1, tripMinDownpayment: 500 })).toBeNull();
     expect(keptDownpaymentAmount({ paymentOption: null, amountDue: 500, totalAmount: 1500, slots: 1, tripMinDownpayment: 500 })).toBeNull();
   });
+  it("caps a booking stored as a downpayment but charged in full at the minimum downpayment times slots", () => {
+    expect(keptDownpaymentAmount({ paymentOption: "downpayment", amountDue: 1500, totalAmount: 1500, slots: 1, tripMinDownpayment: 500 })).toBe(500);
+    expect(keptDownpaymentAmount({ paymentOption: "downpayment", amountDue: 3000, totalAmount: 3000, slots: 2, tripMinDownpayment: "500.00" })).toBe(1000);
+  });
+  it("keeps a downpayment payer's amount_due when the trip minimum is unusable", () => {
+    expect(keptDownpaymentAmount({ paymentOption: "downpayment", amountDue: 500, totalAmount: 1500, slots: 1, tripMinDownpayment: null })).toBe(500);
+  });
 });
 
 describe("splitRefundForPolicy", () => {
@@ -128,5 +135,11 @@ describe("the worked example end to end", () => {
     const full = calculateRefundAmount(NRD, 1000, 20, kept);
     expect(full).toBe(0);
     expect(keptDownpaymentCredit(cancelledSlotsShare(kept as number, 1, 2), cancelledSlotsShare(150, 1, 2))).toBe(425);
+  });
+  it("stored as a downpayment but charged in full (booked after the cutoff): 1,000 back, organizer credited 425", () => {
+    const kept = keptDownpaymentAmount({ paymentOption: "downpayment", amountDue: 1500, totalAmount: 1500, slots: 1, tripMinDownpayment: 500 });
+    expect(calculateRefundAmount(NRD, 1500, 20, kept)).toBe(1000);
+    expect(keptDownpaymentCredit(kept, 75)).toBe(425);
+    expect(splitRefundForPolicy(NRD, booking({ amount_due: 1500 }), 1000)).toEqual({ downpaymentRefund: 1000, balanceRefund: 0 });
   });
 });
