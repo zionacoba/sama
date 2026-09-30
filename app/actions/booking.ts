@@ -14,7 +14,7 @@ import { amountJoinerPaid, shouldRefundOnReject } from "@/lib/booking-finance";
 import { ACTIVE_BOOKING_STATUSES, SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
 import { type RefundResult } from "@/lib/paymongo-refund";
-import { classifyRefundResult, MANUAL_REFUND_FOLLOWUP } from "@/lib/refund-email-copy";
+import { classifyRefundResult, MANUAL_REFUND_FOLLOWUP, refundLegsSucceeded } from "@/lib/refund-email-copy";
 import { issueAndRecordRefund } from "@/lib/refunds";
 import { voidBookingCredit, reverseBookingCredit } from "@/lib/organizer-credits";
 import { cancelledSlotsShare, keptDownpaymentAmount, keptDownpaymentCredit, recordKeptDownpaymentCredit, splitRefundForPolicy, usesKeptDownpaymentCredit } from "@/lib/non-refundable-downpayment";
@@ -2126,7 +2126,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
       refundAmount === null
         ? `<p>If you are eligible for a refund, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking details.</p>`
         : refundAmount > 0
-          ? (refundResult?.success
+          ? (refundLegsSucceeded(refundResult, balanceRefundResult)
               ? `<p>Your refund of <strong>${fmtCurrency(refundAmount)}</strong> for the cancelled slot${slotsToCancel !== 1 ? "s" : ""} has been processed and typically reflects within 24 hours.</p>`
               : partialRefundManual
                 ? `<p>Your refund of <strong>${fmtCurrency(refundAmount)}</strong> for the cancelled slot${slotsToCancel !== 1 ? "s" : ""} is being processed manually. ${MANUAL_REFUND_FOLLOWUP}</p>`
@@ -2477,7 +2477,7 @@ export async function cancelBooking(bookingId: number) {
               ? (classifyRefundResult(balanceRefundResult) === "manual"
                   ? `<p>Based on our cancellation policy, your downpayment refund of <strong>${fmtCurrency(downpaymentRefundAmount!)}</strong> has been processed and typically reflects within 24 hours. Your balance refund of <strong>${fmtCurrency(balanceRefundAmount)}</strong> is being processed manually. ${MANUAL_REFUND_FOLLOWUP}</p>`
                   : `<p>Based on our cancellation policy, your downpayment refund of <strong>${fmtCurrency(downpaymentRefundAmount!)}</strong> has been processed and typically reflects within 24 hours. Your balance refund of <strong>${fmtCurrency(balanceRefundAmount)}</strong> could not be processed automatically. Please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> if you don't receive it within 3 to 5 business days.</p>`)
-              : refundResult?.success
+              : refundLegsSucceeded(refundResult, balanceRefundResult)
                 ? `<p>Based on our cancellation policy, your refund of <strong>${fmtCurrency(refundAmount)}</strong> has been processed and typically reflects within 24 hours.</p>`
                 : cancelRefundManual
                   ? `<p>Based on our cancellation policy, your refund of <strong>${fmtCurrency(refundAmount)}</strong> is being processed manually. ${MANUAL_REFUND_FOLLOWUP}</p>`

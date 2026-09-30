@@ -20,6 +20,23 @@ export function classifyRefundResult(
 }
 
 /**
+ * Whether every refund leg that was attempted succeeded, with at least one leg
+ * attempted. Each cancel path calls issueAndRecordRefund for a leg only when that
+ * leg's amount is above zero and otherwise leaves its result null, so a null leg
+ * means nothing was owed there, not a failure. Checking the downpayment leg alone
+ * reported a balance-only refund (the non-refundable downpayment policy refunds
+ * the online balance first) as unprocessed, and a failed balance leg beside a
+ * successful downpayment leg as processed.
+ */
+export function refundLegsSucceeded(
+  initial: RefundResult | null | undefined,
+  balance: RefundResult | null | undefined,
+): boolean {
+  if (initial == null && balance == null) return false;
+  return (initial == null || initial.success === true) && (balance == null || balance.success === true);
+}
+
+/**
  * Follow-up sentence for manual (QR Ph) refund copy. The timeline and the
  * proactive "we contact you" direction must match the Terms, which promise our
  * team arranges manual refunds within 3 to 5 business days.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyRefundResult,
+  refundLegsSucceeded,
   MANUAL_REFUND_FOLLOWUP,
   cancellationRefundLine,
   type CancellationEmailBooking,
@@ -120,5 +121,33 @@ describe("cancellationRefundLine", () => {
         fmt,
       ),
     );
+  });
+});
+
+describe("refundLegsSucceeded", () => {
+  // Each cancel path attempts a refund leg only when that leg's amount is above
+  // zero and leaves its result null otherwise, so null means "nothing to refund
+  // there", never "failed".
+  it("is true when every attempted leg succeeded", () => {
+    expect(refundLegsSucceeded({ success: true }, { success: true })).toBe(true);
+    expect(refundLegsSucceeded({ success: true }, null)).toBe(true);
+  });
+
+  it("is true for a balance-only refund that succeeded (the non-refundable downpayment policy refunds the balance first)", () => {
+    expect(refundLegsSucceeded(null, { success: true })).toBe(true);
+  });
+
+  it("is false when the downpayment leg succeeded but the balance leg failed", () => {
+    expect(refundLegsSucceeded({ success: true }, { success: false, error: "Refund failed" })).toBe(false);
+  });
+
+  it("is false when any attempted leg failed or needs manual processing", () => {
+    expect(refundLegsSucceeded({ success: false, error: "Refund failed" }, null)).toBe(false);
+    expect(refundLegsSucceeded(null, { success: false, requiresManualProcessing: true })).toBe(false);
+  });
+
+  it("is false when no leg was attempted", () => {
+    expect(refundLegsSucceeded(null, null)).toBe(false);
+    expect(refundLegsSucceeded(undefined, undefined)).toBe(false);
   });
 });
