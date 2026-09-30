@@ -1037,6 +1037,27 @@ export default async function AdminPage({ searchParams }: PageProps) {
               )}
             </div>
 
+            {/* Credits waiting for a payout */}
+            {(pendingPayouts?.waitingCredits.length ?? 0) > 0 && (
+              <div>
+                <div className="mb-4">
+                  <h2 className="text-xl font-bold text-stone-900">Credits Waiting</h2>
+                  <p className="mt-0.5 text-sm text-stone-500">Money owed to organizers who have no payable booking right now. Each credit is added automatically to the next payout for that organizer.</p>
+                </div>
+                <div className="divide-y divide-stone-100 rounded-2xl border border-stone-200 bg-white shadow-sm">
+                  {pendingPayouts?.waitingCredits.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between gap-4 px-6 py-3 text-sm">
+                      <div>
+                        <p className="font-medium text-stone-900">{c.organizerName}</p>
+                        <p className="text-stone-500">Booking {c.bookingId}: {c.reason}</p>
+                      </div>
+                      <p className="font-semibold text-stone-900">{formatPeso(c.amount)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Pending remittance */}
             {(pendingPayouts?.pending.length ?? 0) > 0 && (
               <div>

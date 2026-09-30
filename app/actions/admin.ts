@@ -607,9 +607,23 @@ export type PayoutHistoryEntry = {
 
 // ─── PAYOUT QUERIES ───────────────────────────────────────────────────────────
 
+// A pending organizer credit whose organizer has no payable booking right now.
+// It is paid automatically in that organizer's next payout, but nothing else
+// would show it, so the payouts tab lists it as waiting.
+export type WaitingCredit = {
+  id: string;
+  organizerId: string;
+  organizerName: string;
+  bookingId: number;
+  amount: number;
+  reason: string;
+  createdAt: string;
+};
+
 export async function getPendingPayouts(): Promise<{
   unpaid: PendingPayoutOrganizer[];
   pending: PendingPayout[];
+  waitingCredits: WaitingCredit[];
 }> {
   await requireAdmin();
   const admin = createSupabaseAdminClient();
@@ -699,7 +713,45 @@ export async function getPendingPayouts(): Promise<{
     return b.payment_option === "full" || b.payment_option === "downpayment";
   });
 
-  if (eligible.length === 0) return { unpaid: [], pending };
+  // Every pending credit, so the ones whose organizer has no payable booking
+  // right now can be listed as waiting (they are otherwise invisible: the
+  // per-organizer credit fetch below only covers organizers with payable bookings).
+  const { data: allPendingCreditsRaw, error: allPendingCreditsError } = await (admin
+    .from("organizer_credits")
+    .select("id, organizer_id, booking_id, amount, reason, created_at, organizer:organizers(full_name, display_name)")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true }) as unknown as Promise<{
+      data: Array<{
+        id: string;
+        organizer_id: string;
+        booking_id: number;
+        amount: number | string;
+        reason: string;
+        created_at: string | null;
+        organizer: { full_name: string; display_name: string | null } | null;
+      }> | null;
+      error: { message: string } | null;
+    }>);
+  if (allPendingCreditsError) {
+    console.error("[getPendingPayouts] waiting credits fetch failed:", allPendingCreditsError.message);
+    Sentry.captureException(allPendingCreditsError, {
+      extra: { context: "getPendingPayouts-waiting-credits-fetch-failed" },
+    });
+  }
+  const payableOrganizerIds = new Set(eligible.map((b) => b.trip!.organizer_id));
+  const waitingCredits: WaitingCredit[] = (allPendingCreditsRaw ?? [])
+    .filter((c) => !payableOrganizerIds.has(c.organizer_id))
+    .map((c) => ({
+      id: c.id,
+      organizerId: c.organizer_id,
+      organizerName: c.organizer?.display_name ?? c.organizer?.full_name ?? "Unknown",
+      bookingId: c.booking_id,
+      amount: Number(c.amount),
+      reason: c.reason,
+      createdAt: c.created_at ?? "",
+    }));
+
+  if (eligible.length === 0) return { unpaid: [], pending, waitingCredits };
 
   const organizerIds = [...new Set(eligible.map((b) => b.trip!.organizer_id))];
 
@@ -824,7 +876,7 @@ export async function getPendingPayouts(): Promise<{
     ).net;
   }
 
-  return { unpaid: [...grouped.values()], pending };
+  return { unpaid: [...grouped.values()], pending, waitingCredits };
 }
 
 export async function getPayoutHistory(): Promise<PayoutHistoryEntry[]> {
