@@ -75,8 +75,11 @@ export type CancellationEmailBooking = {
  * (amount_due/total_amount are set at booking creation) but no payment id, so it
  * is NOT promised a refund and gets the neutral cancellation line.
  *
- * When a refund IS being issued, the success/manual/failed sub-branches are
- * chosen by classifyRefundResult exactly as before. The failed ("email us")
+ * When a refund IS being issued, "processed" requires every attempted leg to
+ * have succeeded (refundLegsSucceeded), not the downpayment leg alone: a failed
+ * or manual balance refund beside a successful downpayment refund is not a
+ * processed refund. The manual and failed sub-branches are chosen by
+ * classifyRefundResult as before. The failed ("email us")
  * branch legitimately serves a real payer whose automatic refund errored, which
  * is why it stays distinct from the never-paid neutral line.
  */
@@ -91,7 +94,7 @@ export function cancellationRefundLine(
     (booking.paymongo_payment_id ? (downpaymentRefund ?? 0) : 0) + balanceRefund > 0;
   if (!refundIssued) return CANCELLATION_NO_REFUND_LINE;
 
-  const refundSucceeded = refundResults?.initial?.success === true;
+  const refundSucceeded = refundLegsSucceeded(refundResults?.initial, refundResults?.balance);
   const refundManual =
     classifyRefundResult(refundResults?.initial) === "manual" ||
     classifyRefundResult(refundResults?.balance) === "manual";

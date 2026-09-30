@@ -122,6 +122,47 @@ describe("cancellationRefundLine", () => {
       ),
     );
   });
+
+  // A downpayment booking whose balance was also paid online: cancelTrip
+  // attempts a downpayment refund and a balance refund, and the email must
+  // report "processed" only when both succeeded.
+  const bothLegsPaid: CancellationEmailBooking = {
+    payment_option: "downpayment",
+    amount_due: 1000,
+    total_amount: 5000,
+    balance_payment_gateway_status: "paid",
+    paymongo_payment_id: "pay_dp",
+    balance_paymongo_payment_id: "pay_bal",
+  };
+
+  it("both refunds succeeded gets the success copy", () => {
+    const line = cancellationRefundLine(
+      bothLegsPaid,
+      { initial: { success: true }, balance: { success: true } },
+      fmt,
+    );
+    expect(line).toContain("has been processed and typically reflects within 24 hours");
+  });
+
+  it("a failed balance refund beside a successful downpayment refund is NOT reported as processed", () => {
+    const line = cancellationRefundLine(
+      bothLegsPaid,
+      { initial: { success: true }, balance: { success: false, error: "Refund failed" } },
+      fmt,
+    );
+    expect(line).not.toContain("has been processed");
+    expect(line).toContain("to process your refund within 3 to 5 business days");
+  });
+
+  it("a manual (QR Ph) balance refund beside a successful downpayment refund gets the manual copy", () => {
+    const line = cancellationRefundLine(
+      bothLegsPaid,
+      { initial: { success: true }, balance: { success: false, requiresManualProcessing: true } },
+      fmt,
+    );
+    expect(line).not.toContain("has been processed");
+    expect(line).toContain("It is being processed manually");
+  });
 });
 
 describe("refundLegsSucceeded", () => {
