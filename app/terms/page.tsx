@@ -14,7 +14,7 @@ export default function TermsPage() {
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
-          <p className="text-sm text-stone-500">Last updated: September 2026</p>
+          <p className="text-sm text-stone-500">Last updated: October 2026</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900">
             Terms of Service
           </h1>
@@ -100,6 +100,12 @@ export default function TermsPage() {
                 <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Less than 7 days before trip: No refund</span></li>
               </ul>
 
+              <p className="mt-3 font-medium text-stone-700">Non-refundable Downpayment Policy</p>
+              <ul className="mt-1.5 space-y-1.5 leading-relaxed">
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>At any time: the downpayment is not refunded</span></li>
+                <li className="flex gap-2"><span className="mt-1 shrink-0 text-stone-400">•</span><span>Anything you paid through Sama above the downpayment: Full refund</span></li>
+              </ul>
+
               <p className="mt-4 leading-relaxed">
                 Days are counted as calendar days in Philippine time. We compare the current date in the Philippines with the trip's start date, so the time of day you cancel does not matter — a cancellation made at any hour of a given day falls in the same tier as one made at any other hour of that same day.
               </p>
@@ -107,6 +113,10 @@ export default function TermsPage() {
               <h3 className="mt-5 text-base font-semibold text-stone-800">What the refund percentage applies to</h3>
               <p className="mt-2 leading-relaxed">
                 Refund percentages apply to the amount you actually paid through Sama, not the full trip price. If you paid only a downpayment, your refund is calculated as a percentage of that downpayment. If you also paid your balance online through Sama, the refund is calculated on the total you paid online. Any amount paid in cash directly to the organizer is arranged and refunded with the organizer directly and is not processed through Sama.
+              </p>
+
+              <p className="mt-2 leading-relaxed">
+                Under the Non-refundable Downpayment Policy, the downpayment is never refunded when you cancel; only the amount you paid through Sama above it is refunded. If you paid in full, the downpayment is the trip's minimum downpayment for the slots you booked.
               </p>
 
               <h3 className="mt-5 text-base font-semibold text-stone-800">Cancellation by organizer</h3>
