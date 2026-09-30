@@ -15,7 +15,7 @@ export const PLATFORM_WAIVER_SNAPSHOT_TEXT = `By completing this booking, I agre
 
 // Snapshot of the organizer agreement shown on the apply form. Stored verbatim
 // on the organizer row at acceptance time, per Sections 1 and 28 of the terms.
-export const ORGANIZER_TERMS_VERSION = "1.2";
+export const ORGANIZER_TERMS_VERSION = "1.3";
 
 export const ORGANIZER_TERMS_TEXT = `SAMA ORGANIZER TERMS
 
@@ -135,11 +135,17 @@ Strict
 - 7 to 29 days before: 50% refund
 - Less than 7 days before: No refund
 
+Non-refundable downpayment (only on trips that take a downpayment)
+- At any time: the downpayment is not refunded
+- Anything the joiner paid through Sama above the downpayment: Full refund
+
 Days are calendar days, counted in Philippine time, to the trip's start date. Each threshold is inclusive.
 
 Nothing in a cancellation policy removes a refund or other right that cannot lawfully be excluded.
 
 Sama makes the refund. If it happens before we have paid you, we pay you the reduced amount. If it happens after, Section 9 applies.
+
+Once anyone has booked a trip that uses the non-refundable downpayment policy, its downpayment amount and payment type cannot be changed. If a joiner cancels under that policy and you have no other booking in that payout run, the downpayment you keep is added to your next payout.
 
 9. Refunds we have already paid out to you
 
