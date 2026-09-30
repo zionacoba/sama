@@ -19,8 +19,8 @@ export const CANCELLATION_POLICIES = {
   },
   non_refundable_downpayment: {
     label: "Non-refundable downpayment",
-    short: "Downpayment kept whenever the joiner cancels; anything paid above it is refunded",
-    text: "The downpayment is non-refundable, whenever you cancel. If you paid more than the downpayment, everything above it is refunded. If the organizer cancels the trip, you get everything back.",
+    short: "Downpayment kept whenever the joiner cancels; anything paid through Sama above it is refunded",
+    text: "The downpayment is non-refundable, whenever you cancel. Anything you paid through Sama above the downpayment is refunded. If the organizer cancels the trip, everything you paid through Sama is refunded.",
     color: "bg-stone-200 text-stone-800",
   },
 } as const;

@@ -557,7 +557,7 @@ export function TripForm({
                 flexible: "Full refund 7 or more days before the trip. 50% refund 3 to 6 days before. No refund less than 3 days before.",
                 moderate: "Full refund 14 or more days before the trip. 50% refund 7 to 13 days before. No refund less than 7 days before.",
                 strict: "Full refund 30 or more days before the trip. 50% refund 7 to 29 days before. No refund less than 7 days before.",
-                non_refundable_downpayment: "If a joiner cancels, you keep the downpayment, at any time. Anything they paid above it is refunded. Only available on trips that take a downpayment.",
+                non_refundable_downpayment: "If a joiner cancels, you keep the downpayment minus Sama's commission on the booking, at any time. Anything they paid through Sama above it is refunded. Only available on trips that take a downpayment.",
               } as Record<string, string>)[cancellationPolicy]}
             </p>
           </div>
