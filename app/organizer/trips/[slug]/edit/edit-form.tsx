@@ -84,10 +84,10 @@ export function EditTripForm({
   const [paymentType, setPaymentType] = useState<"full" | "downpayment">(
     trip.payment_type === "downpayment" ? "downpayment" : "full",
   );
-  const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict">(
-    (["flexible", "moderate", "strict"].includes(trip.cancellation_policy ?? "")
+  const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict" | "non_refundable_downpayment">(
+    (["flexible", "moderate", "strict", "non_refundable_downpayment"].includes(trip.cancellation_policy ?? "")
       ? trip.cancellation_policy
-      : "flexible") as "flexible" | "moderate" | "strict",
+      : "flexible") as "flexible" | "moderate" | "strict" | "non_refundable_downpayment",
   );
   const initialEditQuestions = trip.custom_questions ?? (trip.custom_question ? [trip.custom_question] : []);
   const [customQuestions, setCustomQuestions] = useState<string[]>(initialEditQuestions);
@@ -614,12 +614,14 @@ export function EditTripForm({
               <option value="flexible">{CANCELLATION_POLICIES.flexible.label}: {CANCELLATION_POLICIES.flexible.short}</option>
               <option value="moderate">{CANCELLATION_POLICIES.moderate.label}: {CANCELLATION_POLICIES.moderate.short}</option>
               <option value="strict">{CANCELLATION_POLICIES.strict.label}: {CANCELLATION_POLICIES.strict.short}</option>
+              <option value="non_refundable_downpayment" disabled={paymentType !== "downpayment"}>{CANCELLATION_POLICIES.non_refundable_downpayment.label}: {CANCELLATION_POLICIES.non_refundable_downpayment.short}{paymentType !== "downpayment" ? " (downpayment trips only)" : ""}</option>
             </select>
             <p className="mt-1.5 text-xs text-stone-500">
               {({
                 flexible: "Full refund 7 or more days before the trip. 50% refund 3 to 6 days before. No refund less than 3 days before.",
                 moderate: "Full refund 14 or more days before the trip. 50% refund 7 to 13 days before. No refund less than 7 days before.",
                 strict: "Full refund 30 or more days before the trip. 50% refund 7 to 29 days before. No refund less than 7 days before.",
+                non_refundable_downpayment: "If a joiner cancels, you keep the downpayment, at any time. Anything they paid above it is refunded. Only available on trips that take a downpayment.",
               } as Record<string, string>)[cancellationPolicy]}
             </p>
           </div>

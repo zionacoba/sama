@@ -188,7 +188,7 @@ export async function createTrip(
     return { error: "Trip title must be 100 characters or fewer." };
   }
 
-  if (!["flexible", "moderate", "strict"].includes(cancellation_policy)) {
+  if (!["flexible", "moderate", "strict", "non_refundable_downpayment"].includes(cancellation_policy)) {
     return { error: "Invalid cancellation policy." };
   }
 
@@ -242,6 +242,10 @@ export async function createTrip(
   // Free trips cannot have a downpayment requirement.
   const effectivePaymentType = safePrice === 0 ? "full" : payment_type;
   const effectiveMinDownpayment = safePrice === 0 ? null : min_downpayment;
+  // The non-refundable downpayment policy keeps a downpayment, so the trip must take one.
+  if (cancellation_policy === "non_refundable_downpayment" && effectivePaymentType !== "downpayment") {
+    return { error: "The non-refundable downpayment policy is only available on trips that take a downpayment." };
+  }
 
   const slug = await makeUniqueSlug(buildBaseSlug(title, safeDateStart));
 
@@ -332,7 +336,7 @@ export async function updateTrip(
 
   const { data: existing, error: fetchError } = await supabase
     .from("trips")
-    .select("id, slug, status, title, organizer_id, total_slots, remaining_slots, date_start, date_end, price, meeting_points, difficulty, payment_type, min_downpayment, photos")
+    .select("id, slug, status, title, organizer_id, total_slots, remaining_slots, date_start, date_end, price, meeting_points, difficulty, payment_type, min_downpayment, photos, cancellation_policy")
     .eq("id", tripId)
     .maybeSingle();
 
@@ -463,7 +467,7 @@ export async function updateTrip(
     return { error: "Trip title must be 100 characters or fewer." };
   }
 
-  if (!["flexible", "moderate", "strict"].includes(cancellation_policy)) {
+  if (!["flexible", "moderate", "strict", "non_refundable_downpayment"].includes(cancellation_policy)) {
     return { error: "Invalid cancellation policy." };
   }
 
@@ -578,6 +582,17 @@ export async function updateTrip(
     }
   }
 
+  // Once anyone has booked a trip under the non-refundable downpayment policy, its
+  // downpayment amount and payment type are locked (organizer terms 1.3, section 8):
+  // a full payer's kept amount is the trip's minimum downpayment times slots.
+  if (existing.cancellation_policy === "non_refundable_downpayment" && liveBookingCount > 0) {
+    const paymentTypeChanged = payment_type !== existing.payment_type;
+    const downpaymentChanged = Number(min_downpayment ?? 0) !== Number(existing.min_downpayment ?? 0);
+    if (paymentTypeChanged || downpaymentChanged) {
+      return { error: "This trip uses the non-refundable downpayment policy and already has bookings, so its downpayment and payment type can't be changed." };
+    }
+  }
+
   // 3+4. Collect warnings for price change and downpayment-to-full switch.
   let saveWarning: string | undefined;
   let downpaymentDisabled = false;
@@ -621,6 +636,10 @@ export async function updateTrip(
   // Free trips cannot have a downpayment requirement.
   const effectivePaymentType = safePrice === 0 ? "full" : payment_type;
   const effectiveMinDownpayment = safePrice === 0 ? null : min_downpayment;
+  // The non-refundable downpayment policy keeps a downpayment, so the trip must take one.
+  if (cancellation_policy === "non_refundable_downpayment" && effectivePaymentType !== "downpayment") {
+    return { error: "The non-refundable downpayment policy is only available on trips that take a downpayment." };
+  }
 
   const titleChanged = title !== existing.title;
   const startDateChanged = (safeDateStart ?? "").slice(0, 10) !== (existing.date_start ?? "").slice(0, 10);
