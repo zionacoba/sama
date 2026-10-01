@@ -15,7 +15,7 @@ export const PLATFORM_WAIVER_SNAPSHOT_TEXT = `By completing this booking, I agre
 
 // Snapshot of the organizer agreement shown on the apply form. Stored verbatim
 // on the organizer row at acceptance time, per Sections 1 and 28 of the terms.
-export const ORGANIZER_TERMS_VERSION = "1.3";
+export const ORGANIZER_TERMS_VERSION = "1.4";
 
 export const ORGANIZER_TERMS_TEXT = `SAMA ORGANIZER TERMS
 
@@ -145,7 +145,7 @@ Nothing in a cancellation policy removes a refund or other right that cannot law
 
 Sama makes the refund. If it happens before we have paid you, we pay you the reduced amount. If it happens after, Section 9 applies.
 
-Once anyone has booked a trip that uses the non-refundable downpayment policy, its downpayment amount and payment type cannot be changed. If a joiner cancels under that policy and you have no other booking in that payout run, the downpayment you keep is added to your next payout.
+Once anyone has booked a trip that uses the non-refundable downpayment policy, its downpayment amount and payment type cannot be changed. If a joiner cancels under that policy, the downpayment you keep, less our commission on the booking, is added to your next payout. If we have not paid it to you within fourteen (14) calendar days of the cancellation, we pay it to you separately within that time.
 
 9. Refunds we have already paid out to you
 
