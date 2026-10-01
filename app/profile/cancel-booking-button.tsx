@@ -55,7 +55,9 @@ export function CancelBookingButton({
               <strong>{tripTitle}</strong> on {tripDate}?
             </p>
             <p className="mt-3 text-sm text-stone-600">
-              {refundAmount != null && refundAmount > 0
+              {refundAmount == null
+                ? "Your refund can't be worked out automatically. If you are eligible for one, email hello@sama.com.ph with your booking details after you cancel, and we'll process it for you."
+                : refundAmount > 0
                 ? (paymentMethod === "gcash" || paymentMethod === "paymaya")
                   ? <>You will receive a <strong>{formatPeso(refundAmount)}</strong> refund to your e-wallet, typically within 24 hours.</>
                   : <>You will receive a <strong>{formatPeso(refundAmount)}</strong> refund, processed manually by our team within 3 to 5 business days.</>
