@@ -1,5 +1,6 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { escapeHtml, sendEmail } from "../_shared/email.ts";
+import { decideRetryAction, liveRefundIds } from "../_shared/refund-match.ts";
 
 const MAX_ATTEMPTS = 5;
 const BATCH_LIMIT = 50;
@@ -110,6 +111,48 @@ async function recordFailure(
   return exhausted;
 }
 
+// Hold a row for a human (CP-v120). Used when PayMongo lists a live refund on this
+// payment whose id or amount cannot be read: issuing could pay twice and reconciling
+// could claim a refund that belongs to another row, so neither happens. 'manual'
+// rows are skipped by this job and flagged on the admin page and the daily digest.
+async function recordHold(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  row: RefundRow,
+  reason: string,
+  runState: { failed: boolean },
+): Promise<void> {
+  await supabase
+    .from("refunds")
+    .update({ status: "manual", last_error: `Held for review: ${reason}` })
+    .eq("id", row.id);
+
+  console.error(`[retry-failed-refunds] refund ${row.id} held for review: ${reason}`);
+  if (ADMIN_EMAIL) {
+    try {
+      await sendEmail(
+        ADMIN_EMAIL,
+        "Refund held for review: a PayMongo refund could not be read",
+        `
+            <p>The refund retry job found a refund on this payment at PayMongo that it could not read, so it neither issued nor reconciled this refund. The row is now <strong>manual</strong>. Please check the payment in the PayMongo dashboard: if this refund was already paid, mark the row resolved; if it was not, process it by hand.</p>
+            <p><strong>Refund ID:</strong> ${row.id}</p>
+            <p><strong>Booking ID:</strong> ${row.booking_id}</p>
+            <p><strong>Source:</strong> ${escapeHtml(row.source)}</p>
+            <p><strong>Payment ID:</strong> ${escapeHtml(row.payment_id ?? "(none)")}</p>
+            <p><strong>Amount:</strong> ${row.amount}</p>
+            <p><strong>Reason:</strong> ${escapeHtml(reason)}</p>
+          `,
+      );
+    } catch (alertErr) {
+      console.error(`[retry-failed-refunds] failed to send hold alert for refund ${row.id}:`, alertErr);
+    }
+  } else if (!runState.failed) {
+    // Same fallback as recordFailure: no ADMIN_EMAIL, so signal /fail once per run.
+    runState.failed = true;
+    await pingDeadMansSwitch("/fail");
+  }
+}
+
 Deno.serve(async (req) => {
   const cronSecret = Deno.env.get("CRON_SECRET");
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -156,6 +199,7 @@ Deno.serve(async (req) => {
   let issued = 0;
   let failed = 0;
   let exhausted = 0;
+  let held = 0;
   // Tracks whether this run had to signal fail (a refund exhausted while the
   // ADMIN_EMAIL alert channel was unavailable). If set, the success ping is
   // skipped so the check reads as down, not up.
@@ -196,19 +240,48 @@ Deno.serve(async (req) => {
       }
 
       const paymentData = await paymentRes.json();
-      const existingRefunds: Array<{ id: string; attributes?: { status?: string } }> =
-        paymentData?.data?.attributes?.refunds ?? [];
-      const existing = existingRefunds.find(
-        (r) => (r?.attributes?.status ?? "") !== "failed",
-      );
+      // Which listed refund, if any, is THIS row's? Since CP-v120 one payment can
+      // carry several refunds (one per cancellation), so "any non-failed refund" is
+      // not enough. decideRetryAction (../_shared/refund-match.ts, unit-tested)
+      // accepts a refund only if no other refunds row holds its id and its amount is
+      // exactly this row's, and holds the row if any live refund cannot be read.
+      const amountCentavos = Math.round(row.amount * 100);
+      const listedRefunds = paymentData?.data?.attributes?.refunds;
+      const liveIds = liveRefundIds(listedRefunds);
+      let claimedIds = new Set<string>();
+      if (liveIds.length > 0) {
+        const { data: claimedRows, error: claimedError } = await supabase
+          .from("refunds")
+          .select("paymongo_refund_id")
+          .in("paymongo_refund_id", liveIds)
+          .neq("id", row.id);
+        if (claimedError) {
+          // Could not tell which refunds other rows hold. FAIL SAFE: neither
+          // reconcile nor issue; record the attempt and leave the row for the next run.
+          if (await recordFailure(supabase, row, `Claim check failed: ${claimedError.message}`, runState)) exhausted++;
+          else failed++;
+          continue;
+        }
+        claimedIds = new Set(
+          ((claimedRows ?? []) as Array<{ paymongo_refund_id: string | null }>)
+            .map((c) => c.paymongo_refund_id ?? ""),
+        );
+      }
+      const decision = decideRetryAction(amountCentavos, listedRefunds, claimedIds);
 
-      if (existing) {
-        // A refund already exists at PayMongo — reconcile, do not double-refund.
+      if (decision.kind === "hold") {
+        await recordHold(supabase, row, decision.reason, runState);
+        held++;
+        continue;
+      }
+
+      if (decision.kind === "reconcile") {
+        // This row's refund already exists at PayMongo. Reconcile, do not double-refund.
         await supabase
           .from("refunds")
           .update({
             status: "done",
-            paymongo_refund_id: existing.id,
+            paymongo_refund_id: decision.refundId,
             completed_at: new Date().toISOString(),
           })
           .eq("id", row.id);
@@ -216,8 +289,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // No refund exists yet — issue it.
-      const amountCentavos = Math.round(row.amount * 100);
+      // No refund for this row exists yet. Issue it.
       const issueRes = await fetch("https://api.paymongo.com/v1/refunds", {
         method: "POST",
         headers: {
@@ -275,7 +347,7 @@ Deno.serve(async (req) => {
 
   const total = (rows ?? []).length;
   console.log(
-    `[retry-failed-refunds] processed ${total}: reconciled ${reconciled}, issued ${issued}, failed ${failed}, exhausted ${exhausted}`,
+    `[retry-failed-refunds] processed ${total}: reconciled ${reconciled}, issued ${issued}, failed ${failed}, exhausted ${exhausted}, held ${held}`,
   );
 
   // Fully successful run: the initial fetch succeeded and every row was processed.
@@ -287,7 +359,7 @@ Deno.serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({ total, reconciled, issued, failed, exhausted }),
+    JSON.stringify({ total, reconciled, issued, failed, exhausted, held }),
     { headers: { "Content-Type": "application/json" } },
   );
 });
