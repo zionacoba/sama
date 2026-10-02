@@ -7,6 +7,7 @@ import { PhotoUploader, type PhotoItem } from "@/app/components/photo-uploader";
 import { DifficultyInfoButton, RecurringTemplateInfoButton } from "@/app/components/difficulty-info";
 import { DEFAULT_WAIVER_TEXT } from "@/lib/constants";
 import { ACTIVITY_TYPES } from "@/lib/activities";
+import { initialPaymentType, lockedPaymentFieldValues } from "@/lib/locked-payment-fields";
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none ring-trailhead/30 placeholder:text-stone-400 focus:border-trailhead focus:ring-2";
@@ -55,12 +56,14 @@ export function EditTripForm({
   destinations = [],
   templates = [],
   activeBookingCount = 0,
+  downpaymentLocked = false,
 }: {
   slug: string;
   trip: TripForEdit;
   destinations?: string[];
   templates?: { id: string | number; title: string }[];
   activeBookingCount?: number;
+  downpaymentLocked?: boolean;
 }) {
   const [state, action] = useActionState(updateTrip, null);
   const [isPending, startTransition] = useTransition();
@@ -82,8 +85,12 @@ export function EditTripForm({
   );
   const [price, setPrice] = useState<number>(Number(trip.price) || 0);
   const [paymentType, setPaymentType] = useState<"full" | "downpayment">(
-    trip.payment_type === "downpayment" ? "downpayment" : "full",
+    initialPaymentType(trip),
   );
+  // When the downpayment lock applies, the form shows these two fields as
+  // fixed and submits exactly what the untouched form would (see
+  // lib/locked-payment-fields.ts), so the save is never refused for them.
+  const lockedPayment = lockedPaymentFieldValues(trip);
   const [cancellationPolicy, setCancellationPolicy] = useState<"flexible" | "moderate" | "strict" | "non_refundable_downpayment">(
     (["flexible", "moderate", "strict", "non_refundable_downpayment"].includes(trip.cancellation_policy ?? "")
       ? trip.cancellation_policy
@@ -537,6 +544,33 @@ export function EditTripForm({
             </div>
           </div>
 
+          {downpaymentLocked ? (
+            <div>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <p className={labelClass}>Payment type</p>
+                  <p className="mt-1.5 text-sm text-stone-900">
+                    {lockedPayment.paymentType === "downpayment" ? "Downpayment available" : "Full payment only"}
+                  </p>
+                </div>
+                {lockedPayment.minDownpayment !== null && (
+                  <div>
+                    <p className={labelClass}>Downpayment amount (PHP)</p>
+                    <p className="mt-1.5 text-sm text-stone-900">
+                      {lockedPayment.minDownpayment === "" ? "Not set" : `₱${Number(lockedPayment.minDownpayment).toLocaleString()}`}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <input type="hidden" name="payment_type" value={lockedPayment.paymentType} />
+              {lockedPayment.minDownpayment !== null && (
+                <input type="hidden" name="min_downpayment" value={lockedPayment.minDownpayment} />
+              )}
+              <p className="mt-1.5 text-xs text-stone-500">
+                {"These can't be changed: this trip has bookings and uses, or was booked under, the non-refundable downpayment policy."}
+              </p>
+            </div>
+          ) : (
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label htmlFor="payment_type" className={labelClass}>
@@ -578,6 +612,7 @@ export function EditTripForm({
               </div>
             )}
           </div>
+          )}
 
           {paymentType === "downpayment" && (
             <div>

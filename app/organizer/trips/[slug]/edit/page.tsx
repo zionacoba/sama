@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
+import { SLOT_CONSUMING_STATUSES, SLOT_HOLDING_STATUSES } from "@/lib/booking-status";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { isDownpaymentLocked, resolveTripSlotSummary } from "@/lib/trip-slot-summary";
 import { EditTripForm } from "./edit-form";
 
 type PageProps = {
@@ -86,6 +88,43 @@ export default async function EditTripPage({ params }: PageProps) {
     activeBookingCount = count ?? 0;
   }
 
+  // Whether the downpayment lock applies (organizer terms 1.4, section 8), so
+  // the form can show the payment type and downpayment as fixed instead of
+  // letting the organizer edit them only to have the save refused. Computed
+  // with updateTrip's own query and rule (app/actions/trip.ts, the slot-summary
+  // fetch): the same columns, statuses and admin client, and skipped for drafts
+  // and templates as updateTrip skips them. The trip was fetched above filtered
+  // to this organizer, so this admin read is scoped to their own trip.
+  // Display only: updateTrip still refuses any locked change on its own. If
+  // this read fails, the form keeps its editable fields and the save stays the
+  // guard.
+  let downpaymentLocked = false;
+  if (isActiveTrip) {
+    const admin = createSupabaseAdminClient();
+    const { data: lockBookings, error: lockBookingsError } = await admin
+      .from("bookings")
+      .select("status, slots, amount_due, total_amount, cancellation_policy")
+      .eq("trip_id", trip.id)
+      .in("status", [...SLOT_CONSUMING_STATUSES]);
+    const resolvedLock = resolveTripSlotSummary(lockBookings, lockBookingsError);
+    if ("failure" in resolvedLock) {
+      console.error("[trip-edit] downpayment-lock bookings fetch failed:", lockBookingsError);
+      Sentry.captureException(
+        lockBookingsError ?? new Error("trip-edit downpayment-lock bookings query returned no data"),
+        {
+          extra: {
+            context: "trip-edit-downpayment-lock-fetch-failed",
+            failure: resolvedLock.failure,
+            tripId: trip.id,
+            organizerId: organizer.id,
+          },
+        },
+      );
+    } else {
+      downpaymentLocked = isDownpaymentLocked(trip.cancellation_policy, resolvedLock.summary);
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-stone-50 font-sans text-stone-900">
       <header className="border-b border-trailhead-dark/20 bg-trailhead text-white">
@@ -109,7 +148,7 @@ export default async function EditTripPage({ params }: PageProps) {
       </header>
 
       <main className="mx-auto max-w-2xl flex-1 px-4 py-10 sm:px-6">
-        <EditTripForm slug={slug} trip={trip} destinations={destinations} templates={templates} activeBookingCount={activeBookingCount} />
+        <EditTripForm slug={slug} trip={trip} destinations={destinations} templates={templates} activeBookingCount={activeBookingCount} downpaymentLocked={downpaymentLocked} />
       </main>
 
       <footer className="border-t border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-500">
