@@ -36,7 +36,8 @@ export function decideCreditVoid(
 // Voids the active organizer_credits row for a cancelled/refunded booking, and
 // when required inserts an offsetting organizer_deductions row so an already-paid
 // credit is clawed back. The whole credit is voided; there is no proportional or
-// partial shrinking (a partial cancel still voids the full credit). `admin` MUST
+// partial shrinking. No cancel path calls it any more (every path, the partial
+// cancel included, uses reverseBookingCredit below). `admin` MUST
 // be the service-role client (both tables are RLS deny-by-default).
 //
 // Returns what it did for logging. On a DB error it returns the action reached so
@@ -96,8 +97,8 @@ export async function voidBookingCredit(
 }
 
 // Stage 5e: policy-aware, payment-aware reversal of a booking's organizer credit.
-// Siblings of decideCreditVoid/voidBookingCredit above (which partialCancelBooking
-// still uses). The base clawback deduction now recovers only the DOWNPAYMENT
+// Siblings of decideCreditVoid/voidBookingCredit above, which no cancel path calls
+// any more. The base clawback deduction now recovers only the DOWNPAYMENT
 // portion; the online BALANCE is owned entirely by this credit ledger, so the
 // amount refunded to the joiner from the balance (balanceRefundedToJoiner, = p x B
 // already rounded at the call site) drives whether we void, shrink, offset, or
@@ -239,4 +240,18 @@ export async function reverseBookingCredit(
   }
 
   return { action };
+}
+
+// The base clawback deduction when a joiner is refunded after the booking's payout
+// was already remitted: only the DOWNPAYMENT share of the refund. The online
+// balance is owned by the credit ledger (reverseBookingCredit above), so deducting
+// the balance share here as well would charge the organizer for it twice. A null
+// downpayment share falls back to the whole refund, as cancelBooking always has;
+// both refund splitters return null only when the refund itself is null, which
+// every caller excludes before it gets here.
+export function remittedRefundDeductionAmount(
+  downpaymentRefund: number | null,
+  refundAmount: number,
+): number {
+  return downpaymentRefund ?? refundAmount;
 }

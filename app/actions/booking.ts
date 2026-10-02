@@ -16,7 +16,7 @@ import { organizerOwns } from "@/lib/authz";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { classifyRefundResult, MANUAL_REFUND_FOLLOWUP, refundLegsSucceeded } from "@/lib/refund-email-copy";
 import { issueAndRecordRefund } from "@/lib/refunds";
-import { voidBookingCredit, reverseBookingCredit } from "@/lib/organizer-credits";
+import { reverseBookingCredit, remittedRefundDeductionAmount } from "@/lib/organizer-credits";
 import { cancelledSlotsShare, keptDownpaymentAmount, keptDownpaymentCredit, recordKeptDownpaymentCredit, splitRefundForPolicy, usesKeptDownpaymentCredit } from "@/lib/non-refundable-downpayment";
 import { createPaymentCheckout } from "@/lib/create-payment-link";
 import { hasPaidPayment } from "@/lib/paymongo-checkout";
@@ -1953,18 +1953,18 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   }
 
   // Record a deduction against the organizer when a partial refund is issued after
-  // their payout was already remitted. Mirrors cancelBooking's deduction (same
-  // table, columns, and status), but the amount is the slot-proportional refund
-  // actually issued for the cancelled slots (refundAmount), not the full booking
-  // amount. refundAmount equals downpaymentRefundAmount + partialBalanceRefundAmount,
-  // i.e. exactly what is refunded below.
+  // their payout was already remitted. Mirrors cancelBooking's deduction: the amount
+  // is only the DOWNPAYMENT share of the refund for the cancelled slots
+  // (downpaymentRefundAmount). The balance share (partialBalanceRefundAmount) is
+  // reversed against the organizer's credit below, so deducting it here as well
+  // would charge the organizer for the balance twice.
   if (booking.payout_status === "remitted" && tripDateCheck?.organizer_id && refundAmount !== null && refundAmount > 0) {
     const { error: deductionError } = await (admin
       .from("organizer_deductions")
       .insert({
         organizer_id: tripDateCheck.organizer_id,
         booking_id: bookingId,
-        amount: refundAmount,
+        amount: remittedRefundDeductionAmount(downpaymentRefundAmount, refundAmount),
         reason: "Joiner partial cancellation refund after payout remitted",
         status: "pending",
       }) as unknown as Promise<{ error: { message: string } | null }>);
@@ -1976,31 +1976,41 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     }
   }
 
-  // Stage 5d: void the organizer credit for this booking. A partial cancel still
-  // voids the FULL credit (no proportional shrinking); when payout_status is
-  // 'remitted' the deduction above already recovers the balance, so no offset.
-  // Under the non-refundable downpayment policy, before the booking enters a payout,
-  // any live credit on it is this policy's kept credit (see usesKeptDownpaymentCredit),
-  // so the balance-credit void must not touch it.
+  // Stage 5e: reverse any organizer credit for this booking against the balance
+  // actually refunded for the cancelled slots (partialBalanceRefundAmount), as
+  // cancelBooking does: a waiting credit shrinks by that amount, an already-paid
+  // credit is voided and the refunded amount clawed back, and a credit applied into
+  // an unsent payout flags that payout for review. Under the non-refundable
+  // downpayment policy, before the booking enters a payout, any live credit on it
+  // is this policy's kept credit (see usesKeptDownpaymentCredit), so the
+  // balance-credit reversal must not touch it.
   const keptCreditPath = usesKeptDownpaymentCredit({
     policy: cancelPolicy,
     paymentGatewayStatus: booking.payment_gateway_status,
     payoutStatus: booking.payout_status,
   });
   if (tripDateCheck?.organizer_id && !keptCreditPath) {
-    const creditVoid = await voidBookingCredit(admin, bookingId, tripDateCheck.organizer_id, booking.payout_status);
-    if (creditVoid.error) {
-      console.error("[credit-void] failed to void organizer credit", bookingId, creditVoid.error);
-      Sentry.captureException(new Error(creditVoid.error), {
-        extra: { context: "partialCancel-credit-void-failed", bookingId, organizerId: tripDateCheck.organizer_id },
+    const creditReversal = await reverseBookingCredit(admin, bookingId, tripDateCheck.organizer_id, partialBalanceRefundAmount);
+    if (creditReversal.error) {
+      console.error("[credit-reversal] failed to reverse organizer credit", bookingId, creditReversal.error);
+      Sentry.captureException(new Error(creditReversal.error), {
+        extra: { context: "partialCancel-credit-reversal-failed", bookingId, organizerId: tripDateCheck.organizer_id },
       });
       await sendAdminAlert(
-        "Action needed: failed to void organizer credit on partial cancellation",
+        "Action needed: failed to reverse organizer credit on partial cancellation",
         `
-              <p>A booking with an active organizer credit was partially cancelled, but voiding the credit (or inserting its offsetting deduction) failed. The organizer may be over- or under-paid until this is corrected manually.</p>
+              <p>A booking with an active organizer credit was partially cancelled, but reversing the credit (void/shrink/offset) failed. The organizer may be over- or under-paid until this is corrected manually.</p>
               <p><strong>Booking ID:</strong> ${bookingId}</p>
-              <p><strong>Action reached:</strong> ${creditVoid.action}</p>
-              <p><strong>Error:</strong> ${escapeHtml(creditVoid.error)}</p>
+              <p><strong>Action reached:</strong> ${creditReversal.action.kind}</p>
+              <p><strong>Error:</strong> ${escapeHtml(creditReversal.error)}</p>
+            `,
+      );
+    } else if (creditReversal.action.kind === "document") {
+      await sendAdminAlert(
+        "Action needed: organizer credit applied into an undisbursed payout flagged for review",
+        `
+              <p>A booking was partially cancelled whose balance credit had already been applied into an organizer payout that has not yet been disbursed. The payout has been flagged for reconciliation; please review and adjust it before it is remitted.</p>
+              <p><strong>Booking ID:</strong> ${bookingId}</p>
             `,
       );
     }
