@@ -648,6 +648,7 @@ export type Database = {
           amount: number
           attempts: number
           booking_id: number
+          cancellation_marker: number
           completed_at: string | null
           created_at: string
           id: number
@@ -662,6 +663,7 @@ export type Database = {
           amount: number
           attempts?: number
           booking_id: number
+          cancellation_marker?: number
           completed_at?: string | null
           created_at?: string
           id?: never
@@ -676,6 +678,7 @@ export type Database = {
           amount?: number
           attempts?: number
           booking_id?: number
+          cancellation_marker?: number
           completed_at?: string | null
           created_at?: string
           id?: never
