@@ -750,7 +750,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
       extra: { context: "update-booking-status-status-update-failed", bookingId },
     });
   }
-  if (error) return { error: error.message };
+  if (error) return { error: "Could not update the booking. Please try again or contact support." };
   if (!updatedBooking) {
     return { error: "This booking has already been updated by another action." };
   }
@@ -969,7 +969,7 @@ export async function markBalanceCollected(bookingId: number) {
       extra: { context: "markBalanceCollected-update-failed", bookingId },
     });
   }
-  if (error) return { error: error.message };
+  if (error) return { error: "Could not mark the balance as collected. Please try again or contact support." };
   if (!updated || updated.length !== 1) {
     return { error: "Balance can only be collected on a confirmed booking." };
   }
@@ -1419,7 +1419,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
       extra: { context: "markAsTransferred-update-failed", bookingId },
     });
   }
-  if (error) return { error: error.message };
+  if (error) return { error: "Could not mark the booking as transferred. Please try again or contact support." };
   if (!updated || updated.length !== 1) {
     console.error("[markAsTransferred] transfer update matched no rows", bookingId);
     Sentry.captureException(new Error("markAsTransferred update matched no rows"), {
@@ -1693,7 +1693,7 @@ export async function markAsNoShow(bookingId: number) {
       extra: { context: "markAsNoShow-update-failed", bookingId },
     });
   }
-  if (error) return { error: error.message };
+  if (error) return { error: "Could not mark the booking as a no-show. Please try again or contact support." };
 
   revalidatePath("/organizer/trips/[slug]/bookings", "page");
   return { success: true };
@@ -1820,7 +1820,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
       extra: { context: "partialCancel-update-failed", bookingId },
     });
   }
-  if (updateError) return { error: updateError.message };
+  if (updateError) return { error: "Could not cancel those slots. Please try again or contact support." };
   if (!updatedRows || updatedRows.length === 0) {
     console.error("[partialCancelBooking] partial cancel update matched no rows", bookingId);
     Sentry.captureException(new Error("partialCancelBooking update matched no rows"), {

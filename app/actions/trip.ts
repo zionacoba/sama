@@ -712,7 +712,13 @@ export async function updateTrip(
   if (error?.code === "23505") {
     return { error: "A trip with this name and date already exists. Please change the title or the date." };
   }
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[update-trip] trip update failed:", error);
+    Sentry.captureException(error, {
+      extra: { context: "update-trip-update-failed", tripId, organizerId: organizer.id },
+    });
+    return { error: "Could not save the trip. Please try again or contact support." };
+  }
 
   // On a capacity change the slot fields were omitted from the update above;
   // set_total_slots now writes total_slots and remaining_slots together in one
@@ -965,7 +971,13 @@ export async function publishTrip(tripSlug: string): Promise<{ error: string } |
     .eq("organizer_id", organizer.id)
     .eq("status", "draft");
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[publish-trip] publish update failed:", error);
+    Sentry.captureException(error, {
+      extra: { context: "publish-trip-update-failed", tripSlug, organizerId: organizer.id },
+    });
+    return { error: "Could not publish the trip. Please try again or contact support." };
+  }
 
   revalidatePath("/organizer/dashboard");
   return { success: true };

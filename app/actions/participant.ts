@@ -161,7 +161,13 @@ export async function confirmParticipant(
     .select("id")
     .maybeSingle();
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[participant] details update failed:", error);
+    Sentry.captureException(error, {
+      extra: { context: "participant-details-update-failed", participantId: participant.id },
+    });
+    return { error: "We couldn't save your details. Please try again or contact support." };
+  }
   if (!updated) return { error: "This waiver has already been submitted." };
 
   return { success: true };

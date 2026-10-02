@@ -862,8 +862,8 @@ export async function confirmPaidBalance(
   //
   // If payout_status is 'unpaid' (or null) we do NOTHING on purpose: the standard
   // post-trip sweep remits the whole booking (downpayment + balance) and no
-  // separate credit is owed. Nothing reads organizer_credits yet; Stage 5c wires
-  // it into payouts.
+  // separate credit is owed. A pending organizer_credits row is added to the
+  // organizer's net by the next payout run.
   if (booking.payout_status === "included" || booking.payout_status === "remitted") {
     const creditAmount = Math.round(((booking.total_amount ?? 0) - (booking.amount_due ?? 0)) * 100) / 100;
     if (creditAmount > 0 && trip.organizer_id) {
