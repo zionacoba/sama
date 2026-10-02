@@ -1846,6 +1846,10 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
     }
   }
 
+  // Remembered beside the flag for the admin email at the end of this function
+  // (mirrors cancelBooking's wasInIncludedPayout).
+  const wasInIncludedPayout = booking.payout_status === "included" && !!booking.payout_id;
+
   const { error: restoreSlotError } = await admin.rpc("restore_slot", {
     p_trip_id: booking.trip_id,
     p_slots_requested: slotsToCancel,
@@ -2174,6 +2178,44 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
           `,
       );
     }
+  }
+
+  // A partial cancel on a booking whose payout was created but not yet remitted
+  // only flags that payout (above): no deduction is written until remittance and
+  // nothing re-figures the payout. Email the admin, as cancelBooking does for a
+  // full cancel, so the payout is adjusted by hand before Mark as Remitted.
+  // The amount shown is the refund for the cancelled slots (refundAmount), the
+  // same figure the remitted path records as the deduction.
+  if (wasInIncludedPayout) {
+    let organizerName = "Unknown";
+    if (tripDateCheck?.organizer_id) {
+      const { data: org, error: orgNameFetchError } = await admin
+        .from("organizers")
+        .select("display_name, full_name")
+        .eq("id", tripDateCheck.organizer_id)
+        .maybeSingle();
+      if (orgNameFetchError) {
+        console.error("[partialCancelBooking] organizer name fetch failed:", orgNameFetchError);
+        Sentry.captureException(orgNameFetchError, {
+          extra: { context: "partialCancel-organizer-name-fetch-failed", bookingId, organizerId: tripDateCheck.organizer_id },
+        });
+      }
+      organizerName = org?.display_name ?? org?.full_name ?? "Unknown";
+    }
+    await sendAdminAlert(
+      `[Admin] Booking partially cancelled after payout created: review before remitting`,
+      `
+          <p>A booking was partially cancelled after its payout record was created but before remittance. <strong>Do not remit this payout until you have adjusted the amounts.</strong></p>
+          <p><strong>Booking ID:</strong> ${bookingId}</p>
+          <p><strong>Trip:</strong> ${escapeHtml(tripDateCheck?.title ?? "Unknown")}</p>
+          <p><strong>Organizer:</strong> ${escapeHtml(organizerName)}</p>
+          <p><strong>Participant:</strong> ${escapeHtml(booking.full_name)} (${escapeHtml(booking.email)})</p>
+          <p><strong>Slots cancelled:</strong> ${slotsToCancel}</p>
+          <p><strong>Remaining slots:</strong> ${remainingSlots}</p>
+          <p><strong>Refund for the cancelled slots:</strong> ${refundAmount === null ? "could not be worked out automatically, check the booking" : fmtCurrency(refundAmount)}</p>
+          <p>The payout has been flagged for reconciliation in the admin dashboard.</p>
+        `,
+    );
   }
 
   revalidatePath("/profile");
