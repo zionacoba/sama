@@ -1958,7 +1958,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
   // (downpaymentRefundAmount). The balance share (partialBalanceRefundAmount) is
   // reversed against the organizer's credit below, so deducting it here as well
   // would charge the organizer for the balance twice.
-  if (booking.payout_status === "remitted" && tripDateCheck?.organizer_id && refundAmount !== null && refundAmount > 0) {
+  if (booking.payout_status === "remitted" && tripDateCheck?.organizer_id && refundAmount !== null && refundAmount > 0 && remittedRefundDeductionAmount(downpaymentRefundAmount, refundAmount) > 0) {
     const { error: deductionError } = await (admin
       .from("organizer_deductions")
       .insert({
@@ -2396,13 +2396,13 @@ export async function cancelBooking(bookingId: number) {
     }
 
     // Record a deduction against the organizer when a refund is issued after their payout was already remitted.
-    if (booking.payout_status === "remitted" && trip.organizer_id && refundAmount !== null && refundAmount > 0) {
+    if (booking.payout_status === "remitted" && trip.organizer_id && refundAmount !== null && refundAmount > 0 && remittedRefundDeductionAmount(downpaymentRefundAmount, refundAmount) > 0) {
       const { error: deductionError } = await (admin
         .from("organizer_deductions")
         .insert({
           organizer_id: trip.organizer_id,
           booking_id: bookingId,
-          amount: downpaymentRefundAmount ?? refundAmount,
+          amount: remittedRefundDeductionAmount(downpaymentRefundAmount, refundAmount),
           reason: "Joiner cancellation refund after payout remitted",
           status: "pending",
         }) as unknown as Promise<{ error: { message: string } | null }>);

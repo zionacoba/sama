@@ -284,7 +284,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
       }
 
       // Record a deduction against the organizer when a refund is issued after their payout was already remitted.
-      if (booking.payout_status === "remitted" && totalRefundAmount > 0) {
+      if (booking.payout_status === "remitted" && totalRefundAmount > 0 && initialRefundAmount > 0) {
         const { error: deductionError } = await (admin
           .from("organizer_deductions")
           .insert({

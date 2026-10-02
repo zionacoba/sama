@@ -248,7 +248,8 @@ export async function reverseBookingCredit(
 // the balance share here as well would charge the organizer for it twice. A null
 // downpayment share falls back to the whole refund, as cancelBooking always has;
 // both refund splitters return null only when the refund itself is null, which
-// every caller excludes before it gets here.
+// every caller excludes before it gets here. A result of 0 (the whole refund
+// came from the balance) means no deduction row is written at all.
 export function remittedRefundDeductionAmount(
   downpaymentRefund: number | null,
   refundAmount: number,

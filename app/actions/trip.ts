@@ -8,7 +8,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
-import { reverseBookingCredit } from "@/lib/organizer-credits";
+import { reverseBookingCredit, remittedRefundDeductionAmount } from "@/lib/organizer-credits";
 import { type RefundResult } from "@/lib/paymongo-refund";
 import { cancellationRefundLine } from "@/lib/refund-email-copy";
 import { issueAndRecordRefund } from "@/lib/refunds";
@@ -1239,13 +1239,13 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     }
 
     // Record a deduction against the organizer when a refund is issued after their payout was already remitted.
-    if (booking.payout_status === "remitted" && trip.organizer_id && refundAmount > 0) {
+    if (booking.payout_status === "remitted" && trip.organizer_id && refundAmount > 0 && remittedRefundDeductionAmount(downpaymentRefund, refundAmount) > 0) {
       const { error: deductionError } = await (admin
         .from("organizer_deductions")
         .insert({
           organizer_id: trip.organizer_id,
           booking_id: booking.id,
-          amount: downpaymentRefund ?? refundAmount,
+          amount: remittedRefundDeductionAmount(downpaymentRefund, refundAmount),
           reason: "Trip cancelled by organizer - refund after payout remitted",
           status: "pending",
         }) as unknown as Promise<{ error: { message: string } | null }>);
