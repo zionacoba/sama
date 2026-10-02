@@ -14,21 +14,31 @@ if (!process.env.ADMIN_EMAIL) console.warn("[config] ADMIN_EMAIL is not set, adm
  * - Never throws: callers are usually already handling a primary failure, so a
  *   failed alert must not propagate. The failure is logged and captured to
  *   Sentry so even an undelivered alert stays observable.
+ * - A refused send counts as a failure. The Resend SDK reports a refusal (bad
+ *   key, unverified domain, invalid address, rate limit) by RETURNING
+ *   `{ error }`, not by throwing, so the result is read as well as caught.
+ * - Sentry gets ids-only extras: never the subject, which can carry a name.
  */
 export async function sendAdminAlert(subject: string, html: string): Promise<void> {
   if (!ADMIN_EMAIL) return;
   try {
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: FROM_ADDRESS,
       to: ADMIN_EMAIL,
       replyTo: REPLY_TO_ADDRESS,
       subject,
       html,
     });
+    if (error) {
+      console.error("[admin-alert] Resend refused admin alert:", error.name, error.message);
+      Sentry.captureException(new Error(`Resend refused admin alert: ${error.name}: ${error.message}`), {
+        extra: { context: "admin-alert-send-failed", resendErrorName: error.name, statusCode: error.statusCode },
+      });
+    }
   } catch (alertErr) {
     console.error("[admin-alert] failed to send admin alert:", alertErr);
     Sentry.captureException(alertErr, {
-      extra: { context: "admin-alert-send-failed", subject },
+      extra: { context: "admin-alert-send-failed" },
     });
   }
 }
