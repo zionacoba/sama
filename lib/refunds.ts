@@ -13,14 +13,18 @@ export type RefundSource = "downpayment" | "balance";
  * retry-failed-refunds cron will pick it up — so a refund obligation is never
  * silently lost.
  *
- * Idempotency: the `refunds` table has a partial unique index on
- * (booking_id, source, payment_id) WHERE status IN ('processing','done'). Because
- * a freshly inserted `owed` row is not covered by that predicate, the index alone
- * cannot block a duplicate at insert time, so we first do an explicit settled-row
- * check (any existing 'processing'/'done' row for this exact booking+source+payment
- * means the refund is already handled) and skip issuing a duplicate. The unique
- * index remains a hard backstop (we catch 23505), and the retry cron additionally
- * verifies against PayMongo before issuing.
+ * Idempotency: the `refunds` table has a partial unique index, refunds_one_settled,
+ * on (booking_id, source, payment_id, cancellation_marker) WHERE status IN
+ * ('processing','done','owed'). The cancellation marker says WHICH cancellation a
+ * refund belongs to: 0 for the refund that ends a booking (reject, full cancel,
+ * trip cancellation, organizer rejection), and for a partial cancel the booking's
+ * slot count BEFORE that cancel, so each partial cancel gets its own refund while
+ * a retry of the same cancel collapses onto the first. We first do an explicit
+ * settled-row check (an existing 'processing'/'done' row for this exact
+ * booking+source+payment+marker means the refund is already handled) and skip
+ * issuing a duplicate. The index is the hard backstop for concurrent first-issue
+ * callers (we catch 23505), and the retry cron matches a row to its own PayMongo
+ * refund by unclaimed id and amount before issuing.
  *
  * The `refunds` table is RLS deny-by-default, so `admin` MUST be the service-role
  * client.
@@ -32,6 +36,7 @@ export async function issueAndRecordRefund({
   paymentId,
   paymentMethod,
   amountPesos,
+  cancellationMarker,
   reason = "others",
   notes,
 }: {
@@ -41,6 +46,9 @@ export async function issueAndRecordRefund({
   paymentId: string | null | undefined;
   paymentMethod: string | null | undefined;
   amountPesos: number;
+  // Which cancellation this refund belongs to: 0 for a refund that ends the
+  // booking; for a partial cancel, the booking's slot count before that cancel.
+  cancellationMarker: number;
   reason?: "duplicate" | "fraudulent" | "others";
   notes?: string;
 }): Promise<RefundResult | null> {
@@ -48,13 +56,15 @@ export async function issueAndRecordRefund({
   if (!amountPesos || amountPesos <= 0) return null;
 
   // Idempotency gate: if a settled or in-flight refund already exists for this
-  // exact (booking, source, payment), the obligation is already handled. Do not
-  // record or issue a duplicate. Report success so caller email copy stays correct.
+  // exact (booking, source, payment, cancellation), the obligation is already
+  // handled. Do not record or issue a duplicate. Report success so caller email
+  // copy stays correct.
   let settledQuery = admin
     .from("refunds")
     .select("id")
     .eq("booking_id", bookingId)
     .eq("source", source)
+    .eq("cancellation_marker", cancellationMarker)
     .in("status", ["processing", "done"]);
   settledQuery = paymentId
     ? settledQuery.eq("payment_id", paymentId)
@@ -72,6 +82,7 @@ export async function issueAndRecordRefund({
       source,
       payment_id: paymentId ?? null,
       amount: amountPesos,
+      cancellation_marker: cancellationMarker,
       status: "owed",
       reason,
     })
@@ -80,7 +91,7 @@ export async function issueAndRecordRefund({
 
   if (insertError) {
     // 23505 = unique violation against the partial index backstop: a settled refund
-    // already exists for this booking+source+payment. Treat as already handled.
+    // already exists for this booking+source+payment+marker. Treat as handled.
     if ((insertError as { code?: string }).code === "23505") {
       return { success: true };
     }

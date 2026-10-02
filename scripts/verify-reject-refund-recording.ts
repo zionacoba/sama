@@ -208,6 +208,7 @@ async function main() {
       paymentId: row.paymongo_payment_id,
       paymentMethod: row.payment_method,
       amountPesos: Number(row.amount_due),
+      cancellationMarker: 0,
       notes: `Organizer rejected booking (${RUN_MARKER})`,
     });
 

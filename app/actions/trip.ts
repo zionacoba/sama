@@ -1299,6 +1299,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
         paymentId: booking.paymongo_payment_id,
         paymentMethod: booking.payment_method,
         amountPesos: downpaymentRefundAmount,
+        cancellationMarker: 0,
         notes: 'Organizer cancelled trip',
       });
       if (initialResult && !initialResult.success) {
@@ -1320,6 +1321,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
         paymentId: booking.balance_paymongo_payment_id,
         paymentMethod: booking.payment_method,
         amountPesos: balanceRefund,
+        cancellationMarker: 0,
         notes: 'Organizer cancelled trip - balance refund',
       });
       if (balanceResult && !balanceResult.success) {

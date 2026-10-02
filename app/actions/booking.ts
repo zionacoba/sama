@@ -806,6 +806,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
       paymentId: booking.paymongo_payment_id,
       paymentMethod: booking.payment_method,
       amountPesos: rejectRefundAmount,
+      cancellationMarker: 0,
       notes: "Organizer rejected booking",
     });
     if (rejectRefundResult && !rejectRefundResult.success && !rejectRefundResult.requiresManualProcessing) {
@@ -2046,6 +2047,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
       paymentId: booking.paymongo_payment_id,
       paymentMethod: booking.payment_method,
       amountPesos: downpaymentRefundAmount,
+      cancellationMarker: originalSlots,
       notes: `Partial cancellation: ${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""} cancelled`,
     });
     if (refundResult && !refundResult.success && !refundResult.requiresManualProcessing) {
@@ -2064,6 +2066,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
       paymentId: booking.balance_paymongo_payment_id,
       paymentMethod: booking.payment_method,
       amountPesos: partialBalanceRefundAmount,
+      cancellationMarker: originalSlots,
       notes: `Partial cancellation: ${slotsToCancel} slot${slotsToCancel !== 1 ? "s" : ""} cancelled - balance refund`,
     });
     if (balanceRefundResult && !balanceRefundResult.success && !balanceRefundResult.requiresManualProcessing) {
@@ -2477,6 +2480,7 @@ export async function cancelBooking(bookingId: number) {
         paymentId: booking.paymongo_payment_id,
         paymentMethod: booking.payment_method,
         amountPesos: downpaymentRefundAmount,
+        cancellationMarker: 0,
         notes: 'Joiner cancelled booking',
       });
       if (refundResult && !refundResult.success && !refundResult.requiresManualProcessing) {
@@ -2495,6 +2499,7 @@ export async function cancelBooking(bookingId: number) {
         paymentId: booking.balance_paymongo_payment_id,
         paymentMethod: booking.payment_method,
         amountPesos: balanceRefundAmount,
+        cancellationMarker: 0,
         notes: 'Joiner cancelled booking - balance refund',
       });
       if (balanceRefundResult && !balanceRefundResult.success && !balanceRefundResult.requiresManualProcessing) {

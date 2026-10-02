@@ -342,6 +342,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
           paymentId: booking.paymongo_payment_id,
           paymentMethod: booking.payment_method,
           amountPesos: amountPaid,
+          cancellationMarker: 0,
           notes: 'Organizer application rejected',
         });
         if (initialResult && !initialResult.success) {
@@ -364,6 +365,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
             paymentId: booking.balance_paymongo_payment_id,
             paymentMethod: booking.payment_method,
             amountPesos: balanceAmount,
+            cancellationMarker: 0,
             notes: 'Organizer application rejected - balance refund',
           });
           if (balanceResult && !balanceResult.success) {
