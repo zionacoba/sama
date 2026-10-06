@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendEmailChecked } from "@/lib/send-email";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { type RefundResult } from "@/lib/paymongo-refund";
@@ -77,7 +78,7 @@ export async function approveOrganizer(id: string, ratePercent: number): Promise
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
 
   try {
-    await resend.emails.send({
+    const sent = await sendEmailChecked("approveOrganizer-organizer-email", { organizerId: id }, {
       from: FROM_ADDRESS,
       to: organizer.email,
       replyTo: REPLY_TO_ADDRESS,
@@ -98,6 +99,7 @@ export async function approveOrganizer(id: string, ratePercent: number): Promise
         <p>Sama</p>
       `,
     });
+    if (!sent) throw new Error("Resend did not accept the email");
   } catch (err) {
     console.error("[email] failed to send organizer approval email", err);
     Sentry.captureException(err, {
@@ -438,7 +440,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
                 ? `<p>Your downpayment has been refunded. Your balance payment could not be refunded automatically. Sama will process it manually within 3 to 5 business days.</p>`
                 : `<p>Sama will process your refund manually within 3 to 5 business days. If you haven't received it after that time, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${booking.id}</strong></p>`));
       try {
-        await resend.emails.send({
+        const sent = await sendEmailChecked("rejectOrganizer-participant-email", { bookingId: booking.id, tripId: booking.trip_id, organizerId: id }, {
           from: FROM_ADDRESS,
           to: booking.email,
           replyTo: REPLY_TO_ADDRESS,
@@ -452,6 +454,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
             <p>Sama</p>
           `,
         });
+        if (!sent) throw new Error("Resend did not accept the email");
       } catch (err) {
         console.error("[email] failed to send trip cancellation notice to participant", err);
         Sentry.captureException(err, {
@@ -486,7 +489,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
       : "";
 
   try {
-    await resend.emails.send({
+    const sent = await sendEmailChecked("rejectOrganizer-organizer-email", { organizerId: id }, {
       from: FROM_ADDRESS,
       to: organizer.email,
       replyTo: REPLY_TO_ADDRESS,
@@ -500,6 +503,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
         <p>Sama</p>
       `,
     });
+    if (!sent) throw new Error("Resend did not accept the email");
   } catch (err) {
     console.error("[email] failed to send organizer rejection email", err);
     Sentry.captureException(err, {
@@ -1456,7 +1460,7 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
     const name = organizer.display_name ?? organizer.full_name;
     const bookingCount = payout.booking_ids?.length ?? 0;
     try {
-      await resend.emails.send({
+      const sent = await sendEmailChecked("markPayoutRemitted-remittance-email", { payoutId }, {
         from: FROM_ADDRESS,
         to: organizer.email,
         replyTo: REPLY_TO_ADDRESS,
@@ -1471,6 +1475,7 @@ export async function markPayoutRemittedAction(formData: FormData): Promise<void
           <p>Sama</p>
         `,
       });
+      if (!sent) throw new Error("Resend did not accept the email");
     } catch (err) {
       console.error("[email] failed to send payout remittance email", err);
       Sentry.captureException(err, {
