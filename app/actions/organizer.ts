@@ -6,7 +6,8 @@ import { headers } from "next/headers";
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendEmailChecked } from "@/lib/send-email";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { safeExternalUrl } from "@/lib/safe-url";
@@ -156,7 +157,7 @@ export async function applyToBeOrganizer(
     }
 
     try {
-      await resend.emails.send({
+      const sent = await sendEmailChecked("apply-to-be-organizer-reapply-email", { userId: user.id, organizerId: existingOrganizer.id }, {
         from: FROM_ADDRESS,
         to: user.email!,
         replyTo: REPLY_TO_ADDRESS,
@@ -168,6 +169,7 @@ export async function applyToBeOrganizer(
           <p>Sama</p>
         `,
       });
+      if (!sent) throw new Error("Resend did not accept the email");
     } catch (err) {
       console.error("[email] failed to send organizer reapplication confirmation", err);
       Sentry.captureException(err, {
@@ -239,7 +241,7 @@ export async function applyToBeOrganizer(
   }
 
   try {
-    await resend.emails.send({
+    const sent = await sendEmailChecked("apply-to-be-organizer-confirmation-email", { userId: user.id }, {
       from: FROM_ADDRESS,
       to: user.email!,
       replyTo: REPLY_TO_ADDRESS,
@@ -251,6 +253,7 @@ export async function applyToBeOrganizer(
         <p>Sama</p>
       `,
     });
+    if (!sent) throw new Error("Resend did not accept the email");
   } catch (err) {
     console.error("[email] failed to send organizer application confirmation", err);
     Sentry.captureException(err, {
