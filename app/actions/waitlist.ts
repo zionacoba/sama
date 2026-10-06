@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendEmailChecked } from "@/lib/send-email";
 import { escapeHtml } from "@/lib/escape-html";
 import { ACTIVE_BOOKING_STATUSES } from "@/lib/booking-status";
 import { organizerOwns } from "@/lib/authz";
@@ -116,7 +117,7 @@ export async function joinWaitlist(
           timeZone: "Asia/Manila",
         }).format(new Date(trip.date_start));
 
-        await resend.emails.send({
+        const sent = await sendEmailChecked("join-waitlist-email", { tripId: input.tripId, userId: user.id, organizerId: trip.organizer_id }, {
           from: FROM_ADDRESS,
           to: organizer.email,
           replyTo: REPLY_TO_ADDRESS,
@@ -127,6 +128,7 @@ export async function joinWaitlist(
             <p>Sama</p>
           `,
         });
+        if (!sent) throw new Error("Resend did not accept the email");
       }
     }
   } catch (err) {
@@ -190,7 +192,7 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
   }).format(new Date(trip.date_start));
 
   try {
-    await resend.emails.send({
+    const sent = await sendEmailChecked("notify-waitlist-entry-email", { entryId: id, organizerId: organizer.id }, {
       from: FROM_ADDRESS,
       to: entry.email,
       replyTo: REPLY_TO_ADDRESS,
@@ -201,6 +203,7 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
         <p>Sama</p>
       `,
     });
+    if (!sent) throw new Error("Resend did not accept the email");
   } catch (err) {
     console.error("[email] failed to notify waitlist entry of open slot", err);
     Sentry.captureException(err, {
