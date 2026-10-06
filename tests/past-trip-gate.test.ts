@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolvePastTripGate } from "@/lib/past-trip-gate";
+import { isTripInPast, resolvePastTripGate } from "@/lib/past-trip-gate";
 
 const TODAY = "2026-07-17";
 
@@ -46,5 +46,29 @@ describe("resolvePastTripGate", () => {
       expect(result.trip.slug).toBe("mt-pulag");
       expect(result.trip.cancellation_policy).toBe("flexible");
     }
+  });
+});
+
+describe("isTripInPast", () => {
+  it("is true for a start date before today", () => {
+    expect(isTripInPast("2026-07-16", TODAY)).toBe(true);
+  });
+
+  it("is false for a trip starting today: strictly before, never on", () => {
+    expect(isTripInPast(TODAY, TODAY)).toBe(false);
+  });
+
+  it("is false for a start date after today", () => {
+    expect(isTripInPast("2026-07-18", TODAY)).toBe(false);
+  });
+
+  it("keeps past trips out of a rejected organizer's cascade, the way rejectOrganizer filters", () => {
+    const active = [
+      { id: "ran-last-month", date_start: "2026-06-20" },
+      { id: "starts-today", date_start: TODAY },
+      { id: "december", date_start: "2026-12-05" },
+    ];
+    const tripIds = active.filter((t) => !isTripInPast(t.date_start, TODAY)).map((t) => t.id);
+    expect(tripIds).toEqual(["starts-today", "december"]);
   });
 });

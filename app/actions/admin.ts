@@ -13,6 +13,7 @@ import { issueAndRecordRefund } from "@/lib/refunds";
 import { amountSamaHolds, isPayoutEligible, payoutTimingGate, todayManilaDate, computeAppliedNet } from "@/lib/booking-finance";
 import { reverseBookingCredit } from "@/lib/organizer-credits";
 import { resolveCancellationCascade } from "@/lib/cancellation-cascade";
+import { isTripInPast } from "@/lib/past-trip-gate";
 import { ATTENDED_STATUSES, TRIP_CANCELLATION_REFUND_STATUSES } from "@/lib/booking-status";
 import { sendInChunks } from "@/lib/send-in-chunks";
 import { formatPeso } from "@/lib/format";
@@ -135,7 +136,7 @@ export async function rejectOrganizer(id: string): Promise<void> {
   // redirect without marking the organizer rejected, so the unpublish/cancel cascade below is never silently skipped on an already-rejected row.
   const { data: activeTrips, error: activeTripsError } = await admin
     .from("trips")
-    .select("id, title, slug")
+    .select("id, title, slug, date_start")
     .eq("organizer_id", id)
     .eq("status", "active");
 
@@ -167,7 +168,15 @@ export async function rejectOrganizer(id: string): Promise<void> {
     redirect("/admin?tab=organizers&orgActionError=reject_failed");
   }
 
-  const tripIds = activeTrips.map((t) => t.id);
+  // CW-v123: cascade only trips that have not started. A trip whose start date
+  // has passed already ran (or is running) and its bookings are left as they
+  // are, so a balance already remitted is never refunded again. Same comparison
+  // as the joiner cancellation gate: strictly before today in Manila is past;
+  // a trip starting today is not, and is cancelled and refunded like any other.
+  const todayPH = todayManilaDate();
+  const tripIds = activeTrips
+    .filter((t: { date_start: string }) => !isTripInPast(t.date_start, todayPH))
+    .map((t: { id: string }) => t.id);
 
   if (tripIds.length > 0) {
     const { error: unpublishError } = await admin
