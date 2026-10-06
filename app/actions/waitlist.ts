@@ -191,8 +191,9 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
     month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Manila",
   }).format(new Date(trip.date_start));
 
+  let sent = false;
   try {
-    const sent = await sendEmailChecked("notify-waitlist-entry-email", { entryId: id, organizerId: organizer.id }, {
+    sent = await sendEmailChecked("notify-waitlist-entry-email", { entryId: id, organizerId: organizer.id }, {
       from: FROM_ADDRESS,
       to: entry.email,
       replyTo: REPLY_TO_ADDRESS,
@@ -210,6 +211,10 @@ export async function notifyWaitlistEntry(formData: FormData): Promise<void> {
       extra: { context: "notify-waitlist-entry-email-failed", entryId: id, tripSlug: trip.slug },
     });
   }
+
+  // Only a send Resend accepted is stamped: a refused or failed send leaves the
+  // entry unstamped so the organizer can press Notify again (ruled v130).
+  if (!sent) return;
 
   // Stamp notified_at so this manual notify counts toward the 12-hour debounce
   // used by the automatic paths and isn't immediately re-sent by them.
