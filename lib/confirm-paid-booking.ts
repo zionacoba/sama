@@ -433,7 +433,7 @@ export async function confirmPaidBooking(
   } catch (err) {
     console.error("[confirm-paid-booking] booking confirmation email failed:", err);
     Sentry.captureException(err, {
-      extra: { context: "confirm-paid-confirmation-email-failed", bookingId: booking.id, email: booking.email },
+      extra: { context: "confirm-paid-confirmation-email-failed", bookingId: booking.id },
     });
     await sendAdminAlert(
       "Action needed: booking confirmation email failed to send",
@@ -496,7 +496,7 @@ export async function confirmPaidBooking(
     } catch (err) {
       console.error("[confirm-paid-booking] organizer notification email failed:", err);
       Sentry.captureException(err, {
-        extra: { context: "confirm-paid-organizer-notification-failed", bookingId: booking.id, email: booking.email },
+        extra: { context: "confirm-paid-organizer-notification-failed", bookingId: booking.id },
       });
       await sendAdminAlert(
         "Action needed: organizer new-booking email failed to send",
@@ -558,7 +558,7 @@ export async function confirmPaidBooking(
   } catch (err) {
     console.error("[confirm-paid-booking] failed to send participant join links to booker", err);
     Sentry.captureException(err, {
-      extra: { context: "confirm-paid-join-links-email-failed", bookingId: booking.id, email: booking.email },
+      extra: { context: "confirm-paid-join-links-email-failed", bookingId: booking.id },
     });
     await sendAdminAlert(
       "Action needed: participant join links failed to send",
@@ -919,7 +919,7 @@ export async function confirmPaidBalance(
   } catch (err) {
     console.error("[confirm-paid-balance] failed to send balance payment confirmation to participant", err);
     Sentry.captureException(err, {
-      extra: { context: "confirm-paid-balance-participant-failed", bookingId: booking.id, email: booking.email },
+      extra: { context: "confirm-paid-balance-participant-failed", bookingId: booking.id },
     });
     await sendAdminAlert(
       "Action needed: balance payment confirmation email failed to send",
@@ -959,7 +959,7 @@ export async function confirmPaidBalance(
     } catch (err) {
       console.error("[confirm-paid-balance] failed to send balance payment notification to organizer", err);
       Sentry.captureException(err, {
-        extra: { context: "confirm-paid-balance-organizer-failed", bookingId: booking.id, email: booking.email },
+        extra: { context: "confirm-paid-balance-organizer-failed", bookingId: booking.id },
       });
       await sendAdminAlert(
         "Action needed: balance payment organizer email failed to send",
