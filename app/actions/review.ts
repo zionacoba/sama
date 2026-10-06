@@ -3,7 +3,8 @@
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendEmailChecked } from "@/lib/send-email";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { revalidatePath } from "next/cache";
@@ -163,7 +164,7 @@ export async function submitReview(
         const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
         const excerpt = body.length > 200 ? body.slice(0, 197) + "…" : body;
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sama.com.ph";
-        await resend.emails.send({
+        const sent = await sendEmailChecked("submit-review-email", { tripId, userId: user.id, organizerId: tripForDate.organizer_id }, {
           from: FROM_ADDRESS,
           to: organizer.email,
           replyTo: REPLY_TO_ADDRESS,
@@ -176,6 +177,7 @@ export async function submitReview(
             <p>Sama</p>
           `,
         });
+        if (!sent) throw new Error("Resend did not accept the email");
       }
     }
   } catch (emailErr) {
