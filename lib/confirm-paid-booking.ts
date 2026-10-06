@@ -1,8 +1,9 @@
 import { revalidatePath } from "next/cache";
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { sendAdminAlert } from "@/lib/admin-alert";
+import { sendEmailChecked } from "@/lib/send-email";
 import { escapeHtml } from "@/lib/escape-html";
 import { formatPeso, formatBookingRef } from "@/lib/format";
 import { filterPaidPayments, deriveCheckoutPaymentStatus } from "@/lib/paymongo-checkout";
@@ -385,7 +386,7 @@ export async function confirmPaidBooking(
 
   // Participant confirmation email — failure triggers admin alert so no booking is silently missed.
   try {
-    await resend.emails.send({
+    const sent = await sendEmailChecked("confirm-paid-confirmation-email", { bookingId: booking.id }, {
       from: FROM_ADDRESS,
       to: booking.email,
       replyTo: REPLY_TO_ADDRESS,
@@ -430,6 +431,7 @@ export async function confirmPaidBooking(
           <p>Sama</p>
         `,
     });
+    if (!sent) throw new Error("Resend did not accept the email");
   } catch (err) {
     console.error("[confirm-paid-booking] booking confirmation email failed:", err);
     Sentry.captureException(err, {
@@ -462,7 +464,7 @@ export async function confirmPaidBooking(
           ? `<li><strong>Payment:</strong> ${fmt(booking.amount_due)} downpayment (balance: ${fmt(booking.total_amount - booking.amount_due)})</li>`
           : `<li><strong>Payment:</strong> ${fmt(booking.total_amount)} (full payment)</li>`;
 
-        await resend.emails.send({
+        const sent = await sendEmailChecked("confirm-paid-organizer-notification", { bookingId: booking.id, organizerId: trip.organizer_id }, {
           from: FROM_ADDRESS,
           to: organizer.email,
           replyTo: REPLY_TO_ADDRESS,
@@ -492,6 +494,7 @@ export async function confirmPaidBooking(
             <p>Sama</p>
           `,
         });
+        if (!sent) throw new Error("Resend did not accept the email");
       }
     } catch (err) {
       console.error("[confirm-paid-booking] organizer notification email failed:", err);
@@ -540,7 +543,7 @@ export async function confirmPaidBooking(
             `<li>Participant ${p.slot_number + 1}: <a href="${SITE_URL}/join/${p.token}">${SITE_URL}/join/${p.token}</a></li>`,
         )
         .join("");
-      await resend.emails.send({
+      const sent = await sendEmailChecked("confirm-paid-join-links-email", { bookingId: booking.id }, {
         from: FROM_ADDRESS,
         to: booking.email,
         replyTo: REPLY_TO_ADDRESS,
@@ -554,6 +557,7 @@ export async function confirmPaidBooking(
           <p>Sama</p>
         `,
       });
+      if (!sent) throw new Error("Resend did not accept the email");
     }
   } catch (err) {
     console.error("[confirm-paid-booking] failed to send participant join links to booker", err);
@@ -904,7 +908,7 @@ export async function confirmPaidBalance(
   }).format(new Date(trip.date_start));
 
   try {
-    await resend.emails.send({
+    const sent = await sendEmailChecked("confirm-paid-balance-participant", { bookingId: booking.id }, {
       from: FROM_ADDRESS,
       to: booking.email,
       replyTo: REPLY_TO_ADDRESS,
@@ -916,6 +920,7 @@ export async function confirmPaidBalance(
         <p>Sama</p>
       `,
     });
+    if (!sent) throw new Error("Resend did not accept the email");
   } catch (err) {
     console.error("[confirm-paid-balance] failed to send balance payment confirmation to participant", err);
     Sentry.captureException(err, {
@@ -943,7 +948,7 @@ export async function confirmPaidBalance(
         .maybeSingle();
 
       if (organizer?.email) {
-        await resend.emails.send({
+        const sent = await sendEmailChecked("confirm-paid-balance-organizer", { bookingId: booking.id, organizerId: trip.organizer_id }, {
           from: FROM_ADDRESS,
           to: organizer.email,
           replyTo: REPLY_TO_ADDRESS,
@@ -955,6 +960,7 @@ export async function confirmPaidBalance(
             <p>Sama</p>
           `,
         });
+        if (!sent) throw new Error("Resend did not accept the email");
       }
     } catch (err) {
       console.error("[confirm-paid-balance] failed to send balance payment notification to organizer", err);
