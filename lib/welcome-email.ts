@@ -1,5 +1,6 @@
 import { FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
 import { sendEmailChecked } from "@/lib/send-email";
+import { escapeHtml } from "@/lib/escape-html";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sama.com.ph";
 
@@ -16,7 +17,7 @@ export async function sendWelcomeEmail(email: string, firstName: string): Promis
     replyTo: REPLY_TO_ADDRESS,
     subject: "Welcome to Sama!",
     html: `
-      <p>Hi ${firstName},</p>
+      <p>Hi ${escapeHtml(firstName)},</p>
       <p>You're now part of Sama, the Philippine outdoor adventure marketplace.</p>
       <p>Browse upcoming trips at <a href="${SITE_URL}/trips">sama.com.ph/trips</a> and find your next adventure.</p>
       <p style="margin-top:24px;">
