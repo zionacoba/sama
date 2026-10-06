@@ -61,14 +61,16 @@ export async function Footer({ hideBecomeOrganizer = false }: { hideBecomeOrgani
       </Link>
       {" · "}
       <a
-        href="https://verify.bir.gov.ph/correspondence/90a065ef539143b3b004976f55facf24"
+        href="https://verify.bir.gov.ph/correspondence/57f988f43a2c491e81f9a63eaf29140a"
         target="_blank"
         rel="noopener noreferrer"
       >
         <img
-          src="/bir-seal-footer.jpg"
-          alt="Verify our BIR registration"
-          className="h-5 w-auto inline-block"
+          src="/bir-registration-badge-footer.png"
+          alt="BIR Registration Seal Badge: verify our registration with the BIR"
+          width={96}
+          height={32}
+          className="h-8 w-auto inline-block align-middle"
         />
       </a>
     </footer>
