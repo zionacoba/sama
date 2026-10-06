@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendEmailChecked } from "@/lib/send-email";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { reverseBookingCredit, remittedRefundDeductionAmount } from "@/lib/organizer-credits";
@@ -797,7 +798,7 @@ export async function updateTrip(
 
         await sendInChunks(affectedBookings, async (booking) => {
           try {
-            await resend.emails.send({
+            const sent = await sendEmailChecked("update-trip-booking-change-email", { bookingId: booking.id, tripId }, {
               from: FROM_ADDRESS,
               to: booking.email,
               replyTo: REPLY_TO_ADDRESS,
@@ -811,6 +812,7 @@ export async function updateTrip(
                 <p>Sama</p>
               `,
             });
+            if (!sent) throw new Error("Resend did not accept the email");
           } catch (err) {
             console.error("[email] failed to notify booking change", booking.id, err);
             Sentry.captureException(err, {
@@ -863,7 +865,7 @@ export async function updateTrip(
       const balance = Number(booking.total_amount) - Number(booking.amount_due);
       if (balance <= 0) continue;
       try {
-        await resend.emails.send({
+        const sent = await sendEmailChecked("update-trip-balance-due-email", { bookingId: booking.id, tripId }, {
           from: FROM_ADDRESS,
           to: booking.email,
           replyTo: REPLY_TO_ADDRESS,
@@ -878,6 +880,7 @@ export async function updateTrip(
             <p>Sama</p>
           `,
         });
+        if (!sent) throw new Error("Resend did not accept the email");
       } catch (err) {
         console.error("[email] failed to notify balance due after payment type change", booking.id, err);
         Sentry.captureException(err, {
@@ -1356,7 +1359,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
     // quoted amount. See cancellationRefundLine for the never-paid rationale.
     const refundLine = cancellationRefundLine(booking, bookingRefundResults, fmtCurrency);
     try {
-      await resend.emails.send({
+      const sent = await sendEmailChecked("cancel-trip-booking-email", { bookingId: booking.id, tripId: trip.id }, {
         from: FROM_ADDRESS,
         to: booking.email,
         replyTo: REPLY_TO_ADDRESS,
@@ -1369,6 +1372,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
           <p>Sama</p>
         `,
       });
+      if (!sent) throw new Error("Resend did not accept the email");
     } catch (err) {
       console.error("[email] failed to notify booking cancellation", booking.id, err);
       Sentry.captureException(err, {
@@ -1379,7 +1383,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
 
   await sendInChunks(waitlistEntries ?? [], async (entry) => {
     try {
-      await resend.emails.send({
+      const sent = await sendEmailChecked("cancel-trip-waitlist-email", { waitlistEntryId: entry.id, tripId: trip.id }, {
         from: FROM_ADDRESS,
         to: entry.email,
         replyTo: REPLY_TO_ADDRESS,
@@ -1391,6 +1395,7 @@ export async function cancelTrip(tripSlug: string): Promise<{ error: string } | 
           <p>Sama</p>
         `,
       });
+      if (!sent) throw new Error("Resend did not accept the email");
     } catch (err) {
       console.error("[email] failed to notify waitlist cancellation", entry.id, err);
       Sentry.captureException(err, {
