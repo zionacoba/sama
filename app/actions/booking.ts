@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendEmailChecked } from "@/lib/send-email";
 import { sendAdminAlert } from "@/lib/admin-alert";
 import { escapeHtml } from "@/lib/escape-html";
 import { calculateRefundAmount, resolveCancellationPolicy } from "@/lib/cancellation-policies";
@@ -430,7 +431,7 @@ export async function createBooking(input: CreateBookingInput) {
 
     if (autoApprove) {
       try {
-        await resend.emails.send({
+        const sent = await sendEmailChecked("createBooking-free-confirmation-email", { bookingId: newBooking.id, tripId: trip.id }, {
           from: FROM_ADDRESS,
           to: input.email,
           replyTo: REPLY_TO_ADDRESS,
@@ -449,6 +450,7 @@ export async function createBooking(input: CreateBookingInput) {
             <p>Sama</p>
           `,
         });
+        if (!sent) throw new Error("Resend did not accept the email");
       } catch (err) {
         console.error("[email] failed to send free booking confirmation", err);
         Sentry.captureException(err, {
@@ -467,7 +469,7 @@ export async function createBooking(input: CreateBookingInput) {
               `<li>Participant ${p.slotIndex + 1}: <a href="${SITE_URL}/join/${p.token}">${SITE_URL}/join/${p.token}</a></li>`,
           )
           .join("");
-        await resend.emails.send({
+        const sent = await sendEmailChecked("createBooking-join-links-email", { bookingId: newBooking.id, tripId: trip.id }, {
           from: FROM_ADDRESS,
           to: input.email,
           replyTo: REPLY_TO_ADDRESS,
@@ -481,6 +483,7 @@ export async function createBooking(input: CreateBookingInput) {
             <p>Sama</p>
           `,
         });
+        if (!sent) throw new Error("Resend did not accept the email");
       } catch (err) {
         console.error("[email] failed to send participant join links to booker", err);
         Sentry.captureException(err, {
@@ -516,7 +519,7 @@ export async function createBooking(input: CreateBookingInput) {
       }
 
       if (orgRow?.email) {
-        await resend.emails.send({
+        const sent = await sendEmailChecked("createBooking-organizer-notify-email", { bookingId: newBooking.id, tripId: trip.id, organizerId: trip.organizer_id }, {
           from: FROM_ADDRESS,
           to: orgRow.email,
           replyTo: REPLY_TO_ADDRESS,
@@ -537,6 +540,7 @@ export async function createBooking(input: CreateBookingInput) {
             <p>Sama</p>
           `,
         });
+        if (!sent) throw new Error("Resend did not accept the email");
       }
     } catch (err) {
       console.error("[email] failed to send free booking organizer notification", err);
@@ -842,7 +846,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
     }).format(new Date(trip.date_start));
 
     if (status === "confirmed") {
-      await resend.emails.send({
+      const sent = await sendEmailChecked("booking-status-confirmed-email", { bookingId }, {
         from: FROM_ADDRESS,
         to: booking.email,
         replyTo: REPLY_TO_ADDRESS,
@@ -859,6 +863,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
           <p>Sama</p>
         `,
       });
+      if (!sent) throw new Error("Resend did not accept the email");
     } else if (status === "rejected") {
       const bookingRef = formatBookingRef(booking.id);
       const fmtPHP = (n: number) => formatPeso(n);
@@ -869,7 +874,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
           ? `<p>Your full refund of <strong>${fmtPHP(rejectRefundAmount)}</strong> has been issued to your original payment method and typically reflects within 24 hours. You do not need to do anything.</p>`
           : `<p>We are processing your full refund of <strong>${fmtPHP(rejectRefundAmount)}</strong> to your original payment method and will follow up once it is complete. If you don't receive it, please email <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a> with your booking reference: <strong>${bookingRef}</strong></p>`
         : `<p>If you have questions, please contact <a href="mailto:hello@sama.com.ph">hello@sama.com.ph</a>.</p>`;
-      await resend.emails.send({
+      const sent = await sendEmailChecked("booking-status-rejected-email", { bookingId }, {
         from: FROM_ADDRESS,
         to: booking.email,
         replyTo: REPLY_TO_ADDRESS,
@@ -881,6 +886,7 @@ export async function updateBookingStatus(bookingId: number, status: "confirmed"
           <p>Sama</p>
         `,
       });
+      if (!sent) throw new Error("Resend did not accept the email");
     }
   } catch (err) {
     console.error("[email] failed to send booking status update", err);
@@ -980,7 +986,7 @@ export async function markBalanceCollected(bookingId: number) {
     const balance = booking.total_amount != null && booking.amount_due != null
       ? booking.total_amount - booking.amount_due
       : null;
-    await resend.emails.send({
+    const sent = await sendEmailChecked("markBalanceCollected-confirmation-email", { bookingId }, {
       from: FROM_ADDRESS,
       to: booking.email,
       replyTo: REPLY_TO_ADDRESS,
@@ -992,6 +998,7 @@ export async function markBalanceCollected(bookingId: number) {
         <p>Sama</p>
       `,
     });
+    if (!sent) throw new Error("Resend did not accept the email");
   } catch (err) {
     console.error("[email] failed to send balance collected confirmation", err);
     Sentry.captureException(err, {
@@ -1542,7 +1549,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
   const replacementLink = replacementToken ? `${SITE_URL}/join/${replacementToken}` : null;
 
   try {
-    await resend.emails.send({
+    const sent = await sendEmailChecked("markAsTransferred-participant-email", { bookingId }, {
       from: FROM_ADDRESS,
       to: booking.email,
       replyTo: REPLY_TO_ADDRESS,
@@ -1559,6 +1566,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
         <p>Sama</p>
       `,
     });
+    if (!sent) throw new Error("Resend did not accept the email");
   } catch (err) {
     console.error("[email] failed to send transfer notice to participant", err);
     Sentry.captureException(err, {
@@ -1570,7 +1578,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
   // link, send it to them directly too so they do not depend on the forward.
   if (replacementLink && transferredToEmail.trim()) {
     try {
-      await resend.emails.send({
+      const sent = await sendEmailChecked("markAsTransferred-replacement-email", { bookingId }, {
         from: FROM_ADDRESS,
         to: transferredToEmail.trim(),
         replyTo: REPLY_TO_ADDRESS,
@@ -1584,6 +1592,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
           <p>Sama</p>
         `,
       });
+      if (!sent) throw new Error("Resend did not accept the email");
     } catch (err) {
       console.error("[email] failed to send transfer link to replacement", err);
       Sentry.captureException(err, {
@@ -1597,7 +1606,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
       const toNote = transferredToEmail.trim()
         ? ` to <strong>${escapeHtml(transferredToEmail.trim())}</strong>`
         : "";
-      await resend.emails.send({
+      const sent = await sendEmailChecked("markAsTransferred-organizer-email", { bookingId, organizerId: organizer.id }, {
         from: FROM_ADDRESS,
         to: org.email,
         replyTo: REPLY_TO_ADDRESS,
@@ -1610,6 +1619,7 @@ export async function markAsTransferred(bookingId: number, transferredToEmail: s
           <p>Sama</p>
         `,
       });
+      if (!sent) throw new Error("Resend did not accept the email");
     }
   } catch (err) {
     console.error("[email] failed to send transfer confirmation to organizer", err);
@@ -2115,7 +2125,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
       }
       if (organizer?.email) {
         try {
-          await resend.emails.send({
+          const sent = await sendEmailChecked("partialCancel-organizer-email", { bookingId, organizerId: tripDateCheck.organizer_id }, {
             from: FROM_ADDRESS,
             to: organizer.email,
             replyTo: REPLY_TO_ADDRESS,
@@ -2127,6 +2137,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
               <p>Sama</p>
             `,
           });
+          if (!sent) throw new Error("Resend did not accept the email");
         } catch (err) {
           console.error("[email] failed to notify organizer of partial cancellation", err);
           Sentry.captureException(err, {
@@ -2151,7 +2162,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
           : `<p>Based on our cancellation policy, this cancellation is not eligible for a refund.</p>`;
 
     try {
-      await resend.emails.send({
+      const sent = await sendEmailChecked("partialCancel-participant-email", { bookingId }, {
         from: FROM_ADDRESS,
         to: booking.email,
         replyTo: REPLY_TO_ADDRESS,
@@ -2164,6 +2175,7 @@ export async function partialCancelBooking(bookingId: number, slotsToCancel: num
           <p>Sama</p>
         `,
       });
+      if (!sent) throw new Error("Resend did not accept the email");
     } catch (err) {
       console.error("[email] failed to send partial cancellation confirmation", err);
       Sentry.captureException(err, {
@@ -2595,7 +2607,7 @@ export async function cancelBooking(bookingId: number) {
           });
         }
         if (organizer?.email) {
-          await resend.emails.send({
+          const sent = await sendEmailChecked("cancelBooking-organizer-email", { bookingId, organizerId: trip.organizer_id }, {
             from: FROM_ADDRESS,
             to: organizer.email,
             replyTo: REPLY_TO_ADDRESS,
@@ -2606,6 +2618,7 @@ export async function cancelBooking(bookingId: number) {
               <p>Sama</p>
             `,
           });
+          if (!sent) throw new Error("Resend did not accept the email");
         }
       }
     } catch (err) {
@@ -2616,7 +2629,7 @@ export async function cancelBooking(bookingId: number) {
     }
 
     try {
-      await resend.emails.send({
+      const sent = await sendEmailChecked("cancelBooking-cancellation-email", { bookingId }, {
         from: FROM_ADDRESS,
         to: booking.email,
         replyTo: REPLY_TO_ADDRESS,
@@ -2628,6 +2641,7 @@ export async function cancelBooking(bookingId: number) {
           <p>Sama</p>
         `,
       });
+      if (!sent) throw new Error("Resend did not accept the email");
     } catch (err) {
       console.error("[email] failed to send cancellation email", err);
       Sentry.captureException(err, {
