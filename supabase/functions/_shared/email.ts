@@ -38,7 +38,14 @@ export function escapeHtml(str: string | null | undefined): string {
  * edge function: fixed reply-to of hello@sama.com.ph, from address from
  * RESEND_FROM_EMAIL (falling back to "Sama <hello@sama.com.ph>"), and a throw
  * on any non-2xx response so callers can catch and decide what to do.
+ *
+ * v132 (CS-v121 (c)): the call gives up after SEND_TIMEOUT_MS so a stalled Resend
+ * cannot hang a cron run, and the thrown message carries only the status and
+ * Resend's short error code, never the raw reply (which can hold a recipient
+ * address). Every caller already catches and logs the error per send.
  */
+export const SEND_TIMEOUT_MS = 10_000;
+
 export async function sendEmail(to: string, subject: string, html: string) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -47,9 +54,23 @@ export async function sendEmail(to: string, subject: string, html: string) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ from: FROM_ADDRESS, to, subject, html, reply_to: "hello@sama.com.ph" }),
+    signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
   });
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Resend error ${res.status}: ${text}`);
+    throw new Error(`Resend error ${res.status}${await resendErrorCode(res)}`);
+  }
+}
+
+/**
+ * Reads Resend's error body and returns " (code)" when it carries a plain
+ * snake_case code such as rate_limit_exceeded; otherwise "". Never the message.
+ */
+async function resendErrorCode(res: Response): Promise<string> {
+  try {
+    const body = await res.json();
+    const name = typeof body?.name === "string" ? body.name : "";
+    return /^[a-z_]{1,64}$/.test(name) ? ` (${name})` : "";
+  } catch {
+    return "";
   }
 }
