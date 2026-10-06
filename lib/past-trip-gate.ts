@@ -1,6 +1,15 @@
 export type PastTripGateFailure = "fetch-error" | "missing-data" | "trip-in-past";
 
 /**
+ * The one past-trip comparison, shared by every caller. Strictly `<`: a trip
+ * whose date_start equals todayPH is happening today, not past. Both arguments
+ * are Manila "YYYY-MM-DD" strings, so string comparison is date comparison.
+ */
+export function isTripInPast(dateStart: string, todayPH: string): boolean {
+  return dateStart < todayPH;
+}
+
+/**
  * Resolve the past-trip gate on the cancellation paths from the trip fetch
  * result. The gate must fail closed: the previous shape discarded the fetch
  * error, so a failed query left the row null and the guard's `trip &&`
@@ -21,6 +30,6 @@ export function resolvePastTripGate<T extends { date_start: string }>(
 ): { trip: T } | { failure: PastTripGateFailure } {
   if (fetchError) return { failure: "fetch-error" };
   if (trip == null) return { failure: "missing-data" };
-  if (trip.date_start < todayPH) return { failure: "trip-in-past" };
+  if (isTripInPast(trip.date_start, todayPH)) return { failure: "trip-in-past" };
   return { trip };
 }
