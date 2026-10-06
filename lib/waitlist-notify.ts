@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resend, FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { FROM_ADDRESS, REPLY_TO_ADDRESS } from "@/lib/resend";
+import { sendEmailChecked } from "@/lib/send-email";
 import { escapeHtml } from "@/lib/escape-html";
 import { sendInChunks } from "@/lib/send-in-chunks";
 
@@ -59,7 +60,7 @@ export async function notifyWaitlistSlotOpened(
 
   const results = await sendInChunks(waitlistEntries, async (entry) => {
     try {
-      await resend.emails.send({
+      const sent = await sendEmailChecked("notify-waitlist-slot-opened-email", { tripId, waitlistId: entry.id }, {
         from: FROM_ADDRESS,
         to: entry.email,
         replyTo: REPLY_TO_ADDRESS,
@@ -70,6 +71,7 @@ export async function notifyWaitlistSlotOpened(
           <p>Sama</p>
         `,
       });
+      if (!sent) throw new Error("Resend did not accept the email");
     } catch (err) {
       console.error("[email] failed to notify waitlist slot available", entry.id, err);
       throw err;
