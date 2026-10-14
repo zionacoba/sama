@@ -33,6 +33,7 @@ type BookingModalProps = {
   compact?: boolean;
   initialName?: string;
   initialEmail?: string;
+  hideApprovalNote?: boolean;
 };
 
 
@@ -57,6 +58,7 @@ export function BookingModal({
   compact = false,
   initialName = "",
   initialEmail = "",
+  hideApprovalNote = false,
 }: BookingModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -400,7 +402,7 @@ export function BookingModal({
           >
             {requiresApproval ? "Apply to Join" : "Book This Trip"}
           </button>
-          {requiresApproval && (
+          {requiresApproval && !hideApprovalNote && (
             <p className="mt-2 text-xs text-stone-500">
               The organizer reviews each booking before confirming it. You pay now and usually hear back within 24 to 48 hours. If they decline, you&apos;re refunded in full.
             </p>

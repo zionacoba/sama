@@ -820,7 +820,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
 
         {/* Mobile fixed bottom bar */}
         {!isOwnTrip && (
-          <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white/95 pt-3 backdrop-blur-sm lg:hidden" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))', paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))' }}>
+          <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white pt-3 lg:hidden" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))', paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))' }}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-base font-bold text-trailhead">{formatPrice(tripData.price)}</p>
@@ -864,6 +864,7 @@ export default async function TripDetailPage({ params, searchParams }: PageProps
                 ) : (
                   <BookingModal
                     compact
+                    hideApprovalNote
                     tripId={tripData.id}
                     tripSlug={slug}
                     tripTitle={tripData.title}
